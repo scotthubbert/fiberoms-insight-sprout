@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate PWA Icons</title>
+</head>
+<body>
+  <canvas id="canvas192" width="192" height="192"></canvas>
+  <canvas id="canvas512" width="512" height="512"></canvas>
+  <script>
+    function drawIcon(canvas, size) {
+      const ctx = canvas.getContext('2d');
+      
+      // Background
+      ctx.fillStyle = '#1976d2';
+      ctx.fillRect(0, 0, size, size);
+      
+      // White circle
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/3, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Inner circle
+      ctx.fillStyle = '#1976d2';
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/6, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Convert to PNG
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon-${size}.png`;
+        a.textContent = `Download icon-${size}.png`;
+        document.body.appendChild(a);
+        document.body.appendChild(document.createElement('br'));
+      });
+    }
+    
+    drawIcon(document.getElementById('canvas192'), 192);
+    drawIcon(document.getElementById('canvas512'), 512);
+  </script>
+  <p>Open this file in a browser and download the icons, then save them to public/icons/</p>
+</body>
+</html>

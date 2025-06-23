@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#1976d2">
+  <title>FiberOMS Insight</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/icons/icon.svg">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header with theme toggle -->
+    <header class="app-header">
+      <h1 class="app-title">FiberOMS Insight</h1>
+      <calcite-button 
+        id="theme-toggle"
+        icon-start="brightness" 
+        appearance="transparent"
+        scale="l"
+        aria-label="Toggle theme"
+      ></calcite-button>
+    </header>
+
+    <!-- Map container -->
+    <div class="map-container">
+      <arcgis-map 
+        id="map"
+        basemap="satellite"
+        center="-87.5,33.5"
+        zoom="10"
+      >
+        <arcgis-zoom position="bottom-right"></arcgis-zoom>
+        <arcgis-home position="bottom-right"></arcgis-home>
+        <arcgis-locate position="bottom-right"></arcgis-locate>
+      </arcgis-map>
+    </div>
+
+    <!-- Mobile-first layer panel (bottom sheet on mobile, sidebar on desktop) -->
+    <div class="layer-panel" id="layer-panel">
+      <div class="layer-panel-header">
+        <h2>Layers</h2>
+        <calcite-button 
+          id="layer-panel-toggle"
+          icon-start="layer" 
+          appearance="transparent"
+          scale="m"
+          aria-label="Toggle layers panel"
+        ></calcite-button>
+      </div>
+      <div class="layer-panel-content">
+        <!-- Layers will be added here dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

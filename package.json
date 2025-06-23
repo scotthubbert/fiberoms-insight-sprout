@@ -1,0 +1,38 @@
+{
+  "name": "fiberoms-insight-pwa",
+  "version": "1.0.0",
+  "description": "FiberOMS Insight PWA - Production SaaS for ISP outage management with mobile-first design",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scotthubbert/fiberoms-insight-pwa.git"
+  },
+  "keywords": [
+    "pwa",
+    "arcgis",
+    "maps",
+    "isp",
+    "outage-management"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/scotthubbert/fiberoms-insight-pwa/issues"
+  },
+  "homepage": "https://github.com/scotthubbert/fiberoms-insight-pwa#readme",
+  "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.0.0",
+    "vite": "^6.3.5",
+    "vite-plugin-pwa": "^1.0.0"
+  },
+  "dependencies": {
+    "@arcgis/core": "^4.33.0",
+    "@arcgis/map-components": "^4.33.1",
+    "@esri/calcite-components": "^3.2.1"
+  }
+}
