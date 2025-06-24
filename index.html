@@ -23,41 +23,116 @@
 
 <body>
   <div id="app">
-    <!-- Header with theme toggle -->
-    <header class="app-header">
-      <h1 class="app-title">FiberOMS Insight</h1>
-      <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="l"
-        aria-label="Toggle theme"></calcite-button>
-    </header>
+    <!-- Calcite Shell Layout -->
+    <calcite-shell>
+      <!-- Header Navigation -->
+      <calcite-navigation slot="header">
+        <calcite-navigation-logo slot="logo" heading="FiberOMS Insight" thumbnail=""></calcite-navigation-logo>
+        <calcite-button id="theme-toggle" slot="content-end" icon-start="brightness" appearance="transparent" scale="l"
+          aria-label="Toggle theme"></calcite-button>
+      </calcite-navigation>
+      <!-- Side Panel -->
+      <calcite-shell-panel slot="panel-start" id="layers-panel" collapsed display-mode="dock">
+        <calcite-action-bar slot="action-bar">
+          <calcite-action id="layers-action" text="Layers" icon="layer" active></calcite-action>
+          <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
+          <calcite-action id="tools-action" text="Tools" icon="apps"></calcite-action>
+        </calcite-action-bar>
+        <calcite-panel heading="Layers" id="layers-content">
+          <calcite-block heading="Subscriber Status" collapsible>
+            <calcite-label>
+              <calcite-checkbox checked></calcite-checkbox>
+              Online Subscribers
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox checked></calcite-checkbox>
+              Offline Subscribers
+            </calcite-label>
+          </calcite-block>
+          <calcite-block heading="Fiber Infrastructure" collapsible>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              FSA Boundaries
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Main Line Fiber
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              MST Terminals
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Splitters
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Drop Fiber
+            </calcite-label>
+          </calcite-block>
+          <calcite-block heading="Outage Data" collapsible>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Fiber Network Outages
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              APCo Power Outages
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Tombigbee Power Outages
+            </calcite-label>
+          </calcite-block>
+          <calcite-block heading="Vehicle Tracking" collapsible>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Electric Vehicles
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Fiber Vehicles
+            </calcite-label>
+          </calcite-block>
+          <calcite-block heading="Environmental" collapsible>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Weather Radar
+            </calcite-label>
+          </calcite-block>
+        </calcite-panel>
+        <calcite-panel heading="Search" id="search-content" hidden>
+          <calcite-block heading="MFS Database Search">
+            <calcite-input placeholder="Search addresses, customers..." type="search"></calcite-input>
+            <calcite-button width="full" appearance="solid" scale="s">Search</calcite-button>
+          </calcite-block>
+        </calcite-panel>
+        <calcite-panel heading="Tools" id="tools-content" hidden>
+          <calcite-block heading="Sketch Tools">
+            <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
+            <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
+          </calcite-block>
+        </calcite-panel>
+      </calcite-shell-panel>
 
-    <!-- Map container -->
-    <div class="map-container">
-      <arcgis-map id="map" basemap="streets-navigation-vector" center="-87.5,33.5" zoom="10" theme="light">
-        <arcgis-search position="top-left" theme="light"></arcgis-search>
-        <arcgis-track position="top-left" theme="light"></arcgis-track>
-        <!-- <arcgis-zoom position="top-left" theme="light"></arcgis-zoom> -->
-        <arcgis-home position="top-left" theme="light"></arcgis-home>
-        <arcgis-locate position="top-left" theme="light"></arcgis-locate>
-        <arcgis-basemap-toggle position="bottom-right" next-basemap="satellite" theme="light"></arcgis-basemap-toggle>
-        <arcgis-expand position="top-left" theme="light" icon="basemap" tooltip="Basemap Gallery">
-          <arcgis-basemap-gallery theme="light"></arcgis-basemap-gallery>
-        </arcgis-expand>
-        <!-- Measurement toolbar will be added programmatically -->
-        <arcgis-fullscreen position="top-left" theme="light"></arcgis-fullscreen>
-      </arcgis-map>
-    </div>
-
-    <!-- Mobile-first layer panel (bottom sheet on mobile, sidebar on desktop) -->
-    <div class="layer-panel" id="layer-panel">
-      <div class="layer-panel-header">
-        <h2>Layers</h2>
-        <calcite-button id="layer-panel-toggle" icon-start="layer" appearance="transparent" scale="m"
-          aria-label="Toggle layers panel"></calcite-button>
+      <!-- Main Content Area -->
+      <div class="map-container">
+        <arcgis-map id="map" basemap="streets-navigation-vector" center="-87.733,34.05" zoom="9" theme="light">
+          <arcgis-search position="top-left" theme="light"></arcgis-search>
+          <arcgis-track position="top-left" theme="light"></arcgis-track>
+          <!-- <arcgis-zoom position="top-left" theme="light"></arcgis-zoom> -->
+          <arcgis-home position="top-left" theme="light"></arcgis-home>
+          <arcgis-locate position="top-left" theme="light"></arcgis-locate>
+          <arcgis-basemap-toggle position="bottom-right" next-basemap="satellite" theme="light"></arcgis-basemap-toggle>
+          <arcgis-expand position="top-left" theme="light" icon="basemap" tooltip="Basemap Gallery">
+            <arcgis-basemap-gallery theme="light"></arcgis-basemap-gallery>
+          </arcgis-expand>
+          <!-- Measurement toolbar will be added programmatically -->
+          <arcgis-fullscreen position="top-left" theme="light"></arcgis-fullscreen>
+        </arcgis-map>
       </div>
-      <div class="layer-panel-content">
-        <!-- Layers will be added here dynamically -->
-      </div>
-    </div>
+    </calcite-shell>
   </div>
 
   <script type="module" src="/src/main.js"></script>

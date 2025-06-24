@@ -10,7 +10,7 @@ import "@arcgis/map-components/dist/components/arcgis-search";
 import '@arcgis/map-components/dist/components/arcgis-map';
 import '@arcgis/map-components/dist/components/arcgis-zoom';
 import '@arcgis/map-components/dist/components/arcgis-home';
-import '@arcgis/map-components/dist/components/arcgis-locate';
+// import '@arcgis/map-components/dist/components/arcgis-locate';
 import '@arcgis/map-components/dist/components/arcgis-basemap-toggle';
 import '@arcgis/map-components/dist/components/arcgis-basemap-gallery';
 import '@arcgis/map-components/dist/components/arcgis-expand';
@@ -19,6 +19,17 @@ import '@arcgis/map-components/dist/components/arcgis-fullscreen';
 
 // Import Calcite components
 import '@esri/calcite-components/dist/components/calcite-button';
+import '@esri/calcite-components/dist/components/calcite-shell';
+import '@esri/calcite-components/dist/components/calcite-shell-panel';
+import '@esri/calcite-components/dist/components/calcite-panel';
+import '@esri/calcite-components/dist/components/calcite-action';
+import '@esri/calcite-components/dist/components/calcite-action-bar';
+import '@esri/calcite-components/dist/components/calcite-block';
+import '@esri/calcite-components/dist/components/calcite-label';
+import '@esri/calcite-components/dist/components/calcite-checkbox';
+import '@esri/calcite-components/dist/components/calcite-input';
+import '@esri/calcite-components/dist/components/calcite-navigation';
+import '@esri/calcite-components/dist/components/calcite-navigation-logo';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path to NPM bundled assets
@@ -28,7 +39,7 @@ setAssetPath('/node_modules/@esri/calcite-components/dist/calcite/assets');
 const BASEMAP_CONFIG = {
   light: {
     primary: 'streets-navigation-vector',
-    alternate: 'satellite'
+    alternate: 'hybrid'
   },
   dark: {
     primary: 'dark-gray-vector',
@@ -125,7 +136,7 @@ class ThemeManager {
       widgets.forEach(widget => {
         widget.setAttribute('theme', theme);
       });
-      
+
       // Apply theme to underlying Esri widgets (search, popups, etc.)
       setTimeout(() => {
         const esriElements = document.querySelectorAll('.esri-widget, .esri-search, .esri-popup, .esri-ui, .esri-view-surface');
@@ -140,12 +151,12 @@ class ThemeManager {
         });
       }, 100);
     }
-    
+
     // Apply theme to map view if available
     if (window.mapView) {
       this.applyThemeToView(window.mapView);
     }
-    
+
 
   }
 
@@ -180,13 +191,13 @@ class ThemeManager {
     this.currentTheme = this.getSystemPreference();
     this.applyTheme(this.currentTheme);
   }
-  
+
   // Apply theme to map view (for popups and other view-level UI)
   applyThemeToView(view) {
     if (!view) return;
-    
+
     const isDark = this.currentTheme === 'dark';
-    
+
     // Apply theme to view container
     if (view.container) {
       if (isDark) {
@@ -197,7 +208,7 @@ class ThemeManager {
         view.container.classList.remove('calcite-mode-dark');
       }
     }
-    
+
     // Apply theme to popup if it exists
     if (view.popup) {
       const popupContainer = view.popup.container;
@@ -211,67 +222,90 @@ class ThemeManager {
         }
       }
     }
-    
+
   }
 }
 
-// Layer panel management
+// Layer panel management using Calcite Shell Panel
 class LayerPanel {
   constructor() {
-    this.panel = document.getElementById('layer-panel');
-    this.header = document.querySelector('.layer-panel-header');
-    this.toggleButton = document.getElementById('layer-panel-toggle');
-    this.isOpen = false;
+    this.shellPanel = document.getElementById('layers-panel');
+    this.layersAction = document.getElementById('layers-action');
+    this.searchAction = document.getElementById('search-action');
+    this.toolsAction = document.getElementById('tools-action');
+    this.layersContent = document.getElementById('layers-content');
+    this.searchContent = document.getElementById('search-content');
+    this.toolsContent = document.getElementById('tools-content');
     this.init();
   }
 
-  init() {
-    // Toggle panel on header click (mobile) or button click
-    this.header.addEventListener('click', () => this.toggle());
+  async init() {
+    // Wait for calcite components to be defined
+    await customElements.whenDefined('calcite-shell-panel');
+    await customElements.whenDefined('calcite-action');
+    await customElements.whenDefined('calcite-panel');
 
-    // Handle swipe down to close on mobile
-    this.setupSwipeGestures();
+    this.setupActionBarNavigation();
   }
 
-  toggle() {
-    this.isOpen = !this.isOpen;
-    this.panel.classList.toggle('open', this.isOpen);
+  setupActionBarNavigation() {
+    // Handle action bar clicks to switch between panels or toggle collapse
+    this.layersAction?.addEventListener('click', () => this.handleActionClick('layers'));
+    this.searchAction?.addEventListener('click', () => this.handleActionClick('search'));
+    this.toolsAction?.addEventListener('click', () => this.handleActionClick('tools'));
   }
 
-  setupSwipeGestures() {
-    let startY = 0;
-    let currentY = 0;
-    let isDragging = false;
+  handleActionClick(panelName) {
+    const clickedAction = this.getActionByPanel(panelName);
+    
+    // If clicking the same active action and panel is open, collapse it
+    if (clickedAction?.active && !this.shellPanel?.collapsed) {
+      this.shellPanel.collapsed = true;
+      return;
+    }
 
-    this.header.addEventListener('touchstart', (e) => {
-      startY = e.touches[0].clientY;
-      isDragging = true;
-    }, { passive: true });
+    // Otherwise, expand panel (if collapsed) and show the selected panel
+    if (this.shellPanel?.collapsed) {
+      this.shellPanel.collapsed = false;
+    }
+    this.showPanel(panelName);
+  }
 
-    this.header.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
+  getActionByPanel(panelName) {
+    switch (panelName) {
+      case 'layers': return this.layersAction;
+      case 'search': return this.searchAction;
+      case 'tools': return this.toolsAction;
+      default: return null;
+    }
+  }
 
-      currentY = e.touches[0].clientY;
-      const deltaY = currentY - startY;
+  showPanel(panelName) {
+    // Hide all panels
+    this.layersContent.hidden = true;
+    this.searchContent.hidden = true;
+    this.toolsContent.hidden = true;
 
-      if (deltaY > 0 && this.isOpen) {
-        e.preventDefault();
-        const translateY = Math.min(deltaY, this.panel.offsetHeight);
-        this.panel.style.transform = `translateY(${translateY}px)`;
-      }
-    }, { passive: false });
+    // Remove active state from all actions
+    this.layersAction.active = false;
+    this.searchAction.active = false;
+    this.toolsAction.active = false;
 
-    this.header.addEventListener('touchend', () => {
-      if (!isDragging) return;
-
-      const deltaY = currentY - startY;
-      if (deltaY > 50 && this.isOpen) {
-        this.toggle();
-      }
-
-      this.panel.style.transform = '';
-      isDragging = false;
-    }, { passive: true });
+    // Show selected panel and set active action
+    switch (panelName) {
+      case 'layers':
+        this.layersContent.hidden = false;
+        this.layersAction.active = true;
+        break;
+      case 'search':
+        this.searchContent.hidden = false;
+        this.searchAction.active = true;
+        break;
+      case 'tools':
+        this.toolsContent.hidden = false;
+        this.toolsAction.active = true;
+        break;
+    }
   }
 }
 
@@ -298,10 +332,10 @@ class MapApp {
     // Store view reference
     this.view = view;
     this.map = view.map;
-    
+
     // Store view reference globally for theme management
     window.mapView = view;
-    
+
     // Apply current theme to the view
     if (window.themeManager) {
       window.themeManager.applyThemeToView(view);

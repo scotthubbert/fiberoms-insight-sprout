@@ -6,12 +6,11 @@
 }
 
 :root {
-  --header-height: 56px;
   --primary-color: #1976d2;
   --background-color: #ffffff;
   --text-color: #333333;
   --panel-background: #f5f5f5;
-  --shadow: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Dark theme variables */
@@ -19,11 +18,12 @@
   --background-color: #1e1e1e;
   --text-color: #ffffff;
   --panel-background: #2d2d2d;
-  --shadow: 0 2px 4px rgba(0,0,0,0.3);
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial,
+    sans-serif;
   background-color: var(--background-color);
   color: var(--text-color);
   overflow: hidden;
@@ -33,133 +33,28 @@ body {
 
 /* App container */
 #app {
-  display: flex;
-  flex-direction: column;
   height: 100vh;
-  position: relative;
 }
 
-/* Header - Mobile First */
-.app-header {
-  height: var(--header-height);
-  background-color: white;
-  color: #333333;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  box-shadow: var(--shadow);
-  z-index: 100;
+/* Calcite Shell styling - use defaults */
+calcite-shell {
+  height: 100%;
 }
 
-/* Header dark theme */
-[data-theme="dark"] .app-header {
-  background-color: #2b2b2b;
-  color: white;
-}
-
-.app-title {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-/* Map container - Mobile First */
+/* Map container - use Calcite defaults */
 .map-container {
-  flex: 1;
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-}
-
-arcgis-map {
-  display: block;
   width: 100%;
   height: 100%;
 }
 
-/* Layer panel - Mobile First (Bottom Sheet) */
-.layer-panel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: var(--panel-background);
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-  transform: translateY(calc(100% - 56px));
-  transition: transform 0.3s ease;
-  z-index: 50;
-  max-height: 60vh;
-  display: flex;
-  flex-direction: column;
+arcgis-map {
+  width: 100%;
+  height: 100%;
 }
 
-.layer-panel.open {
-  transform: translateY(0);
-}
-
-.layer-panel-header {
-  padding: 16px;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-}
-
-.layer-panel-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.layer-panel-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Use default Calcite button sizes - no overrides */
-
-/* Desktop enhancements */
+/* Desktop enhancements - let Calcite handle responsive behavior */
 @media (min-width: 769px) {
-  /* Header adjustments for desktop */
-  .app-header {
-    height: 64px;
-    padding: 0 24px;
-  }
-  
-  .app-title {
-    font-size: 24px;
-  }
-  
-  /* Layer panel becomes sidebar on desktop */
-  .layer-panel {
-    position: fixed;
-    left: 0;
-    top: 64px;
-    bottom: 0;
-    width: 320px;
-    border-radius: 0;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    transform: translateX(-100%);
-    max-height: none;
-  }
-  
-  .layer-panel.open {
-    transform: translateX(0);
-  }
-  
-  /* Adjust map container when panel is open */
-  .layer-panel.open ~ .map-container {
-    margin-left: 320px;
-  }
-  
-  .map-container {
-    transition: margin-left 0.3s ease;
-  }
+  /* No custom styles needed - Calcite Navigation handles responsive design */
 }
 
 /* Loading state */
@@ -184,7 +79,7 @@ arcgis-map {
   color: white;
   padding: 16px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -202,4 +97,3 @@ arcgis-map {
     opacity: 1;
   }
 }
-
