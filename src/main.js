@@ -35,6 +35,8 @@ import '@esri/calcite-components/dist/components/calcite-fab';
 import '@esri/calcite-components/dist/components/calcite-icon';
 import '@esri/calcite-components/dist/components/calcite-segmented-control';
 import '@esri/calcite-components/dist/components/calcite-segmented-control-item';
+import '@esri/calcite-components/dist/components/calcite-list';
+import '@esri/calcite-components/dist/components/calcite-list-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path to NPM bundled assets
