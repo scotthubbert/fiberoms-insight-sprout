@@ -126,6 +126,23 @@ VITE_GEOTAB_DATABASE=mygeotab_db
 - **ArcGIS Docs**: https://developers.arcgis.com/javascript/latest/
 - **Calcite Components**: https://developers.arcgis.com/calcite-design-system/components/
 
+## Development Philosophy
+
+### "Use the Platform" Principle
+Always leverage native CalciteUI and ArcGIS components over custom implementations:
+
+✅ **DO**: Use `calcite-segmented-control` for tab navigation
+✅ **DO**: Use CalciteUI CSS variables and properties  
+✅ **DO**: Rely on built-in component behaviors (theming, accessibility, responsive design)
+✅ **DO**: Follow CalciteUI patterns and conventions
+
+❌ **AVOID**: Custom CSS flexbox/grid layouts when CalciteUI components exist
+❌ **AVOID**: Manual button distribution, spacing, or theming
+❌ **AVOID**: Reinventing functionality that CalciteUI provides natively
+❌ **AVOID**: Fighting against component defaults with complex overrides
+
+**Why**: CalciteUI components are purpose-built, tested, accessible, themeable, and maintainable. Custom implementations create technical debt and compatibility issues.
+
 ## Common Pitfalls to Avoid
 
 1. **Do NOT use CDN links** - All dependencies must be bundled via NPM
@@ -133,3 +150,4 @@ VITE_GEOTAB_DATABASE=mygeotab_db
 3. **Do NOT design desktop-first** - Always start with mobile layouts
 4. **Do NOT skip testing on actual mobile devices** - Test on real hardware
 5. **Do NOT mix architecture patterns** - Use established patterns consistently
+6. **Do NOT create custom UI when CalciteUI components exist** - Follow "use the platform" philosophy

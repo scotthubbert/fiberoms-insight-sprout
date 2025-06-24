@@ -30,6 +30,11 @@ import '@esri/calcite-components/dist/components/calcite-checkbox';
 import '@esri/calcite-components/dist/components/calcite-input';
 import '@esri/calcite-components/dist/components/calcite-navigation';
 import '@esri/calcite-components/dist/components/calcite-navigation-logo';
+import '@esri/calcite-components/dist/components/calcite-sheet';
+import '@esri/calcite-components/dist/components/calcite-fab';
+import '@esri/calcite-components/dist/components/calcite-icon';
+import '@esri/calcite-components/dist/components/calcite-segmented-control';
+import '@esri/calcite-components/dist/components/calcite-segmented-control-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path to NPM bundled assets
@@ -152,9 +157,14 @@ class ThemeManager {
       }, 100);
     }
 
-    // Apply theme to map view if available
+    // Apply theme to map view and widgets if available
     if (window.mapView) {
       this.applyThemeToView(window.mapView);
+    }
+
+    // Apply theme to map widgets if available
+    if (window.mapApp) {
+      window.mapApp.applyThemeToWidgets(theme);
     }
 
 
@@ -257,7 +267,7 @@ class LayerPanel {
 
   handleActionClick(panelName) {
     const clickedAction = this.getActionByPanel(panelName);
-    
+
     // If clicking the same active action and panel is open, collapse it
     if (clickedAction?.active && !this.shellPanel?.collapsed) {
       this.shellPanel.collapsed = true;
@@ -309,7 +319,7 @@ class LayerPanel {
   }
 }
 
-// Map initialization
+// Map initialization 
 class MapApp {
   constructor() {
     this.mapElement = document.getElementById('map');
@@ -340,6 +350,17 @@ class MapApp {
     if (window.themeManager) {
       window.themeManager.applyThemeToView(view);
     }
+
+    // Map and view are ready for use
+  }
+
+  // Method to apply theme to map components
+  applyThemeToWidgets(theme) {
+    // Update ArcGIS map components theme attributes
+    const widgets = this.mapElement.querySelectorAll('arcgis-search, arcgis-track, arcgis-home, arcgis-locate, arcgis-basemap-toggle, arcgis-basemap-gallery, arcgis-expand, arcgis-fullscreen');
+    widgets.forEach(widget => {
+      widget.setAttribute('theme', theme);
+    });
   }
 }
 
@@ -392,11 +413,95 @@ class PWAInstaller {
   }
 }
 
+// Mobile tab bar and sheet management
+class MobileTabBar {
+  constructor() {
+    this.tabs = {
+      map: document.getElementById('tab-map'),
+      subscribers: document.getElementById('tab-subscribers'),
+      osp: document.getElementById('tab-osp'),
+      vehicles: document.getElementById('tab-vehicles'),
+      other: document.getElementById('tab-other')
+    };
+
+    this.sheets = {
+      subscribers: document.getElementById('mobile-subscribers-sheet'),
+      osp: document.getElementById('mobile-osp-sheet'),
+      vehicles: document.getElementById('mobile-vehicles-sheet'),
+      other: document.getElementById('mobile-other-sheet')
+    };
+
+    this.currentSheet = null;
+
+    // Initialize mobile tab bar
+
+    this.init();
+  }
+
+  async init() {
+    // Wait for calcite components to be defined
+    await customElements.whenDefined('calcite-sheet');
+    await customElements.whenDefined('calcite-icon');
+
+    // Setup tab click handlers
+    Object.keys(this.tabs).forEach(tabName => {
+      const tab = this.tabs[tabName];
+      if (tab) {
+        tab.addEventListener('click', () => this.handleTabClick(tabName));
+      }
+    });
+
+    // Setup sheet close handlers
+    Object.values(this.sheets).forEach(sheet => {
+      if (sheet) {
+        sheet.addEventListener('calciteSheetClose', () => this.closeCurrentSheet());
+      }
+    });
+  }
+
+  handleTabClick(tabName) {
+    // Close current sheet if open
+    this.closeCurrentSheet();
+
+    // Clear all active states
+    Object.values(this.tabs).forEach(tab => {
+      if (tab) tab.active = false;
+    });
+
+    // Set clicked tab as active
+    if (this.tabs[tabName]) {
+      this.tabs[tabName].active = true;
+    }
+
+    // Open corresponding sheet (except for map tab)
+    if (tabName !== 'map' && this.sheets[tabName]) {
+      this.currentSheet = this.sheets[tabName];
+      this.currentSheet.expanded = true;
+    }
+  }
+
+  closeCurrentSheet() {
+    if (this.currentSheet) {
+      this.currentSheet.expanded = false;
+      this.currentSheet = null;
+    }
+
+    // Set map tab as active when closing any sheet
+    Object.values(this.tabs).forEach(tab => {
+      if (tab) tab.active = false;
+    });
+    if (this.tabs.map) {
+      this.tabs.map.active = true;
+    }
+  }
+}
+
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize components
   const themeManager = new ThemeManager();
   new LayerPanel();
+  new MobileTabBar();
   const mapApp = new MapApp();
   new PWAInstaller();
 

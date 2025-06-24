@@ -33,8 +33,8 @@
             aria-label="Toggle theme"></calcite-button>
         </div>
       </calcite-navigation>
-      <!-- Side Panel -->
-      <calcite-shell-panel slot="panel-start" id="layers-panel" collapsed display-mode="dock">
+      <!-- Side Panel - Desktop Only -->
+      <calcite-shell-panel slot="panel-start" id="layers-panel" collapsed display-mode="dock" class="desktop-only">
         <calcite-action-bar slot="action-bar">
           <calcite-action id="layers-action" text="Layers" icon="layer" active></calcite-action>
           <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
@@ -123,18 +123,142 @@
         <arcgis-map id="map" basemap="streets-navigation-vector" center="-87.733,34.05" zoom="9" theme="light">
           <arcgis-search position="top-left" theme="light"></arcgis-search>
           <arcgis-track position="top-left" theme="light"></arcgis-track>
-          <!-- <arcgis-zoom position="top-left" theme="light"></arcgis-zoom> -->
           <arcgis-home position="top-left" theme="light"></arcgis-home>
           <arcgis-locate position="top-left" theme="light"></arcgis-locate>
           <arcgis-basemap-toggle position="bottom-right" next-basemap="satellite" theme="light"></arcgis-basemap-toggle>
           <arcgis-expand position="top-left" theme="light" icon="basemap" tooltip="Basemap Gallery">
             <arcgis-basemap-gallery theme="light"></arcgis-basemap-gallery>
           </arcgis-expand>
-          <!-- Measurement toolbar will be added programmatically -->
           <arcgis-fullscreen position="top-left" theme="light"></arcgis-fullscreen>
         </arcgis-map>
       </div>
+
+      <!-- Mobile Bottom Navigation -->
+      <calcite-segmented-control id="mobile-tab-bar" class="mobile-only" width="full" appearance="solid">
+        <calcite-segmented-control-item id="tab-map" value="map" checked>
+          <calcite-icon icon="map" scale="m"></calcite-icon>
+        </calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-subscribers" value="subscribers">
+          <calcite-icon icon="users" scale="m"></calcite-icon>
+        </calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-osp" value="osp">
+          <calcite-icon icon="link-chart" scale="m"></calcite-icon>
+        </calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-vehicles" value="vehicles">
+          <calcite-icon icon="car" scale="m"></calcite-icon>
+        </calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-other" value="other">
+          <calcite-icon icon="layers" scale="m"></calcite-icon>
+        </calcite-segmented-control-item>
+      </calcite-segmented-control>
     </calcite-shell>
+
+    <!-- Mobile Bottom Sheets for each category -->
+    <calcite-sheet id="mobile-subscribers-sheet" class="mobile-only">
+      <calcite-panel heading="Subscriber Data">
+        <calcite-block heading="Subscriber Status" collapsible open>
+          <calcite-label>
+            <calcite-checkbox checked></calcite-checkbox>
+            Online Subscribers
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox checked></calcite-checkbox>
+            Offline Subscribers
+          </calcite-label>
+        </calcite-block>
+        <calcite-block heading="Customer Search" collapsible>
+          <calcite-input placeholder="Search addresses, customers..." type="search"></calcite-input>
+          <calcite-button width="full" appearance="solid" scale="s">Search</calcite-button>
+        </calcite-block>
+        <calcite-block heading="Export" collapsible>
+          <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
+        </calcite-block>
+      </calcite-panel>
+    </calcite-sheet>
+
+    <calcite-sheet id="mobile-osp-sheet" class="mobile-only">
+      <calcite-panel heading="OSP Infrastructure">
+        <calcite-block heading="Fiber Plant" collapsible open>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            FSA Boundaries
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Main Line Fiber
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            MST Terminals
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Splitters
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Drop Fiber
+          </calcite-label>
+        </calcite-block>
+        <calcite-block heading="Outages" collapsible>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Fiber Network Outages
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            APCo Power Outages
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Tombigbee Power Outages
+          </calcite-label>
+        </calcite-block>
+        <calcite-block heading="Tools" collapsible>
+          <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
+        </calcite-block>
+      </calcite-panel>
+    </calcite-sheet>
+
+    <calcite-sheet id="mobile-vehicles-sheet" class="mobile-only">
+      <calcite-panel heading="Vehicle Tracking">
+        <calcite-block heading="Fleet Tracking" collapsible open>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Electric Vehicles
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Fiber Vehicles
+          </calcite-label>
+        </calcite-block>
+      </calcite-panel>
+    </calcite-sheet>
+
+    <calcite-sheet id="mobile-other-sheet" class="mobile-only">
+      <calcite-panel heading="Other Layers">
+        <calcite-block heading="Environmental" collapsible open>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Weather Radar
+          </calcite-label>
+        </calcite-block>
+        <calcite-block heading="Base Maps" collapsible>
+          <calcite-label>
+            <calcite-checkbox checked></calcite-checkbox>
+            Streets
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Satellite
+          </calcite-label>
+          <calcite-label>
+            <calcite-checkbox></calcite-checkbox>
+            Topographic
+          </calcite-label>
+        </calcite-block>
+      </calcite-panel>
+    </calcite-sheet>
   </div>
 
   <script type="module" src="/src/main.js"></script>
