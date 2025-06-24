@@ -28,8 +28,10 @@
       <!-- Header Navigation -->
       <calcite-navigation slot="header">
         <calcite-navigation-logo slot="logo" heading="FiberOMS Insight" thumbnail=""></calcite-navigation-logo>
-        <calcite-button id="theme-toggle" slot="content-end" icon-start="brightness" appearance="transparent" scale="l"
-          aria-label="Toggle theme"></calcite-button>
+        <div slot="content-end">
+          <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="m"
+            aria-label="Toggle theme"></calcite-button>
+        </div>
       </calcite-navigation>
       <!-- Side Panel -->
       <calcite-shell-panel slot="panel-start" id="layers-panel" collapsed display-mode="dock">
