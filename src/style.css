@@ -42,14 +42,20 @@ body {
 /* Header - Mobile First */
 .app-header {
   height: var(--header-height);
-  background-color: var(--primary-color);
-  color: white;
+  background-color: white;
+  color: #333333;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   box-shadow: var(--shadow);
   z-index: 100;
+}
+
+/* Header dark theme */
+[data-theme="dark"] .app-header {
+  background-color: #2b2b2b;
+  color: white;
 }
 
 .app-title {
@@ -115,11 +121,7 @@ arcgis-map {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Touch-friendly buttons */
-calcite-button {
-  min-height: 44px;
-  min-width: 44px;
-}
+/* Use default Calcite button sizes - no overrides */
 
 /* Desktop enhancements */
 @media (min-width: 769px) {
@@ -170,10 +172,7 @@ calcite-button {
   color: var(--text-color);
 }
 
-/* Ensure Calcite components respect theme */
-calcite-button {
-  color: inherit;
-}
+/* No custom CSS overrides - use default ArcGIS/Calcite styles only */
 
 /* PWA install prompt styles */
 .install-prompt {

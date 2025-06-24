@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -11,33 +12,38 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/icons/icon.svg">
   <link rel="manifest" href="/manifest.json">
+
+  <!-- ArcGIS Map SDK theme stylesheets -->
+  <link id="esri-theme-light" rel="stylesheet" href="/node_modules/@arcgis/core/assets/esri/themes/light/main.css" />
+  <link id="esri-theme-dark" rel="stylesheet" href="/node_modules/@arcgis/core/assets/esri/themes/dark/main.css"
+    disabled />
+
   <link rel="stylesheet" href="/src/style.css">
 </head>
+
 <body>
   <div id="app">
     <!-- Header with theme toggle -->
     <header class="app-header">
       <h1 class="app-title">FiberOMS Insight</h1>
-      <calcite-button 
-        id="theme-toggle"
-        icon-start="brightness" 
-        appearance="transparent"
-        scale="l"
-        aria-label="Toggle theme"
-      ></calcite-button>
+      <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="l"
+        aria-label="Toggle theme"></calcite-button>
     </header>
 
     <!-- Map container -->
     <div class="map-container">
-      <arcgis-map 
-        id="map"
-        basemap="satellite"
-        center="-87.5,33.5"
-        zoom="10"
-      >
-        <arcgis-zoom position="bottom-right"></arcgis-zoom>
-        <arcgis-home position="bottom-right"></arcgis-home>
-        <arcgis-locate position="bottom-right"></arcgis-locate>
+      <arcgis-map id="map" basemap="streets-navigation-vector" center="-87.5,33.5" zoom="10" theme="light">
+        <arcgis-search position="top-left" theme="light"></arcgis-search>
+        <arcgis-track position="top-left" theme="light"></arcgis-track>
+        <!-- <arcgis-zoom position="top-left" theme="light"></arcgis-zoom> -->
+        <arcgis-home position="top-left" theme="light"></arcgis-home>
+        <arcgis-locate position="top-left" theme="light"></arcgis-locate>
+        <arcgis-basemap-toggle position="bottom-right" next-basemap="satellite" theme="light"></arcgis-basemap-toggle>
+        <arcgis-expand position="top-left" theme="light" icon="basemap" tooltip="Basemap Gallery">
+          <arcgis-basemap-gallery theme="light"></arcgis-basemap-gallery>
+        </arcgis-expand>
+        <!-- Measurement toolbar will be added programmatically -->
+        <arcgis-fullscreen position="top-left" theme="light"></arcgis-fullscreen>
       </arcgis-map>
     </div>
 
@@ -45,13 +51,8 @@
     <div class="layer-panel" id="layer-panel">
       <div class="layer-panel-header">
         <h2>Layers</h2>
-        <calcite-button 
-          id="layer-panel-toggle"
-          icon-start="layer" 
-          appearance="transparent"
-          scale="m"
-          aria-label="Toggle layers panel"
-        ></calcite-button>
+        <calcite-button id="layer-panel-toggle" icon-start="layer" appearance="transparent" scale="m"
+          aria-label="Toggle layers panel"></calcite-button>
       </div>
       <div class="layer-panel-content">
         <!-- Layers will be added here dynamically -->
@@ -61,4 +62,5 @@
 
   <script type="module" src="/src/main.js"></script>
 </body>
+
 </html>
