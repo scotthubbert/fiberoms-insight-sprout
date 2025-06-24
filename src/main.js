@@ -259,7 +259,7 @@ class LayerPanel {
   }
 
   setupActionBarNavigation() {
-    // Handle action bar clicks to switch between panels or toggle collapse
+    // CalciteUI actions use standard click events
     this.layersAction?.addEventListener('click', () => this.handleActionClick('layers'));
     this.searchAction?.addEventListener('click', () => this.handleActionClick('search'));
     this.toolsAction?.addEventListener('click', () => this.handleActionClick('tools'));
@@ -413,16 +413,10 @@ class PWAInstaller {
   }
 }
 
-// Mobile tab bar and sheet management
+// Mobile tab bar and sheet management using CalciteUI native events
 class MobileTabBar {
   constructor() {
-    this.tabs = {
-      map: document.getElementById('tab-map'),
-      subscribers: document.getElementById('tab-subscribers'),
-      osp: document.getElementById('tab-osp'),
-      vehicles: document.getElementById('tab-vehicles'),
-      other: document.getElementById('tab-other')
-    };
+    this.segmentedControl = document.getElementById('mobile-tab-bar');
 
     this.sheets = {
       subscribers: document.getElementById('mobile-subscribers-sheet'),
@@ -433,25 +427,27 @@ class MobileTabBar {
 
     this.currentSheet = null;
 
-    // Initialize mobile tab bar
-
     this.init();
   }
 
   async init() {
     // Wait for calcite components to be defined
+    await customElements.whenDefined('calcite-segmented-control');
+    await customElements.whenDefined('calcite-segmented-control-item');
     await customElements.whenDefined('calcite-sheet');
-    await customElements.whenDefined('calcite-icon');
 
-    // Setup tab click handlers
-    Object.keys(this.tabs).forEach(tabName => {
-      const tab = this.tabs[tabName];
-      if (tab) {
-        tab.addEventListener('click', () => this.handleTabClick(tabName));
-      }
-    });
+    // Use standard change event on segmented control
+    if (this.segmentedControl) {
+      this.segmentedControl.addEventListener('change', (event) => {
+        // Get the value from the selected item
+        const selectedValue = event.target.value || event.target.selectedItem?.value;
+        if (selectedValue) {
+          this.handleTabChange(selectedValue);
+        }
+      });
+    }
 
-    // Setup sheet close handlers
+    // Setup CalciteUI sheet close events
     Object.values(this.sheets).forEach(sheet => {
       if (sheet) {
         sheet.addEventListener('calciteSheetClose', () => this.closeCurrentSheet());
@@ -459,23 +455,13 @@ class MobileTabBar {
     });
   }
 
-  handleTabClick(tabName) {
+  handleTabChange(tabValue) {
     // Close current sheet if open
     this.closeCurrentSheet();
 
-    // Clear all active states
-    Object.values(this.tabs).forEach(tab => {
-      if (tab) tab.active = false;
-    });
-
-    // Set clicked tab as active
-    if (this.tabs[tabName]) {
-      this.tabs[tabName].active = true;
-    }
-
     // Open corresponding sheet (except for map tab)
-    if (tabName !== 'map' && this.sheets[tabName]) {
-      this.currentSheet = this.sheets[tabName];
+    if (tabValue !== 'map' && this.sheets[tabValue]) {
+      this.currentSheet = this.sheets[tabValue];
       this.currentSheet.expanded = true;
     }
   }
@@ -486,12 +472,14 @@ class MobileTabBar {
       this.currentSheet = null;
     }
 
-    // Set map tab as active when closing any sheet
-    Object.values(this.tabs).forEach(tab => {
-      if (tab) tab.active = false;
-    });
-    if (this.tabs.map) {
-      this.tabs.map.active = true;
+    // Reset to map tab using CalciteUI's native method
+    if (this.segmentedControl) {
+      const mapItem = this.segmentedControl.querySelector('calcite-segmented-control-item[value="map"]');
+      if (mapItem) {
+        mapItem.checked = true;
+        // Also update the segmented control's value
+        this.segmentedControl.value = 'map';
+      }
     }
   }
 }
