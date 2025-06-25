@@ -826,7 +826,7 @@ class MapApp {
         clusterRadius: '80px',
         clusterMinSize: '28px',
         clusterMaxSize: '80px',
-        clusterMaxScale: 250000,
+        clusterMaxScale: 50000,
         symbol: {
           type: 'simple-marker',
           style: 'circle',
@@ -1202,7 +1202,7 @@ class MapApp {
               clusterRadius: '80px',
               clusterMinSize: '28px',
               clusterMaxSize: '80px',
-              clusterMaxScale: 250000,
+              clusterMaxScale: 50000,
               symbol: {
                 type: 'simple-marker',
                 style: 'circle',
