@@ -33,6 +33,7 @@
   "dependencies": {
     "@arcgis/core": "^4.33.0",
     "@arcgis/map-components": "^4.33.1",
-    "@esri/calcite-components": "^3.2.1"
+    "@esri/calcite-components": "^3.2.1",
+    "@supabase/supabase-js": "^2.50.2"
   }
 }
