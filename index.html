@@ -134,219 +134,228 @@
       </div>
 
       <!-- Mobile Bottom Navigation -->
-      <calcite-segmented-control id="mobile-tab-bar" class="mobile-only" width="full" appearance="solid">
-        <calcite-segmented-control-item id="tab-map" value="map" checked>
-          <calcite-icon icon="map" scale="m"></calcite-icon>
-        </calcite-segmented-control-item>
-        <calcite-segmented-control-item id="tab-subscribers" value="subscribers">
-          <calcite-icon icon="users" scale="m"></calcite-icon>
-        </calcite-segmented-control-item>
-        <calcite-segmented-control-item id="tab-osp" value="osp">
-          <calcite-icon icon="link-chart" scale="m"></calcite-icon>
-        </calcite-segmented-control-item>
-        <calcite-segmented-control-item id="tab-vehicles" value="vehicles">
-          <calcite-icon icon="car" scale="m"></calcite-icon>
-        </calcite-segmented-control-item>
-        <calcite-segmented-control-item id="tab-other" value="other">
-          <calcite-icon icon="layers" scale="m"></calcite-icon>
-        </calcite-segmented-control-item>
+      <calcite-segmented-control id="mobile-tab-bar" class="mobile-only" width="full" appearance="outline" scale="l">
+        <calcite-segmented-control-item id="tab-search" value="search" icon-start="search"></calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-subscribers" value="subscribers" icon-start="users"></calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-osp" value="osp" icon-start="link-chart"></calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-vehicles" value="vehicles" icon-start="car"></calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-other" value="other" icon-start="layers"></calcite-segmented-control-item>
       </calcite-segmented-control>
     </calcite-shell>
 
-    <!-- Mobile Bottom Sheets for each category -->
-    <calcite-sheet id="mobile-subscribers-sheet" class="mobile-only">
-      <calcite-panel heading="Subscriber Data">
-        <calcite-action slot="header-actions-end" icon="information" text="Info"></calcite-action>
-        
-        <calcite-block heading="Subscriber Status" collapsible expanded>
-          <calcite-icon slot="icon" icon="users"></calcite-icon>
-          <calcite-list>
-            <calcite-list-item>
-              <calcite-icon slot="content-start" icon="circle" style="color: var(--calcite-color-status-success);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox checked></calcite-checkbox>
-                Online Subscribers
-              </calcite-label>
-              <calcite-action slot="actions-end" icon="layer" text="Show Layer"></calcite-action>
-            </calcite-list-item>
-            <calcite-list-item>
-              <calcite-icon slot="content-start" icon="circle" style="color: var(--calcite-color-status-danger);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox checked></calcite-checkbox>
-                Offline Subscribers
-              </calcite-label>
-              <calcite-action slot="actions-end" icon="layer" text="Show Layer"></calcite-action>
-            </calcite-list-item>
-          </calcite-list>
-        </calcite-block>
-
-        <calcite-block heading="Customer Search" collapsible>
-          <calcite-icon slot="icon" icon="search"></calcite-icon>
-          <calcite-input placeholder="Search addresses, customers..." type="search" scale="m">
-            <calcite-button slot="action" icon-start="search" appearance="transparent" scale="m" aria-label="Search"></calcite-button>
+    <!-- Mobile Bottom Modals -->
+    
+    <!-- Search Modal -->
+    <calcite-modal 
+      id="mobile-search-sheet" 
+      class="mobile-only"
+      width-scale="l"
+      scale="l"
+      fullscreen>
+      <div slot="header">Search</div>
+      <div slot="content">
+        <calcite-block heading="Quick Search" open>
+          <calcite-input 
+            id="mobile-search-input"
+            type="search" 
+            placeholder="Search addresses, customers, accounts..." 
+            icon="search"
+            scale="l"
+            clearable>
           </calcite-input>
         </calcite-block>
 
-        <calcite-block heading="Export" collapsible>
-          <calcite-icon slot="icon" icon="download"></calcite-icon>
-          <calcite-button width="full" icon-start="download" scale="s" appearance="outline">Export Offline Subscribers CSV</calcite-button>
+        <calcite-block heading="Recent Searches" open>
+          <calcite-list selection-mode="none">
+            <calcite-list-item 
+              label="123 Main Street" 
+              description="John Doe - Account #1234">
+              <calcite-icon slot="content-start" icon="clock"></calcite-icon>
+              <calcite-action slot="actions-end" icon="arrow-right"></calcite-action>
+            </calcite-list-item>
+            <calcite-list-item 
+              label="456 Oak Avenue" 
+              description="Jane Smith - Account #5678">
+              <calcite-icon slot="content-start" icon="clock"></calcite-icon>
+              <calcite-action slot="actions-end" icon="arrow-right"></calcite-action>
+            </calcite-list-item>
+          </calcite-list>
         </calcite-block>
-      </calcite-panel>
-    </calcite-sheet>
 
-    <calcite-sheet id="mobile-osp-sheet" class="mobile-only">
-      <calcite-panel heading="OSP Infrastructure">
-        <calcite-action slot="header-actions-end" icon="gear" text="Settings"></calcite-action>
-        
-        <calcite-block heading="Fiber Plant" collapsible expanded>
-          <calcite-icon slot="icon" icon="link-chart"></calcite-icon>
-          <calcite-list>
-            <calcite-list-item>
+        <calcite-block heading="Search Options" open>
+          <calcite-button width="full" icon-start="person" appearance="outline">Search by Customer Name</calcite-button>
+          <calcite-button width="full" icon-start="number" appearance="outline">Search by Account Number</calcite-button>
+          <calcite-button width="full" icon-start="map-pin" appearance="outline">Search by Address</calcite-button>
+        </calcite-block>
+      </div>
+      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x" class="close-modal-btn">Close</calcite-button>
+    </calcite-modal>
+
+    <calcite-modal 
+      id="mobile-subscribers-sheet" 
+      class="mobile-only"
+      width-scale="l"
+      scale="l"
+      fullscreen>
+      <div slot="header">Subscribers</div>
+      <div slot="content">
+        <calcite-list selection-mode="none">
+          <calcite-list-item 
+            label="Online Subscribers" 
+            description="Show active subscribers"
+            class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="circle" style="color: var(--calcite-color-status-success);"></calcite-icon>
+            <calcite-switch slot="content-end" checked></calcite-switch>
+          </calcite-list-item>
+          
+          <calcite-list-item 
+            label="Offline Subscribers" 
+            description="Show disconnected subscribers"
+            class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="circle" style="color: var(--calcite-color-status-danger);"></calcite-icon>
+            <calcite-switch slot="content-end" checked></calcite-switch>
+          </calcite-list-item>
+        </calcite-list>
+
+        <calcite-block heading="Tools" open>
+          <calcite-button width="full" icon-start="search" appearance="outline">Search Customers</calcite-button>
+          <calcite-button width="full" icon-start="download" appearance="outline">Export Offline CSV</calcite-button>
+        </calcite-block>
+      </div>
+      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x" class="close-modal-btn">Close</calcite-button>
+    </calcite-modal>
+
+    <calcite-modal 
+      id="mobile-osp-sheet" 
+      class="mobile-only"
+      width-scale="l"
+      scale="l"
+      fullscreen>
+      <div slot="header">OSP Infrastructure</div>
+      <div slot="content">
+        <calcite-block heading="Fiber Plant" open>
+          <calcite-list selection-mode="none">
+            <calcite-list-item label="FSA Boundaries" description="Service area boundaries" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="polygon" style="color: var(--calcite-color-brand);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                FSA Boundaries
-              </calcite-label>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
-            <calcite-list-item>
+            
+            <calcite-list-item label="Main Line Fiber" description="Primary fiber routes" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="line" style="color: var(--calcite-color-info);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Main Line Fiber
-              </calcite-label>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
-            <calcite-list-item>
+            
+            <calcite-list-item label="MST Terminals" description="Multi-service terminals" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="circle" style="color: var(--calcite-color-warning);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                MST Terminals
-              </calcite-label>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
-            <calcite-list-item>
+            
+            <calcite-list-item label="Splitters" description="Optical splitters" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="ellipsis" style="color: var(--calcite-color-success);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Splitters
-              </calcite-label>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
-            <calcite-list-item>
+            
+            <calcite-list-item label="Drop Fiber" description="Customer drop lines" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="line" style="color: var(--calcite-color-danger);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Drop Fiber
-              </calcite-label>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Outages" collapsible>
-          <calcite-icon slot="icon" icon="exclamation-mark-triangle"></calcite-icon>
-          <calcite-list>
-            <calcite-list-item>
+        <calcite-block heading="Outages" open>
+          <calcite-list selection-mode="none">
+            <calcite-list-item label="Fiber Network Outages" description="Current fiber outages" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="warning" style="color: var(--calcite-color-status-danger);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Fiber Network Outages
-              </calcite-label>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
-            <calcite-list-item>
+            
+            <calcite-list-item label="APCo Power Outages" description="Alabama Power outages" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="flash" style="color: var(--calcite-color-status-warning);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                APCo Power Outages
-              </calcite-label>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
-            <calcite-list-item>
+            
+            <calcite-list-item label="Tombigbee Power Outages" description="Tombigbee EPA outages" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="flash" style="color: var(--calcite-color-status-warning);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Tombigbee Power Outages
-              </calcite-label>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Tools" collapsible>
-          <calcite-icon slot="icon" icon="apps"></calcite-icon>
-          <calcite-button width="full" icon-start="polygon" scale="s" appearance="solid">Draw Outage Area</calcite-button>
+        <calcite-block heading="Tools" open>
+          <calcite-button width="full" icon-start="polygon" appearance="outline">Draw Outage Area</calcite-button>
         </calcite-block>
-      </calcite-panel>
-    </calcite-sheet>
+      </div>
+      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x" class="close-modal-btn">Close</calcite-button>
+    </calcite-modal>
 
-    <calcite-sheet id="mobile-vehicles-sheet" class="mobile-only">
-      <calcite-panel heading="Vehicle Tracking">
-        <calcite-action slot="header-actions-end" icon="refresh" text="Refresh"></calcite-action>
-        
-        <calcite-block heading="Fleet Tracking" collapsible expanded>
-          <calcite-icon slot="icon" icon="car"></calcite-icon>
-          <calcite-list>
-            <calcite-list-item>
-              <calcite-icon slot="content-start" icon="flash" style="color: var(--calcite-color-info);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Electric Vehicles
-              </calcite-label>
-              <calcite-action slot="actions-end" icon="information" text="Vehicle Info"></calcite-action>
-            </calcite-list-item>
-            <calcite-list-item>
-              <calcite-icon slot="content-start" icon="car" style="color: var(--calcite-color-success);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Fiber Vehicles
-              </calcite-label>
-              <calcite-action slot="actions-end" icon="information" text="Vehicle Info"></calcite-action>
-            </calcite-list-item>
-          </calcite-list>
+    <calcite-modal 
+      id="mobile-vehicles-sheet" 
+      class="mobile-only"
+      width-scale="l"
+      scale="l"
+      fullscreen>
+      <div slot="header">Vehicle Tracking</div>
+      <div slot="content">
+        <calcite-list selection-mode="none">
+          <calcite-list-item label="Electric Vehicles" description="Track electric fleet" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="flash" style="color: var(--calcite-color-info);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
+          
+          <calcite-list-item label="Fiber Vehicles" description="Track fiber fleet" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="car" style="color: var(--calcite-color-success);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
+        </calcite-list>
+
+        <calcite-block heading="Tools" open>
+          <calcite-button width="full" icon-start="refresh" appearance="outline">Refresh Vehicle Locations</calcite-button>
+          <calcite-button width="full" icon-start="information" appearance="outline">Vehicle Details</calcite-button>
         </calcite-block>
-      </calcite-panel>
-    </calcite-sheet>
+      </div>
+      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x" class="close-modal-btn">Close</calcite-button>
+    </calcite-modal>
 
-    <calcite-sheet id="mobile-other-sheet" class="mobile-only">
-      <calcite-panel heading="Other Layers">
-        <calcite-action slot="header-actions-end" icon="layer" text="Layer Manager"></calcite-action>
-        
-        <calcite-block heading="Environmental" collapsible expanded>
-          <calcite-icon slot="icon" icon="layer"></calcite-icon>
-          <calcite-list>
-            <calcite-list-item>
+    <calcite-modal 
+      id="mobile-other-sheet" 
+      class="mobile-only"
+      width-scale="l"
+      scale="l"
+      fullscreen>
+      <div slot="header">Other Layers</div>
+      <div slot="content">
+        <calcite-block heading="Environmental" open>
+          <calcite-list selection-mode="none">
+            <calcite-list-item label="Weather Radar" description="Live weather overlay" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="layer" style="color: var(--calcite-color-info);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Weather Radar
-              </calcite-label>
-              <calcite-action slot="actions-end" icon="layer" text="Layer Options"></calcite-action>
+              <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Base Maps" collapsible>
-          <calcite-icon slot="icon" icon="basemap"></calcite-icon>
-          <calcite-list selection-mode="single">
-            <calcite-list-item selected>
-              <calcite-icon slot="content-start" icon="map" style="color: var(--calcite-color-brand);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox checked></calcite-checkbox>
-                Streets
-              </calcite-label>
-            </calcite-list-item>
-            <calcite-list-item>
-              <calcite-icon slot="content-start" icon="satellite" style="color: var(--calcite-color-warning);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Satellite
-              </calcite-label>
-            </calcite-list-item>
-            <calcite-list-item>
-              <calcite-icon slot="content-start" icon="altitude" style="color: var(--calcite-color-success);"></calcite-icon>
-              <calcite-label layout="inline">
-                <calcite-checkbox></calcite-checkbox>
-                Topographic
-              </calcite-label>
-            </calcite-list-item>
-          </calcite-list>
+        <calcite-block heading="Base Maps" open>
+          <calcite-radio-button-group name="basemap-selection" layout="vertical">
+            <calcite-label layout="inline">
+              <calcite-radio-button value="streets" checked></calcite-radio-button>
+              Streets Navigation
+            </calcite-label>
+            <calcite-label layout="inline">
+              <calcite-radio-button value="satellite"></calcite-radio-button>
+              Satellite Imagery
+            </calcite-label>
+            <calcite-label layout="inline">
+              <calcite-radio-button value="topographic"></calcite-radio-button>
+              Topographic
+            </calcite-label>
+          </calcite-radio-button-group>
         </calcite-block>
-      </calcite-panel>
-    </calcite-sheet>
+
+        <calcite-block heading="Tools" open>
+          <calcite-button width="full" icon-start="layer" appearance="outline">Layer Manager</calcite-button>
+        </calcite-block>
+      </div>
+      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x" class="close-modal-btn">Close</calcite-button>
+    </calcite-modal>
   </div>
 
   <script type="module" src="/src/main.js"></script>

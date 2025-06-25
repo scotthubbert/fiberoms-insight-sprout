@@ -37,6 +37,9 @@ import '@esri/calcite-components/dist/components/calcite-segmented-control';
 import '@esri/calcite-components/dist/components/calcite-segmented-control-item';
 import '@esri/calcite-components/dist/components/calcite-list';
 import '@esri/calcite-components/dist/components/calcite-list-item';
+import '@esri/calcite-components/dist/components/calcite-switch';
+import '@esri/calcite-components/dist/components/calcite-modal';
+import '@esri/calcite-components/dist/components/calcite-chip';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path to NPM bundled assets
@@ -421,6 +424,7 @@ class MobileTabBar {
     this.segmentedControl = document.getElementById('mobile-tab-bar');
 
     this.sheets = {
+      search: document.getElementById('mobile-search-sheet'),
       subscribers: document.getElementById('mobile-subscribers-sheet'),
       osp: document.getElementById('mobile-osp-sheet'),
       vehicles: document.getElementById('mobile-vehicles-sheet'),
@@ -428,60 +432,121 @@ class MobileTabBar {
     };
 
     this.currentSheet = null;
+    this.initialized = false;
 
-    this.init();
+    // Delay initialization to ensure DOM is ready
+    setTimeout(() => this.init(), 100);
   }
 
   async init() {
     // Wait for calcite components to be defined
     await customElements.whenDefined('calcite-segmented-control');
     await customElements.whenDefined('calcite-segmented-control-item');
-    await customElements.whenDefined('calcite-sheet');
+    await customElements.whenDefined('calcite-modal');
 
-    // Use standard change event on segmented control
+    // Initialize modals as closed
+    Object.values(this.sheets).forEach(modal => {
+      if (modal) {
+        modal.open = false;
+      }
+    });
+
+    // Setup segmented control change event
     if (this.segmentedControl) {
-      this.segmentedControl.addEventListener('change', (event) => {
-        // Get the value from the selected item
-        const selectedValue = event.target.value || event.target.selectedItem?.value;
-        if (selectedValue) {
-          this.handleTabChange(selectedValue);
-        }
+      // Listen for the calciteSegmentedControlChange event
+      this.segmentedControl.addEventListener('calciteSegmentedControlChange', (event) => {
+        const selectedValue = event.target.value;
+        console.log('Tab selected:', selectedValue);
+        this.handleTabChange(selectedValue);
+      });
+      
+      // Also add click handlers to individual items as fallback
+      const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
+      items.forEach(item => {
+        item.addEventListener('click', () => {
+          const value = item.getAttribute('value');
+          console.log('Item clicked:', value);
+          // If this tab is already selected and modal is closed, reopen it
+          if (item.checked && (!this.currentSheet || !this.currentSheet.open)) {
+            this.handleTabChange(value);
+          }
+        });
       });
     }
 
-    // Setup CalciteUI sheet close events
-    Object.values(this.sheets).forEach(sheet => {
-      if (sheet) {
-        sheet.addEventListener('calciteSheetClose', () => this.closeCurrentSheet());
+    // Setup modal close events
+    Object.values(this.sheets).forEach(modal => {
+      if (modal) {
+        modal.addEventListener('calciteModalClose', () => {
+          this.currentSheet = null;
+          // Don't reset tab selection here - let user interaction control it
+        });
       }
     });
+
+    // Setup close button click handlers
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.closeAllSheets();
+        // Don't reset tab selection - keep it selected
+      });
+    });
+
+    // Setup layer toggle list items - click anywhere to toggle switch
+    document.querySelectorAll('.layer-toggle-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        // Don't toggle if clicking directly on the switch
+        if (e.target.tagName !== 'CALCITE-SWITCH') {
+          const switchElement = item.querySelector('calcite-switch');
+          if (switchElement) {
+            switchElement.checked = !switchElement.checked;
+          }
+        }
+      });
+    });
+
+    this.initialized = true;
   }
 
   handleTabChange(tabValue) {
-    // Close current sheet if open
-    this.closeCurrentSheet();
+    console.log('Tab changed to:', tabValue);
+    
+    // Close all modals first
+    this.closeAllSheets();
 
-    // Open corresponding sheet (except for map tab)
-    if (tabValue !== 'map' && this.sheets[tabValue]) {
+    // Open the selected modal (even if it's the same one that was just open)
+    if (this.sheets[tabValue]) {
       this.currentSheet = this.sheets[tabValue];
-      this.currentSheet.expanded = true;
+      // Use CalciteUI's native open property
+      this.currentSheet.open = true;
+      
+      // Focus search input when opening search modal
+      if (tabValue === 'search') {
+        setTimeout(() => {
+          const searchInput = document.getElementById('mobile-search-input');
+          if (searchInput) {
+            searchInput.setFocus();
+          }
+        }, 100);
+      }
     }
   }
 
-  closeCurrentSheet() {
-    if (this.currentSheet) {
-      this.currentSheet.expanded = false;
-      this.currentSheet = null;
-    }
-
-    // Reset to map tab using CalciteUI's native method
-    if (this.segmentedControl) {
-      const mapItem = this.segmentedControl.querySelector('calcite-segmented-control-item[value="map"]');
-      if (mapItem) {
-        mapItem.checked = true;
-        // Also update the segmented control's value
-        this.segmentedControl.value = 'map';
+  closeAllSheets() {
+    Object.values(this.sheets).forEach(modal => {
+      if (modal) {
+        modal.open = false;
       }
+    });
+    this.currentSheet = null;
+  }
+
+  resetToMapTab() {
+    // Clear selection when closing modals
+    if (this.segmentedControl) {
+      // Uncheck all items
+      const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
+      items.forEach(item => item.checked = false);
     }
   }
 }

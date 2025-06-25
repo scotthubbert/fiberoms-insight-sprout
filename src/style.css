@@ -70,13 +70,55 @@ calcite-navigation [slot="content-end"] {
   right: 0;
   width: 100%;
   margin: 0;
-  z-index: var(--calcite-z-index-modal);
+  z-index: 100;
+  background: var(--calcite-color-foreground-1);
+  border-top: 1px solid var(--calcite-color-border-2);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  --calcite-segmented-control-height: 64px;
+}
+
+/* Style the segmented control items for mobile */
+#mobile-tab-bar calcite-segmented-control-item {
+  --calcite-segmented-control-item-spacing-internal: var(--calcite-spacing-sm);
+  height: 64px;
+}
+
+#mobile-tab-bar calcite-icon {
+  margin-bottom: 0;
+}
+
+/* Mobile modals - use CalciteUI defaults */
+calcite-modal.mobile-only calcite-button + calcite-button {
+  margin-top: var(--calcite-spacing-sm);
+}
+
+/* Close button styling */
+.close-modal-btn {
+  margin-top: var(--calcite-spacing-md);
+}
+
+/* Layer toggle list items - tap anywhere to toggle */
+.layer-toggle-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.layer-toggle-item:hover {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+/* Touch feedback for mobile */
+@media (max-width: 768px) {
+  .layer-toggle-item:active {
+    background-color: var(--calcite-color-foreground-3);
+  }
 }
 
 /* Mobile-specific adjustments */
 @media (max-width: 768px) {
   .map-container {
-    margin-bottom: var(--calcite-spacing-xl);
+    height: calc(100% - 64px); /* Account for taller bottom nav height */
+    margin-bottom: 0;
   }
 
   .mobile-only {
@@ -85,6 +127,11 @@ calcite-navigation [slot="content-end"] {
 
   .desktop-only {
     display: none !important;
+  }
+  
+  /* Adjust map to account for bottom navigation */
+  arcgis-map {
+    height: 100%;
   }
 }
 
