@@ -125,6 +125,28 @@ VITE_GEOTAB_DATABASE=mygeotab_db
 - **Primary Guide**: https://www.esri.com/arcgis-blog/products/js-api-arcgis/developers/build-gis-web-apps-with-javascript-maps-sdk-components
 - **ArcGIS Docs**: https://developers.arcgis.com/javascript/latest/
 - **Calcite Components**: https://developers.arcgis.com/calcite-design-system/components/
+- **CalciteUI Icons**: https://developers.arcgis.com/calcite-design-system/icons/
+
+## Development Best Practices
+
+### CalciteUI Component Verification
+Before using any CalciteUI component or icon:
+
+1. **Component Verification**: Check official documentation for component existence and correct properties
+2. **Icon Verification**: Use CalciteUI icon browser to verify icon names exist
+3. **Event Handling**: Test with standard DOM events first, then check for component-specific events
+4. **Property Updates**: Check for deprecated properties in console warnings
+
+### Safe CalciteUI Icons (Guaranteed to Work)
+Use these core icons that are always available:
+- `circle`, `ellipsis`, `layer`, `users`, `map`, `car`, `apps`
+- `search`, `information`, `gear`, `refresh`, `download`
+- `polygon`, `line`, `warning`, `flash`
+
+### Console Error Patterns to Watch For
+- `calcite [property] is deprecated` → Update to new property name
+- `calcite [icon-name] icon failed to load` → Use verified icon name
+- `Failed to resolve import` → Verify component exists in CalciteUI
 
 ## Development Philosophy
 
@@ -135,11 +157,18 @@ Always leverage native CalciteUI and ArcGIS components over custom implementatio
 ✅ **DO**: Use CalciteUI CSS variables and properties  
 ✅ **DO**: Rely on built-in component behaviors (theming, accessibility, responsive design)
 ✅ **DO**: Follow CalciteUI patterns and conventions
+✅ **DO**: Use `calcite-list` and `calcite-list-item` for structured data
+✅ **DO**: Use standard DOM events (click, change) - not all components have custom events
+✅ **DO**: Use `expanded` property instead of deprecated `open`
+✅ **DO**: Verify icon names exist in CalciteUI icon library before using
 
 ❌ **AVOID**: Custom CSS flexbox/grid layouts when CalciteUI components exist
 ❌ **AVOID**: Manual button distribution, spacing, or theming
 ❌ **AVOID**: Reinventing functionality that CalciteUI provides natively
 ❌ **AVOID**: Fighting against component defaults with complex overrides
+❌ **AVOID**: Assuming CalciteUI components exist without verification (e.g., `calcite-input-group`)
+❌ **AVOID**: Using deprecated properties (`open` → use `expanded`)
+❌ **AVOID**: Guessing icon names - verify they exist in the CalciteUI icon library
 
 **Why**: CalciteUI components are purpose-built, tested, accessible, themeable, and maintainable. Custom implementations create technical debt and compatibility issues.
 
