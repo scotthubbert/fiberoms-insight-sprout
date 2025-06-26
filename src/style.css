@@ -54,9 +54,151 @@ arcgis-map {
   height: 100%;
 }
 
-/* Navigation spacing using Calcite variables */
+/* Navigation styling - more compact */
+calcite-navigation {
+  --calcite-navigation-height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+calcite-navigation calcite-navigation-logo {
+  --calcite-navigation-logo-padding: var(--calcite-spacing-xs)
+    var(--calcite-spacing-sm);
+  line-height: 1.2;
+}
+
+calcite-navigation [slot="content-center"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  padding: 0 var(--calcite-spacing-md);
+}
+
 calcite-navigation [slot="content-end"] {
   padding-right: var(--calcite-spacing-md);
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+calcite-navigation calcite-button {
+  --calcite-button-padding-x: var(--calcite-spacing-sm);
+  --calcite-button-padding-y: var(--calcite-spacing-xs);
+}
+
+/* Header search styling */
+.navigation-search-container {
+  max-width: 400px;
+  width: 100%;
+}
+
+.search-input-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.header-search-input {
+  --calcite-input-border-color: var(--calcite-color-border-2);
+  --calcite-input-background-color: var(--calcite-color-foreground-2);
+  width: 100%;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.search-clear-button {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  --calcite-button-padding-x: var(--calcite-spacing-xs);
+  --calcite-button-padding-y: var(--calcite-spacing-xs);
+}
+
+.header-search-input:focus-within {
+  --calcite-input-border-color: var(--calcite-color-brand);
+  outline: none;
+}
+
+.header-search-input[loading] {
+  opacity: 0.7;
+}
+
+/* Dark theme search input adjustments */
+[data-theme="dark"] .header-search-input {
+  --calcite-input-background-color: var(--calcite-color-foreground-3);
+  --calcite-input-border-color: var(--calcite-color-border-1);
+}
+
+/* Search results dropdown styling */
+.search-results-dropdown {
+  --calcite-popover-z-index: 1000;
+  min-width: 300px;
+  max-width: 400px;
+  border: 1px solid var(--calcite-color-border-2);
+  box-shadow: var(--calcite-shadow-2);
+  outline: none;
+  /* Remove any unwanted focus outlines that might cause blue boxes */
+}
+
+.search-results-dropdown:focus,
+.search-results-dropdown:focus-within {
+  outline: none;
+  border-color: var(--calcite-color-border-2);
+}
+
+.search-results-dropdown calcite-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.search-results-dropdown calcite-list-item {
+  --calcite-list-item-padding: var(--calcite-spacing-sm);
+  cursor: pointer;
+  border-bottom: 1px solid var(--calcite-color-border-3);
+}
+
+.search-results-dropdown calcite-list-item:hover {
+  --calcite-list-item-background-color: var(--calcite-color-foreground-2);
+}
+
+.search-results-dropdown calcite-list-item:last-child {
+  border-bottom: none;
+}
+
+/* Status indicator for search results */
+.search-result-status {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: var(--calcite-spacing-sm);
+}
+
+.search-result-status.offline {
+  background-color: var(--calcite-color-status-danger);
+}
+
+.search-result-status.online {
+  background-color: var(--calcite-color-status-success);
+}
+
+/* Mobile dropdown adjustments */
+@media (max-width: 768px) {
+  .search-results-dropdown {
+    min-width: 250px;
+    max-width: 90vw;
+  }
+
+  .search-results-dropdown calcite-list-item {
+    font-size: 13px;
+  }
 }
 
 /* Mobile-first responsive design */
@@ -123,6 +265,62 @@ calcite-modal.mobile-only calcite-button + calcite-button {
 
 /* Mobile-specific adjustments */
 @media (max-width: 768px) {
+  /* More compact navigation on mobile */
+  calcite-navigation {
+    --calcite-navigation-height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+  }
+
+  calcite-navigation calcite-navigation-logo {
+    --calcite-navigation-logo-padding: var(--calcite-spacing-xs);
+    font-size: 14px;
+  }
+
+  calcite-navigation calcite-button {
+    --calcite-button-scale: s;
+    --calcite-button-padding-x: var(--calcite-spacing-xs);
+    --calcite-button-padding-y: var(--calcite-spacing-xs);
+  }
+
+  calcite-navigation [slot="content-center"] {
+    padding: 0 var(--calcite-spacing-sm);
+    max-width: 250px;
+  }
+
+  .navigation-search-container {
+    max-width: 200px;
+  }
+
+  .search-input-wrapper {
+    max-width: 100%;
+  }
+
+  .header-search-input {
+    --calcite-input-scale: s;
+    font-size: 14px;
+  }
+
+  .search-clear-button {
+    --calcite-button-scale: xs;
+    right: 2px;
+  }
+
+  /* Very small screens - make search even more compact */
+  @media (max-width: 480px) {
+    .navigation-search-container {
+      max-width: 160px;
+    }
+
+    .header-search-input::placeholder {
+      font-size: 12px;
+    }
+  }
+
+  calcite-navigation [slot="content-end"] {
+    padding-right: var(--calcite-spacing-sm);
+  }
+
   .map-container {
     height: calc(100% - 64px); /* Account for taller bottom nav height */
     margin-bottom: 0;
@@ -146,6 +344,15 @@ calcite-modal.mobile-only calcite-button + calcite-button {
 @media (min-width: 769px) {
   calcite-navigation [slot="content-end"] {
     padding-right: var(--calcite-spacing-lg);
+  }
+
+  calcite-navigation calcite-navigation-logo {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  calcite-navigation calcite-button {
+    --calcite-button-scale: m;
   }
 
   .desktop-only {
@@ -292,12 +499,12 @@ calcite-modal.mobile-only calcite-button + calcite-button {
 
 /* Dashboard Bar Styles */
 .dashboard-bar {
-  height: 48px;
-  min-height: 48px;
-  max-height: 48px;
+  height: 68px;
+  min-height: 68px;
+  max-height: 68px;
   z-index: 10;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .dashboard-panel {
@@ -307,7 +514,10 @@ calcite-modal.mobile-only calcite-button + calcite-button {
   box-shadow: none;
   background: var(--calcite-color-foreground-1);
   border-bottom: 1px solid var(--calcite-color-border-2);
-  padding: var(--calcite-spacing-sm) var(--calcite-spacing-md);
+  padding: var(--calcite-spacing-md) var(--calcite-spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .dashboard-metrics {
@@ -316,20 +526,21 @@ calcite-modal.mobile-only calcite-button + calcite-button {
   gap: var(--calcite-spacing-sm);
   flex: 1;
   height: 100%;
-  padding-left: var(--calcite-spacing-sm);
+  padding: var(--calcite-spacing-xs) var(--calcite-spacing-sm);
 }
 
 .metric-item {
   display: flex;
   align-items: center;
   gap: var(--calcite-spacing-xs);
-  padding: var(--calcite-spacing-xs) var(--calcite-spacing-sm);
+  padding: var(--calcite-spacing-sm) var(--calcite-spacing-md);
   border-radius: var(--calcite-border-radius);
   transition: all 0.2s ease;
   min-width: 80px;
   justify-content: center;
   cursor: pointer;
-  height: 32px;
+  height: 40px;
+  margin: var(--calcite-spacing-xs) 0;
 }
 
 .metric-item:hover {
@@ -339,14 +550,14 @@ calcite-modal.mobile-only calcite-button + calcite-button {
 
 .metric-count {
   font-weight: 700;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--calcite-color-text-1);
   min-width: 24px;
   text-align: center;
 }
 
 .metric-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--calcite-color-text-2);
   font-weight: 500;
   text-transform: uppercase;
@@ -395,36 +606,38 @@ calcite-modal.mobile-only calcite-button + calcite-button {
 /* Responsive dashboard */
 @media (max-width: 768px) {
   .dashboard-bar {
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
+    height: 58px;
+    min-height: 58px;
+    max-height: 58px;
+    overflow: visible;
   }
 
   .dashboard-panel {
-    padding: var(--calcite-spacing-xs) var(--calcite-spacing-sm);
+    padding: var(--calcite-spacing-sm) var(--calcite-spacing-sm);
+    min-height: 58px;
   }
 
   .dashboard-metrics {
     gap: var(--calcite-spacing-xs);
     overflow-x: auto;
-    padding-bottom: 2px;
-    padding-left: var(--calcite-spacing-xs);
+    padding: var(--calcite-spacing-xs);
   }
 
   .metric-item {
     min-width: 70px;
-    padding: var(--calcite-spacing-xs);
+    padding: var(--calcite-spacing-xs) var(--calcite-spacing-sm);
     flex-shrink: 0;
-    height: 28px;
+    height: 36px;
+    margin: var(--calcite-spacing-xxs) 0;
   }
 
   .metric-count {
-    font-size: 14px;
+    font-size: 16px;
     min-width: 20px;
   }
 
   .metric-label {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .dashboard-actions {

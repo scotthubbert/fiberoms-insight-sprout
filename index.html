@@ -28,6 +28,21 @@
       <!-- Header Navigation -->
       <calcite-navigation slot="header">
         <calcite-navigation-logo slot="logo" heading="FiberOMS Insight" thumbnail=""></calcite-navigation-logo>
+        <div slot="content-center" class="navigation-search-container">
+          <div class="search-input-wrapper">
+            <calcite-input-text id="header-search" icon-start="search" scale="s" class="header-search-input">
+            </calcite-input-text>
+            <calcite-button id="search-clear-btn" icon-start="x" appearance="transparent" scale="s"
+              class="search-clear-button" style="display: none;" aria-label="Clear search">
+            </calcite-button>
+          </div>
+          <calcite-popover id="search-results-popover" reference-element="header-search" placement="bottom-start"
+            class="search-results-dropdown">
+            <calcite-list id="search-results-list" selection-mode="none">
+              <!-- Search results will be populated here -->
+            </calcite-list>
+          </calcite-popover>
+        </div>
         <div slot="content-end">
           <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="m"
             aria-label="Toggle theme"></calcite-button>
@@ -42,30 +57,6 @@
               <calcite-icon slot="icon" icon="circle" scale="s"></calcite-icon>
               <span class="metric-count" id="offline-count">--</span>
               <span class="metric-label">Offline</span>
-            </calcite-chip>
-
-            <calcite-chip class="metric-item power-metric" value="power" appearance="solid" scale="s">
-              <calcite-icon slot="icon" icon="flash" scale="s"></calcite-icon>
-              <span class="metric-count" id="power-outages">--</span>
-              <span class="metric-label">Power</span>
-            </calcite-chip>
-
-            <calcite-chip class="metric-item fiber-metric" value="fiber" appearance="solid" scale="s">
-              <calcite-icon slot="icon" icon="warning" scale="s"></calcite-icon>
-              <span class="metric-count" id="fiber-outages">--</span>
-              <span class="metric-label">Fiber</span>
-            </calcite-chip>
-
-            <calcite-chip class="metric-item vehicle-metric" value="vehicles" appearance="solid" scale="s">
-              <calcite-icon slot="icon" icon="car" scale="s"></calcite-icon>
-              <span class="metric-count" id="active-vehicles">--</span>
-              <span class="metric-label">Vehicles</span>
-            </calcite-chip>
-
-            <calcite-chip class="metric-item weather-metric" id="weather-alert" value="weather" appearance="solid"
-              scale="s" style="display: none;">
-              <calcite-icon slot="icon" icon="weather" scale="s"></calcite-icon>
-              <span class="metric-label" id="weather-text">Weather Alert</span>
             </calcite-chip>
           </div>
 

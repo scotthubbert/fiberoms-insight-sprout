@@ -38,6 +38,7 @@ import '@esri/calcite-components/dist/components/calcite-block';
 import '@esri/calcite-components/dist/components/calcite-label';
 import '@esri/calcite-components/dist/components/calcite-checkbox';
 import '@esri/calcite-components/dist/components/calcite-input';
+import '@esri/calcite-components/dist/components/calcite-input-text';
 import '@esri/calcite-components/dist/components/calcite-navigation';
 import '@esri/calcite-components/dist/components/calcite-navigation-logo';
 import '@esri/calcite-components/dist/components/calcite-sheet';
@@ -50,6 +51,7 @@ import '@esri/calcite-components/dist/components/calcite-list-item';
 import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-modal';
 import '@esri/calcite-components/dist/components/calcite-chip';
+import '@esri/calcite-components/dist/components/calcite-popover';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path to NPM bundled assets
@@ -2238,6 +2240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const mapApp = new MapApp();
   const mobileTabBar = new MobileTabBar();
   const dashboardManager = new DashboardManager();
+  const headerSearch = new HeaderSearch();
   new PWAInstaller();
 
   // Make components available globally for debugging and theme management
@@ -2245,6 +2248,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.mapApp = mapApp;
   window.mobileTabBar = mobileTabBar;
   window.dashboardManager = dashboardManager;
+  window.headerSearch = headerSearch;
   window.subscriberDataService = subscriberDataService;
 
   // Add debugging helpers
@@ -2274,16 +2278,492 @@ document.addEventListener('DOMContentLoaded', () => {
   // Service worker is auto-registered by Vite PWA plugin
 });
 
+// Header Search Class
+class HeaderSearch {
+  constructor() {
+    this.searchInput = null;
+    this.searchResults = [];
+    this.debounceTimer = null;
+    this.resultsPopover = null;
+    this.resultsList = null;
+    this.init();
+  }
+
+  async init() {
+    console.log('🔍 Initializing Header Search...');
+
+    // Wait for calcite components to be defined
+    await customElements.whenDefined('calcite-input-text');
+    await customElements.whenDefined('calcite-popover');
+    await customElements.whenDefined('calcite-list');
+
+    this.searchInput = document.getElementById('header-search');
+    this.resultsPopover = document.getElementById('search-results-popover');
+    this.resultsList = document.getElementById('search-results-list');
+    this.clearButton = document.getElementById('search-clear-btn');
+
+
+
+    if (this.searchInput && this.resultsPopover && this.resultsList && this.clearButton) {
+      this.setupEventListeners();
+      this.updatePlaceholderForScreenSize();
+
+      // Listen for window resize to update placeholder
+      window.addEventListener('resize', () => {
+        this.updatePlaceholderForScreenSize();
+      });
+
+      // Setup dropdown event listeners
+      this.setupDropdownEventListeners();
+
+      // Setup clear button
+      this.setupClearButton();
+    }
+  }
+
+  setupEventListeners() {
+    // Search input event
+    this.searchInput.addEventListener('calciteInputTextInput', (e) => {
+      this.handleSearchInput(e.target.value);
+    });
+
+    // Add custom clear functionality (since we removed clearable attribute)
+    this.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.searchInput.value = '';
+        this.clearSearch();
+        this.searchInput.blur();
+      }
+    });
+
+    // Enter key to search, Escape to close dropdown
+    this.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.performSearch(this.searchInput.value);
+      } else if (e.key === 'Escape') {
+        this.hideDropdown();
+      }
+    });
+
+    // Keep dropdown open when focusing back
+    this.searchInput.addEventListener('focus', () => {
+      if (this.searchResults.length > 0 && this.searchInput.value.length >= 4) {
+        this.showDropdown();
+      }
+    });
+  }
+
+  updatePlaceholderForScreenSize() {
+    if (!this.searchInput) return;
+
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+
+    if (isSmallMobile) {
+      this.searchInput.setAttribute('placeholder', 'Search (min 4 chars)...');
+    } else if (isMobile) {
+      this.searchInput.setAttribute('placeholder', 'Search subscribers (min 4)...');
+    } else {
+      this.searchInput.setAttribute('placeholder', 'Search subscribers, accounts, addresses (min 4 chars)...');
+    }
+  }
+
+  setupDropdownEventListeners() {
+    // Listen for clicks on search result items
+    this.resultsList.addEventListener('click', (e) => {
+      const listItem = e.target.closest('calcite-list-item');
+      if (listItem) {
+        const resultIndex = parseInt(listItem.getAttribute('data-result-index'));
+        if (!isNaN(resultIndex) && this.searchResults[resultIndex]) {
+          this.selectSearchResult(this.searchResults[resultIndex]);
+        }
+      }
+    });
+
+    // Close dropdown when clicking outside (but not when typing)
+    document.addEventListener('click', (e) => {
+      // Only hide dropdown if clicking outside and user is not actively typing
+      if (!this.searchInput.contains(e.target) && !this.resultsPopover.contains(e.target) && !this.clearButton.contains(e.target)) {
+        // Add a small delay to ensure it's not interfering with input events
+        setTimeout(() => {
+          if (document.activeElement !== this.searchInput) {
+            this.hideDropdown();
+          }
+        }, 50);
+      }
+    });
+  }
+
+  setupClearButton() {
+    // Handle clear button click
+    this.clearButton.addEventListener('click', () => {
+      this.searchInput.value = '';
+      this.clearSearch();
+      this.updateClearButtonVisibility();
+      this.searchInput.focus();
+    });
+
+    // Show/hide clear button based on input content
+    this.searchInput.addEventListener('input', () => {
+      this.updateClearButtonVisibility();
+    });
+
+    // Initial visibility check
+    this.updateClearButtonVisibility();
+  }
+
+  updateClearButtonVisibility() {
+    if (this.searchInput.value.length > 0) {
+      this.clearButton.style.display = 'block';
+    } else {
+      this.clearButton.style.display = 'none';
+    }
+  }
+
+  handleSearchInput(searchTerm) {
+    // Clear previous debounce timer
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+
+    // Debounce search for 500ms to give users time to type
+    this.debounceTimer = setTimeout(() => {
+      if (searchTerm.length >= 4) {
+        this.performSearch(searchTerm);
+      } else if (searchTerm.length === 0) {
+        this.clearSearch();
+      } else if (searchTerm.length < 4 && searchTerm.length > 0) {
+        // Hide dropdown for searches less than 4 characters but don't clear
+        this.hideDropdown();
+      }
+    }, 500);
+  }
+
+  async performSearch(searchTerm) {
+    if (!searchTerm || searchTerm.length < 4) return;
+
+    console.log('🔍 Searching for:', searchTerm);
+
+    try {
+      // Show loading state
+      this.searchInput.setAttribute('loading', '');
+
+      // Search through different data sources
+      const results = await this.searchAllLayers(searchTerm);
+
+      // Process and display results
+      this.displaySearchResults(results, searchTerm);
+
+    } catch (error) {
+      console.error('❌ Search error:', error);
+    } finally {
+      // Remove loading state
+      this.searchInput.removeAttribute('loading');
+    }
+  }
+
+  async searchAllLayers(searchTerm) {
+    const results = [];
+    const searchTermLower = searchTerm.trim().toLowerCase();
+
+    console.log(`🔍 Starting comprehensive search for: "${searchTerm}"`);
+    let totalSearched = 0;
+
+    // Check what layers are available
+    console.log('🔍 Available layers:');
+    console.log('  - Offline subscribers:', !!window.mapApp?.layers?.offlineSubscribers);
+    console.log('  - Online subscribers:', !!window.mapApp?.layers?.onlineSubscribers);
+    if (window.mapApp?.layers?.offlineSubscribers) {
+      console.log('  - Offline source length:', window.mapApp.layers.offlineSubscribers.source?.length);
+    }
+    if (window.mapApp?.layers?.onlineSubscribers) {
+      console.log('  - Online source length:', window.mapApp.layers.onlineSubscribers.source?.length);
+    }
+
+    // Search offline subscribers
+    if (window.mapApp?.layers?.offlineSubscribers) {
+      const offlineResults = await this.searchSubscribers(searchTermLower, 'offline');
+      results.push(...offlineResults);
+      totalSearched += window.mapApp.layers.offlineSubscribers.source?.length || 0;
+    } else {
+      console.log('⚠️ Offline subscribers layer not available');
+    }
+
+    // Search online subscribers - ensure they're loaded for search even if layer is hidden
+    if (window.mapApp?.layers?.onlineSubscribers && window.mapApp.layers.onlineSubscribers.source?.length > 0) {
+      console.log('🔍 Online subscribers layer found, searching...');
+      const onlineResults = await this.searchSubscribers(searchTermLower, 'online');
+      results.push(...onlineResults);
+      totalSearched += window.mapApp.layers.onlineSubscribers.source?.length || 0;
+    } else {
+      console.log('⚠️ Online subscribers layer not loaded - attempting to load for search...');
+      // Load online subscribers data specifically for search
+      try {
+        await window.mapApp?.loadOnlineSubscribers();
+        if (window.mapApp?.layers?.onlineSubscribers) {
+          console.log('🔍 Online subscribers loaded, now searching...');
+          const onlineResults = await this.searchSubscribers(searchTermLower, 'online');
+          results.push(...onlineResults);
+          totalSearched += window.mapApp.layers.onlineSubscribers.source?.length || 0;
+        }
+      } catch (error) {
+        console.log('❌ Failed to load online subscribers for search:', error.message);
+      }
+    }
+
+    console.log(`🔍 Search Summary:`);
+    console.log(`  - Total subscribers searched: ${totalSearched}`);
+    console.log(`  - Total matches found: ${results.length}`);
+    console.log(`  - Returning top ${Math.min(results.length, 10)} results`);
+
+    // Log details of all found results
+    results.forEach((result, index) => {
+      console.log(`  Result ${index + 1}: ${result.title} (${result.type}) - Account: ${result.account}`);
+    });
+
+    return results.slice(0, 10); // Limit to 10 results
+  }
+
+  async searchSubscribers(searchTerm, type) {
+    const results = [];
+    const layer = window.mapApp.layers[`${type}Subscribers`];
+
+    console.log(`🔍 Searching ${type} subscribers...`);
+    console.log(`📊 Layer available:`, !!layer);
+    console.log(`📊 Layer source length:`, layer?.source?.length || 0);
+
+    if (!layer || !layer.source) {
+      console.log(`⚠️ No ${type} subscriber layer or source available`);
+      return results;
+    }
+
+    // Search through subscriber graphics
+    console.log(`🔍 Searching through ${layer.source.length} ${type} subscribers...`);
+
+    // Search in these fields (prioritized by importance)
+    const searchFields = [
+      'customer_name',     // Primary: Customer name
+      'account_number',    // Primary: Account number  
+      'address',          // Primary: Service address
+      'service_address',  // Secondary: Alternative address
+      'phone',           // Secondary: Phone number
+      'email'            // Secondary: Email address
+    ];
+
+    console.log(`🔍 Searching in fields: ${searchFields.join(', ')}`);
+
+    let checkedCount = 0;
+    layer.source.forEach((graphic, index) => {
+      checkedCount++;
+      const attributes = graphic.attributes;
+
+      let matchedField = null;
+      let matchedValue = null;
+
+      const found = searchFields.some(field => {
+        const value = attributes[field];
+        if (value) {
+          const valueStr = value.toString().toLowerCase();
+          if (valueStr.includes(searchTerm)) {
+            matchedField = field;
+            matchedValue = value;
+            return true;
+          }
+        }
+        return false;
+      });
+
+      if (found) {
+        console.log(`✅ Match #${results.length + 1} found in ${matchedField}: "${matchedValue}"`);
+
+        const result = {
+          type: `${type}_subscriber`,
+          graphic: graphic,
+          title: attributes.customer_name || `${type.charAt(0).toUpperCase() + type.slice(1)} Subscriber`,
+          subtitle: attributes.address || attributes.service_address || 'No address',
+          account: attributes.account_number || 'No account',
+          layer: layer,
+          matchedField: matchedField,
+          matchedValue: matchedValue
+        };
+
+        console.log('📍 Adding search result:', {
+          name: result.title,
+          account: result.account,
+          address: result.subtitle,
+          matchedIn: matchedField
+        });
+        results.push(result);
+      }
+    });
+
+    console.log(`🔍 Checked ${checkedCount} ${type} subscribers, found ${results.length} matches`);
+
+    console.log(`🔍 Found ${results.length} ${type} subscriber results`);
+    return results;
+  }
+
+  displaySearchResults(results, searchTerm) {
+    this.searchResults = results;
+
+    // Clear previous results
+    this.resultsList.innerHTML = '';
+
+    if (results.length === 0) {
+      console.log('🔍 No results found for:', searchTerm);
+
+      // Show "No results" message
+      const noResultsItem = document.createElement('calcite-list-item');
+      noResultsItem.setAttribute('label', 'No results found');
+      noResultsItem.setAttribute('description', `No subscribers found for "${searchTerm}"`);
+      noResultsItem.style.opacity = '0.7';
+      noResultsItem.style.pointerEvents = 'none';
+
+      this.resultsList.appendChild(noResultsItem);
+      this.showDropdown();
+      return;
+    }
+
+    console.log(`🔍 Found ${results.length} results for:`, searchTerm);
+
+    // Populate dropdown with results
+    results.forEach((result, index) => {
+      const listItem = document.createElement('calcite-list-item');
+      listItem.setAttribute('data-result-index', index.toString());
+      listItem.setAttribute('label', result.title);
+      listItem.setAttribute('description', `${result.account} • ${result.subtitle}`);
+
+      // Create status indicator for content-start slot
+      const statusDiv = document.createElement('div');
+      statusDiv.className = `search-result-status ${result.type.includes('offline') ? 'offline' : 'online'}`;
+      statusDiv.setAttribute('slot', 'content-start');
+      listItem.appendChild(statusDiv);
+
+      this.resultsList.appendChild(listItem);
+    });
+
+    // Show dropdown
+    this.showDropdown();
+  }
+
+  showPopupForResult(result) {
+    try {
+      if (!window.mapApp?.view || !result.graphic) return;
+
+      const view = window.mapApp.view;
+
+      // Method 1: Try the standard ArcGIS Map Components approach
+      if (view.popup) {
+        // Set popup properties directly
+        view.popup.features = [result.graphic];
+        view.popup.location = result.graphic.geometry;
+        view.popup.visible = true;
+        console.log('✅ Popup opened using direct property setting');
+        return;
+      }
+
+      // Method 2: Try accessing the underlying MapView
+      if (view.view && view.view.popup) {
+        view.view.popup.open({
+          features: [result.graphic],
+          location: result.graphic.geometry
+        });
+        console.log('✅ Popup opened using underlying MapView');
+        return;
+      }
+
+      console.log('⚠️ No popup method available');
+
+    } catch (error) {
+      console.log('⚠️ Could not open popup:', error.message);
+      // Fallback: Just log the result info
+      console.log('📍 Search result:', {
+        title: result.title,
+        subtitle: result.subtitle,
+        account: result.account
+      });
+    }
+  }
+
+  selectSearchResult(result) {
+    console.log('🎯 Selected search result:', result.title);
+
+    // Hide dropdown
+    this.hideDropdown();
+
+    // Clear search input
+    this.searchInput.value = '';
+    this.updateClearButtonVisibility();
+
+    // Zoom to and show popup for selected result
+    if (result.graphic && window.mapApp?.view) {
+      window.mapApp.view.goTo({
+        target: result.graphic,
+        zoom: 16
+      }).then(() => {
+        this.showPopupForResult(result);
+      }).catch(error => {
+        console.log('⚠️ Error during zoom:', error.message);
+      });
+    }
+  }
+
+  showDropdown() {
+    if (this.resultsPopover) {
+      this.resultsPopover.open = true;
+      console.log('📋 Dropdown opened with', this.resultsList?.children?.length, 'results');
+
+      // Force update the popover position
+      if (this.resultsPopover.reposition) {
+        this.resultsPopover.reposition();
+      }
+    } else {
+      console.log('❌ No popover element found!');
+    }
+  }
+
+  hideDropdown() {
+    if (this.resultsPopover) {
+      this.resultsPopover.open = false;
+    }
+  }
+
+  clearSearch() {
+    console.log('🔍 Clearing search');
+    this.searchResults = [];
+    this.hideDropdown();
+
+    // Only close popup if search input is actually empty
+    if (!this.searchInput?.value || this.searchInput.value.length === 0) {
+      try {
+        if (window.mapApp?.view?.popup) {
+          window.mapApp.view.popup.visible = false;
+        } else if (window.mapApp?.view?.view?.popup) {
+          // Try underlying MapView popup
+          window.mapApp.view.view.popup.close();
+        }
+      } catch (error) {
+        console.log('⚠️ Could not close popup:', error.message);
+      }
+    }
+  }
+
+  // Public method to search from other components
+  search(searchTerm) {
+    if (this.searchInput) {
+      this.searchInput.value = searchTerm;
+      this.performSearch(searchTerm);
+    }
+  }
+}
+
 // Dashboard Manager Class
 class DashboardManager {
   constructor() {
     this.metrics = {
-      offline: 0,
-      power: 0,
-      fiber: 0,
-      vehicles: 0
+      offline: 0
     };
-    this.weatherAlert = null;
     this.refreshInterval = null;
     this.init();
   }
@@ -2314,15 +2794,15 @@ class DashboardManager {
       settingsBtn.addEventListener('click', () => this.showSettings());
     }
 
-    // Make metric chips clickable for more details
-    const metricChips = document.querySelectorAll('.metric-item');
-    metricChips.forEach(chip => {
-      chip.addEventListener('click', (e) => {
-        if (!chip.classList.contains('loading')) {
-          this.handleMetricClick(chip);
+    // Make offline metric chip clickable for more details
+    const offlineChip = document.querySelector('.offline-metric');
+    if (offlineChip) {
+      offlineChip.addEventListener('click', (e) => {
+        if (!offlineChip.classList.contains('loading')) {
+          this.showOfflineDetails();
         }
       });
-    });
+    }
   }
 
   async updateDashboard() {
@@ -2331,12 +2811,6 @@ class DashboardManager {
     try {
       // Update offline subscribers count
       await this.updateOfflineCount();
-
-      // Update other metrics (placeholder data for now)
-      this.updatePowerOutages();
-      this.updateFiberOutages();
-      this.updateVehicleCount();
-      this.updateWeatherAlert();
 
     } catch (error) {
       console.error('❌ Error updating dashboard:', error);
@@ -2365,67 +2839,7 @@ class DashboardManager {
     }
   }
 
-  updatePowerOutages() {
-    // Placeholder - replace with real power outage data
-    const count = Math.floor(Math.random() * 5); // 0-4 outages
-    this.metrics.power = count;
-    this.updateMetricDisplay('power-outages', count);
 
-    // Add alert state if outages exist
-    const powerMetric = document.querySelector('.power-metric');
-    if (count > 0) {
-      powerMetric.classList.add('alert');
-    } else {
-      powerMetric.classList.remove('alert');
-    }
-  }
-
-  updateFiberOutages() {
-    // Placeholder - replace with real fiber outage data
-    const count = Math.floor(Math.random() * 3); // 0-2 outages
-    this.metrics.fiber = count;
-    this.updateMetricDisplay('fiber-outages', count);
-
-    // Add alert state if outages exist
-    const fiberMetric = document.querySelector('.fiber-metric');
-    if (count > 0) {
-      fiberMetric.classList.add('alert');
-    } else {
-      fiberMetric.classList.remove('alert');
-    }
-  }
-
-  updateVehicleCount() {
-    // Placeholder - replace with real vehicle tracking data
-    const count = Math.floor(Math.random() * 10) + 5; // 5-14 vehicles
-    this.metrics.vehicles = count;
-    this.updateMetricDisplay('active-vehicles', count);
-  }
-
-  updateWeatherAlert() {
-    // Placeholder - replace with real weather data
-    const alerts = [
-      null,
-      'Thunderstorms',
-      'High Winds',
-      'Heavy Rain'
-    ];
-
-    const alert = alerts[Math.floor(Math.random() * alerts.length)];
-    this.weatherAlert = alert;
-
-    const weatherElement = document.getElementById('weather-alert');
-    const weatherText = document.getElementById('weather-text');
-
-    if (alert && weatherElement && weatherText) {
-      weatherText.textContent = alert;
-      weatherElement.style.display = 'flex';
-      weatherElement.classList.add('alert');
-    } else if (weatherElement) {
-      weatherElement.style.display = 'none';
-      weatherElement.classList.remove('alert');
-    }
-  }
 
   updateMetricDisplay(elementId, value) {
     const element = document.getElementById(elementId);
@@ -2480,30 +2894,7 @@ class DashboardManager {
     }
   }
 
-  handleMetricClick(metricItem) {
-    const metricType = metricItem.className.split(' ')[1]; // offline-metric, power-metric, etc.
 
-    console.log(`📊 Metric clicked: ${metricType}`);
-
-    // Handle different metric types
-    switch (metricType) {
-      case 'offline-metric':
-        this.showOfflineDetails();
-        break;
-      case 'power-metric':
-        this.showPowerOutageDetails();
-        break;
-      case 'fiber-metric':
-        this.showFiberOutageDetails();
-        break;
-      case 'vehicle-metric':
-        this.showVehicleDetails();
-        break;
-      case 'weather-metric':
-        this.showWeatherDetails();
-        break;
-    }
-  }
 
   showOfflineDetails() {
     // Zoom to offline subscribers on map
@@ -2517,27 +2908,7 @@ class DashboardManager {
     }
   }
 
-  showPowerOutageDetails() {
-    // Placeholder - show power outage details
-    console.log('⚡ Show power outage details');
-  }
 
-  showFiberOutageDetails() {
-    // Placeholder - show fiber outage details
-    console.log('🔧 Show fiber outage details');
-  }
-
-  showVehicleDetails() {
-    // Show mobile vehicles sheet on mobile
-    if (window.innerWidth <= 768 && window.mobileTabBar) {
-      window.mobileTabBar.handleTabChange('vehicles');
-    }
-  }
-
-  showWeatherDetails() {
-    // Placeholder - show weather details
-    console.log('🌦️ Show weather details');
-  }
 
   showSettings() {
     // Placeholder - show dashboard settings
@@ -2546,23 +2917,19 @@ class DashboardManager {
 
   // Public method to update specific metrics from other components
   updateMetric(metricType, value) {
-    switch (metricType) {
-      case 'offline':
-        this.metrics.offline = value;
-        this.updateMetricDisplay('offline-count', value);
-        break;
-      case 'power':
-        this.metrics.power = value;
-        this.updateMetricDisplay('power-outages', value);
-        break;
-      case 'fiber':
-        this.metrics.fiber = value;
-        this.updateMetricDisplay('fiber-outages', value);
-        break;
-      case 'vehicles':
-        this.metrics.vehicles = value;
-        this.updateMetricDisplay('active-vehicles', value);
-        break;
+    if (metricType === 'offline') {
+      this.metrics.offline = value;
+      this.updateMetricDisplay('offline-count', value);
+
+      // Add alert state if count is high
+      const offlineMetric = document.querySelector('.offline-metric');
+      if (offlineMetric) {
+        if (value > 50) {
+          offlineMetric.classList.add('alert');
+        } else {
+          offlineMetric.classList.remove('alert');
+        }
+      }
     }
   }
 }
