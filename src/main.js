@@ -1251,6 +1251,11 @@ class MapApp {
             graphicsCount: graphics.length,
             firstFeature: offlineData.features[0]
           });
+
+          // Update dashboard with offline count
+          if (window.dashboardManager) {
+            window.dashboardManager.updateMetric('offline', graphics.length);
+          }
         } catch (error) {
           console.error('❌ Error loading offline subscribers:', error);
         }
@@ -1519,6 +1524,12 @@ class MapApp {
         });
 
         console.log(`🔄 Updated offline layer: ${newGraphics.length} features`);
+
+        // Update dashboard with new count
+        if (window.dashboardManager) {
+          window.dashboardManager.updateMetric('offline', newGraphics.length);
+        }
+
       } catch (error) {
         console.error('❌ Error updating offline subscribers:', error);
       }
@@ -2226,12 +2237,14 @@ document.addEventListener('DOMContentLoaded', () => {
   new LayerPanel();
   const mapApp = new MapApp();
   const mobileTabBar = new MobileTabBar();
+  const dashboardManager = new DashboardManager();
   new PWAInstaller();
 
   // Make components available globally for debugging and theme management
   window.themeManager = themeManager;
   window.mapApp = mapApp;
   window.mobileTabBar = mobileTabBar;
+  window.dashboardManager = dashboardManager;
   window.subscriberDataService = subscriberDataService;
 
   // Add debugging helpers
@@ -2260,4 +2273,297 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Service worker is auto-registered by Vite PWA plugin
 });
+
+// Dashboard Manager Class
+class DashboardManager {
+  constructor() {
+    this.metrics = {
+      offline: 0,
+      power: 0,
+      fiber: 0,
+      vehicles: 0
+    };
+    this.weatherAlert = null;
+    this.refreshInterval = null;
+    this.init();
+  }
+
+  async init() {
+    console.log('📊 Initializing Dashboard Manager...');
+
+    // Set up event listeners
+    this.setupEventListeners();
+
+    // Initial data load
+    await this.updateDashboard();
+
+    // Start auto-refresh every 30 seconds
+    this.startAutoRefresh();
+  }
+
+  setupEventListeners() {
+    // Refresh button
+    const refreshBtn = document.getElementById('refresh-dashboard');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => this.refreshDashboard());
+    }
+
+    // Settings button
+    const settingsBtn = document.getElementById('dashboard-settings');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => this.showSettings());
+    }
+
+    // Make metric chips clickable for more details
+    const metricChips = document.querySelectorAll('.metric-item');
+    metricChips.forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        if (!chip.classList.contains('loading')) {
+          this.handleMetricClick(chip);
+        }
+      });
+    });
+  }
+
+  async updateDashboard() {
+    console.log('📊 Updating dashboard metrics...');
+
+    try {
+      // Update offline subscribers count
+      await this.updateOfflineCount();
+
+      // Update other metrics (placeholder data for now)
+      this.updatePowerOutages();
+      this.updateFiberOutages();
+      this.updateVehicleCount();
+      this.updateWeatherAlert();
+
+    } catch (error) {
+      console.error('❌ Error updating dashboard:', error);
+    }
+  }
+
+  async updateOfflineCount() {
+    try {
+      const offlineData = await subscriberDataService.getOfflineSubscribers();
+      const count = offlineData.count || 0;
+
+      this.metrics.offline = count;
+      this.updateMetricDisplay('offline-count', count);
+
+      // Add alert state if count is high
+      const offlineMetric = document.querySelector('.offline-metric');
+      if (count > 50) {
+        offlineMetric.classList.add('alert');
+      } else {
+        offlineMetric.classList.remove('alert');
+      }
+
+    } catch (error) {
+      console.error('❌ Error updating offline count:', error);
+      this.updateMetricDisplay('offline-count', '--');
+    }
+  }
+
+  updatePowerOutages() {
+    // Placeholder - replace with real power outage data
+    const count = Math.floor(Math.random() * 5); // 0-4 outages
+    this.metrics.power = count;
+    this.updateMetricDisplay('power-outages', count);
+
+    // Add alert state if outages exist
+    const powerMetric = document.querySelector('.power-metric');
+    if (count > 0) {
+      powerMetric.classList.add('alert');
+    } else {
+      powerMetric.classList.remove('alert');
+    }
+  }
+
+  updateFiberOutages() {
+    // Placeholder - replace with real fiber outage data
+    const count = Math.floor(Math.random() * 3); // 0-2 outages
+    this.metrics.fiber = count;
+    this.updateMetricDisplay('fiber-outages', count);
+
+    // Add alert state if outages exist
+    const fiberMetric = document.querySelector('.fiber-metric');
+    if (count > 0) {
+      fiberMetric.classList.add('alert');
+    } else {
+      fiberMetric.classList.remove('alert');
+    }
+  }
+
+  updateVehicleCount() {
+    // Placeholder - replace with real vehicle tracking data
+    const count = Math.floor(Math.random() * 10) + 5; // 5-14 vehicles
+    this.metrics.vehicles = count;
+    this.updateMetricDisplay('active-vehicles', count);
+  }
+
+  updateWeatherAlert() {
+    // Placeholder - replace with real weather data
+    const alerts = [
+      null,
+      'Thunderstorms',
+      'High Winds',
+      'Heavy Rain'
+    ];
+
+    const alert = alerts[Math.floor(Math.random() * alerts.length)];
+    this.weatherAlert = alert;
+
+    const weatherElement = document.getElementById('weather-alert');
+    const weatherText = document.getElementById('weather-text');
+
+    if (alert && weatherElement && weatherText) {
+      weatherText.textContent = alert;
+      weatherElement.style.display = 'flex';
+      weatherElement.classList.add('alert');
+    } else if (weatherElement) {
+      weatherElement.style.display = 'none';
+      weatherElement.classList.remove('alert');
+    }
+  }
+
+  updateMetricDisplay(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+      // Add loading state briefly
+      const metricItem = element.closest('.metric-item');
+      if (metricItem) {
+        metricItem.classList.add('loading');
+
+        setTimeout(() => {
+          element.textContent = value;
+          metricItem.classList.remove('loading');
+        }, 200);
+      } else {
+        element.textContent = value;
+      }
+    }
+  }
+
+  async refreshDashboard() {
+    console.log('🔄 Manual dashboard refresh...');
+
+    // Show loading state on refresh button
+    const refreshBtn = document.getElementById('refresh-dashboard');
+    if (refreshBtn) {
+      refreshBtn.setAttribute('loading', '');
+      refreshBtn.setAttribute('disabled', '');
+    }
+
+    try {
+      await this.updateDashboard();
+    } finally {
+      // Remove loading state
+      if (refreshBtn) {
+        refreshBtn.removeAttribute('loading');
+        refreshBtn.removeAttribute('disabled');
+      }
+    }
+  }
+
+  startAutoRefresh() {
+    // Refresh every 30 seconds
+    this.refreshInterval = setInterval(() => {
+      this.updateDashboard();
+    }, 30000);
+  }
+
+  stopAutoRefresh() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+  }
+
+  handleMetricClick(metricItem) {
+    const metricType = metricItem.className.split(' ')[1]; // offline-metric, power-metric, etc.
+
+    console.log(`📊 Metric clicked: ${metricType}`);
+
+    // Handle different metric types
+    switch (metricType) {
+      case 'offline-metric':
+        this.showOfflineDetails();
+        break;
+      case 'power-metric':
+        this.showPowerOutageDetails();
+        break;
+      case 'fiber-metric':
+        this.showFiberOutageDetails();
+        break;
+      case 'vehicle-metric':
+        this.showVehicleDetails();
+        break;
+      case 'weather-metric':
+        this.showWeatherDetails();
+        break;
+    }
+  }
+
+  showOfflineDetails() {
+    // Zoom to offline subscribers on map
+    if (window.mapApp && window.mapApp.layers.offlineSubscribers) {
+      window.mapApp.view.goTo(window.mapApp.layers.offlineSubscribers.fullExtent);
+    }
+
+    // Show mobile subscribers sheet on mobile
+    if (window.innerWidth <= 768 && window.mobileTabBar) {
+      window.mobileTabBar.handleTabChange('subscribers');
+    }
+  }
+
+  showPowerOutageDetails() {
+    // Placeholder - show power outage details
+    console.log('⚡ Show power outage details');
+  }
+
+  showFiberOutageDetails() {
+    // Placeholder - show fiber outage details
+    console.log('🔧 Show fiber outage details');
+  }
+
+  showVehicleDetails() {
+    // Show mobile vehicles sheet on mobile
+    if (window.innerWidth <= 768 && window.mobileTabBar) {
+      window.mobileTabBar.handleTabChange('vehicles');
+    }
+  }
+
+  showWeatherDetails() {
+    // Placeholder - show weather details
+    console.log('🌦️ Show weather details');
+  }
+
+  showSettings() {
+    // Placeholder - show dashboard settings
+    console.log('⚙️ Show dashboard settings');
+  }
+
+  // Public method to update specific metrics from other components
+  updateMetric(metricType, value) {
+    switch (metricType) {
+      case 'offline':
+        this.metrics.offline = value;
+        this.updateMetricDisplay('offline-count', value);
+        break;
+      case 'power':
+        this.metrics.power = value;
+        this.updateMetricDisplay('power-outages', value);
+        break;
+      case 'fiber':
+        this.metrics.fiber = value;
+        this.updateMetricDisplay('fiber-outages', value);
+        break;
+      case 'vehicles':
+        this.metrics.vehicles = value;
+        this.updateMetricDisplay('active-vehicles', value);
+        break;
+    }
+  }
+}
 
