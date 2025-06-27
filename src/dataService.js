@@ -4,15 +4,28 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-console.log('🔧 Supabase Config Check:')
-console.log('URL:', supabaseUrl ? 'Set ✅' : 'Missing ❌')
-console.log('Key:', supabaseKey ? 'Set ✅' : 'Missing ❌')
+// Production logging utility
+const isDevelopment = import.meta.env.DEV;
+const log = {
+    info: (...args) => isDevelopment && console.log(...args),
+    warn: (...args) => console.warn(...args),
+    error: (...args) => console.error(...args)
+};
+
+// Only log configuration status in development
+if (isDevelopment) {
+    log.info('🔧 Supabase Config Check:')
+    log.info('URL:', supabaseUrl ? 'Set ✅' : 'Missing ❌')
+    log.info('Key:', supabaseKey ? 'Set ✅' : 'Missing ❌')
+}
 
 if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ Missing Supabase environment variables! Check your .env file.')
-    console.log('Required variables:')
-    console.log('VITE_SUPABASE_URL=https://your-project.supabase.co')
-    console.log('VITE_SUPABASE_ANON_KEY=your-anon-key')
+    log.error('❌ Missing Supabase environment variables! Check your .env file.')
+    if (isDevelopment) {
+        log.info('Required variables:')
+        log.info('VITE_SUPABASE_URL=https://your-project.supabase.co')
+        log.info('VITE_SUPABASE_ANON_KEY=your-anon-key')
+    }
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
@@ -47,7 +60,7 @@ export class SubscriberDataService {
         }
 
         try {
-            console.log('📡 Fetching offline subscribers from Supabase...')
+            log.info('📡 Fetching offline subscribers from Supabase...')
 
             // Select all fields for feature layer creation
             const { data, error, count } = await supabase
@@ -57,20 +70,24 @@ export class SubscriberDataService {
                 .not('latitude', 'is', null)
                 .not('longitude', 'is', null)
 
-            console.log('📊 Supabase response:')
-            console.log('- Count:', count)
-            console.log('- Data length:', data?.length || 0)
-            console.log('- Error:', error)
+            if (isDevelopment) {
+                log.info('📊 Supabase response:')
+                log.info('- Count:', count)
+                log.info('- Data length:', data?.length || 0)
+                log.info('- Error:', error)
+            }
 
             if (error) {
-                console.error('❌ Error fetching offline subscribers:', error)
+                log.error('❌ Error fetching offline subscribers:', error)
                 throw error
             }
 
             if (!data || data.length === 0) {
-                console.warn('⚠️ No offline subscribers found. Check your data:')
-                console.log('- Make sure you have records with status="Offline"')
-                console.log('- Make sure latitude and longitude are not null')
+                log.warn('⚠️ No offline subscribers found. Check your data:')
+                if (isDevelopment) {
+                    log.info('- Make sure you have records with status="Offline"')
+                    log.info('- Make sure latitude and longitude are not null')
+                }
                 return {
                     count: 0,
                     data: [],
@@ -79,17 +96,17 @@ export class SubscriberDataService {
                 }
             }
 
-            // Log first record for debugging
-            console.log('📋 Sample record:', data[0])
+            // Log first record for debugging in development only
+            log.info('📋 Sample record:', data[0])
 
             // Convert to GeoJSON features for ArcGIS
             const features = this.convertToGeoJSONFeatures(data || [], 'offline')
 
-            console.log('🗺️ Generated features:', features.length)
-            if (features.length > 0) {
-                console.log('📍 Sample feature:', features[0])
-                console.log('📍 Sample coordinates:', features[0].geometry.coordinates)
-                console.log('📍 First 3 coordinates:', features.slice(0, 3).map(f => f.geometry.coordinates))
+            log.info('🗺️ Generated features:', features.length)
+            if (isDevelopment && features.length > 0) {
+                log.info('📍 Sample feature:', features[0])
+                log.info('📍 Sample coordinates:', features[0].geometry.coordinates)
+                log.info('📍 First 3 coordinates:', features.slice(0, 3).map(f => f.geometry.coordinates))
             }
 
             const result = {
@@ -104,7 +121,7 @@ export class SubscriberDataService {
 
             return result
         } catch (error) {
-            console.error('Failed to fetch offline subscribers:', error)
+            log.error('Failed to fetch offline subscribers:', error)
             // Return cached data if available, even if expired
             if (this.cache.has(cacheKey)) {
                 const cachedData = this.cache.get(cacheKey)
@@ -128,7 +145,7 @@ export class SubscriberDataService {
         }
 
         try {
-            console.log('📡 Fetching online subscribers from Supabase...')
+            log.info('📡 Fetching online subscribers from Supabase...')
 
             // Select all fields for feature layer creation
             const { data, error, count } = await supabase
@@ -138,20 +155,24 @@ export class SubscriberDataService {
                 .not('latitude', 'is', null)
                 .not('longitude', 'is', null)
 
-            console.log('📊 Online subscribers response:')
-            console.log('- Count:', count)
-            console.log('- Data length:', data?.length || 0)
-            console.log('- Error:', error)
+            if (isDevelopment) {
+                log.info('📊 Online subscribers response:')
+                log.info('- Count:', count)
+                log.info('- Data length:', data?.length || 0)
+                log.info('- Error:', error)
+            }
 
             if (error) {
-                console.error('❌ Error fetching online subscribers:', error)
+                log.error('❌ Error fetching online subscribers:', error)
                 throw error
             }
 
             if (!data || data.length === 0) {
-                console.warn('⚠️ No online subscribers found. Check your data:')
-                console.log('- Make sure you have records with status="Online"')
-                console.log('- Make sure latitude and longitude are not null')
+                log.warn('⚠️ No online subscribers found. Check your data:')
+                if (isDevelopment) {
+                    log.info('- Make sure you have records with status="Online"')
+                    log.info('- Make sure latitude and longitude are not null')
+                }
                 return {
                     count: 0,
                     data: [],
@@ -163,7 +184,7 @@ export class SubscriberDataService {
             // Convert to GeoJSON features for ArcGIS
             const features = this.convertToGeoJSONFeatures(data || [], 'online')
 
-            console.log('🗺️ Generated online features:', features.length)
+            log.info('🗺️ Generated online features:', features.length)
 
             const result = {
                 count: count || 0,
@@ -177,7 +198,7 @@ export class SubscriberDataService {
 
             return result
         } catch (error) {
-            console.error('Failed to fetch online subscribers:', error)
+            log.error('Failed to fetch online subscribers:', error)
             // Return cached data if available, even if expired
             if (this.cache.has(cacheKey)) {
                 const cachedData = this.cache.get(cacheKey)
@@ -206,7 +227,7 @@ export class SubscriberDataService {
                 .select('status')
 
             if (error) {
-                console.error('Error fetching subscribers summary:', error)
+                log.error('Error fetching subscribers summary:', error)
                 throw error
             }
 
@@ -231,7 +252,7 @@ export class SubscriberDataService {
 
             return result
         } catch (error) {
-            console.error('Failed to fetch subscribers summary:', error)
+            log.error('Failed to fetch subscribers summary:', error)
             // Return cached data if available, even if expired
             if (this.cache.has(cacheKey)) {
                 const cachedData = this.cache.get(cacheKey)
@@ -254,7 +275,7 @@ export class SubscriberDataService {
     // Test database connection and data
     async testConnection() {
         try {
-            console.log('🧪 Testing Supabase connection...')
+            log.info('🧪 Testing Supabase connection...')
 
             // Test basic connection with a simple query
             const { data: tableData, error: tableError } = await supabase
@@ -263,11 +284,11 @@ export class SubscriberDataService {
                 .limit(1)
 
             if (tableError) {
-                console.error('❌ Database connection failed:', tableError)
+                log.error('❌ Database connection failed:', tableError)
                 return false
             }
 
-            console.log('✅ Database connection successful')
+            log.info('✅ Database connection successful')
 
             // Test data availability
             const { data: sampleData, error: sampleError } = await supabase
@@ -276,11 +297,11 @@ export class SubscriberDataService {
                 .limit(5)
 
             if (sampleError) {
-                console.error('❌ Sample data fetch failed:', sampleError)
+                log.error('❌ Sample data fetch failed:', sampleError)
                 return false
             }
 
-            console.log('📊 Sample data:', sampleData)
+            log.info('📊 Sample data:', sampleData)
 
             // Check status values
             const { data: statusData, error: statusError } = await supabase
@@ -291,12 +312,12 @@ export class SubscriberDataService {
 
             if (!statusError && statusData) {
                 const uniqueStatuses = [...new Set(statusData.map(row => row.status))]
-                console.log('📋 Available status values:', uniqueStatuses)
+                log.info('📋 Available status values:', uniqueStatuses)
             }
 
             return true
         } catch (error) {
-            console.error('❌ Connection test failed:', error)
+            log.error('❌ Connection test failed:', error)
             return false
         }
     }
@@ -327,7 +348,7 @@ export class SubscriberDataService {
             const lng = record.longitude
 
             if (!lat || !lng) {
-                console.warn(`Skipping record ${index}: missing coordinates`, record)
+                log.warn(`Skipping record ${index}: missing coordinates`, record)
                 return null
             }
 

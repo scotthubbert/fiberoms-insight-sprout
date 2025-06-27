@@ -56,9 +56,9 @@ arcgis-map {
 
 /* Navigation styling - more compact */
 calcite-navigation {
-  --calcite-navigation-height: 40px;
-  min-height: 40px;
-  max-height: 40px;
+  --calcite-navigation-height: 60px;
+  min-height: 60px;
+  max-height: 60px;
   display: flex;
   align-items: center;
 }
@@ -90,103 +90,37 @@ calcite-navigation calcite-button {
   --calcite-button-padding-y: var(--calcite-spacing-xs);
 }
 
-/* Header search styling */
+/* Header search styling - CalciteUI Input + Popover */
 .navigation-search-container {
-  max-width: 400px;
-  width: 100%;
-}
-
-.search-input-wrapper {
-  position: relative;
   width: 100%;
   display: flex;
+  justify-content: center;
   align-items: center;
 }
 
 .header-search-input {
-  --calcite-input-border-color: var(--calcite-color-border-2);
-  --calcite-input-background-color: var(--calcite-color-foreground-2);
   width: 100%;
-  transition: all 0.2s ease;
-  flex: 1;
+  max-width: 800px;
 }
 
-.search-clear-button {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  --calcite-button-padding-x: var(--calcite-spacing-xs);
-  --calcite-button-padding-y: var(--calcite-spacing-xs);
-}
-
-.header-search-input:focus-within {
-  --calcite-input-border-color: var(--calcite-color-brand);
-  outline: none;
-}
-
-.header-search-input[loading] {
-  opacity: 0.7;
-}
-
-/* Dark theme search input adjustments */
-[data-theme="dark"] .header-search-input {
-  --calcite-input-background-color: var(--calcite-color-foreground-3);
-  --calcite-input-border-color: var(--calcite-color-border-1);
-}
-
-/* Search results dropdown styling */
-.search-results-dropdown {
+.search-results-popover {
   --calcite-popover-z-index: 1000;
-  min-width: 300px;
-  max-width: 400px;
-  border: 1px solid var(--calcite-color-border-2);
-  box-shadow: var(--calcite-shadow-2);
-  outline: none;
-  /* Remove any unwanted focus outlines that might cause blue boxes */
+  min-width: 400px;
+  max-width: 800px;
+  max-height: 400px;
 }
 
-.search-results-dropdown:focus,
-.search-results-dropdown:focus-within {
-  outline: none;
-  border-color: var(--calcite-color-border-2);
-}
-
-.search-results-dropdown calcite-list {
+.search-results-popover calcite-list {
   max-height: 300px;
   overflow-y: auto;
 }
 
-.search-results-dropdown calcite-list-item {
-  --calcite-list-item-padding: var(--calcite-spacing-sm);
+.search-results-popover calcite-list-item {
   cursor: pointer;
-  border-bottom: 1px solid var(--calcite-color-border-3);
 }
 
-.search-results-dropdown calcite-list-item:hover {
+.search-results-popover calcite-list-item:hover {
   --calcite-list-item-background-color: var(--calcite-color-foreground-2);
-}
-
-.search-results-dropdown calcite-list-item:last-child {
-  border-bottom: none;
-}
-
-/* Status indicator for search results */
-.search-result-status {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-right: var(--calcite-spacing-sm);
-}
-
-.search-result-status.offline {
-  background-color: var(--calcite-color-status-danger);
-}
-
-.search-result-status.online {
-  background-color: var(--calcite-color-status-success);
 }
 
 /* Mobile dropdown adjustments */

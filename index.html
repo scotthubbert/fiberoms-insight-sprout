@@ -29,15 +29,11 @@
       <calcite-navigation slot="header">
         <calcite-navigation-logo slot="logo" heading="FiberOMS Insight" thumbnail=""></calcite-navigation-logo>
         <div slot="content-center" class="navigation-search-container">
-          <div class="search-input-wrapper">
-            <calcite-input-text id="header-search" icon-start="search" scale="s" class="header-search-input">
-            </calcite-input-text>
-            <calcite-button id="search-clear-btn" icon-start="x" appearance="transparent" scale="s"
-              class="search-clear-button" style="display: none;" aria-label="Clear search">
-            </calcite-button>
-          </div>
+          <calcite-input id="header-search" placeholder="Search subscribers, accounts, addresses (min 4 chars)..."
+            scale="l" type="search" icon="search" clearable class="header-search-input">
+          </calcite-input>
           <calcite-popover id="search-results-popover" reference-element="header-search" placement="bottom-start"
-            class="search-results-dropdown">
+            offset-distance="4" class="search-results-popover">
             <calcite-list id="search-results-list" selection-mode="none">
               <!-- Search results will be populated here -->
             </calcite-list>
@@ -187,7 +183,7 @@
     <!-- Mobile Bottom Modals -->
 
     <!-- Search Modal -->
-    <calcite-modal id="mobile-search-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
+    <calcite-dialog id="mobile-search-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
       <div slot="header">Search</div>
       <div slot="content">
         <calcite-block heading="Quick Search" open>
@@ -218,9 +214,9 @@
       </div>
       <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
         class="close-modal-btn">Close</calcite-button>
-    </calcite-modal>
+    </calcite-dialog>
 
-    <calcite-modal id="mobile-subscribers-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
+    <calcite-dialog id="mobile-subscribers-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
       <div slot="header">Subscribers</div>
       <div slot="content">
         <calcite-list selection-mode="none">
@@ -247,9 +243,9 @@
       </div>
       <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
         class="close-modal-btn">Close</calcite-button>
-    </calcite-modal>
+    </calcite-dialog>
 
-    <calcite-modal id="mobile-osp-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
+    <calcite-dialog id="mobile-osp-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
       <div slot="header">OSP Infrastructure</div>
       <div slot="content">
         <calcite-block heading="Fiber Plant" open>
@@ -314,9 +310,9 @@
       </div>
       <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
         class="close-modal-btn">Close</calcite-button>
-    </calcite-modal>
+    </calcite-dialog>
 
-    <calcite-modal id="mobile-vehicles-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
+    <calcite-dialog id="mobile-vehicles-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
       <div slot="header">Vehicle Tracking</div>
       <div slot="content">
         <calcite-list selection-mode="none">
@@ -339,9 +335,9 @@
       </div>
       <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
         class="close-modal-btn">Close</calcite-button>
-    </calcite-modal>
+    </calcite-dialog>
 
-    <calcite-modal id="mobile-other-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
+    <calcite-dialog id="mobile-other-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
       <div slot="header">Other Layers</div>
       <div slot="content">
         <calcite-block heading="Environmental" open>
@@ -376,7 +372,7 @@
       </div>
       <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
         class="close-modal-btn">Close</calcite-button>
-    </calcite-modal>
+    </calcite-dialog>
   </div>
 
   <script type="module" src="/src/main.js"></script>

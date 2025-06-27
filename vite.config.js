@@ -49,6 +49,19 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
-    sourcemap: true
+    sourcemap: false, // Disable source maps in production for security and performance
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split large dependencies into separate chunks for better caching
+          'arcgis-core': ['@arcgis/core'],
+          'arcgis-components': ['@arcgis/map-components'],
+          'calcite-ui': ['@esri/calcite-components'],
+          'vendor': ['@supabase/supabase-js']
+        }
+      }
+    },
+    // Optimize chunk size
+    chunkSizeWarningLimit: 1000
   }
 });
