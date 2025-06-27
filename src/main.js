@@ -2821,12 +2821,29 @@ class HeaderSearch {
       const view = window.mapApp?.view;
       if (!view || !result.graphic) return;
 
-      console.log('🎯 Showing search location indicator');
+      console.log('🎯 Showing search location indicator for:', result.title);
 
       // Clear any existing indicator
       this.clearLocationIndicator();
 
-      // Create animated CIM symbol with pulsing effect
+      // Determine status and color scheme
+      const status = result.status || result.graphic?.attributes?.status || 'unknown';
+      const isOffline = status.toLowerCase() === 'offline';
+
+      // Color schemes based on status
+      const colors = isOffline ? {
+        ring: [220, 38, 38, 255],    // Red for offline
+        center: [220, 38, 38, 255],  // Red center
+        name: 'offline'
+      } : {
+        ring: [34, 197, 94, 255],    // Green for online
+        center: [34, 197, 94, 255],  // Green center  
+        name: 'online'
+      };
+
+      console.log(`🎯 Using ${colors.name} color scheme for status: ${status}`);
+
+      // Create animated CIM symbol with status-based colors
       const animatedSymbol = {
         type: "cim",
         data: {
@@ -2861,7 +2878,7 @@ class HeaderSearch {
                     symbolLayers: [{
                       type: "CIMSolidStroke",
                       enable: true,
-                      color: [0, 150, 255, 255],
+                      color: colors.ring,
                       width: 2
                     }]
                   }
@@ -2895,7 +2912,7 @@ class HeaderSearch {
                     symbolLayers: [{
                       type: "CIMSolidFill",
                       enable: true,
-                      color: [0, 150, 255, 255]
+                      color: colors.center
                     }]
                   }
                 }]
