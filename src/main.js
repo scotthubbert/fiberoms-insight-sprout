@@ -49,7 +49,8 @@ import '@esri/calcite-components/dist/components/calcite-list-item';
 import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-dialog';
 import '@esri/calcite-components/dist/components/calcite-chip';
-import '@esri/calcite-components/dist/components/calcite-popover';
+import '@esri/calcite-components/dist/components/calcite-autocomplete';
+import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path to NPM bundled assets
@@ -2287,27 +2288,30 @@ document.addEventListener('DOMContentLoaded', () => {
 // Header Search Class
 class HeaderSearch {
   constructor() {
-    this.searchInput = null;
+    this.autocomplete = null;
     this.searchResults = [];
     this.debounceTimer = null;
-    this.resultsPopover = null;
-    this.resultsList = null;
+    this.locationIndicatorGraphic = null;
+    this.locationIndicatorGraphics = [];
+    this.indicatorTimeout = null;
+    this.pulseInterval = null;
     this.init();
   }
 
   async init() {
-    console.log('🔍 Initializing Header Search with CalciteUI Input + Popover...');
+    console.log('🔍 Initializing Header Search with Calcite Autocomplete...');
 
     // Wait for calcite components to be defined
-    await customElements.whenDefined('calcite-input');
-    await customElements.whenDefined('calcite-popover');
-    await customElements.whenDefined('calcite-list');
+    await customElements.whenDefined('calcite-autocomplete');
+    await customElements.whenDefined('calcite-autocomplete-item');
+    console.log('✅ Calcite autocomplete components defined');
 
-    this.searchInput = document.getElementById('header-search');
-    this.resultsPopover = document.getElementById('search-results-popover');
-    this.resultsList = document.getElementById('search-results-list');
+    this.autocomplete = document.getElementById('header-search');
+    console.log('🔍 Autocomplete element found:', !!this.autocomplete);
+    console.log('🔍 Autocomplete element type:', this.autocomplete?.tagName);
 
-    if (this.searchInput && this.resultsPopover && this.resultsList) {
+    if (this.autocomplete) {
+      console.log('🔍 Setting up autocomplete...');
       this.setupEventListeners();
       this.updatePlaceholderForScreenSize();
 
@@ -2315,153 +2319,72 @@ class HeaderSearch {
       window.addEventListener('resize', () => {
         this.updatePlaceholderForScreenSize();
       });
+
+      console.log('✅ Header search initialization complete');
+    } else {
+      console.error('❌ Autocomplete element not found!');
     }
   }
 
   setupEventListeners() {
     console.log('🔧 Setting up HeaderSearch event listeners');
-    console.log('🔧 Search input element:', this.searchInput);
 
-    // Search input change event
-    this.searchInput.addEventListener('calciteInputInput', (e) => {
-      this.handleSearchInput(e.target.value);
+    // Search input event - fires as user types
+    this.autocomplete.addEventListener('calciteAutocompleteTextInput', (e) => {
+      const inputValue = e.target.inputValue || e.target.value;
+      console.log('🔍 Search input:', inputValue);
+      this.handleSearchInput(inputValue);
     });
 
-    // Clear button event (built into calcite-input with clearable attribute)
-    this.searchInput.addEventListener('calciteInputClear', () => {
-      this.clearSearch();
-    });
+    // Selection event - fires when user selects an item
+    this.autocomplete.addEventListener('calciteAutocompleteChange', (e) => {
+      console.log('🔍 calciteAutocompleteChange fired');
+      console.log('🔍 Selected value:', e.target.value);
+      console.log('🔍 Selected item:', e.target.selectedItem);
 
-    // Keyboard shortcuts - try multiple event approaches
-    this.searchInput.addEventListener('keydown', (e) => {
-      console.log('🔍 Direct keydown on search input:', e.key);
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        console.log('🔍 Enter pressed - Search results:', this.searchResults.length);
-        if (this.searchResults.length > 0) {
-          console.log('🎯 Selecting first result:', this.searchResults[0].title);
-          this.selectSearchResult(this.searchResults[0]);
+      // Find the selected result from our stored results
+      const selectedValue = e.target.value;
+      if (selectedValue && this.searchResults.length > 0) {
+        // Find the matching result by title
+        const selectedResult = this.searchResults.find(result => result.title === selectedValue);
+        if (selectedResult) {
+          console.log('🎯 Flying to selected result:', selectedResult.title);
+          this.selectSearchResult(selectedResult);
         } else {
-          console.log('⚠️ No search results available');
+          console.warn('⚠️ Could not find matching result for:', selectedValue);
         }
-      } else if (e.key === 'Escape') {
+      }
+    });
+
+    // Handle Enter key to select first result
+    this.autocomplete.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && this.searchResults.length > 0) {
         e.preventDefault();
-        this.clearSearch();
+        console.log('🎯 Enter pressed - selecting first result:', this.searchResults[0].title);
+        this.selectSearchResult(this.searchResults[0]);
       }
     });
 
-    // Also try keypress event
-    this.searchInput.addEventListener('keypress', (e) => {
-      console.log('🔍 Direct keypress on search input:', e.key);
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (this.searchResults.length > 0) {
-          this.selectSearchResult(this.searchResults[0]);
-        }
-      }
-    });
-
-    // Global keyboard listener as backup
-    document.addEventListener('keydown', (e) => {
-      if (document.activeElement === this.searchInput) {
-        console.log('🔍 Global keydown with search focused:', e.key);
-        if (e.key === 'Enter' && this.searchResults.length > 0) {
-          e.preventDefault();
-          console.log('🎯 Global Enter - selecting first result');
-          this.selectSearchResult(this.searchResults[0]);
-        }
-      }
-    });
-
-    // Focus debugging
-    this.searchInput.addEventListener('focus', () => {
-      console.log('🔍 Search input focused');
-    });
-
-    this.searchInput.addEventListener('blur', () => {
-      console.log('🔍 Search input blurred');
-    });
-
-    // Click on search results
-    this.resultsList.addEventListener('click', (e) => {
-      const listItem = e.target.closest('calcite-list-item');
-      if (listItem) {
-        const resultIndex = parseInt(listItem.getAttribute('data-result-index'));
-        if (!isNaN(resultIndex) && this.searchResults[resultIndex]) {
-          this.selectSearchResult(this.searchResults[resultIndex]);
-        }
-      }
-    });
-
-    // Keyboard navigation for search results
-    this.resultsList.addEventListener('keydown', (e) => {
-      console.log('🔍 Keydown on search results:', e.key);
-
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        console.log('🔍 Enter pressed on search results');
-
-        // Find the currently focused list item
-        const focusedItem = this.resultsList.querySelector('calcite-list-item:focus');
-        if (focusedItem) {
-          const resultIndex = parseInt(focusedItem.getAttribute('data-result-index'));
-          if (!isNaN(resultIndex) && this.searchResults[resultIndex]) {
-            console.log('🎯 Selecting focused result:', this.searchResults[resultIndex].title);
-            this.selectSearchResult(this.searchResults[resultIndex]);
-          }
-        } else if (this.searchResults.length > 0) {
-          // No specific item focused, select first result
-          console.log('🎯 No focused item, selecting first result:', this.searchResults[0].title);
-          this.selectSearchResult(this.searchResults[0]);
-        }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        console.log('🔍 Escape pressed on search results');
-        this.clearSearch();
-        this.searchInput.focus(); // Return focus to search input
-      }
-    });
-
-    // Also handle Enter key globally when search results are visible
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && this.resultsPopover && this.resultsPopover.expanded && this.searchResults.length > 0) {
-        // Check if focus is anywhere within the search interface
-        const activeElement = document.activeElement;
-        const isSearchFocused = activeElement === this.searchInput ||
-          this.resultsPopover.contains(activeElement) ||
-          activeElement.closest('#search-results-popover');
-
-        if (isSearchFocused) {
-          e.preventDefault();
-          console.log('🔍 Global Enter with search results visible');
-          console.log('🎯 Active element:', activeElement?.tagName, activeElement?.id);
-
-          // Select first result if no specific result is focused
-          this.selectSearchResult(this.searchResults[0]);
-        }
-      }
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!this.searchInput.contains(e.target) && !this.resultsPopover.contains(e.target)) {
-        this.hideDropdown();
-      }
-    });
+    // Optional: Debug specific events if needed
+    // ['calciteAutocompleteOpen', 'calciteAutocompleteClose'].forEach(eventName => {
+    //   this.autocomplete.addEventListener(eventName, (e) => {
+    //     console.log(`🔍 Event fired: ${eventName}`);
+    //   });
+    // });
   }
 
   updatePlaceholderForScreenSize() {
-    if (!this.searchInput) return;
+    if (!this.autocomplete) return;
 
     const isMobile = window.innerWidth <= 768;
     const isSmallMobile = window.innerWidth <= 480;
 
     if (isSmallMobile) {
-      this.searchInput.setAttribute('placeholder', 'Search (min 4 chars)...');
+      this.autocomplete.setAttribute('placeholder', 'Search (min 4 chars)...');
     } else if (isMobile) {
-      this.searchInput.setAttribute('placeholder', 'Search subscribers (min 4)...');
+      this.autocomplete.setAttribute('placeholder', 'Search subscribers (min 4)...');
     } else {
-      this.searchInput.setAttribute('placeholder', 'Search subscribers, accounts, addresses (min 4 chars)...');
+      this.autocomplete.setAttribute('placeholder', 'Search subscribers, accounts, addresses (min 4 chars)...');
     }
   }
 
@@ -2490,21 +2413,15 @@ class HeaderSearch {
     if (!searchTerm || searchTerm.length < 4) return;
 
     try {
-      // Show loading state
-      this.searchInput.loading = true;
-
       // Search through different data sources
       const results = await this.searchAllLayers(searchTerm);
 
       // Process and display results
-      this.displaySearchResults(results, searchTerm);
+      this.populateAutocomplete(results);
 
     } catch (error) {
       console.error('Search error:', error);
-      this.displaySearchError(searchTerm);
-    } finally {
-      // Remove loading state
-      this.searchInput.loading = false;
+      this.clearAutocomplete();
     }
   }
 
@@ -2662,190 +2579,51 @@ class HeaderSearch {
     return results;
   }
 
-  displaySearchResults(results, searchTerm) {
-    log.info('📝 Displaying search results:', results.length, 'results for term:', searchTerm);
+  populateAutocomplete(results) {
+    log.info('📝 Populating autocomplete with:', results.length, 'results');
     this.searchResults = results;
-    this.resultsList.innerHTML = '';
 
-    if (results.length === 0) {
-      this.displayNoResults(searchTerm);
-      return;
-    }
+    // Clear existing items
+    this.autocomplete.innerHTML = '';
 
-    // Populate list with results
-    results.forEach((result, index) => {
-      const listItem = document.createElement('calcite-list-item');
-      listItem.setAttribute('data-result-index', index.toString());
-      listItem.setAttribute('label', result.title);
-      listItem.setAttribute('description', `${result.account} • ${result.subtitle}`);
+    // Add new items
+    results.forEach(result => {
+      const item = document.createElement('calcite-autocomplete-item');
+      item.setAttribute('label', result.title);
+      item.setAttribute('description', `${result.account} • ${result.subtitle}`);
+      item.setAttribute('value', result.title);
 
-      // Make list items focusable for keyboard navigation
-      listItem.setAttribute('tabindex', '0');
-      listItem.style.cursor = 'pointer';
+      // Store full result data for selection
+      item.searchResult = result;
 
-      // Add status icon
-      const statusIcon = document.createElement('calcite-icon');
-      statusIcon.setAttribute('slot', 'content-start');
-      statusIcon.setAttribute('icon', result.type.includes('offline') ? 'circle-disallowed' : 'check-circle');
-      statusIcon.style.color = result.type.includes('offline') ? 'var(--calcite-color-status-danger)' : 'var(--calcite-color-status-success)';
-      listItem.appendChild(statusIcon);
+      // Add icon based on status
+      item.setAttribute('icon-start', result.type.includes('offline') ? 'circle-disallowed' : 'check-circle');
 
-      this.resultsList.appendChild(listItem);
+      this.autocomplete.appendChild(item);
     });
-
-    log.info('📝 Results list populated, calling showDropdown');
-    log.info('📝 Results list HTML:', this.resultsList.innerHTML);
-    log.info('📝 Results list children count:', this.resultsList.children.length);
-
-    // Ensure search input maintains focus for popover to work properly
-    if (this.searchInput) {
-      this.searchInput.focus();
-    }
-
-    // Use a small delay to ensure DOM is rendered before showing dropdown
-    setTimeout(() => {
-      this.showDropdown();
-
-      // Debug visibility after showing
-      setTimeout(() => {
-        log.info('🔍 Popover computed style:', window.getComputedStyle(this.resultsPopover).display);
-        log.info('🔍 Popover visibility:', window.getComputedStyle(this.resultsPopover).visibility);
-        log.info('🔍 Popover z-index:', window.getComputedStyle(this.resultsPopover).zIndex);
-        log.info('🔍 Popover position:', this.resultsPopover.getBoundingClientRect());
-      }, 100);
-    }, 50);
   }
 
-  displayNoResults(searchTerm) {
-    const noResultsItem = document.createElement('calcite-list-item');
-    noResultsItem.setAttribute('label', 'No results found');
-    noResultsItem.setAttribute('description', `No subscribers found for "${searchTerm}"`);
-    noResultsItem.style.opacity = '0.7';
-    noResultsItem.style.pointerEvents = 'none';
-
-    this.resultsList.appendChild(noResultsItem);
-    this.showDropdown();
-  }
-
-  displaySearchError(searchTerm) {
-    this.resultsList.innerHTML = '';
-
-    const errorItem = document.createElement('calcite-list-item');
-    errorItem.setAttribute('label', 'Search Error');
-    errorItem.setAttribute('description', 'Unable to search at this time. Please try again.');
-    errorItem.style.opacity = '0.7';
-    errorItem.style.pointerEvents = 'none';
-
-    const errorIcon = document.createElement('calcite-icon');
-    errorIcon.setAttribute('slot', 'content-start');
-    errorIcon.setAttribute('icon', 'exclamation-mark-triangle');
-    errorIcon.style.color = 'var(--calcite-color-status-warning)';
-    errorItem.appendChild(errorIcon);
-
-    this.resultsList.appendChild(errorItem);
-    this.showDropdown();
+  clearAutocomplete() {
+    this.autocomplete.innerHTML = '';
+    this.searchResults = [];
   }
 
   showPopupForResult(result) {
     try {
       if (!window.mapApp?.view || !result.graphic) {
-        log.warn('⚠️ Missing view or graphic for popup');
+        console.warn('⚠️ Missing view or graphic for popup');
         return;
       }
 
       const view = window.mapApp.view;
-      log.info('🔍 Attempting to show popup for result:', result.title);
-      log.info('🔍 View object:', !!view);
-      log.info('🔍 View.popup exists:', !!view.popup);
-      log.info('🔍 Graphic:', !!result.graphic);
+      console.log('🔍 Showing popup for:', result.title);
 
-      // Close any existing popup first (use correct ArcGIS Map Components API)
-      if (view.popup) {
-        view.popup.visible = false;
-        // Clear existing features
-        view.popup.features = [];
-      }
-
-      // Wait a moment for popup to close, then open new one
-      setTimeout(() => {
-        try {
-          // Method 1: Direct popup property setting (most reliable for ArcGIS Map Components)
-          if (view.popup) {
-            view.popup.features = [result.graphic];
-            view.popup.location = result.graphic.geometry;
-            view.popup.visible = true;
-
-            // Debug popup state
-            setTimeout(() => {
-              log.info('🔍 Popup debugging:');
-              log.info('🔍 Popup visible property:', view.popup.visible);
-              log.info('🔍 Popup features count:', view.popup.features?.length);
-              log.info('🔍 Popup location:', view.popup.location);
-
-              // Try to find popup in DOM
-              const popupElement = document.querySelector('.esri-popup, .esri-popup--is-visible, arcgis-popup');
-              log.info('🔍 Popup DOM element found:', !!popupElement);
-              if (popupElement) {
-                log.info('🔍 Popup element style:', window.getComputedStyle(popupElement).display);
-                log.info('🔍 Popup element visibility:', window.getComputedStyle(popupElement).visibility);
-                log.info('🔍 Popup element position:', popupElement.getBoundingClientRect());
-              }
-            }, 200);
-
-            log.info('✅ Popup opened using direct property setting');
-            return;
-          }
-
-          // Method 2: Try underlying MapView popup
-          if (view.view && view.view.popup) {
-            view.view.popup.open({
-              features: [result.graphic],
-              location: result.graphic.geometry
-            });
-            log.info('✅ Popup opened using underlying MapView');
-            return;
-          }
-
-          // Method 3: Try setting popup properties on the view itself
-          try {
-            view.openPopup({
-              features: [result.graphic],
-              location: result.graphic.geometry
-            });
-            log.info('✅ Popup opened using view.openPopup');
-            return;
-          } catch (openPopupError) {
-            log.info('⚠️ view.openPopup not available');
-          }
-
-          // Method 4: Force popup creation by clicking on the map location
-          try {
-            // Simulate a click at the graphic location to trigger popup
-            view.hitTest(result.graphic.geometry).then((response) => {
-              if (response.results.length > 0) {
-                view.popup.open({
-                  features: response.results.map(r => r.graphic),
-                  location: result.graphic.geometry
-                });
-                log.info('✅ Popup opened using hitTest simulation');
-              }
-            });
-            return;
-          } catch (hitTestError) {
-            log.info('⚠️ hitTest method failed');
-          }
-
-          log.warn('⚠️ No popup method available - all attempts failed');
-
-        } catch (innerError) {
-          log.error('⚠️ Error in delayed popup opening:', innerError.message);
-        }
-      }, 100);
+      // Use native ArcGIS popup approach (like your other project)
+      this.showNativePopup(result, view);
 
     } catch (error) {
-      log.error('⚠️ Could not open popup:', error.message);
-      // Fallback: Just log the result info
-      log.info('📍 Search result:', {
+      console.error('❌ Could not open popup:', error.message);
+      console.log('📍 Search result info:', {
         title: result.title,
         subtitle: result.subtitle,
         account: result.account
@@ -2853,10 +2631,134 @@ class HeaderSearch {
     }
   }
 
+  showNativePopup(result, view) {
+    try {
+      console.log('🔍 Using native ArcGIS popup approach');
+
+      // Create point geometry from the result graphic
+      const pointGeometry = {
+        type: "point",
+        longitude: result.graphic.geometry.longitude,
+        latitude: result.graphic.geometry.latitude
+      };
+
+      // Map search result to comprehensive attributes (like your other project)
+      const attributes = {
+        ObjectID: result.graphic.attributes.ObjectID || 0,
+        customer_name: result.title,
+        customer_number: result.account,
+        full_address: result.subtitle,
+        status: result.type.includes('offline') ? 'offline' : 'online',
+        ...result.graphic.attributes // Include all original attributes
+      };
+
+      // Use the existing popup template from the graphic or create one
+      let popupTemplate = result.graphic.popupTemplate;
+      if (!popupTemplate) {
+        // Find the popup template from the layer
+        popupTemplate = result.layer?.popupTemplate;
+      }
+      if (!popupTemplate) {
+        // Create fallback template
+        popupTemplate = this.createFallbackPopupTemplate();
+      }
+
+      // Create graphic for popup
+      const popupGraphic = {
+        geometry: pointGeometry,
+        attributes: attributes,
+        popupTemplate: popupTemplate
+      };
+
+      console.log('🔍 Opening popup with graphic:', popupGraphic);
+
+      // Use native ArcGIS openPopup method
+      view.openPopup({
+        features: [popupGraphic],
+        location: pointGeometry
+      });
+
+      console.log('✅ Native popup opened');
+
+    } catch (error) {
+      console.error('❌ Native popup failed:', error.message);
+      // Try the map element view as fallback
+      this.showPopupDirectly(result, view);
+    }
+  }
+
+  createFallbackPopupTemplate() {
+    return {
+      title: "{customer_name}",
+      content: [
+        {
+          type: "fields",
+          fieldInfos: [
+            { fieldName: "customer_number", label: "Account" },
+            { fieldName: "status", label: "Status" },
+            { fieldName: "full_address", label: "Address" },
+            { fieldName: "service_type", label: "Service Type" },
+            { fieldName: "plan", label: "Plan" },
+            { fieldName: "ta5k", label: "TA5K" },
+            { fieldName: "remote_id", label: "Remote ID" },
+            { fieldName: "ont", label: "ONT" },
+            { fieldName: "electric_available", label: "Electric Available" },
+            { fieldName: "fiber_distance", label: "Fiber Distance" },
+            { fieldName: "light_level", label: "Light Level" },
+            { fieldName: "last_update", label: "Last Update" }
+          ]
+        }
+      ]
+    };
+  }
+
+  showPopupDirectly(result, view) {
+    console.log('🔍 Trying direct popup approach');
+
+    // Check if we can access the mapView through other properties
+    const mapElement = document.getElementById('map');
+    console.log('🔍 Map element:', mapElement);
+    console.log('🔍 Map element view:', mapElement?.view);
+
+    if (mapElement && mapElement.view) {
+      console.log('🔍 Using mapElement.view for popup');
+      const mapView = mapElement.view;
+
+      try {
+        // Try setting popup properties directly
+        console.log('🔍 MapView popup object:', mapView.popup);
+        console.log('🔍 MapView popup properties:', Object.getOwnPropertyNames(mapView.popup || {}));
+
+        if (mapView.popup) {
+          // Set popup properties directly
+          mapView.popup.features = [result.graphic];
+          mapView.popup.location = result.graphic.geometry;
+          mapView.popup.visible = true;
+          console.log('✅ Popup opened via direct property setting');
+        } else {
+          console.log('❌ No popup object on mapView');
+        }
+      } catch (error) {
+        console.log('❌ Direct popup approach failed:', error.message);
+      }
+    } else {
+      console.log('❌ No mapElement.view available');
+    }
+
+    // Always log the info as fallback
+    console.log('📍 Result info:', {
+      title: result.title,
+      account: result.account,
+      address: result.subtitle
+    });
+  }
+
   selectSearchResult(result) {
     console.log('🎯 selectSearchResult called with:', result.title);
     console.log('🎯 Result has graphic:', !!result.graphic);
+    console.log('🎯 Result graphic geometry:', result.graphic?.geometry);
     console.log('🎯 MapApp view available:', !!window.mapApp?.view);
+    console.log('🎯 Full result object:', result);
 
     // Clear search and hide dropdown
     this.clearSearch();
@@ -2864,62 +2766,26 @@ class HeaderSearch {
     // Zoom to result location and show popup
     if (result.graphic && window.mapApp?.view) {
       console.log('✅ Starting goTo for result');
+      console.log('✅ Target geometry:', result.graphic.geometry);
       window.mapApp.view.goTo({
         target: result.graphic,
         zoom: 16
       }).then(() => {
-        console.log('✅ goTo completed, showing popup');
-        this.showPopupForResult(result);
+        console.log('✅ goTo completed, showing popup in 500ms');
+        // Small delay to ensure map animation is complete
+        setTimeout(() => {
+          // Show radar pulse indicator first
+          this.showSearchLocationIndicator(result);
+          // Then show popup
+          this.showPopupForResult(result);
+        }, 500);
       }).catch(error => {
-        console.error('Error during zoom to search result:', error);
+        console.error('❌ Error during zoom to search result:', error);
       });
     } else {
       console.log('❌ Cannot zoom - missing graphic or view');
-    }
-  }
-
-  showDropdown() {
-    if (this.resultsPopover) {
-      log.info('🔽 Attempting to show dropdown');
-      log.info('🔽 Popover element:', this.resultsPopover);
-      log.info('🔽 Results count:', this.searchResults.length);
-
-      // Try multiple approaches to ensure the popover opens
-      this.resultsPopover.open = true;
-      this.resultsPopover.expanded = true;
-
-      // Force visibility with CSS as backup
-      this.resultsPopover.style.display = 'block';
-      this.resultsPopover.style.visibility = 'visible';
-      this.resultsPopover.style.opacity = '1';
-      this.resultsPopover.style.zIndex = '9999';
-      this.resultsPopover.style.position = 'absolute';
-
-      // Force a slight delay to ensure DOM is ready
-      setTimeout(() => {
-        if (this.resultsPopover) {
-          this.resultsPopover.open = true;
-          this.resultsPopover.expanded = true;
-
-          // Double-check visibility
-          this.resultsPopover.style.display = 'block';
-          this.resultsPopover.style.visibility = 'visible';
-          this.resultsPopover.style.opacity = '1';
-
-          log.info('🔽 Popover state after timeout - open:', this.resultsPopover.open, 'expanded:', this.resultsPopover.expanded);
-          log.info('🔽 Popover CSS display:', this.resultsPopover.style.display);
-          log.info('🔽 Popover CSS visibility:', this.resultsPopover.style.visibility);
-        }
-      }, 10);
-    } else {
-      log.warn('⚠️ Results popover not found!');
-    }
-  }
-
-  hideDropdown() {
-    if (this.resultsPopover) {
-      this.resultsPopover.open = false;
-      this.resultsPopover.expanded = false;
+      if (!result.graphic) console.log('❌ Missing graphic');
+      if (!window.mapApp?.view) console.log('❌ Missing view');
     }
   }
 
@@ -2930,11 +2796,15 @@ class HeaderSearch {
       this.debounceTimer = null;
     }
 
-    // Clear input and results
-    this.searchInput.value = '';
-    this.resultsList.innerHTML = '';
-    this.hideDropdown();
-    this.searchResults = [];
+    // Clear autocomplete and results
+    if (this.autocomplete) {
+      this.autocomplete.value = '';
+      this.autocomplete.inputValue = '';
+    }
+    this.clearAutocomplete();
+
+    // Clear location indicator
+    this.clearLocationIndicator();
 
     // Close any open popups
     try {
@@ -2946,10 +2816,169 @@ class HeaderSearch {
     }
   }
 
+  showSearchLocationIndicator(result) {
+    try {
+      const view = window.mapApp?.view;
+      if (!view || !result.graphic) return;
+
+      console.log('🎯 Showing search location indicator');
+
+      // Clear any existing indicator
+      this.clearLocationIndicator();
+
+      // Create animated CIM symbol with pulsing effect
+      const animatedSymbol = {
+        type: "cim",
+        data: {
+          type: "CIMSymbolReference",
+          symbol: {
+            type: "CIMPointSymbol",
+            symbolLayers: [
+              // Pulsing outer ring
+              {
+                type: "CIMVectorMarker",
+                enable: true,
+                size: 30,
+                frame: {
+                  xmin: -2,
+                  ymin: -2,
+                  xmax: 2,
+                  ymax: 2
+                },
+                markerGraphics: [{
+                  type: "CIMMarkerGraphic",
+                  geometry: {
+                    type: "CIMPolygon",
+                    rings: [[
+                      [2, 0], [1.9, 0.6], [1.6, 1.2], [1.2, 1.6], [0.6, 1.9], [0, 2],
+                      [-0.6, 1.9], [-1.2, 1.6], [-1.6, 1.2], [-1.9, 0.6], [-2, 0],
+                      [-1.9, -0.6], [-1.6, -1.2], [-1.2, -1.6], [-0.6, -1.9], [0, -2],
+                      [0.6, -1.9], [1.2, -1.6], [1.6, -1.2], [1.9, -0.6], [2, 0]
+                    ]]
+                  },
+                  symbol: {
+                    type: "CIMPolygonSymbol",
+                    symbolLayers: [{
+                      type: "CIMSolidStroke",
+                      enable: true,
+                      color: [0, 150, 255, 255],
+                      width: 2
+                    }]
+                  }
+                }],
+                primitiveName: "pulse_ring"
+              },
+              // Static center dot
+              {
+                type: "CIMVectorMarker",
+                enable: true,
+                size: 8,
+                frame: {
+                  xmin: -1,
+                  ymin: -1,
+                  xmax: 1,
+                  ymax: 1
+                },
+                markerGraphics: [{
+                  type: "CIMMarkerGraphic",
+                  geometry: {
+                    type: "CIMPolygon",
+                    rings: [[
+                      [1, 0], [0.9, 0.4], [0.7, 0.7], [0.4, 0.9], [0, 1],
+                      [-0.4, 0.9], [-0.7, 0.7], [-0.9, 0.4], [-1, 0],
+                      [-0.9, -0.4], [-0.7, -0.7], [-0.4, -0.9], [0, -1],
+                      [0.4, -0.9], [0.7, -0.7], [0.9, -0.4], [1, 0]
+                    ]]
+                  },
+                  symbol: {
+                    type: "CIMPolygonSymbol",
+                    symbolLayers: [{
+                      type: "CIMSolidFill",
+                      enable: true,
+                      color: [0, 150, 255, 255]
+                    }]
+                  }
+                }]
+              }
+            ],
+            // Add pulsing animation
+            animations: [
+              {
+                type: "CIMSymbolAnimationScale",
+                primitiveName: "pulse_ring",
+                scaleFactor: 2.5,
+                animatedSymbolProperties: {
+                  type: "CIMAnimatedSymbolProperties",
+                  playAnimation: true,
+                  randomizeStartTime: false,
+                  repeatType: "Loop",
+                  repeatDelay: 0,
+                  duration: 2.0,
+                  easing: "Linear"
+                }
+              },
+              {
+                type: "CIMSymbolAnimationTransparency",
+                primitiveName: "pulse_ring",
+                toTransparency: 100,
+                animatedSymbolProperties: {
+                  type: "CIMAnimatedSymbolProperties",
+                  playAnimation: true,
+                  randomizeStartTime: false,
+                  repeatType: "Loop",
+                  repeatDelay: 0,
+                  duration: 2.0,
+                  easing: "Linear"
+                }
+              }
+            ]
+          }
+        }
+      };
+
+      // Create the location indicator graphic
+      this.locationIndicatorGraphic = new Graphic({
+        geometry: result.graphic.geometry,
+        symbol: animatedSymbol
+      });
+
+      view.graphics.add(this.locationIndicatorGraphic);
+
+      // Auto-remove after 8 seconds
+      this.indicatorTimeout = setTimeout(() => {
+        this.clearLocationIndicator();
+      }, 8000);
+
+      console.log('✅ Animated search location indicator displayed');
+
+    } catch (error) {
+      console.error('❌ Error showing location indicator:', error);
+    }
+  }
+
+  clearLocationIndicator() {
+    const view = window.mapApp?.view;
+    if (!view) return;
+
+    // Clear the animated location indicator graphic
+    if (this.locationIndicatorGraphic) {
+      view.graphics.remove(this.locationIndicatorGraphic);
+      this.locationIndicatorGraphic = null;
+      console.log('🧹 Animated location indicator cleared');
+    }
+
+    // Clear auto-removal timeout
+    if (this.indicatorTimeout) {
+      clearTimeout(this.indicatorTimeout);
+      this.indicatorTimeout = null;
+    }
+  }
+
   // Public method to search from other components
   search(searchTerm) {
-    if (this.searchInput) {
-      this.searchInput.value = searchTerm;
+    if (this.autocomplete) {
+      this.autocomplete.value = searchTerm;
+      this.autocomplete.inputValue = searchTerm;
       this.performSearch(searchTerm);
     }
   }
@@ -3130,4 +3159,5 @@ class DashboardManager {
     }
   }
 }
+
 

@@ -29,15 +29,11 @@
       <calcite-navigation slot="header">
         <calcite-navigation-logo slot="logo" heading="FiberOMS Insight" thumbnail=""></calcite-navigation-logo>
         <div slot="content-center" class="navigation-search-container">
-          <calcite-input id="header-search" placeholder="Search subscribers, accounts, addresses (min 4 chars)..."
-            scale="l" type="search" icon="search" clearable class="header-search-input">
-          </calcite-input>
-          <calcite-popover id="search-results-popover" reference-element="header-search" placement="bottom-start"
-            offset-distance="4" class="search-results-popover">
-            <calcite-list id="search-results-list" selection-mode="none">
-              <!-- Search results will be populated here -->
-            </calcite-list>
-          </calcite-popover>
+          <calcite-autocomplete id="header-search"
+            placeholder="Search subscribers, accounts, addresses (min 4 chars)..." scale="l" icon="search" clearable
+            class="header-search-input">
+            <!-- Search results will be populated here -->
+          </calcite-autocomplete>
         </div>
         <div slot="content-end">
           <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="m"

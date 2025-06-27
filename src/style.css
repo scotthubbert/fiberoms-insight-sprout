@@ -103,26 +103,6 @@ calcite-navigation calcite-button {
   max-width: 800px;
 }
 
-.search-results-popover {
-  --calcite-popover-z-index: 1000;
-  min-width: 400px;
-  max-width: 800px;
-  max-height: 400px;
-}
-
-.search-results-popover calcite-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.search-results-popover calcite-list-item {
-  cursor: pointer;
-}
-
-.search-results-popover calcite-list-item:hover {
-  --calcite-list-item-background-color: var(--calcite-color-foreground-2);
-}
-
 /* Mobile dropdown adjustments */
 @media (max-width: 768px) {
   .search-results-dropdown {
