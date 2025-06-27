@@ -3031,14 +3031,8 @@ class DashboardManager {
       refreshBtn.addEventListener('click', () => this.refreshDashboard());
     }
 
-    // Settings button
-    const settingsBtn = document.getElementById('dashboard-settings');
-    if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => this.showSettings());
-    }
-
     // Make offline metric chip clickable for more details
-    const offlineChip = document.querySelector('.offline-metric');
+    const offlineChip = document.querySelector('.inline-metric.offline-metric');
     if (offlineChip) {
       offlineChip.addEventListener('click', (e) => {
         if (!offlineChip.classList.contains('loading')) {
@@ -3069,11 +3063,13 @@ class DashboardManager {
       this.updateMetricDisplay('offline-count', count);
 
       // Add alert state if count is high
-      const offlineMetric = document.querySelector('.offline-metric');
-      if (count > 50) {
-        offlineMetric.classList.add('alert');
-      } else {
-        offlineMetric.classList.remove('alert');
+      const offlineMetric = document.querySelector('.inline-metric.offline-metric');
+      if (offlineMetric) {
+        if (count > 50) {
+          offlineMetric.classList.add('alert');
+        } else {
+          offlineMetric.classList.remove('alert');
+        }
       }
 
     } catch (error) {
@@ -3088,7 +3084,7 @@ class DashboardManager {
     const element = document.getElementById(elementId);
     if (element) {
       // Add loading state briefly
-      const metricItem = element.closest('.metric-item');
+      const metricItem = element.closest('.inline-metric');
       if (metricItem) {
         metricItem.classList.add('loading');
 
@@ -3153,10 +3149,7 @@ class DashboardManager {
 
 
 
-  showSettings() {
-    // Placeholder - show dashboard settings
-    console.log('⚙️ Show dashboard settings');
-  }
+
 
   // Public method to update specific metrics from other components
   updateMetric(metricType, value) {
@@ -3165,7 +3158,7 @@ class DashboardManager {
       this.updateMetricDisplay('offline-count', value);
 
       // Add alert state if count is high
-      const offlineMetric = document.querySelector('.offline-metric');
+      const offlineMetric = document.querySelector('.inline-metric.offline-metric');
       if (offlineMetric) {
         if (value > 50) {
           offlineMetric.classList.add('alert');

@@ -26,40 +26,31 @@
     <!-- Calcite Shell Layout -->
     <calcite-shell>
       <!-- Header Navigation -->
-      <calcite-navigation slot="header">
+      <calcite-navigation slot="header" class="unified-header">
         <calcite-navigation-logo slot="logo" heading="FiberOMS Insight" thumbnail=""></calcite-navigation-logo>
-        <div slot="content-center" class="navigation-search-container">
-          <calcite-autocomplete id="header-search"
-            placeholder="Search subscribers, accounts, addresses (min 4 chars)..." scale="l" icon="search" clearable
-            class="header-search-input">
-            <!-- Search results will be populated here -->
-          </calcite-autocomplete>
-        </div>
-        <div slot="content-end">
-          <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="m"
-            aria-label="Toggle theme"></calcite-button>
-        </div>
-      </calcite-navigation>
-
-      <!-- Dashboard Bar -->
-      <div slot="header" id="dashboard-bar" class="dashboard-bar">
-        <calcite-panel class="dashboard-panel">
-          <div class="dashboard-metrics">
-            <calcite-chip class="metric-item offline-metric" value="offline" appearance="solid" scale="s">
+        <div slot="content-center" class="navigation-content-center">
+          <div class="search-section">
+            <calcite-autocomplete id="header-search"
+              placeholder="Search subscribers, accounts, addresses (min 4 chars)..." scale="l" icon="search" clearable
+              class="header-search-input">
+              <!-- Search results will be populated here -->
+            </calcite-autocomplete>
+          </div>
+          <div class="metrics-section">
+            <calcite-chip class="inline-metric offline-metric" value="offline" appearance="outline" scale="s">
               <calcite-icon slot="icon" icon="circle" scale="s"></calcite-icon>
-              <span class="metric-count" id="offline-count">--</span>
+              <span class="metric-count" id="offline-count">0</span>
               <span class="metric-label">Offline</span>
             </calcite-chip>
           </div>
-
-          <div class="dashboard-actions" slot="actions-end">
-            <calcite-button id="refresh-dashboard" icon-start="refresh" appearance="transparent" scale="s"
-              aria-label="Refresh dashboard"></calcite-button>
-            <calcite-button id="dashboard-settings" icon-start="gear" appearance="transparent" scale="s"
-              aria-label="Dashboard settings"></calcite-button>
-          </div>
-        </calcite-panel>
-      </div>
+        </div>
+        <div slot="content-end" class="navigation-actions">
+          <calcite-button id="refresh-dashboard" icon-start="refresh" appearance="transparent" scale="s"
+            aria-label="Refresh dashboard"></calcite-button>
+          <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="s"
+            aria-label="Toggle theme"></calcite-button>
+        </div>
+      </calcite-navigation>
 
       <!-- Side Panel - Desktop Only -->
       <calcite-shell-panel slot="panel-start" id="layers-panel" collapsed display-mode="dock" class="desktop-only">
