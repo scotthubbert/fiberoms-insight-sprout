@@ -25,6 +25,40 @@ npm run preview  # Preview production build
 
 ## Project Architecture
 
+### SOLID Principles for Web Development
+
+This project follows SOLID principles adapted for modern web development:
+
+#### 1. Single Responsibility Principle (SRP)
+Each module/component should have one reason to change:
+- **Services**: Handle only data fetching/manipulation (e.g., `dataService.js` for Supabase operations)
+- **Components**: Focus on single UI concerns (e.g., `SearchBar` only handles search, not data fetching)
+- **Utilities**: Perform specific transformations (e.g., `formatters.js` for data formatting)
+
+#### 2. Open/Closed Principle (OCP)
+Code should be open for extension but closed for modification:
+- Use composition over inheritance
+- Leverage CalciteUI component slots and properties for customization
+- Create plugin-based layer system for map features
+
+#### 3. Liskov Substitution Principle (LSP)
+Components should be replaceable with instances of their subtypes:
+- All layer implementations must adhere to the base layer interface
+- Service implementations must fulfill their contracts
+- Component props should maintain consistent behavior
+
+#### 4. Interface Segregation Principle (ISP)
+Clients shouldn't depend on interfaces they don't use:
+- Split large services into focused interfaces
+- Use specific event handlers instead of monolithic listeners
+- Create targeted API endpoints rather than generic ones
+
+#### 5. Dependency Inversion Principle (DIP)
+Depend on abstractions, not concretions:
+- Inject services as dependencies
+- Use configuration objects for layer definitions
+- Abstract external APIs behind service interfaces
+
 ### Critical Architecture Decision: NPM vs CDN
 **Use NPM for all dependencies** - Do NOT use CDN links. This decision was made for:
 - Enterprise reliability in VPN-only environments
@@ -47,26 +81,63 @@ All CSS and UI decisions should follow mobile-first methodology:
 }
 ```
 
-### Data Layer Pattern
-Each map layer follows this consistent pattern:
+### Code Organization Structure (SOLID-compliant)
+
+```
+src/
+├── services/           # Single Responsibility: Data & Business Logic
+│   ├── base/          # Abstract service interfaces (DIP)
+│   │   ├── DataService.js
+│   │   └── LayerService.js
+│   ├── data/          # Concrete implementations
+│   │   ├── SupabaseService.js
+│   │   └── GeotabService.js
+│   └── layers/        # Layer-specific services
+│       ├── SubscriberLayerService.js
+│       └── OutageLayerService.js
+├── components/        # Single Responsibility: UI Components
+│   ├── map/          # Map-related components
+│   ├── search/       # Search functionality
+│   └── common/       # Reusable UI elements
+├── utils/            # Single Responsibility: Pure functions
+│   ├── formatters.js
+│   └── validators.js
+└── config/           # Open/Closed: Configuration over modification
+    ├── layers.js     # Layer definitions
+    └── services.js   # Service configurations
+```
+
+### Data Layer Pattern (SOLID-compliant)
+Each map layer follows this consistent pattern adhering to SOLID principles:
+
 ```javascript
-async loadLayerName() {
-  try {
-    const data = await this.dataService.fetchData('table_name');
-    if (!data?.length) return;
+// Layer Service (SRP - handles only layer logic)
+class SubscriberLayerService extends BaseLayerService {
+  constructor(dataService) {
+    super();
+    this.dataService = dataService; // DIP - depends on abstraction
+  }
 
-    const layer = new GeoJSONLayer({
-      id: 'layer-id',
+  async createLayer(config) {
+    const data = await this.dataService.fetchData(config.table);
+    return this.buildLayer(data, config);
+  }
+
+  buildLayer(data, config) {
+    // OCP - extend through config, not modification
+    return new GeoJSONLayer({
+      id: config.id,
       source: data,
-      renderer: { /* styling */ },
-      popupTemplate: { /* popup config */ }
+      renderer: config.renderer,
+      popupTemplate: config.popupTemplate
     });
-
-    this.map.add(layer);
-  } catch (error) {
-    this.handleLayerError('layer-name', error);
   }
 }
+
+// Usage (DIP - inject dependencies)
+const layerService = new SubscriberLayerService(dataService);
+const layer = await layerService.createLayer(subscriberConfig);
+map.add(layer);
 ```
 
 ## Core Features & Data Layers
@@ -127,6 +198,96 @@ VITE_GEOTAB_DATABASE=mygeotab_db
 - **Calcite Components**: https://developers.arcgis.com/calcite-design-system/components/
 - **CalciteUI Icons**: https://developers.arcgis.com/calcite-design-system/icons/
 
+## SOLID Principles Examples
+
+### 1. Single Responsibility Principle (SRP)
+```javascript
+// ❌ BAD: Multiple responsibilities
+class MapComponent {
+  async loadData() { /* fetches from Supabase */ }
+  renderLayer() { /* creates map layer */ }
+  exportCSV() { /* exports data */ }
+  handleTheme() { /* manages theme */ }
+}
+
+// ✅ GOOD: Single responsibility per class
+class DataService { async fetchData() { /* only data fetching */ } }
+class LayerRenderer { render() { /* only rendering */ } }
+class CSVExporter { export() { /* only exporting */ } }
+class ThemeManager { toggle() { /* only theming */ } }
+```
+
+### 2. Open/Closed Principle (OCP)
+```javascript
+// ✅ GOOD: Extensible through configuration
+const layerConfigs = {
+  subscriber: {
+    renderer: subscriberRenderer,
+    popup: subscriberPopup
+  },
+  outage: {
+    renderer: outageRenderer,
+    popup: outagePopup
+  }
+};
+
+// Add new layer types without modifying existing code
+layerConfigs.vehicle = { renderer: vehicleRenderer, popup: vehiclePopup };
+```
+
+### 3. Liskov Substitution Principle (LSP)
+```javascript
+// ✅ GOOD: All services implement consistent interface
+class BaseDataService {
+  async fetch(params) { throw new Error('Must implement'); }
+}
+
+class SupabaseService extends BaseDataService {
+  async fetch(params) { /* Supabase implementation */ }
+}
+
+class GeotabService extends BaseDataService {
+  async fetch(params) { /* Geotab implementation */ }
+}
+
+// Services are interchangeable
+const service = isOffline ? new CachedService() : new SupabaseService();
+```
+
+### 4. Interface Segregation Principle (ISP)
+```javascript
+// ❌ BAD: Fat interface
+class DataService {
+  fetchSubscribers() {}
+  fetchOutages() {}
+  fetchVehicles() {}
+  updateSubscriber() {}
+  deleteOutage() {}
+}
+
+// ✅ GOOD: Segregated interfaces
+class SubscriberService { fetch() {} update() {} }
+class OutageService { fetch() {} create() {} delete() {} }
+class VehicleService { fetch() {} track() {} }
+```
+
+### 5. Dependency Inversion Principle (DIP)
+```javascript
+// ✅ GOOD: Depend on abstractions
+class MapController {
+  constructor(dataService, layerService) {
+    this.dataService = dataService;    // Interface, not concrete class
+    this.layerService = layerService;  // Interface, not concrete class
+  }
+}
+
+// Inject dependencies
+const mapController = new MapController(
+  new SupabaseService(),
+  new SubscriberLayerService()
+);
+```
+
 ## Development Best Practices
 
 ### CalciteUI Component Verification
@@ -149,6 +310,28 @@ Use these core icons that are always available:
 - `Failed to resolve import` → Verify component exists in CalciteUI
 
 ## Development Philosophy
+
+### SOLID-Aligned Development Principles
+
+1. **Component Composition** (SRP + OCP)
+   - Build complex features by composing simple, focused components
+   - Each component should have a single, well-defined purpose
+   - Extend functionality through props and slots, not modification
+
+2. **Service Layer Architecture** (SRP + DIP)
+   - Separate data concerns from presentation
+   - UI components should never directly access databases
+   - Services should be injected, not imported directly
+
+3. **Configuration-Driven Development** (OCP)
+   - Use configuration objects to define behavior
+   - Avoid hardcoding values in components
+   - New features should be addable via config, not code changes
+
+4. **Progressive Enhancement** (LSP)
+   - Base functionality should work for all users
+   - Enhanced features should gracefully degrade
+   - Mobile experience is the baseline, desktop is enhancement
 
 ### "Use the Platform" Principle
 Always leverage native CalciteUI and ArcGIS components over custom implementations:
@@ -174,9 +357,29 @@ Always leverage native CalciteUI and ArcGIS components over custom implementatio
 
 ## Common Pitfalls to Avoid
 
+### Architecture Anti-Patterns
 1. **Do NOT use CDN links** - All dependencies must be bundled via NPM
 2. **Do NOT implement multiple features simultaneously** - Follow phases sequentially
 3. **Do NOT design desktop-first** - Always start with mobile layouts
 4. **Do NOT skip testing on actual mobile devices** - Test on real hardware
 5. **Do NOT mix architecture patterns** - Use established patterns consistently
 6. **Do NOT create custom UI when CalciteUI components exist** - Follow "use the platform" philosophy
+
+### SOLID Violations to Avoid
+1. **God Objects** - Classes/modules that do everything (violates SRP)
+2. **Hardcoded Dependencies** - Direct imports instead of injection (violates DIP)
+3. **Modifying Core Code** - Changing existing code for new features (violates OCP)
+4. **Fat Interfaces** - Services with too many methods (violates ISP)
+5. **Inconsistent Implementations** - Services that don't fulfill contracts (violates LSP)
+
+## Implementation Checklist
+
+When implementing new features, ensure:
+- [ ] Each class/module has a single responsibility
+- [ ] New features extend via configuration, not modification
+- [ ] Services implement consistent interfaces
+- [ ] Dependencies are injected, not hardcoded
+- [ ] Interfaces are focused and segregated
+- [ ] Mobile experience is implemented first
+- [ ] CalciteUI components are used where available
+- [ ] Code follows established patterns in the codebase

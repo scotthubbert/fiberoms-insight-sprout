@@ -1898,6 +1898,11 @@ class MapApp {
         mobileSwitch.checked = checked;
       }
     }
+
+    // Also sync with mobile tab bar if available
+    if (window.mobileTabBar && window.mobileTabBar.syncSwitchStates) {
+      window.mobileTabBar.syncSwitchStates();
+    }
   }
 
   // Method to apply theme to map components
@@ -1974,9 +1979,16 @@ class MobileTabBar {
 
     this.currentSheet = null;
     this.initialized = false;
+    this.isSwitching = false; // Flag to manage state during panel switching
     this.subscriberData = {
-      online: { count: 0, loading: false },
-      offline: { count: 0, loading: false }
+      online: {
+        count: 0,
+        loading: false
+      },
+      offline: {
+        count: 0,
+        loading: false
+      }
     };
 
     // Delay initialization to ensure DOM is ready
@@ -1986,69 +1998,41 @@ class MobileTabBar {
   async init() {
     // Wait for calcite components to be defined
     await customElements.whenDefined('calcite-segmented-control');
-    await customElements.whenDefined('calcite-segmented-control-item');
     await customElements.whenDefined('calcite-dialog');
+    console.log('🏗️ MobileTabBar: Components defined, setting up...');
 
-    // Initialize modals as closed
     Object.values(this.sheets).forEach(modal => {
       if (modal) {
         modal.open = false;
+        // This event fires whenever a dialog closes. We use a flag to distinguish
+        // a "natural" close from a programmatic one during a panel switch.
+        modal.addEventListener('calciteDialogClose', () => {
+          if (!this.isSwitching) {
+            console.log('📱 Modal closed by user.');
+            this.currentSheet = null;
+            this.cleanupUI();
+            this.resetTabSelection();
+          } else {
+            console.log('📱 Modal closed as part of a switch.');
+          }
+        });
       }
     });
 
-    // Setup segmented control change event
     if (this.segmentedControl) {
-      // Listen for the calciteSegmentedControlChange event
+      console.log('🏗️ MobileTabBar: Setting up segmented control...');
       this.segmentedControl.addEventListener('calciteSegmentedControlChange', (event) => {
         const selectedValue = event.target.value;
-        console.log('Tab selected:', selectedValue);
-        this.handleTabChange(selectedValue);
-      });
-
-      // Also add click handlers to individual items as fallback
-      const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
-      items.forEach(item => {
-        item.addEventListener('click', () => {
-          const value = item.getAttribute('value');
-          console.log('Item clicked:', value);
-          // If this tab is already selected and modal is closed, reopen it
-          if (item.checked && (!this.currentSheet || !this.currentSheet.open)) {
-            this.handleTabChange(value);
-          }
-        });
+        console.log('📱 Tab selected:', selectedValue);
+        this.handleTabSelection(selectedValue);
       });
     }
 
-    // Setup modal close events
-    Object.values(this.sheets).forEach(modal => {
-      if (modal) {
-        modal.addEventListener('calciteDialogClose', () => {
-          this.currentSheet = null;
-          // Don't reset tab selection here - let user interaction control it
-        });
-      }
-    });
-
     // Setup close button click handlers
-    document.querySelectorAll('.close-modal-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.closeAllSheets();
-        // Don't reset tab selection - keep it selected
-      });
-    });
+    this.setupCloseButtons();
 
-    // Setup layer toggle list items - click anywhere to toggle switch
-    document.querySelectorAll('.layer-toggle-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        // Don't toggle if clicking directly on the switch
-        if (e.target.tagName !== 'CALCITE-SWITCH') {
-          const switchElement = item.querySelector('calcite-switch');
-          if (switchElement) {
-            switchElement.checked = !switchElement.checked;
-          }
-        }
-      });
-    });
+    // Setup layer toggle functionality for mobile switches
+    this.setupMobileLayerToggles();
 
     // Setup refresh button click handler
     const refreshButton = document.getElementById('refresh-subscriber-data');
@@ -2059,6 +2043,7 @@ class MobileTabBar {
     }
 
     this.initialized = true;
+    console.log('✅ MobileTabBar: Initialization complete');
 
     // Load subscriber data for UI counts (map will load its own data)
     this.loadSubscriberData();
@@ -2069,180 +2054,288 @@ class MobileTabBar {
     }, 5 * 60 * 1000);
   }
 
+  handleTabSelection(tabValue) {
+    const sheetToOpen = this.sheets[tabValue];
+    if (!sheetToOpen) return;
+
+    // Case 1: The selected tab's panel is already open. Close it.
+    // This is handled by the general 'calciteDialogClose' listener which will reset the UI.
+    if (sheetToOpen.open) {
+      console.log('📱 Same tab clicked - closing panel');
+      sheetToOpen.open = false;
+      return;
+    }
+
+    // Case 2: Another panel is open, or no panel is open. Switch to the new one.
+    const currentOpenSheet = this.currentSheet;
+
+    const openNewSheet = () => {
+      sheetToOpen.open = true;
+      this.currentSheet = sheetToOpen;
+      this.setupUIForOpenSheet();
+      // Reset the switching flag AFTER the new sheet is open and UI is set up.
+      this.isSwitching = false;
+    };
+
+    if (currentOpenSheet && currentOpenSheet.open) {
+      console.log(`📱 Switching from ${currentOpenSheet.id} to ${sheetToOpen.id}`);
+      this.isSwitching = true; // Set flag to prevent the general close handler from resetting tabs
+      // Listen for the old sheet to close, then open the new one.
+      currentOpenSheet.addEventListener('calciteDialogClose', openNewSheet, {
+        once: true
+      });
+      currentOpenSheet.open = false; // Trigger the close
+      this.cleanupUI(); // Clean up the old sheet's UI immediately
+    } else {
+      // No sheet is open, just open the new one.
+      console.log(`📱 Opening new panel: ${sheetToOpen.id}`);
+      openNewSheet();
+    }
+  }
+
+  setupUIForOpenSheet() {
+    this.createBlurOverlay();
+    this.setupAlternativeCloseHandlers(); // Depends on this.currentSheet
+    this.injectCustomCloseButton();
+
+    if (this.currentSheet && this.currentSheet.id === 'mobile-search-sheet') {
+      setTimeout(() => {
+        const searchInput = document.getElementById('mobile-search-input');
+        if (searchInput) searchInput.setFocus();
+      }, 150); // Delay to allow for transition
+    }
+  }
+
+  cleanupUI() {
+    this.cleanupCustomCloseButton();
+    this.removeBlurOverlay();
+  }
+
+  // This is for the manual 'X' buttons or injected close button.
+  handleCloseClick() {
+    console.log('📱 Handle close click called');
+    if (this.currentSheet && this.currentSheet.open) {
+      this.isSwitching = false; // Ensure it's treated as a natural close
+      this.currentSheet.open = false; // Trigger close, the general event listener will handle the rest.
+    }
+  }
+
+  setupCloseButtons() {
+    console.log('🔧 Setting up close buttons...');
+    setTimeout(() => {
+      const closeButtons = document.querySelectorAll('.close-modal-btn');
+      closeButtons.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          console.log('📱 Close button clicked!', btn.closest('calcite-dialog')?.id);
+          e.preventDefault();
+          e.stopPropagation();
+          this.handleCloseClick();
+        });
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.currentSheet && this.currentSheet.open) {
+          this.handleCloseClick();
+        }
+      });
+    }, 300);
+  }
+
+  setupAlternativeCloseHandlers() {
+    if (!this.currentSheet) return;
+    const modal = this.currentSheet;
+    this.backdropClickHandler = (e) => {
+      if (e.target === modal) this.handleCloseClick();
+    };
+    modal.addEventListener('click', this.backdropClickHandler);
+  }
+
+  injectCustomCloseButton() {
+    if (!this.currentSheet) return;
+    const existingBtn = document.querySelector('.in-panel-close-btn');
+    if (existingBtn) existingBtn.remove();
+    const closeButton = document.createElement('calcite-button');
+    closeButton.className = 'in-panel-close-btn';
+    closeButton.setAttribute('width', 'full');
+    closeButton.setAttribute('appearance', 'outline');
+    closeButton.setAttribute('scale', 'l');
+    closeButton.setAttribute('icon-start', 'x');
+    closeButton.textContent = 'Close';
+    closeButton.style.cssText = `
+       position: fixed !important; bottom: 64px !important; left: 0 !important;
+       right: 0 !important; z-index: 150 !important; margin: 0 !important; padding: 18px !important;
+       background: var(--calcite-color-foreground-1) !important; border-top: 3px solid var(--calcite-color-brand) !important;
+       box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.2) !important; border-radius: 0 !important;
+       min-height: 60px !important; font-size: 16px !important; font-weight: 600 !important;
+       cursor: pointer !important; touch-action: manipulation !important; user-select: none !important;
+       -webkit-user-select: none !important; -webkit-tap-highlight-color: transparent !important;
+       display: flex !important; align-items: center !important; justify-content: center !important;
+     `;
+    closeButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleCloseClick();
+    });
+    document.body.appendChild(closeButton);
+    const contentSlot = this.currentSheet.querySelector('[slot="content"]');
+    if (contentSlot) contentSlot.style.paddingBottom = '80px';
+    this.customCloseButton = closeButton;
+  }
+
+  setupMobileLayerToggles() {
+    console.log('🔧 Setting up mobile layer toggles...');
+    setTimeout(() => {
+      const onlineSwitch = document.querySelector('#mobile-subscribers-sheet calcite-list-item:first-child calcite-switch');
+      const offlineSwitch = document.querySelector('#mobile-subscribers-sheet calcite-list-item:nth-child(2) calcite-switch');
+      if (onlineSwitch) {
+        if (window.mapApp && window.mapApp.layerVisibility) {
+          onlineSwitch.checked = window.mapApp.layerVisibility.onlineSubscribers;
+        }
+        onlineSwitch.addEventListener('calciteSwitchChange', (event) => {
+          if (window.mapApp) window.mapApp.toggleLayer('onlineSubscribers', event.target.checked);
+        });
+      }
+      if (offlineSwitch) {
+        if (window.mapApp && window.mapApp.layerVisibility) {
+          offlineSwitch.checked = window.mapApp.layerVisibility.offlineSubscribers;
+        }
+        offlineSwitch.addEventListener('calciteSwitchChange', (event) => {
+          if (window.mapApp) window.mapApp.toggleLayer('offlineSubscribers', event.target.checked);
+        });
+      }
+    }, 500);
+  }
+
   async loadSubscriberData() {
-    // Load offline subscribers data
     try {
       this.subscriberData.offline.loading = true;
       this.updateOfflineSubscriberUI();
-
       const offlineData = await subscriberDataService.getOfflineSubscribers();
       this.subscriberData.offline = {
-        count: offlineData.count,
-        loading: false,
-        data: offlineData.data,
-        lastUpdated: offlineData.lastUpdated,
-        error: offlineData.error
+        ...offlineData,
+        loading: false
       };
-
       this.updateOfflineSubscriberUI();
     } catch (error) {
-      console.error('Failed to load offline subscribers:', error);
       this.subscriberData.offline.loading = false;
       this.subscriberData.offline.error = error.message;
       this.updateOfflineSubscriberUI();
     }
-
-    // Load online subscribers data only if the layer is visible
-    // This prevents unnecessary API calls when the layer is off
     if (window.mapApp && window.mapApp.layerVisibility.onlineSubscribers) {
       try {
         this.subscriberData.online.loading = true;
         this.updateOnlineSubscriberUI();
-
         const onlineData = await subscriberDataService.getOnlineSubscribers();
         this.subscriberData.online = {
-          count: onlineData.count,
-          loading: false,
-          data: onlineData.data,
-          lastUpdated: onlineData.lastUpdated,
-          error: onlineData.error
+          ...onlineData,
+          loading: false
         };
-
         this.updateOnlineSubscriberUI();
       } catch (error) {
-        console.error('Failed to load online subscribers:', error);
         this.subscriberData.online.loading = false;
         this.subscriberData.online.error = error.message;
         this.updateOnlineSubscriberUI();
       }
     } else {
-      // Just update UI to show layer is off
       this.subscriberData.online.loading = false;
       this.updateOnlineSubscriberUI();
     }
-
-    // Note: Map layers load their own data when initialized
   }
 
   updateOfflineSubscriberUI() {
-    // Update mobile modal list item
-    const mobileOfflineItem = document.querySelector('#mobile-subscribers-sheet calcite-list-item:nth-child(2)');
-    if (mobileOfflineItem) {
-      const { loading, error } = this.subscriberData.offline;
-      let description = 'Show disconnected subscribers';
-
-      if (loading) {
-        description = 'Loading...';
-      } else if (error) {
-        description = 'Error loading data';
-        mobileOfflineItem.classList.add('error');
-      } else {
-        mobileOfflineItem.classList.remove('error');
-      }
-
-      mobileOfflineItem.setAttribute('description', description);
+    const item = document.querySelector('#mobile-subscribers-sheet calcite-list-item:nth-child(2)');
+    if (item) {
+      const {
+        loading,
+        error
+      } = this.subscriberData.offline;
+      item.description = loading ? 'Loading...' : 'Show disconnected subscribers';
+      item.classList.toggle('error', !!error);
     }
-
-    // Desktop panel - no count display needed
   }
 
   updateOnlineSubscriberUI() {
-    // Update mobile modal list item
-    const mobileOnlineItem = document.querySelector('#mobile-subscribers-sheet calcite-list-item:first-child');
-    if (mobileOnlineItem) {
-      const { loading, error } = this.subscriberData.online;
-      let description = 'Show active subscribers';
-
-      if (loading) {
-        description = 'Loading...';
-      } else if (error) {
-        description = 'Error loading data';
-        mobileOnlineItem.classList.add('error');
-      } else {
-        mobileOnlineItem.classList.remove('error');
-      }
-
-      mobileOnlineItem.setAttribute('description', description);
+    const item = document.querySelector('#mobile-subscribers-sheet calcite-list-item:first-child');
+    if (item) {
+      const {
+        loading,
+        error
+      } = this.subscriberData.online;
+      item.description = loading ? 'Loading...' : 'Show active subscribers';
+      item.classList.toggle('error', !!error);
     }
-
-    // Desktop panel - no count display needed
   }
 
-  // Add refresh functionality
   async refreshSubscriberData() {
-    const refreshButton = document.getElementById('refresh-subscriber-data');
-
+    const button = document.getElementById('refresh-subscriber-data');
     try {
-      // Show loading state
-      if (refreshButton) {
-        refreshButton.setAttribute('loading', '');
-        refreshButton.setAttribute('disabled', '');
-      }
-
-      console.log('Refreshing subscriber data...');
+      if (button) button.loading = true;
       await subscriberDataService.refreshData('all');
       await this.loadSubscriberData();
-
-      // Also refresh map layers if available
-      if (window.mapApp && window.mapApp.layers.offlineSubscribers) {
-        await window.mapApp.loadSubscriberData();
-      }
-
-      console.log('Subscriber data refreshed successfully');
-
+      if (window.mapApp) await window.mapApp.loadSubscriberData();
     } catch (error) {
       console.error('Failed to refresh subscriber data:', error);
     } finally {
-      // Remove loading state
-      if (refreshButton) {
-        refreshButton.removeAttribute('loading');
-        refreshButton.removeAttribute('disabled');
-      }
+      if (button) button.loading = false;
     }
   }
 
-  handleTabChange(tabValue) {
-    console.log('Tab changed to:', tabValue);
-
-    // Close all modals first
-    this.closeAllSheets();
-
-    // Open the selected modal (even if it's the same one that was just open)
-    if (this.sheets[tabValue]) {
-      this.currentSheet = this.sheets[tabValue];
-      // Use CalciteUI's native open property
-      this.currentSheet.open = true;
-
-      // Focus search input when opening search modal
-      if (tabValue === 'search') {
-        setTimeout(() => {
-          const searchInput = document.getElementById('mobile-search-input');
-          if (searchInput) {
-            searchInput.setFocus();
-          }
-        }, 100);
-      }
-    }
+  cleanupCustomCloseButton() {
+    const btn = document.querySelector('.in-panel-close-btn');
+    if (btn) btn.remove();
+    this.customCloseButton = null;
   }
 
-  closeAllSheets() {
-    Object.values(this.sheets).forEach(modal => {
-      if (modal) {
-        modal.open = false;
-      }
-    });
-    this.currentSheet = null;
+  createBlurOverlay() {
+    this.removeBlurOverlay();
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-panel-overlay';
+    document.body.appendChild(overlay);
   }
 
-  resetToMapTab() {
-    // Clear selection when closing modals
+  removeBlurOverlay() {
+    const overlay = document.querySelector('.mobile-panel-overlay');
+    if (overlay) overlay.remove();
+  }
+
+  resetTabSelection() {
+    console.log('📱 Resetting tab selection');
     if (this.segmentedControl) {
-      // Uncheck all items
+      this.segmentedControl.value = '';
       const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
       items.forEach(item => item.checked = false);
     }
   }
+
+  syncSwitchStates() {
+    if (!window.mapApp) return;
+    const onlineSwitch = document.querySelector('#mobile-subscribers-sheet calcite-list-item:first-child calcite-switch');
+    const offlineSwitch = document.querySelector('#mobile-subscribers-sheet calcite-list-item:nth-child(2) calcite-switch');
+    if (onlineSwitch) onlineSwitch.checked = window.mapApp.layerVisibility.onlineSubscribers;
+    if (offlineSwitch) offlineSwitch.checked = window.mapApp.layerVisibility.offlineSubscribers;
+  }
+
+  reinitializeMobile() {
+    this.setupCloseButtons();
+    this.setupMobileLayerToggles();
+    this.syncSwitchStates();
+  }
+
+  testCloseButton() {
+    if (this.currentSheet && this.currentSheet.open) this.handleCloseClick();
+  }
+
+  testMobileTab(tabName) {
+    this.handleTabSelection(tabName);
+  }
+
+  forceCloseModal() {
+    if (this.currentSheet) this.currentSheet.open = false;
+    this.cleanupUI();
+    this.resetTabSelection();
+  }
 }
+
+
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -2263,6 +2356,17 @@ document.addEventListener('DOMContentLoaded', () => {
   window.headerSearch = headerSearch;
   window.subscriberDataService = subscriberDataService;
 
+  // Ensure mobile switches sync with map app once both are initialized
+  setTimeout(() => {
+    if (window.mobileTabBar && window.mobileTabBar.syncSwitchStates) {
+      window.mobileTabBar.syncSwitchStates();
+    }
+    // Also reinitialize close buttons to ensure they work
+    if (window.mobileTabBar && window.mobileTabBar.setupCloseButtons) {
+      window.mobileTabBar.setupCloseButtons();
+    }
+  }, 1000);
+
   // Development-only debugging helpers
   if (isDevelopment) {
     window.testConnection = () => subscriberDataService.testConnection();
@@ -2278,6 +2382,43 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.mapApp?.layers?.onlineSubscribers) {
         log.info('Online layer visible:', window.mapApp.layers.onlineSubscribers.visible)
         log.info('Online layer source length:', window.mapApp.layers.onlineSubscribers.source?.length || 0)
+      }
+    };
+    window.debugMobile = () => {
+      log.info('📱 Mobile UI Debug Info:');
+      log.info('Mobile tab bar:', !!window.mobileTabBar);
+      log.info('Mobile tab bar initialized:', window.mobileTabBar?.initialized);
+      log.info('Segmented control:', !!document.getElementById('mobile-tab-bar'));
+      log.info('Current sheet:', window.mobileTabBar?.currentSheet?.id);
+
+      const onlineSwitch = document.querySelector('#mobile-subscribers-sheet calcite-list-item:first-child calcite-switch');
+      const offlineSwitch = document.querySelector('#mobile-subscribers-sheet calcite-list-item:nth-child(2) calcite-switch');
+      log.info('Online switch found:', !!onlineSwitch, 'checked:', onlineSwitch?.checked);
+      log.info('Offline switch found:', !!offlineSwitch, 'checked:', offlineSwitch?.checked);
+
+      log.info('📱 Available test commands:');
+      log.info('  - window.mobileTabBar.testMobileTab("subscribers")');
+      log.info('  - window.mobileTabBar.testCloseButton()');
+      log.info('  - window.mobileTabBar.forceCloseModal()');
+      log.info('  - window.mobileTabBar.reinitializeMobile()');
+      log.info('  - window.mobileTabBar.syncSwitchStates()');
+    };
+
+    window.testMobileUI = () => {
+      log.info('🧪 Testing mobile UI functionality...');
+      if (window.mobileTabBar) {
+        window.mobileTabBar.testMobileTab('subscribers');
+      } else {
+        log.error('❌ Mobile tab bar not available');
+      }
+    };
+
+    window.closeMobileModal = () => {
+      log.info('🔧 Force closing mobile modal...');
+      if (window.mobileTabBar) {
+        window.mobileTabBar.forceCloseModal();
+      } else {
+        log.error('❌ Mobile tab bar not available');
       }
     };
   }

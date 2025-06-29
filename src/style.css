@@ -163,7 +163,7 @@ calcite-navigation.unified-header calcite-button {
   right: 0;
   width: 100%;
   margin: 0;
-  z-index: 100;
+  z-index: 200; /* Higher than panel modals to stay accessible */
   background: var(--calcite-color-foreground-1);
   border-top: 1px solid var(--calcite-color-border-2);
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
@@ -183,6 +183,84 @@ calcite-navigation.unified-header calcite-button {
 /* Mobile modals - use CalciteUI defaults */
 calcite-modal.mobile-only calcite-button + calcite-button {
   margin-top: var(--calcite-spacing-sm);
+}
+
+/* Mobile dialog layout - panel sits above bottom navigation */
+calcite-dialog.mobile-only[fullscreen] {
+  /* Override fullscreen to make room for bottom tab bar */
+  height: calc(100vh - 64px) !important; /* Stop above bottom tab bar */
+  max-height: calc(100vh - 64px) !important;
+  bottom: 64px !important; /* Position above tab bar */
+  top: 0 !important;
+  z-index: 100 !important; /* Above blur overlay */
+  border-bottom: 3px solid var(--calcite-color-brand) !important; /* Visual indicator */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important; /* Subtle shadow above tab bar */
+  background: var(
+    --calcite-color-foreground-1
+  ) !important; /* Fully opaque background */
+  -webkit-backdrop-filter: none !important; /* Remove any blur effects */
+  backdrop-filter: none !important;
+}
+
+/* Panel content styling */
+calcite-dialog.mobile-only[fullscreen] [slot="content"] {
+  padding-bottom: 80px !important; /* Make room for close button */
+  max-height: calc(
+    100vh - 180px
+  ) !important; /* Account for header and close button */
+  overflow-y: auto !important;
+  background: var(
+    --calcite-color-foreground-1
+  ) !important; /* Ensure content is opaque */
+}
+
+/* Ensure panel is completely opaque - no map showing through */
+calcite-dialog.mobile-only[fullscreen],
+calcite-dialog.mobile-only[fullscreen] .calcite-dialog,
+calcite-dialog.mobile-only[fullscreen] .calcite-dialog-content {
+  background: var(--calcite-color-foreground-1) !important;
+  opacity: 1 !important;
+}
+
+/* Blur overlay to hide map when panels are open */
+.mobile-panel-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+  z-index: 50 !important; /* Below panels but above map */
+  pointer-events: none !important; /* Don't interfere with panel interactions */
+}
+
+/* Style for in-panel close button */
+.in-panel-close-btn {
+  /* Styles set via JavaScript for positioning within panel */
+}
+
+/* Make mobile modal headers clearly tappable for closing */
+calcite-dialog.mobile-only [slot="header"] {
+  padding: var(--calcite-spacing-md) !important;
+  background: var(--calcite-color-foreground-2) !important;
+  border-bottom: 1px solid var(--calcite-color-border-2) !important;
+  text-align: center !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  position: relative !important;
+}
+
+calcite-dialog.mobile-only [slot="header"]:after {
+  content: "Tap to close" !important;
+  position: absolute !important;
+  right: var(--calcite-spacing-md) !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  font-size: 12px !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
 }
 
 /* Close button styling */
