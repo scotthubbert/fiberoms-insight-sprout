@@ -1,0 +1,42 @@
+{
+  "arcgis": {
+    "api": [
+      {
+        "title": "ArcGIS Maps SDK for JavaScript",
+        "url": "https://developers.arcgis.com/javascript/latest/",
+        "description": "Main API reference for ArcGIS JavaScript SDK",
+        "category": "api-reference"
+      },
+      {
+        "title": "Map Class",
+        "url": "https://developers.arcgis.com/javascript/latest/api-reference/esri-Map.html",
+        "description": "Core Map class for creating maps",
+        "category": "api-reference"
+      }
+    ],
+    "samples": [
+      {
+        "title": "Intro to MapView",
+        "url": "https://developers.arcgis.com/javascript/latest/sample-code/intro-mapview/",
+        "description": "Basic map creation example",
+        "category": "code-sample"
+      }
+    ]
+  },
+  "calcite": {
+    "components": [
+      {
+        "title": "Calcite Design System",
+        "url": "https://developers.arcgis.com/calcite-design-system/",
+        "description": "Complete Calcite UI component library",
+        "category": "ui-components"
+      },
+      {
+        "title": "Button Component",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/button/",
+        "description": "Calcite button component documentation",
+        "category": "component"
+      }
+    ]
+  }
+}

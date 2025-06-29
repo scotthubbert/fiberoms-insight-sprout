@@ -1,0 +1,386 @@
+{
+  "arcgis-core": {
+    "api-reference": [
+      {
+        "title": "ArcGIS Maps SDK for JavaScript",
+        "url": "https://developers.arcgis.com/javascript/latest/",
+        "description": "Main documentation hub for ArcGIS JS SDK",
+        "category": "overview"
+      },
+      {
+        "title": "Release Notes v4.33",
+        "url": "https://developers.arcgis.com/javascript/latest/release-notes/",
+        "description": "Latest release notes for ArcGIS JS SDK 4.33",
+        "category": "release-notes"
+      },
+      {
+        "title": "@arcgis/core API Reference",
+        "url": "https://developers.arcgis.com/javascript/latest/api-reference/",
+        "description": "Complete API reference for @arcgis/core package",
+        "category": "api-reference"
+      },
+      {
+        "title": "Map Class",
+        "url": "https://developers.arcgis.com/javascript/latest/api-reference/esri-Map.html",
+        "description": "Core Map class for creating maps",
+        "category": "api-reference"
+      },
+      {
+        "title": "MapView Class",
+        "url": "https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html",
+        "description": "2D view for displaying maps",
+        "category": "api-reference"
+      },
+      {
+        "title": "FeatureLayer Class",
+        "url": "https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-FeatureLayer.html",
+        "description": "Display and query features from feature services - key for outage data",
+        "category": "api-reference"
+      },
+      {
+        "title": "GraphicsLayer Class",
+        "url": "https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-GraphicsLayer.html",
+        "description": "Layer for displaying real-time outage graphics",
+        "category": "api-reference"
+      },
+      {
+        "title": "Popup Class",
+        "url": "https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-Popup.html",
+        "description": "Display outage details and customer information",
+        "category": "api-reference"
+      }
+    ],
+    "es-modules": [
+      {
+        "title": "ES Modules Guide",
+        "url": "https://developers.arcgis.com/javascript/latest/es-modules/",
+        "description": "Using @arcgis/core with modern ES modules and Vite",
+        "category": "guide"
+      },
+      {
+        "title": "Vite Configuration",
+        "url": "https://developers.arcgis.com/javascript/latest/tooling-vite/",
+        "description": "Configure Vite for ArcGIS development",
+        "category": "tooling"
+      }
+    ]
+  },
+  "map-components": {
+    "components": [
+      {
+        "title": "ArcGIS Map Components",
+        "url": "https://developers.arcgis.com/javascript/latest/components/",
+        "description": "Web components for ArcGIS maps (@arcgis/map-components)",
+        "category": "component"
+      },
+      {
+        "title": "arcgis-map",
+        "url": "https://developers.arcgis.com/javascript/latest/components/arcgis-map/",
+        "description": "Core map web component",
+        "category": "component"
+      },
+      {
+        "title": "arcgis-search",
+        "url": "https://developers.arcgis.com/javascript/latest/components/arcgis-search/",
+        "description": "Search component for finding locations and addresses",
+        "category": "component"
+      },
+      {
+        "title": "arcgis-legend",
+        "url": "https://developers.arcgis.com/javascript/latest/components/arcgis-legend/",
+        "description": "Legend component for outage severity layers",
+        "category": "component"
+      },
+      {
+        "title": "arcgis-layer-list",
+        "url": "https://developers.arcgis.com/javascript/latest/components/arcgis-layer-list/",
+        "description": "Layer list for managing different outage data layers",
+        "category": "component"
+      }
+    ],
+    "guides": [
+      {
+        "title": "ArcGIS Map Components",
+        "url": "https://developers.arcgis.com/javascript/latest/components/",
+        "description": "Web components for ArcGIS maps (@arcgis/map-components)",
+        "category": "overview"
+      },
+      {
+        "title": "Components Transition Plan", 
+        "url": "https://developers.arcgis.com/javascript/latest/components-transition-plan/",
+        "description": "Migration guide from legacy widgets to map components",
+        "category": "migration"
+      },
+      {
+        "title": "Get Started with Map Components",
+        "url": "https://developers.arcgis.com/javascript/latest/components/get-started/",
+        "description": "Quick start guide for @arcgis/map-components",
+        "category": "guide"
+      },
+      {
+        "title": "Create a Web App Using Components",
+        "url": "https://developers.arcgis.com/javascript/latest/tutorials/create-a-web-app-using-components/",
+        "description": "Complete tutorial for building web apps with ArcGIS components",
+        "category": "tutorial"
+      }
+    ]
+  },
+  "calcite-design-system": {
+    "overview": [
+      {
+        "title": "Calcite Design System",
+        "url": "https://developers.arcgis.com/calcite-design-system/",
+        "description": "Complete design system for building ISP management interfaces",
+        "category": "overview"
+      },
+      {
+        "title": "Get Started",
+        "url": "https://developers.arcgis.com/calcite-design-system/get-started/",
+        "description": "Installation and setup for @esri/calcite-components",
+        "category": "guide"
+      },
+      {
+        "title": "Core Concepts",
+        "url": "https://developers.arcgis.com/calcite-design-system/core-concepts/",
+        "description": "Fundamental concepts of the Calcite design system",
+        "category": "guide"
+      }
+    ],
+    "tutorials": [
+      {
+        "title": "Create a Mapping App",
+        "url": "https://developers.arcgis.com/calcite-design-system/tutorials/create-a-mapping-app/",
+        "description": "Build a mapping application with Calcite components",
+        "category": "tutorial"
+      },
+      {
+        "title": "Construct a Mapping App with Components",
+        "url": "https://developers.arcgis.com/calcite-design-system/tutorials/construct-a-mapping-app-components/",
+        "description": "Advanced mapping app construction with components",
+        "category": "tutorial"
+      },
+      {
+        "title": "Apply Core Concepts",
+        "url": "https://developers.arcgis.com/calcite-design-system/tutorials/apply-core-concepts/",
+        "description": "Practical application of Calcite design principles",
+        "category": "tutorial"
+      }
+    ],
+    "layout": [
+      {
+        "title": "calcite-shell",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/shell/",
+        "description": "Main application shell layout",
+        "category": "component"
+      },
+      {
+        "title": "calcite-shell-panel",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/shell-panel/",
+        "description": "Side panels for outage lists and details",
+        "category": "component"
+      },
+      {
+        "title": "calcite-panel",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/panel/",
+        "description": "Content panels for organizing outage information",
+        "category": "component"
+      },
+      {
+        "title": "calcite-navigation",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/navigation/",
+        "description": "Top navigation for different management views",
+        "category": "component"
+      }
+    ],
+    "forms": [
+      {
+        "title": "calcite-input",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/input/",
+        "description": "Text inputs for outage reports and customer data",
+        "category": "component"
+      },
+      {
+        "title": "calcite-select",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/select/",
+        "description": "Dropdowns for outage types, priorities, etc.",
+        "category": "component"
+      },
+      {
+        "title": "calcite-button",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/button/",
+        "description": "Action buttons for outage management workflows",
+        "category": "component"
+      },
+      {
+        "title": "calcite-textarea",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/textarea/",
+        "description": "Multi-line text input for outage descriptions",
+        "category": "component"
+      }
+    ],
+    "data-display": [
+      {
+        "title": "calcite-list",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/list/",
+        "description": "Lists for displaying outages and affected customers",
+        "category": "component"
+      },
+      {
+        "title": "calcite-card",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/card/",
+        "description": "Cards for outage summaries and details",
+        "category": "component"
+      },
+      {
+        "title": "calcite-alert",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/alert/",
+        "description": "Alerts for critical outages and system notifications",
+        "category": "component"
+      },
+      {
+        "title": "calcite-notice",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/notice/",
+        "description": "Notices for outage status updates",
+        "category": "component"
+      }
+    ],
+    "feedback": [
+      {
+        "title": "calcite-loader",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/loader/",
+        "description": "Loading indicators for map and data operations",
+        "category": "component"
+      },
+      {
+        "title": "calcite-progress",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/progress/",
+        "description": "Progress bars for outage resolution tracking",
+        "category": "component"
+      },
+      {
+        "title": "calcite-modal",
+        "url": "https://developers.arcgis.com/calcite-design-system/components/modal/",
+        "description": "Modals for outage details and confirmation dialogs",
+        "category": "component"
+      }
+    ]
+  },
+  "supabase": {
+    "getting-started": [
+      {
+        "title": "Supabase JavaScript Client",
+        "url": "https://supabase.com/docs/reference/javascript/introduction",
+        "description": "Official JavaScript client documentation",
+        "category": "documentation"
+      },
+      {
+        "title": "Supabase Auth",
+        "url": "https://supabase.com/docs/guides/auth",
+        "description": "Authentication for ISP technician access",
+        "category": "auth"
+      },
+      {
+        "title": "Realtime Subscriptions",
+        "url": "https://supabase.com/docs/guides/realtime",
+        "description": "Real-time outage updates and notifications",
+        "category": "realtime"
+      }
+    ],
+    "database": [
+      {
+        "title": "Database Functions",
+        "url": "https://supabase.com/docs/guides/database/functions",
+        "description": "PostgreSQL functions for outage calculations",
+        "category": "database"
+      },
+      {
+        "title": "Row Level Security",
+        "url": "https://supabase.com/docs/guides/auth/row-level-security",
+        "description": "Secure access to outage data by user role",
+        "category": "security"
+      }
+    ]
+  },
+  "pwa": {
+    "vite-pwa": [
+      {
+        "title": "Vite PWA Plugin",
+        "url": "https://vite-pwa-org.netlify.app/",
+        "description": "PWA plugin for Vite (vite-plugin-pwa)",
+        "category": "tooling"
+      },
+      {
+        "title": "Service Worker Strategies",
+        "url": "https://vite-pwa-org.netlify.app/workbox/",
+        "description": "Offline strategies for outage management data",
+        "category": "offline"
+      },
+      {
+        "title": "PWA Manifest",
+        "url": "https://vite-pwa-org.netlify.app/guide/pwa-minimal-requirements.html",
+        "description": "Configure PWA manifest for mobile installation",
+        "category": "configuration"
+      }
+    ],
+    "web-standards": [
+      {
+        "title": "Web App Manifest",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/Manifest",
+        "description": "PWA manifest specification",
+        "category": "standard"
+      },
+      {
+        "title": "Service Workers",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API",
+        "description": "Service worker fundamentals for offline functionality",
+        "category": "standard"
+      }
+    ]
+  },
+  "vite": {
+    "configuration": [
+      {
+        "title": "Vite Configuration",
+        "url": "https://vitejs.dev/config/",
+        "description": "Configure Vite for your ISP management PWA",
+        "category": "configuration"
+      },
+      {
+        "title": "Vite Basic SSL Plugin",
+        "url": "https://github.com/vitejs/vite-plugin-basic-ssl",
+        "description": "HTTPS development server for PWA testing",
+        "category": "plugin"
+      },
+      {
+        "title": "Environment Variables",
+        "url": "https://vitejs.dev/guide/env-and-mode.html",
+        "description": "Configure Supabase and ArcGIS API keys",
+        "category": "configuration"
+      }
+    ]
+  },
+  "isp-specific": {
+    "fiber-management": [
+      {
+        "title": "Fiber Network Modeling",
+        "url": "https://community.esri.com/t5/electric-gas-and-telecommunications-blog/fiber-network-modeling-with-arcgis/ba-p/897891",
+        "description": "Best practices for modeling fiber networks in ArcGIS",
+        "category": "industry"
+      },
+      {
+        "title": "Utility Network for Telecom",
+        "url": "https://www.esri.com/en-us/industries/telecommunications/overview",
+        "description": "ArcGIS solutions for telecommunications infrastructure",
+        "category": "industry"
+      }
+    ],
+    "outage-management": [
+      {
+        "title": "Outage Management Systems",
+        "url": "https://www.esri.com/en-us/industries/electric-utilities/segments/outage-management",
+        "description": "GIS-based outage management best practices",
+        "category": "industry"
+      }
+    ]
+  }
+}

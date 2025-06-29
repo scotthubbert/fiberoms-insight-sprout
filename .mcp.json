@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "fiberoms-insight": {
+      "command": "/usr/local/bin/node",
+      "args": [
+        "/Users/scotthubbert/Developer/development/fiberoms-insight-pwa/mcp-server/dist/index.js"
+      ]
+    }
+  }
+}

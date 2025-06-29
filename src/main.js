@@ -1967,19 +1967,16 @@ class PWAInstaller {
 // Mobile tab bar and sheet management using CalciteUI native events
 class MobileTabBar {
   constructor() {
-    this.segmentedControl = document.getElementById('mobile-tab-bar');
-
-    this.sheets = {
-      search: document.getElementById('mobile-search-sheet'),
-      subscribers: document.getElementById('mobile-subscribers-sheet'),
-      osp: document.getElementById('mobile-osp-sheet'),
-      vehicles: document.getElementById('mobile-vehicles-sheet'),
-      other: document.getElementById('mobile-other-sheet')
-    };
-
+    console.log('🏗️ MobileTabBar constructor starting...');
+    
+    // Initialize properties
+    this.segmentedControl = null;
+    this.sheets = {};
     this.currentSheet = null;
     this.initialized = false;
     this.isSwitching = false; // Flag to manage state during panel switching
+    this.lastTabChange = 0; // Debounce rapid tab changes
+    this.isProcessingClick = false; // Prevent rapid clicks
     this.subscriberData = {
       online: {
         count: 0,
@@ -1992,7 +1989,11 @@ class MobileTabBar {
     };
 
     // Delay initialization to ensure DOM is ready
-    setTimeout(() => this.init(), 100);
+    console.log('🏗️ Scheduling init in 100ms...');
+    setTimeout(() => {
+      console.log('🏗️ Calling init now...');
+      this.init();
+    }, 100);
   }
 
   async init() {
@@ -2000,6 +2001,36 @@ class MobileTabBar {
     await customElements.whenDefined('calcite-segmented-control');
     await customElements.whenDefined('calcite-dialog');
     console.log('🏗️ MobileTabBar: Components defined, setting up...');
+    
+    // Get DOM elements
+    this.segmentedControl = document.getElementById('mobile-tab-bar');
+    console.log('📱 Segmented control found:', !!this.segmentedControl);
+    
+    this.sheets = {
+      search: document.getElementById('mobile-search-sheet'),
+      subscribers: document.getElementById('mobile-subscribers-sheet'),
+      osp: document.getElementById('mobile-osp-sheet'),
+      vehicles: document.getElementById('mobile-vehicles-sheet'),
+      other: document.getElementById('mobile-other-sheet')
+    };
+    
+    // Debug sheet initialization
+    console.log('📱 Sheets found:', Object.keys(this.sheets));
+    
+    // Check current screen size
+    this.checkResponsiveState();
+    
+    // Listen for resize events
+    window.addEventListener('resize', () => {
+      this.checkResponsiveState();
+    });
+    Object.entries(this.sheets).forEach(([key, modal]) => {
+      console.log(`📱 Sheet ${key}:`, modal ? 'found' : 'missing', modal?.tagName);
+    });
+    
+    // Check viewport
+    console.log('📱 Current viewport width:', window.innerWidth);
+    console.log('📱 Is mobile viewport (<=768px):', window.innerWidth <= 768);
 
     Object.values(this.sheets).forEach(modal => {
       if (modal) {
@@ -2013,7 +2044,7 @@ class MobileTabBar {
             this.cleanupUI();
             this.resetTabSelection();
           } else {
-            console.log('📱 Modal closed as part of a switch.');
+            console.log('📱 Modal closed as part of a switch - keeping tab state.');
           }
         });
       }
@@ -2021,11 +2052,56 @@ class MobileTabBar {
 
     if (this.segmentedControl) {
       console.log('🏗️ MobileTabBar: Setting up segmented control...');
-      this.segmentedControl.addEventListener('calciteSegmentedControlChange', (event) => {
-        const selectedValue = event.target.value;
-        console.log('📱 Tab selected:', selectedValue);
-        this.handleTabSelection(selectedValue);
-      });
+      console.log('🏗️ Segmented control element:', this.segmentedControl);
+      
+      // Test if we can add event listeners
+      try {
+        // Debug: Log all events on the segmented control
+        this.segmentedControl.addEventListener('click', (e) => {
+          console.log('📱 Tab bar clicked!', e.target);
+          console.log('📱 Current value:', this.segmentedControl.value);
+          console.log('📱 Event target:', e.target.tagName, e.target.value);
+        }, true);
+        
+        // Try multiple event types
+        this.segmentedControl.addEventListener('calciteSegmentedControlChange', (event) => {
+          console.log('📱 calciteSegmentedControlChange event fired!');
+          const selectedValue = event.target.value;
+          console.log('📱 Tab selected:', selectedValue);
+          
+          // If empty value, ignore (happens during reset)
+          if (!selectedValue) return;
+          
+          // Prevent any ongoing close operations
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          
+          // Handle tab selection
+          this.handleTabSelection(selectedValue);
+        });
+        
+        // Also try the standard 'change' event
+        this.segmentedControl.addEventListener('change', (event) => {
+          console.log('📱 Standard change event fired!');
+          console.log('📱 Value:', event.target.value);
+          // Handle if calciteSegmentedControlChange doesn't fire
+          if (event.target.value && !this.isProcessingClick) {
+            this.handleTabSelection(event.target.value);
+          }
+        });
+        
+        // Monitor value changes with input event
+        this.segmentedControl.addEventListener('input', (event) => {
+          console.log('📱 Input event fired!');
+          console.log('📱 Value:', event.target.value);
+        });
+        
+        console.log('✅ Event listeners attached successfully');
+      } catch (error) {
+        console.error('❌ Failed to attach event listeners:', error);
+      }
+    } else {
+      console.error('❌ No segmented control found!');
     }
 
     // Setup close button click handlers
@@ -2033,6 +2109,56 @@ class MobileTabBar {
 
     // Setup layer toggle functionality for mobile switches
     this.setupMobileLayerToggles();
+    
+    // Add direct click handlers to individual items as a fallback
+    if (this.segmentedControl) {
+      // Wait a bit for Calcite components to fully hydrate
+      setTimeout(() => {
+        const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
+        console.log('📱 Found segmented control items:', items.length);
+        items.forEach(item => {
+          console.log('📱 Adding click handler to item:', item.value);
+          item.addEventListener('click', (e) => {
+            console.log('📱 Direct click on item:', item.value);
+            console.log('📱 Item checked state:', item.checked);
+            
+            // Stop propagation to prevent double handling
+            e.stopPropagation();
+            
+            // Manually trigger tab selection since change event isn't firing
+            if (item.value && !this.isProcessingClick) {
+              this.isProcessingClick = true;
+              console.log('📱 Manually triggering tab selection for:', item.value);
+              
+              // First uncheck all items
+              const allItems = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
+              allItems.forEach(otherItem => {
+                otherItem.checked = false;
+                otherItem.removeAttribute('checked');
+              });
+              
+              // Set the clicked item as checked
+              item.checked = true;
+              item.setAttribute('checked', '');
+              
+              // Update the parent segmented control value
+              this.segmentedControl.value = item.value;
+              
+              // Force a re-render
+              this.segmentedControl.setAttribute('value', item.value);
+              
+              // Handle the selection
+              this.handleTabSelection(item.value);
+              
+              // Prevent rapid clicks
+              setTimeout(() => {
+                this.isProcessingClick = false;
+              }, 300);
+            }
+          });
+        });
+      }, 500);
+    }
 
     // Setup refresh button click handler
     const refreshButton = document.getElementById('refresh-subscriber-data');
@@ -2044,6 +2170,8 @@ class MobileTabBar {
 
     this.initialized = true;
     console.log('✅ MobileTabBar: Initialization complete');
+    console.log('📱 Final check - segmentedControl:', !!this.segmentedControl);
+    console.log('📱 Final check - sheets:', Object.keys(this.sheets));
 
     // Load subscriber data for UI counts (map will load its own data)
     this.loadSubscriberData();
@@ -2055,41 +2183,95 @@ class MobileTabBar {
   }
 
   handleTabSelection(tabValue) {
+    console.log('📱 handleTabSelection called with:', tabValue);
+    
+    // Check if we're actually on a mobile screen
+    const isMobile = window.innerWidth <= 768;
+    console.log('📱 Screen width:', window.innerWidth, 'Is mobile:', isMobile);
+    
+    if (!isMobile) {
+      console.warn('📱 Mobile UI activated on desktop screen - check CSS media queries');
+    }
+    
     const sheetToOpen = this.sheets[tabValue];
-    if (!sheetToOpen) return;
-
-    // Case 1: The selected tab's panel is already open. Close it.
-    // This is handled by the general 'calciteDialogClose' listener which will reset the UI.
-    if (sheetToOpen.open) {
-      console.log('📱 Same tab clicked - closing panel');
-      sheetToOpen.open = false;
+    if (!sheetToOpen) {
+      console.error('📱 No sheet found for tab:', tabValue);
       return;
     }
 
-    // Case 2: Another panel is open, or no panel is open. Switch to the new one.
-    const currentOpenSheet = this.currentSheet;
+    // Case 1: Same panel clicked - close it
+    if (sheetToOpen === this.currentSheet && sheetToOpen.open) {
+      console.log('📱 Same tab clicked - closing panel');
+      sheetToOpen.open = false;
+      this.currentSheet = null;
+      this.cleanupUI();
+      this.resetTabSelection();
+      return;
+    }
 
-    const openNewSheet = () => {
+    // Case 2: Different panel or no panel open
+    const previousSheet = this.currentSheet;
+    
+    // Close previous panel if open
+    if (previousSheet && previousSheet.open) {
+      console.log('📱 Closing previous panel:', previousSheet.id);
+      this.isSwitching = true; // Prevent tab reset
+      previousSheet.open = false;
+      this.cleanupUI();
+    }
+
+    // Open new panel
+    console.log('📱 Opening panel:', sheetToOpen.id);
+    
+    // Small delay to ensure previous panel is closed
+    setTimeout(() => {
+      // Check if element is visible before trying to open
+      const computedStyle = window.getComputedStyle(sheetToOpen);
+      console.log('📱 Panel display style:', computedStyle.display);
+      console.log('📱 Panel visibility:', computedStyle.visibility);
+      
+      // If the panel is hidden due to CSS, temporarily override
+      if (computedStyle.display === 'none') {
+        console.log('📱 Panel is hidden by CSS, forcing display...');
+        sheetToOpen.style.display = 'block';
+        // Also ensure it's visible after Calcite processes it
+        requestAnimationFrame(() => {
+          sheetToOpen.style.display = '';
+        });
+      }
+      
       sheetToOpen.open = true;
       this.currentSheet = sheetToOpen;
       this.setupUIForOpenSheet();
-      // Reset the switching flag AFTER the new sheet is open and UI is set up.
-      this.isSwitching = false;
-    };
+      this.setActiveTab(tabValue);
+      
+      // Verify it opened
+      setTimeout(() => {
+        console.log('📱 Panel open state after setting:', sheetToOpen.open);
+        console.log('📱 Panel has open attribute:', sheetToOpen.hasAttribute('open'));
+        
+        // Double-check visibility
+        const finalStyle = window.getComputedStyle(sheetToOpen);
+        if (finalStyle.display === 'none') {
+          console.error('📱 Panel still hidden after opening! Force showing...');
+          sheetToOpen.style.display = 'block !important';
+        }
+      }, 100);
+      
+      // Reset switching flag
+      setTimeout(() => {
+        this.isSwitching = false;
+      }, 300);
+    }, previousSheet ? 50 : 0);
+  }
 
-    if (currentOpenSheet && currentOpenSheet.open) {
-      console.log(`📱 Switching from ${currentOpenSheet.id} to ${sheetToOpen.id}`);
-      this.isSwitching = true; // Set flag to prevent the general close handler from resetting tabs
-      // Listen for the old sheet to close, then open the new one.
-      currentOpenSheet.addEventListener('calciteDialogClose', openNewSheet, {
-        once: true
+  setActiveTab(tabValue) {
+    if (this.segmentedControl) {
+      this.segmentedControl.value = tabValue;
+      const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
+      items.forEach(item => {
+        item.checked = item.value === tabValue;
       });
-      currentOpenSheet.open = false; // Trigger the close
-      this.cleanupUI(); // Clean up the old sheet's UI immediately
-    } else {
-      // No sheet is open, just open the new one.
-      console.log(`📱 Opening new panel: ${sheetToOpen.id}`);
-      openNewSheet();
     }
   }
 
@@ -2109,6 +2291,12 @@ class MobileTabBar {
   cleanupUI() {
     this.cleanupCustomCloseButton();
     this.removeBlurOverlay();
+    
+    // Remove backdrop click handler if exists
+    if (this.currentSheet && this.backdropClickHandler) {
+      this.currentSheet.removeEventListener('click', this.backdropClickHandler);
+      this.backdropClickHandler = null;
+    }
   }
 
   // This is for the manual 'X' buttons or injected close button.
@@ -2144,7 +2332,10 @@ class MobileTabBar {
     if (!this.currentSheet) return;
     const modal = this.currentSheet;
     this.backdropClickHandler = (e) => {
-      if (e.target === modal) this.handleCloseClick();
+      // Only close if clicking the actual backdrop, not during tab switching
+      if (e.target === modal && !this.isSwitching) {
+        this.handleCloseClick();
+      }
     };
     modal.addEventListener('click', this.backdropClickHandler);
   }
@@ -2161,11 +2352,11 @@ class MobileTabBar {
     closeButton.setAttribute('icon-start', 'x');
     closeButton.textContent = 'Close';
     closeButton.style.cssText = `
-       position: fixed !important; bottom: 64px !important; left: 0 !important;
-       right: 0 !important; z-index: 150 !important; margin: 0 !important; padding: 18px !important;
-       background: var(--calcite-color-foreground-1) !important; border-top: 3px solid var(--calcite-color-brand) !important;
-       box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.2) !important; border-radius: 0 !important;
-       min-height: 60px !important; font-size: 16px !important; font-weight: 600 !important;
+       position: fixed !important; bottom: 124px !important; left: 16px !important;
+       right: 16px !important; z-index: 90 !important; margin: 0 !important; padding: 18px !important;
+       background: var(--calcite-color-foreground-1) !important; border: 2px solid var(--calcite-color-border-1) !important;
+       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important; border-radius: 8px !important;
+       min-height: 56px !important; font-size: 16px !important; font-weight: 600 !important;
        cursor: pointer !important; touch-action: manipulation !important; user-select: none !important;
        -webkit-user-select: none !important; -webkit-tap-highlight-color: transparent !important;
        display: flex !important; align-items: center !important; justify-content: center !important;
@@ -2300,9 +2491,12 @@ class MobileTabBar {
   resetTabSelection() {
     console.log('📱 Resetting tab selection');
     if (this.segmentedControl) {
-      this.segmentedControl.value = '';
-      const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
-      items.forEach(item => item.checked = false);
+      // Only reset if we're not in the middle of switching
+      if (!this.isSwitching) {
+        this.segmentedControl.value = '';
+        const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
+        items.forEach(item => item.checked = false);
+      }
     }
   }
 
@@ -2332,6 +2526,78 @@ class MobileTabBar {
     if (this.currentSheet) this.currentSheet.open = false;
     this.cleanupUI();
     this.resetTabSelection();
+  }
+  
+  checkResponsiveState() {
+    const isMobile = window.innerWidth <= 768;
+    console.log('📱 Responsive check - Width:', window.innerWidth, 'Is mobile:', isMobile);
+    
+    // If we're on desktop but mobile UI is visible, log a warning
+    if (!isMobile && this.segmentedControl) {
+      const segmentedControlStyle = window.getComputedStyle(this.segmentedControl);
+      if (segmentedControlStyle.display !== 'none') {
+        console.warn('📱 Mobile UI visible on desktop! This may cause issues.');
+      }
+    }
+    
+    // Ensure dialogs are properly styled for current viewport
+    Object.values(this.sheets).forEach(sheet => {
+      if (sheet && !isMobile && sheet.classList.contains('mobile-only')) {
+        // On desktop, mobile-only dialogs should be hidden by CSS
+        // But if one is open, we need to handle it
+        if (sheet.open) {
+          console.log('📱 Closing mobile dialog on desktop resize');
+          sheet.open = false;
+          this.cleanupUI();
+          this.resetTabSelection();
+        }
+      }
+    });
+  }
+  
+  // Debug method to test panel opening
+  testOpenPanel(panelName) {
+    console.log('📱 TEST: Attempting to open panel:', panelName);
+    const panel = this.sheets[panelName];
+    if (!panel) {
+      console.error('📱 TEST: Panel not found:', panelName);
+      return;
+    }
+    console.log('📱 TEST: Panel element:', panel);
+    console.log('📱 TEST: Panel open before:', panel.open);
+    panel.open = true;
+    console.log('📱 TEST: Panel open after:', panel.open);
+    
+    // Also try with setAttribute
+    panel.setAttribute('open', '');
+    console.log('📱 TEST: Added open attribute');
+    
+    // Check computed style
+    setTimeout(() => {
+      const computed = window.getComputedStyle(panel);
+      console.log('📱 TEST: Panel display:', computed.display);
+      console.log('📱 TEST: Panel visibility:', computed.visibility);
+      console.log('📱 TEST: Panel open property:', panel.open);
+      console.log('📱 TEST: Panel hasAttribute open:', panel.hasAttribute('open'));
+    }, 100);
+  }
+  
+  // Debug method to check initialization state
+  debugState() {
+    console.log('📱 DEBUG: MobileTabBar state');
+    console.log('  - Initialized:', this.initialized);
+    console.log('  - Segmented control:', !!this.segmentedControl);
+    console.log('  - Sheets:', Object.keys(this.sheets));
+    console.log('  - Current sheet:', this.currentSheet?.id || 'none');
+    console.log('  - Viewport width:', window.innerWidth);
+    console.log('  - Is mobile:', window.innerWidth <= 768);
+    
+    // Check if components are visible
+    if (this.segmentedControl) {
+      const style = window.getComputedStyle(this.segmentedControl);
+      console.log('  - Tab bar display:', style.display);
+      console.log('  - Tab bar visibility:', style.visibility);
+    }
   }
 }
 

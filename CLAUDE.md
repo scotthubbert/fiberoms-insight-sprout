@@ -1,6 +1,27 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides comprehensive guidance to Claude Code (claude.ai/code) when working with code in this repository. It defines architecture patterns, coding standards, and development practices for the FiberOMS Insight PWA project.
+
+## Table of Contents
+
+1. [Project Overview](#project-overview)
+2. [Technology Stack](#technology-stack)
+3. [Development Commands](#development-commands)
+4. [Project Architecture](#project-architecture)
+5. [Core Features & Data Layers](#core-features--data-layers)
+6. [Development Phases](#development-phases)
+7. [Environment Variables](#environment-variables)
+8. [Performance Requirements](#performance-requirements)
+9. [SOLID Principles Examples](#solid-principles-examples)
+10. [Development Best Practices](#development-best-practices)
+11. [Development Philosophy](#development-philosophy)
+12. [Common Pitfalls](#common-pitfalls-to-avoid)
+13. [Implementation Checklist](#implementation-checklist)
+14. [Code Standards](#code-standards)
+15. [Security Standards](#security-standards)
+16. [Accessibility Requirements](#accessibility-requirements)
+17. [Version Control Standards](#version-control-standards)
+18. [Documentation Requirements](#documentation-requirements)
 
 ## Project Overview
 
@@ -383,3 +404,269 @@ When implementing new features, ensure:
 - [ ] Mobile experience is implemented first
 - [ ] CalciteUI components are used where available
 - [ ] Code follows established patterns in the codebase
+
+## Code Standards
+
+### Naming Conventions
+- **Files**: Use PascalCase for classes/components (e.g., `MapController.js`, `SearchBar.js`)
+- **Variables**: Use camelCase (e.g., `subscriberData`, `layerConfig`)
+- **Constants**: Use UPPER_SNAKE_CASE (e.g., `MAX_RETRIES`, `API_TIMEOUT`)
+- **CSS Classes**: Use kebab-case (e.g., `map-container`, `search-input`)
+
+### File Structure Standards
+```javascript
+// 1. Imports (grouped by type)
+import { MapView } from '@arcgis/core/views/MapView.js';  // External
+import { DataService } from './services/DataService.js';   // Internal
+import { formatDate } from './utils/formatters.js';        // Utilities
+
+// 2. Constants
+const MAX_ZOOM = 20;
+
+// 3. Class/Component definition
+export class MapController {
+  // 4. Constructor with dependency injection
+  constructor(dataService, layerService) {
+    this.dataService = dataService;
+    this.layerService = layerService;
+  }
+  
+  // 5. Public methods
+  async initialize() { }
+  
+  // 6. Private methods (prefixed with _)
+  _handleError(error) { }
+}
+```
+
+### Error Handling Pattern
+```javascript
+async fetchData() {
+  try {
+    const data = await this.service.fetch();
+    if (!data) {
+      console.warn('No data returned');
+      return [];
+    }
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch data:', error);
+    // Graceful degradation - don't crash the app
+    return [];
+  }
+}
+```
+
+### Testing Requirements
+- Test file naming: `ComponentName.test.js` or `ComponentName.spec.js`
+- Unit tests for all services and utilities
+- Integration tests for critical user flows
+- Minimum 80% code coverage for new features
+
+## Security Standards
+
+### Data Handling
+- Never expose API keys in client-side code
+- Sanitize all user inputs before use
+- Use environment variables for sensitive configuration
+- Implement proper CORS policies
+
+### Authentication & Authorization
+- Use Supabase Row Level Security (RLS)
+- Validate permissions on both client and server
+- Implement session timeout handling
+- Use secure HTTP-only cookies for session management
+
+## Accessibility Requirements
+
+### WCAG 2.1 Level AA Compliance
+- All interactive elements must be keyboard accessible
+- Provide ARIA labels for map features
+- Ensure color contrast ratios meet standards (4.5:1 for normal text)
+- Support screen readers with proper semantic HTML
+- Provide text alternatives for all visual information
+
+### Mobile Accessibility
+- Touch targets minimum 44x44px
+- Gestures should have keyboard alternatives
+- Avoid relying solely on device orientation
+- Ensure readable font sizes (minimum 16px)
+
+## Version Control Standards
+
+### Commit Message Format
+```
+type(scope): subject
+
+body (optional)
+
+footer (optional)
+```
+
+Types: feat, fix, docs, style, refactor, test, chore
+Example: `feat(map): add offline subscriber layer`
+
+### Branch Naming
+- Feature branches: `feature/description`
+- Bug fixes: `fix/description`
+- Hotfixes: `hotfix/description`
+
+## Documentation Requirements
+
+### Code Documentation
+- JSDoc comments for all public methods
+- Inline comments for complex logic
+- README files for each major module
+- API documentation for services
+
+### Component Documentation
+```javascript
+/**
+ * Renders subscriber points on the map
+ * @param {Object} config - Layer configuration
+ * @param {string} config.id - Unique layer identifier
+ * @param {Object} config.renderer - Symbol renderer configuration
+ * @returns {Promise<Layer>} The created layer instance
+ */
+async createSubscriberLayer(config) { }
+```
+
+## State Management Standards
+
+### Application State
+- Use a centralized state management pattern
+- Avoid component-level state for shared data
+- Implement state persistence for offline capability
+
+### State Structure
+```javascript
+// Centralized state manager
+class AppState {
+  constructor() {
+    this.layers = new Map();
+    this.userPreferences = this.loadPreferences();
+    this.connectionStatus = 'online';
+  }
+
+  // State updates trigger UI updates
+  updateLayer(layerId, data) {
+    this.layers.set(layerId, data);
+    this.notifyObservers('layer-update', { layerId, data });
+  }
+}
+```
+
+## PWA Requirements
+
+### Service Worker Implementation
+- Cache static assets for offline use
+- Implement network-first strategy for API calls
+- Provide offline fallbacks for critical features
+- Show connection status to users
+
+### Manifest Configuration
+```json
+{
+  "name": "FiberOMS Insight",
+  "short_name": "FiberOMS",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#007AC2",
+  "background_color": "#ffffff"
+}
+```
+
+### Offline Capabilities
+- Store critical data in IndexedDB
+- Queue actions for sync when online
+- Provide visual indicators for offline mode
+- Gracefully handle sync conflicts
+
+## Deployment Standards
+
+### Build Optimization
+- Enable tree shaking for unused code
+- Implement code splitting for routes
+- Optimize images and assets
+- Minify CSS and JavaScript
+
+### Production Checklist
+- [ ] All environment variables configured
+- [ ] Service worker tested on multiple devices
+- [ ] Performance metrics meet requirements
+- [ ] Security headers configured
+- [ ] Error tracking enabled
+- [ ] Analytics implemented
+- [ ] Backup and recovery tested
+
+## Monitoring and Logging
+
+### Client-Side Logging
+```javascript
+// Structured logging pattern
+class Logger {
+  log(level, message, context = {}) {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      ...context
+    };
+    
+    // Send to monitoring service in production
+    if (this.isProduction) {
+      this.sendToMonitoring(entry);
+    }
+  }
+}
+```
+
+### Performance Monitoring
+- Track page load times
+- Monitor API response times
+- Track user interactions
+- Report errors with context
+
+## Support and Maintenance
+
+### Browser Support
+- Chrome/Edge: Latest 2 versions
+- Safari: Latest 2 versions
+- Firefox: Latest 2 versions
+- Mobile browsers: iOS Safari 14+, Chrome Android
+
+### Update Strategy
+- Implement version checking
+- Notify users of updates
+- Force reload for critical updates
+- Maintain backward compatibility
+
+## Quick Reference
+
+### Essential Commands
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run test         # Run tests
+npm run lint         # Lint code
+```
+
+### Key Principles
+1. **Mobile-First**: Every feature starts with mobile design
+2. **SOLID Code**: Follow SOLID principles religiously
+3. **CalciteUI First**: Use platform components before custom
+4. **Offline Ready**: Design for intermittent connectivity
+5. **Performance Critical**: Meet all performance targets
+
+### Contact Points
+- Documentation: Internal wiki
+- Issue Tracking: GitHub Issues
+- Code Reviews: Pull Requests required
+- Deployment: CI/CD pipeline
+
+---
+
+*Last Updated: [Auto-update on commit]*
+*Version: 1.0.0*
