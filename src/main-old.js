@@ -1,10 +1,10 @@
-// main.js - SOLID-compliant application entry point following CLAUDE.md principles
+// ArcGIS themes are loaded via HTML link tags for proper switching
 
 // Configure ArcGIS intl
 import * as intl from '@arcgis/core/intl';
 intl.setLocale('en');
 
-// Import SOLID-compliant services (DIP - Dependency Injection)
+// Import SOLID-compliant services
 import { MapController } from './services/MapController.js';
 import { LayerManager } from './services/LayerManager.js';
 import { subscriberDataService } from './dataService.js';
@@ -21,7 +21,7 @@ import '@arcgis/map-components/dist/components/arcgis-expand';
 import '@arcgis/map-components/dist/components/arcgis-track';
 import '@arcgis/map-components/dist/components/arcgis-fullscreen';
 
-// Import Calcite Components (verified against CLAUDE.md safe list)
+// Import Calcite components
 import '@esri/calcite-components/dist/components/calcite-button';
 import '@esri/calcite-components/dist/components/calcite-shell';
 import '@esri/calcite-components/dist/components/calcite-shell-panel';
@@ -32,8 +32,11 @@ import '@esri/calcite-components/dist/components/calcite-block';
 import '@esri/calcite-components/dist/components/calcite-label';
 import '@esri/calcite-components/dist/components/calcite-checkbox';
 import '@esri/calcite-components/dist/components/calcite-input';
+import '@esri/calcite-components/dist/components/calcite-input-text';
 import '@esri/calcite-components/dist/components/calcite-navigation';
 import '@esri/calcite-components/dist/components/calcite-navigation-logo';
+import '@esri/calcite-components/dist/components/calcite-sheet';
+import '@esri/calcite-components/dist/components/calcite-fab';
 import '@esri/calcite-components/dist/components/calcite-icon';
 import '@esri/calcite-components/dist/components/calcite-segmented-control';
 import '@esri/calcite-components/dist/components/calcite-segmented-control-item';
@@ -41,11 +44,15 @@ import '@esri/calcite-components/dist/components/calcite-list';
 import '@esri/calcite-components/dist/components/calcite-list-item';
 import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-dialog';
+import '@esri/calcite-components/dist/components/calcite-scrim';
 import '@esri/calcite-components/dist/components/calcite-chip';
 import '@esri/calcite-components/dist/components/calcite-autocomplete';
+import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
+import '@esri/calcite-components/dist/components/calcite-radio-button';
+import '@esri/calcite-components/dist/components/calcite-radio-button-group';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
-// Set Calcite assets path to NPM bundled assets (CLAUDE.md compliance)
+// Set Calcite assets path to NPM bundled assets
 setAssetPath('/node_modules/@esri/calcite-components/dist/calcite/assets');
 
 // Production logging utility
@@ -68,7 +75,7 @@ const BASEMAP_CONFIG = {
   }
 };
 
-// Theme Manager - Single Responsibility Principle
+// Theme management with system preference support - Single Responsibility
 class ThemeManager {
   constructor() {
     this.userPreference = localStorage.getItem('theme');
@@ -78,7 +85,10 @@ class ThemeManager {
   }
 
   getSystemPreference() {
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
   }
 
   async init() {
@@ -87,9 +97,10 @@ class ThemeManager {
 
     if (this.themeToggle) {
       this.applyTheme(this.currentTheme);
-      this.themeToggle.addEventListener('click', () => this.toggleTheme());
+      this.themeToggle.addEventListener('click', () => {
+        this.toggleTheme();
+      });
 
-      // Listen for system theme changes
       if (window.matchMedia) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         mediaQuery.addEventListener('change', (e) => {
@@ -110,7 +121,7 @@ class ThemeManager {
     const isDark = theme === 'dark';
     document.body.classList.toggle('calcite-mode-dark', isDark);
 
-    // Toggle ArcGIS theme stylesheets (official Esri pattern)
+    // Toggle ArcGIS theme stylesheets
     const lightStylesheet = document.getElementById('esri-theme-light');
     const darkStylesheet = document.getElementById('esri-theme-dark');
 
@@ -119,7 +130,7 @@ class ThemeManager {
       darkStylesheet.disabled = !isDark;
     }
 
-    // Update ArcGIS map components theme
+    // Update ArcGIS map components
     const mapElement = document.getElementById('map');
     if (mapElement) {
       mapElement.setAttribute('theme', theme);
@@ -136,12 +147,16 @@ class ThemeManager {
         widget.setAttribute('theme', theme);
       });
 
-      // Apply theme to Esri widgets with delay
       setTimeout(() => {
         const esriElements = document.querySelectorAll('.esri-widget, .esri-search, .esri-popup, .esri-ui, .esri-view-surface');
         esriElements.forEach(element => {
-          element.classList.toggle('calcite-mode-dark', isDark);
-          element.classList.toggle('calcite-mode-light', !isDark);
+          if (isDark) {
+            element.classList.add('calcite-mode-dark');
+            element.classList.remove('calcite-mode-light');
+          } else {
+            element.classList.add('calcite-mode-light');
+            element.classList.remove('calcite-mode-dark');
+          }
         });
       }, 100);
     }
@@ -163,10 +178,11 @@ class ThemeManager {
     const icon = theme === 'dark' ? 'brightness' : 'moon';
     const baseLabel = `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`;
     const statusLabel = this.hasUserPreference ? ' (manual)' : ' (following system)';
+    const label = baseLabel + statusLabel;
 
     this.themeToggle.setAttribute('icon-start', icon);
     this.themeToggle.setAttribute('aria-label', baseLabel);
-    this.themeToggle.setAttribute('title', baseLabel + statusLabel);
+    this.themeToggle.setAttribute('title', label);
   }
 
   applyThemeToView(view) {
@@ -175,18 +191,31 @@ class ThemeManager {
     const isDark = this.currentTheme === 'dark';
 
     if (view.container) {
-      view.container.classList.toggle('calcite-mode-dark', isDark);
-      view.container.classList.toggle('calcite-mode-light', !isDark);
+      if (isDark) {
+        view.container.classList.add('calcite-mode-dark');
+        view.container.classList.remove('calcite-mode-light');
+      } else {
+        view.container.classList.add('calcite-mode-light');
+        view.container.classList.remove('calcite-mode-dark');
+      }
     }
 
-    if (view.popup?.container) {
-      view.popup.container.classList.toggle('calcite-mode-dark', isDark);
-      view.popup.container.classList.toggle('calcite-mode-light', !isDark);
+    if (view.popup) {
+      const popupContainer = view.popup.container;
+      if (popupContainer) {
+        if (isDark) {
+          popupContainer.classList.add('calcite-mode-dark');
+          popupContainer.classList.remove('calcite-mode-light');
+        } else {
+          popupContainer.classList.add('calcite-mode-light');
+          popupContainer.classList.remove('calcite-mode-dark');
+        }
+      }
     }
   }
 }
 
-// Polling Service - Single Responsibility Principle (disabled for Phase 1)
+// Polling Service - Single Responsibility
 class PollingService {
   constructor(layerManager) {
     this.layerManager = layerManager;
@@ -198,13 +227,22 @@ class PollingService {
       outages: 60000              // 1 minute for outage data
     };
 
-    window.addEventListener('beforeunload', () => this.cleanup());
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+      this.cleanup();
+    });
   }
 
   startPolling(layerName) {
-    // Polling disabled for Phase 1 - will implement in Phase 2
-    log.info(`🔄 Polling requested for ${layerName} - disabled for Phase 1`);
-    return;
+    if (this.pollingTimers[layerName]) return;
+
+    const interval = this.pollingIntervals[layerName];
+    if (!interval) return;
+
+    log.info(`🔄 Starting polling for ${layerName} every ${interval}ms`);
+    this.pollingTimers[layerName] = setInterval(async () => {
+      await this.updateLayerData(layerName);
+    }, interval);
   }
 
   stopPolling(layerName) {
@@ -216,8 +254,12 @@ class PollingService {
   }
 
   async updateLayerData(layerName) {
-    // Delegate to LayerManager
-    return this.layerManager.updateLayerData(layerName);
+    try {
+      await this.layerManager.updateLayerData(layerName);
+      log.info(`✅ Updated ${layerName} data`);
+    } catch (error) {
+      log.error(`❌ Failed to update ${layerName}:`, error);
+    }
   }
 
   cleanup() {
@@ -228,7 +270,7 @@ class PollingService {
   }
 }
 
-// Layer Panel Manager - Single Responsibility Principle
+// Layer panel management - Single Responsibility
 class LayerPanel {
   constructor() {
     this.shellPanel = document.getElementById('layers-panel');
@@ -278,17 +320,14 @@ class LayerPanel {
   }
 
   showPanel(panelName) {
-    // Hide all panels
     this.layersContent.hidden = true;
     this.searchContent.hidden = true;
     this.toolsContent.hidden = true;
 
-    // Remove active state from all actions
     this.layersAction.active = false;
     this.searchAction.active = false;
     this.toolsAction.active = false;
 
-    // Show selected panel and set active action
     switch (panelName) {
       case 'layers':
         this.layersContent.hidden = false;
@@ -306,7 +345,252 @@ class LayerPanel {
   }
 }
 
-// Mobile Tab Bar Manager - Single Responsibility Principle
+// Application orchestrator - Dependency Injection Pattern
+class Application {
+  constructor() {
+    this.services = {};
+    this.init();
+  }
+
+  async init() {
+    log.info('🚀 Starting Application...');
+
+    // Create services with dependency injection (DIP)
+    this.services.themeManager = new ThemeManager();
+    this.services.layerManager = new LayerManager(subscriberDataService);
+    this.services.mapController = new MapController(this.services.layerManager, this.services.themeManager);
+    this.services.pollingService = new PollingService(this.services.layerManager);
+    this.services.layerPanel = new LayerPanel();
+
+    // Initialize map
+    await this.services.mapController.initialize();
+
+    // Set up map ready handler
+    this.services.mapController.mapElement.addEventListener('arcgisViewReadyChange', async (event) => {
+      if (event.target.ready) {
+        await this.onMapReady();
+      }
+    });
+
+    // Check if already ready
+    if (this.services.mapController.mapElement.ready) {
+      await this.onMapReady();
+    }
+
+    // Initialize other services
+    this.initializeUI();
+
+    log.info('✅ Application initialized');
+  }
+
+  async onMapReady() {
+    log.info('🗺️ Map ready, initializing layers...');
+
+    // Initialize subscriber layers
+    await this.initializeSubscriberLayers();
+
+    // Set up layer toggles
+    this.setupLayerToggleHandlers();
+
+    // Start polling for critical data
+    this.services.pollingService.startPolling('offlineSubscribers');
+  }
+
+  async initializeSubscriberLayers() {
+    try {
+      // Create offline subscribers layer (visible by default)
+      const offlineConfig = getLayerConfig('offlineSubscribers');
+      if (offlineConfig) {
+        const offlineLayer = await this.createLayerFromConfig(offlineConfig);
+        if (offlineLayer) {
+          this.services.mapController.addLayer(offlineLayer, offlineConfig.zOrder);
+          log.info('✅ Offline subscribers layer created');
+        }
+      }
+
+      // Create online subscribers layer (hidden by default)
+      const onlineConfig = getLayerConfig('onlineSubscribers');
+      if (onlineConfig) {
+        const onlineLayer = await this.createLayerFromConfig(onlineConfig);
+        if (onlineLayer) {
+          onlineLayer.visible = false; // Hidden by default
+          this.services.mapController.addLayer(onlineLayer, onlineConfig.zOrder);
+          log.info('✅ Online subscribers layer created');
+        }
+      }
+
+    } catch (error) {
+      log.error('❌ Failed to initialize subscriber layers:', error);
+    }
+  }
+
+  async createLayerFromConfig(config) {
+    try {
+      const data = await config.dataServiceMethod();
+      if (!data?.features?.length) {
+        log.warn(`No data for layer: ${config.id}`);
+        return null;
+      }
+
+      return await this.services.layerManager.createLayer({
+        ...config,
+        dataSource: data
+      });
+    } catch (error) {
+      log.error(`Failed to create layer ${config.id}:`, error);
+      return null;
+    }
+  }
+
+  setupLayerToggleHandlers() {
+    // Desktop layer toggles
+    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox');
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('calciteCheckboxChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    });
+
+    // Mobile layer toggles
+    const switches = document.querySelectorAll('.layer-toggle-item calcite-switch');
+    switches.forEach(switchElement => {
+      switchElement.addEventListener('calciteSwitchChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    });
+
+    // Mobile list item tap to toggle
+    const listItems = document.querySelectorAll('.layer-toggle-item');
+    listItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        const switchElement = item.querySelector('calcite-switch');
+        if (switchElement && e.target !== switchElement) {
+          switchElement.checked = !switchElement.checked;
+          this.handleLayerToggle(switchElement, switchElement.checked);
+        }
+      });
+    });
+  }
+
+  async handleLayerToggle(element, checked) {
+    // Determine layer ID from context
+    let layerId = null;
+
+    const listItem = element.closest('calcite-list-item');
+    const label = element.closest('calcite-label');
+
+    if (listItem) {
+      const labelText = listItem.getAttribute('label');
+      layerId = this.mapLayerIdFromLabel(labelText);
+    } else if (label) {
+      const labelText = label.textContent.trim();
+      layerId = this.mapLayerIdFromLabel(labelText);
+    }
+
+    if (layerId) {
+      await this.services.layerManager.toggleLayerVisibility(layerId, checked);
+      this.syncToggleStates(layerId, checked);
+
+      // Start/stop polling based on visibility
+      if (checked && (layerId === 'offline-subscribers' || layerId === 'online-subscribers')) {
+        const configKey = layerId.replace('-', '');
+        this.services.pollingService.startPolling(configKey);
+      }
+    }
+  }
+
+  mapLayerIdFromLabel(labelText) {
+    const mapping = {
+      'Online Subscribers': 'online-subscribers',
+      'Offline Subscribers': 'offline-subscribers'
+    };
+    return mapping[labelText] || null;
+  }
+
+  syncToggleStates(layerId, checked) {
+    // Sync desktop checkboxes
+    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox');
+    desktopCheckboxes.forEach(checkbox => {
+      const label = checkbox.closest('calcite-label');
+      if (label) {
+        const labelText = label.textContent.trim();
+        const mappedId = this.mapLayerIdFromLabel(labelText);
+        if (mappedId === layerId) {
+          checkbox.checked = checked;
+        }
+      }
+    });
+
+    // Sync mobile switches
+    const mobileSwitches = document.querySelectorAll('.layer-toggle-item calcite-switch');
+    mobileSwitches.forEach(switchElement => {
+      const listItem = switchElement.closest('calcite-list-item');
+      if (listItem) {
+        const labelText = listItem.getAttribute('label');
+        const mappedId = this.mapLayerIdFromLabel(labelText);
+        if (mappedId === layerId) {
+          switchElement.checked = checked;
+        }
+      }
+    });
+  }
+
+  initializeUI() {
+    // Initialize other UI components that don't require map
+    this.initializePWAInstaller();
+    this.initializeMobileTabBar();
+    this.initializeDashboard();
+    this.initializeHeaderSearch();
+  }
+
+  initializePWAInstaller() {
+    // Simplified PWA installer
+    const pwaInstaller = new PWAInstaller();
+    pwaInstaller.init();
+  }
+
+  initializeMobileTabBar() {
+    // Simplified mobile tab bar
+    const mobileTabBar = new MobileTabBar();
+    mobileTabBar.init();
+  }
+
+  initializeDashboard() {
+    // Simplified dashboard
+    const dashboard = new DashboardManager();
+    dashboard.init();
+  }
+
+  initializeHeaderSearch() {
+    // Simplified header search
+    const headerSearch = new HeaderSearch();
+    headerSearch.init();
+  }
+}
+
+// Simplified service classes - keeping essential functionality only
+
+class PWAInstaller {
+  constructor() {
+    this.deferredPrompt = null;
+  }
+
+  init() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.deferredPrompt = e;
+      this.showInstallPrompt();
+    });
+  }
+
+  showInstallPrompt() {
+    // Simple install prompt logic
+    if (this.deferredPrompt) {
+      log.info('📱 PWA install prompt available');
+    }
+  }
+}
+
 class MobileTabBar {
   constructor() {
     this.tabBar = document.getElementById('mobile-tab-bar');
@@ -332,6 +616,7 @@ class MobileTabBar {
       });
     }
 
+    // Setup close buttons for dialogs
     this.setupCloseButtons();
   }
 
@@ -355,6 +640,7 @@ class MobileTabBar {
     }
     this.closeButton.classList.remove('show');
 
+    // Reset tab selection
     if (this.tabBar) {
       this.tabBar.selectedItem = null;
     }
@@ -370,7 +656,6 @@ class MobileTabBar {
   }
 }
 
-// Dashboard Manager - Single Responsibility Principle
 class DashboardManager {
   constructor() {
     this.refreshButton = document.getElementById('refresh-dashboard');
@@ -411,7 +696,6 @@ class DashboardManager {
   }
 }
 
-// Header Search Manager - Single Responsibility Principle
 class HeaderSearch {
   constructor() {
     this.searchInput = document.getElementById('header-search');
@@ -435,245 +719,17 @@ class HeaderSearch {
   handleSearchInput(searchTerm) {
     if (searchTerm.length >= 4) {
       log.info('🔍 Searching for:', searchTerm);
-      // Search implementation will be added in future phases
+      // Implement search logic here
     }
   }
 }
 
-// Application Orchestrator - Dependency Injection Pattern (DIP)
-class Application {
-  constructor() {
-    this.services = {};
-    this.init();
-  }
-
-  async init() {
-    log.info('🚀 Starting FiberOMS Insight PWA...');
-
-    // Create services with dependency injection (DIP - Dependency Inversion Principle)
-    this.services.themeManager = new ThemeManager();
-    this.services.layerManager = new LayerManager(subscriberDataService);
-    this.services.mapController = new MapController(this.services.layerManager, this.services.themeManager);
-    this.services.pollingService = new PollingService(this.services.layerManager);
-    this.services.layerPanel = new LayerPanel();
-    this.services.mobileTabBar = new MobileTabBar();
-    this.services.dashboard = new DashboardManager();
-    this.services.headerSearch = new HeaderSearch();
-
-    // Store theme manager globally for component access
-    window.themeManager = this.services.themeManager;
-
-    // Initialize map controller
-    await this.services.mapController.initialize();
-
-    // Set up map ready handler
-    this.services.mapController.mapElement.addEventListener('arcgisViewReadyChange', async (event) => {
-      if (event.target.ready) {
-        await this.onMapReady();
-      }
-    });
-
-    // Check if map is already ready
-    if (this.services.mapController.mapElement.ready) {
-      await this.onMapReady();
-    }
-
-    log.info('✅ Application initialized successfully');
-  }
-
-  async onMapReady() {
-    log.info('🗺️ Map ready, initializing layers and features...');
-
-    // Initialize subscriber layers
-    await this.initializeSubscriberLayers();
-
-    // Set up layer toggle handlers
-    this.setupLayerToggleHandlers();
-
-    // Polling disabled for Phase 1
-    // this.services.pollingService.startPolling('offlineSubscribers');
-
-    log.info('🎯 Phase 1 features initialized successfully');
-  }
-
-  async initializeSubscriberLayers() {
-    try {
-      // Create offline subscribers layer (visible by default - Phase 1 focus)
-      const offlineConfig = getLayerConfig('offlineSubscribers');
-      if (offlineConfig) {
-        const offlineLayer = await this.createLayerFromConfig(offlineConfig);
-        if (offlineLayer) {
-          this.services.mapController.addLayer(offlineLayer, offlineConfig.zOrder);
-          log.info('✅ Offline subscribers layer created and added to map');
-        }
-      }
-
-      // Create online subscribers layer (hidden by default)
-      const onlineConfig = getLayerConfig('onlineSubscribers');
-      if (onlineConfig) {
-        const onlineLayer = await this.createLayerFromConfig(onlineConfig);
-        if (onlineLayer) {
-          onlineLayer.visible = false; // Hidden by default per Phase 1 requirements
-          this.services.mapController.addLayer(onlineLayer, onlineConfig.zOrder);
-          log.info('✅ Online subscribers layer created (hidden by default)');
-        }
-      }
-
-    } catch (error) {
-      log.error('❌ Failed to initialize subscriber layers:', error);
-    }
-  }
-
-  async createLayerFromConfig(config) {
-    try {
-      const data = await config.dataServiceMethod();
-      if (!data?.features?.length) {
-        log.warn(`⚠️ No data available for layer: ${config.id}`);
-        return null;
-      }
-
-      return await this.services.layerManager.createLayer({
-        ...config,
-        dataSource: data
-      });
-    } catch (error) {
-      log.error(`❌ Failed to create layer ${config.id}:`, error);
-      return null;
-    }
-  }
-
-  setupLayerToggleHandlers() {
-    // Desktop layer toggles (checkboxes)
-    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox');
-    checkboxes.forEach(checkbox => {
-      checkbox.addEventListener('calciteCheckboxChange', (e) => {
-        this.handleLayerToggle(e.target, e.target.checked);
-      });
-    });
-
-    // Mobile layer toggles (switches)
-    const switches = document.querySelectorAll('.layer-toggle-item calcite-switch');
-    switches.forEach(switchElement => {
-      switchElement.addEventListener('calciteSwitchChange', (e) => {
-        this.handleLayerToggle(e.target, e.target.checked);
-      });
-    });
-
-    // Mobile list item tap to toggle (touch-friendly)
-    const listItems = document.querySelectorAll('.layer-toggle-item');
-    listItems.forEach(item => {
-      item.addEventListener('click', (e) => {
-        const switchElement = item.querySelector('calcite-switch');
-        if (switchElement && e.target !== switchElement) {
-          switchElement.checked = !switchElement.checked;
-          this.handleLayerToggle(switchElement, switchElement.checked);
-        }
-      });
-    });
-  }
-
-  async handleLayerToggle(element, checked) {
-    // Map UI labels to layer IDs
-    const layerId = this.getLayerIdFromElement(element);
-
-    if (layerId) {
-      await this.services.layerManager.toggleLayerVisibility(layerId, checked);
-      this.syncToggleStates(layerId, checked);
-
-      // Start/stop polling based on visibility (disabled for Phase 1)
-      // if (checked && (layerId === 'offline-subscribers' || layerId === 'online-subscribers')) {
-      //   const configKey = layerId.replace('-', '');
-      //   this.services.pollingService.startPolling(configKey);
-      // } else if (!checked) {
-      //   const configKey = layerId.replace('-', '');
-      //   this.services.pollingService.stopPolling(configKey);
-      // }
-    }
-  }
-
-  getLayerIdFromElement(element) {
-    const listItem = element.closest('calcite-list-item');
-    const label = element.closest('calcite-label');
-
-    let labelText = '';
-    if (listItem) {
-      labelText = listItem.getAttribute('label');
-    } else if (label) {
-      labelText = label.textContent.trim();
-    }
-
-    // Map UI labels to layer IDs
-    const mapping = {
-      'Online Subscribers': 'online-subscribers',
-      'Offline Subscribers': 'offline-subscribers'
-    };
-
-    return mapping[labelText] || null;
-  }
-
-  syncToggleStates(layerId, checked) {
-    // Sync between desktop and mobile UI elements
-    const labelMapping = {
-      'offline-subscribers': 'Offline Subscribers',
-      'online-subscribers': 'Online Subscribers'
-    };
-
-    const labelText = labelMapping[layerId];
-    if (!labelText) return;
-
-    // Sync desktop checkboxes
-    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox');
-    desktopCheckboxes.forEach(checkbox => {
-      const label = checkbox.closest('calcite-label');
-      if (label && label.textContent.trim() === labelText) {
-        checkbox.checked = checked;
-      }
-    });
-
-    // Sync mobile switches
-    const mobileSwitches = document.querySelectorAll('.layer-toggle-item calcite-switch');
-    mobileSwitches.forEach(switchElement => {
-      const listItem = switchElement.closest('calcite-list-item');
-      if (listItem && listItem.getAttribute('label') === labelText) {
-        switchElement.checked = checked;
-      }
-    });
-  }
-}
-
-// PWA Installer - Simple implementation for Phase 1
-class PWAInstaller {
-  constructor() {
-    this.deferredPrompt = null;
-  }
-
-  init() {
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      this.deferredPrompt = e;
-      log.info('📱 PWA install prompt available');
-    });
-
-    window.addEventListener('appinstalled', () => {
-      log.info('📱 PWA installed successfully');
-    });
-  }
-}
-
-// Initialize the application when DOM is ready
+// Initialize application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize PWA installer
-  const pwaInstaller = new PWAInstaller();
-  pwaInstaller.init();
-
-  // Start the main application
+  // Store references globally for theme management
+  window.themeManager = null;
+  window.mapView = null;
   window.app = new Application();
-
-  log.info('🎯 FiberOMS Insight PWA - Phase 1 Complete');
-  log.info('📱 Mobile-first design with CalciteUI components');
-  log.info('🗺️ Map with offline subscriber visualization');
-  log.info('🎨 Theme switching with system preference support');
-  log.info('⚡ Real-time data polling ready for Phase 2');
 });
 
 

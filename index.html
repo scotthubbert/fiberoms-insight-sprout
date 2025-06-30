@@ -153,10 +153,11 @@
       </div>
 
       <!-- Mobile Close Button - shows when panels are open -->
-      <calcite-button id="mobile-close-button" class="mobile-only" width="full" appearance="outline" scale="l" icon-start="x">
+      <calcite-button id="mobile-close-button" class="mobile-only" width="full" appearance="outline" scale="l"
+        icon-start="x">
         Close Panel
       </calcite-button>
-      
+
       <!-- Mobile Bottom Navigation -->
       <calcite-segmented-control id="mobile-tab-bar" class="mobile-only" width="full" appearance="outline" scale="l">
         <calcite-segmented-control-item id="tab-search" value="search"
@@ -183,13 +184,13 @@
           aria-label="Close"></calcite-button>
       </div>
       <div slot="content">
-        <calcite-block heading="Quick Search" open>
+        <calcite-block heading="Quick Search" expanded>
           <calcite-input id="mobile-search-input" type="search" placeholder="Search addresses, customers, accounts..."
             icon="search" scale="l" clearable>
           </calcite-input>
         </calcite-block>
 
-        <calcite-block heading="Recent Searches" open>
+        <calcite-block heading="Recent Searches" expanded>
           <calcite-list selection-mode="none">
             <calcite-list-item label="123 Main Street" description="John Doe - Account #1234">
               <calcite-icon slot="content-start" icon="clock"></calcite-icon>
@@ -202,7 +203,7 @@
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Search Options" open>
+        <calcite-block heading="Search Options" expanded>
           <calcite-button width="full" icon-start="person" appearance="outline">Search by Customer Name</calcite-button>
           <calcite-button width="full" icon-start="number" appearance="outline">Search by Account
             Number</calcite-button>
@@ -233,7 +234,7 @@
           </calcite-list-item>
         </calcite-list>
 
-        <calcite-block heading="Tools" open>
+        <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="refresh" appearance="outline" id="refresh-subscriber-data">Refresh
             Data</calcite-button>
           <calcite-button width="full" icon-start="search" appearance="outline">Search Customers</calcite-button>
@@ -249,7 +250,7 @@
           aria-label="Close"></calcite-button>
       </div>
       <div slot="content">
-        <calcite-block heading="Fiber Plant" open>
+        <calcite-block heading="Fiber Plant" expanded>
           <calcite-list selection-mode="none">
             <calcite-list-item label="FSA Boundaries" description="Service area boundaries" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="polygon"
@@ -281,7 +282,7 @@
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Outages" open>
+        <calcite-block heading="Outages" expanded>
           <calcite-list selection-mode="none">
             <calcite-list-item label="Fiber Network Outages" description="Current fiber outages"
               class="layer-toggle-item">
@@ -305,7 +306,7 @@
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Tools" open>
+        <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="polygon" appearance="outline">Draw Outage Area</calcite-button>
         </calcite-block>
       </div>
@@ -330,7 +331,7 @@
           </calcite-list-item>
         </calcite-list>
 
-        <calcite-block heading="Tools" open>
+        <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="refresh" appearance="outline">Refresh Vehicle
             Locations</calcite-button>
           <calcite-button width="full" icon-start="information" appearance="outline">Vehicle Details</calcite-button>
@@ -345,7 +346,7 @@
           aria-label="Close"></calcite-button>
       </div>
       <div slot="content">
-        <calcite-block heading="Environmental" open>
+        <calcite-block heading="Environmental" expanded>
           <calcite-list selection-mode="none">
             <calcite-list-item label="Weather Radar" description="Live weather overlay" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="layer" style="color: var(--calcite-color-info);"></calcite-icon>
@@ -354,7 +355,7 @@
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Base Maps" open>
+        <calcite-block heading="Base Maps" expanded>
           <calcite-radio-button-group name="basemap-selection" layout="vertical">
             <calcite-label layout="inline">
               <calcite-radio-button value="streets" checked></calcite-radio-button>
@@ -371,7 +372,7 @@
           </calcite-radio-button-group>
         </calcite-block>
 
-        <calcite-block heading="Tools" open>
+        <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="layer" appearance="outline">Layer Manager</calcite-button>
         </calcite-block>
       </div>

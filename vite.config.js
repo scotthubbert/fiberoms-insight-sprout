@@ -4,7 +4,8 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
   plugins: [
-    basicSsl(),
+    // Only use SSL in production or when explicitly requested
+    ...(process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS ? [basicSsl()] : []),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icons/*.png', 'icons/*.svg'],
@@ -12,7 +13,8 @@ export default defineConfig({
       injectRegister: 'auto',
       strategies: 'generateSW',
       devOptions: {
-        enabled: true
+        enabled: true,
+        suppressWarnings: true // Suppress PWA warnings in dev without HTTPS
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
@@ -44,7 +46,7 @@ export default defineConfig({
     })
   ],
   server: {
-    https: true,
+    https: process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS,
     host: true
   },
   build: {
