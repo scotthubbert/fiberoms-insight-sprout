@@ -7,6 +7,7 @@ intl.setLocale('en');
 // Import SOLID-compliant services (DIP - Dependency Injection)
 import { MapController } from './services/MapController.js';
 import { LayerManager } from './services/LayerManager.js';
+import { PopupManager } from './services/PopupManager.js';
 import { subscriberDataService } from './dataService.js';
 import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConfigs.js';
 
@@ -455,6 +456,7 @@ class Application {
     this.services.layerManager = new LayerManager(subscriberDataService);
     this.services.mapController = new MapController(this.services.layerManager, this.services.themeManager);
     this.services.pollingService = new PollingService(this.services.layerManager);
+    this.services.popupManager = new PopupManager();
     this.services.layerPanel = new LayerPanel();
     this.services.mobileTabBar = new MobileTabBar();
     this.services.dashboard = new DashboardManager();
@@ -484,11 +486,16 @@ class Application {
   async onMapReady() {
     log.info('🗺️ Map ready, initializing layers and features...');
 
-    // Initialize subscriber layers
+    // Initialize subscriber layers first
     await this.initializeSubscriberLayers();
 
     // Set up layer toggle handlers
     this.setupLayerToggleHandlers();
+
+    // Initialize popup action handlers after layers are ready
+    if (this.services.mapController.view) {
+      this.services.popupManager.initialize(this.services.mapController.view);
+    }
 
     // Polling disabled for Phase 1
     // this.services.pollingService.startPolling('offlineSubscribers');

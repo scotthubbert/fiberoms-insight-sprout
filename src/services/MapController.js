@@ -61,6 +61,42 @@ export class MapController {
             layer.listMode = 'show';
         }
 
-        this.map.add(layer);
+        // Add layer at specific index based on z-order
+        // Higher z-order = higher index = appears on top
+        const layers = this.map.layers;
+        let insertIndex = 0;
+
+        // Find the correct insertion point based on z-order
+        for (let i = 0; i < layers.length; i++) {
+            const existingLayer = layers.getItemAt(i);
+            const existingZOrder = this.getLayerZOrder(existingLayer.id);
+
+            if (zOrder > existingZOrder) {
+                insertIndex = i + 1;
+            } else {
+                break;
+            }
+        }
+
+        this.map.add(layer, insertIndex);
+        console.log(`📍 Added layer "${layer.id}" at index ${insertIndex} with z-order ${zOrder}`);
+    }
+
+    // Helper method to get z-order for existing layers
+    getLayerZOrder(layerId) {
+        const zOrderMap = {
+            'online-subscribers': 0,
+            'fsa-boundaries': 10,
+            'main-line-fiber': 20,
+            'drop-fiber': 30,
+            'mst-terminals': 40,
+            'splitters': 50,
+            'offline-subscribers': 100,  // Highest priority - always on top
+            'power-outages': 110,
+            'fiber-outages': 120,
+            'vehicles': 130,
+            'weather-radar': 140
+        };
+        return zOrderMap[layerId] || 0;
     }
 } 
