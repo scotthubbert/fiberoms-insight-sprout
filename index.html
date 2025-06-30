@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -152,6 +152,11 @@
         </arcgis-map>
       </div>
 
+      <!-- Mobile Close Button - shows when panels are open -->
+      <calcite-button id="mobile-close-button" class="mobile-only" width="full" appearance="outline" scale="l" icon-start="x">
+        Close Panel
+      </calcite-button>
+      
       <!-- Mobile Bottom Navigation -->
       <calcite-segmented-control id="mobile-tab-bar" class="mobile-only" width="full" appearance="outline" scale="l">
         <calcite-segmented-control-item id="tab-search" value="search"
@@ -167,11 +172,16 @@
       </calcite-segmented-control>
     </calcite-shell>
 
+
     <!-- Mobile Bottom Modals -->
 
     <!-- Search Modal -->
-    <calcite-dialog id="mobile-search-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
-      <div slot="header">Search</div>
+    <calcite-dialog id="mobile-search-sheet" class="mobile-only" width-scale="l" scale="l">
+      <div slot="header" class="dialog-header">
+        <span class="dialog-title">Search</span>
+        <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
+          aria-label="Close"></calcite-button>
+      </div>
       <div slot="content">
         <calcite-block heading="Quick Search" open>
           <calcite-input id="mobile-search-input" type="search" placeholder="Search addresses, customers, accounts..."
@@ -199,12 +209,14 @@
           <calcite-button width="full" icon-start="map-pin" appearance="outline">Search by Address</calcite-button>
         </calcite-block>
       </div>
-      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
-        class="close-modal-btn">Close</calcite-button>
     </calcite-dialog>
 
-    <calcite-dialog id="mobile-subscribers-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
-      <div slot="header">Subscribers</div>
+    <calcite-dialog id="mobile-subscribers-sheet" class="mobile-only" width-scale="l" scale="l">
+      <div slot="header" class="dialog-header">
+        <span class="dialog-title">Subscribers</span>
+        <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
+          aria-label="Close"></calcite-button>
+      </div>
       <div slot="content">
         <calcite-list selection-mode="none">
           <calcite-list-item label="Online Subscribers" description="Show active subscribers" class="layer-toggle-item">
@@ -228,12 +240,14 @@
           <calcite-button width="full" icon-start="download" appearance="outline">Export Offline CSV</calcite-button>
         </calcite-block>
       </div>
-      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
-        class="close-modal-btn">Close</calcite-button>
     </calcite-dialog>
 
-    <calcite-dialog id="mobile-osp-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
-      <div slot="header">OSP Infrastructure</div>
+    <calcite-dialog id="mobile-osp-sheet" class="mobile-only" width-scale="l" scale="l">
+      <div slot="header" class="dialog-header">
+        <span class="dialog-title">OSP Infrastructure</span>
+        <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
+          aria-label="Close"></calcite-button>
+      </div>
       <div slot="content">
         <calcite-block heading="Fiber Plant" open>
           <calcite-list selection-mode="none">
@@ -295,12 +309,14 @@
           <calcite-button width="full" icon-start="polygon" appearance="outline">Draw Outage Area</calcite-button>
         </calcite-block>
       </div>
-      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
-        class="close-modal-btn">Close</calcite-button>
     </calcite-dialog>
 
-    <calcite-dialog id="mobile-vehicles-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
-      <div slot="header">Vehicle Tracking</div>
+    <calcite-dialog id="mobile-vehicles-sheet" class="mobile-only" width-scale="l" scale="l">
+      <div slot="header" class="dialog-header">
+        <span class="dialog-title">Vehicle Tracking</span>
+        <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
+          aria-label="Close"></calcite-button>
+      </div>
       <div slot="content">
         <calcite-list selection-mode="none">
           <calcite-list-item label="Electric Vehicles" description="Track electric fleet" class="layer-toggle-item">
@@ -320,12 +336,14 @@
           <calcite-button width="full" icon-start="information" appearance="outline">Vehicle Details</calcite-button>
         </calcite-block>
       </div>
-      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
-        class="close-modal-btn">Close</calcite-button>
     </calcite-dialog>
 
-    <calcite-dialog id="mobile-other-sheet" class="mobile-only" width-scale="l" scale="l" fullscreen>
-      <div slot="header">Other Layers</div>
+    <calcite-dialog id="mobile-other-sheet" class="mobile-only" width-scale="l" scale="l">
+      <div slot="header" class="dialog-header">
+        <span class="dialog-title">Other Layers</span>
+        <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
+          aria-label="Close"></calcite-button>
+      </div>
       <div slot="content">
         <calcite-block heading="Environmental" open>
           <calcite-list selection-mode="none">
@@ -357,8 +375,6 @@
           <calcite-button width="full" icon-start="layer" appearance="outline">Layer Manager</calcite-button>
         </calcite-block>
       </div>
-      <calcite-button slot="primary" width="full" appearance="outline" icon-start="x"
-        class="close-modal-btn">Close</calcite-button>
     </calcite-dialog>
   </div>
 

@@ -48,9 +48,12 @@ import '@esri/calcite-components/dist/components/calcite-list';
 import '@esri/calcite-components/dist/components/calcite-list-item';
 import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-dialog';
+import '@esri/calcite-components/dist/components/calcite-scrim';
 import '@esri/calcite-components/dist/components/calcite-chip';
 import '@esri/calcite-components/dist/components/calcite-autocomplete';
 import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
+import '@esri/calcite-components/dist/components/calcite-radio-button';
+import '@esri/calcite-components/dist/components/calcite-radio-button-group';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path to NPM bundled assets
@@ -1968,7 +1971,7 @@ class PWAInstaller {
 class MobileTabBar {
   constructor() {
     console.log('🏗️ MobileTabBar constructor starting...');
-    
+
     // Initialize properties
     this.segmentedControl = null;
     this.sheets = {};
@@ -1977,6 +1980,7 @@ class MobileTabBar {
     this.isSwitching = false; // Flag to manage state during panel switching
     this.lastTabChange = 0; // Debounce rapid tab changes
     this.isProcessingClick = false; // Prevent rapid clicks
+    this.openedPanels = new Set(); // Track which panels have been opened
     this.subscriberData = {
       online: {
         count: 0,
@@ -2001,11 +2005,19 @@ class MobileTabBar {
     await customElements.whenDefined('calcite-segmented-control');
     await customElements.whenDefined('calcite-dialog');
     console.log('🏗️ MobileTabBar: Components defined, setting up...');
-    
+
+    // Ensure all dialogs are properly initialized
+    const dialogs = document.querySelectorAll('calcite-dialog.mobile-only');
+    dialogs.forEach(dialog => {
+      // Force dialogs to render
+      dialog.offsetHeight;
+      console.log('📱 Initializing dialog:', dialog.id, 'Open:', dialog.open);
+    });
+
     // Get DOM elements
     this.segmentedControl = document.getElementById('mobile-tab-bar');
     console.log('📱 Segmented control found:', !!this.segmentedControl);
-    
+
     this.sheets = {
       search: document.getElementById('mobile-search-sheet'),
       subscribers: document.getElementById('mobile-subscribers-sheet'),
@@ -2013,13 +2025,13 @@ class MobileTabBar {
       vehicles: document.getElementById('mobile-vehicles-sheet'),
       other: document.getElementById('mobile-other-sheet')
     };
-    
+
     // Debug sheet initialization
     console.log('📱 Sheets found:', Object.keys(this.sheets));
-    
+
     // Check current screen size
     this.checkResponsiveState();
-    
+
     // Listen for resize events
     window.addEventListener('resize', () => {
       this.checkResponsiveState();
@@ -2027,7 +2039,7 @@ class MobileTabBar {
     Object.entries(this.sheets).forEach(([key, modal]) => {
       console.log(`📱 Sheet ${key}:`, modal ? 'found' : 'missing', modal?.tagName);
     });
-    
+
     // Check viewport
     console.log('📱 Current viewport width:', window.innerWidth);
     console.log('📱 Is mobile viewport (<=768px):', window.innerWidth <= 768);
@@ -2035,15 +2047,22 @@ class MobileTabBar {
     Object.values(this.sheets).forEach(modal => {
       if (modal) {
         modal.open = false;
-        // This event fires whenever a dialog closes. We use a flag to distinguish
-        // a "natural" close from a programmatic one during a panel switch.
-        modal.addEventListener('calciteDialogClose', () => {
-          if (!this.isSwitching) {
+        // Add a close event listener with better handling
+        modal.addEventListener('calciteDialogClose', (event) => {
+          // Check if this is the current sheet being closed
+          if (modal === this.currentSheet && !this.isSwitching) {
             console.log('📱 Modal closed by user.');
             this.currentSheet = null;
+            
+            // Hide the mobile close button
+            const closeButton = document.getElementById('mobile-close-button');
+            if (closeButton) {
+              closeButton.classList.remove('show');
+            }
+            
             this.cleanupUI();
             this.resetTabSelection();
-          } else {
+          } else if (this.isSwitching) {
             console.log('📱 Modal closed as part of a switch - keeping tab state.');
           }
         });
@@ -2053,7 +2072,7 @@ class MobileTabBar {
     if (this.segmentedControl) {
       console.log('🏗️ MobileTabBar: Setting up segmented control...');
       console.log('🏗️ Segmented control element:', this.segmentedControl);
-      
+
       // Test if we can add event listeners
       try {
         // Debug: Log all events on the segmented control
@@ -2062,24 +2081,24 @@ class MobileTabBar {
           console.log('📱 Current value:', this.segmentedControl.value);
           console.log('📱 Event target:', e.target.tagName, e.target.value);
         }, true);
-        
+
         // Try multiple event types
         this.segmentedControl.addEventListener('calciteSegmentedControlChange', (event) => {
           console.log('📱 calciteSegmentedControlChange event fired!');
           const selectedValue = event.target.value;
           console.log('📱 Tab selected:', selectedValue);
-          
+
           // If empty value, ignore (happens during reset)
           if (!selectedValue) return;
-          
+
           // Prevent any ongoing close operations
           event.stopPropagation();
           event.stopImmediatePropagation();
-          
+
           // Handle tab selection
           this.handleTabSelection(selectedValue);
         });
-        
+
         // Also try the standard 'change' event
         this.segmentedControl.addEventListener('change', (event) => {
           console.log('📱 Standard change event fired!');
@@ -2089,13 +2108,13 @@ class MobileTabBar {
             this.handleTabSelection(event.target.value);
           }
         });
-        
+
         // Monitor value changes with input event
         this.segmentedControl.addEventListener('input', (event) => {
           console.log('📱 Input event fired!');
           console.log('📱 Value:', event.target.value);
         });
-        
+
         console.log('✅ Event listeners attached successfully');
       } catch (error) {
         console.error('❌ Failed to attach event listeners:', error);
@@ -2109,7 +2128,7 @@ class MobileTabBar {
 
     // Setup layer toggle functionality for mobile switches
     this.setupMobileLayerToggles();
-    
+
     // Add direct click handlers to individual items as a fallback
     if (this.segmentedControl) {
       // Wait a bit for Calcite components to fully hydrate
@@ -2121,35 +2140,43 @@ class MobileTabBar {
           item.addEventListener('click', (e) => {
             console.log('📱 Direct click on item:', item.value);
             console.log('📱 Item checked state:', item.checked);
-            
+            console.log('📱 Current panel:', this.currentSheet?.id);
+
             // Stop propagation to prevent double handling
             e.stopPropagation();
-            
-            // Manually trigger tab selection since change event isn't firing
+
+            // Check if clicking the already active tab - close panel and return to map
+            if (item.checked && this.currentSheet && this.currentSheet.id === `mobile-${item.value}-sheet`) {
+              console.log('📱 Clicking active tab - closing panel and returning to map');
+              this.closeCurrentPanel();
+              return;
+            }
+
+            // Otherwise handle normal tab selection
             if (item.value && !this.isProcessingClick) {
               this.isProcessingClick = true;
               console.log('📱 Manually triggering tab selection for:', item.value);
-              
+
               // First uncheck all items
               const allItems = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
               allItems.forEach(otherItem => {
                 otherItem.checked = false;
                 otherItem.removeAttribute('checked');
               });
-              
+
               // Set the clicked item as checked
               item.checked = true;
               item.setAttribute('checked', '');
-              
+
               // Update the parent segmented control value
               this.segmentedControl.value = item.value;
-              
+
               // Force a re-render
               this.segmentedControl.setAttribute('value', item.value);
-              
+
               // Handle the selection
               this.handleTabSelection(item.value);
-              
+
               // Prevent rapid clicks
               setTimeout(() => {
                 this.isProcessingClick = false;
@@ -2158,6 +2185,16 @@ class MobileTabBar {
           });
         });
       }, 500);
+    }
+
+    // Setup mobile close button
+    const closeButton = document.getElementById('mobile-close-button');
+    if (closeButton && !closeButton.hasAttribute('data-listener-added')) {
+      closeButton.addEventListener('click', () => {
+        console.log('📱 Mobile close button clicked');
+        this.closeCurrentPanel();
+      });
+      closeButton.setAttribute('data-listener-added', 'true');
     }
 
     // Setup refresh button click handler
@@ -2184,15 +2221,15 @@ class MobileTabBar {
 
   handleTabSelection(tabValue) {
     console.log('📱 handleTabSelection called with:', tabValue);
-    
+
     // Check if we're actually on a mobile screen
     const isMobile = window.innerWidth <= 768;
     console.log('📱 Screen width:', window.innerWidth, 'Is mobile:', isMobile);
-    
+
     if (!isMobile) {
       console.warn('📱 Mobile UI activated on desktop screen - check CSS media queries');
     }
-    
+
     const sheetToOpen = this.sheets[tabValue];
     if (!sheetToOpen) {
       console.error('📱 No sheet found for tab:', tabValue);
@@ -2211,58 +2248,77 @@ class MobileTabBar {
 
     // Case 2: Different panel or no panel open
     const previousSheet = this.currentSheet;
-    
+
+    // Set switching flag before any operations
+    this.isSwitching = true;
+
     // Close previous panel if open
     if (previousSheet && previousSheet.open) {
       console.log('📱 Closing previous panel:', previousSheet.id);
-      this.isSwitching = true; // Prevent tab reset
       previousSheet.open = false;
       this.cleanupUI();
+
+      // Clear any inline styles from the previous panel
+      previousSheet.removeAttribute('style');
     }
 
     // Open new panel
     console.log('📱 Opening panel:', sheetToOpen.id);
-    
-    // Small delay to ensure previous panel is closed
+
+    // Check if this panel has been opened before
+    const hasBeenOpened = this.openedPanels.has(tabValue);
+    if (hasBeenOpened) {
+      console.log('📱 Panel has been opened before, clearing all styles...');
+      // Ensure we have a completely clean slate for reopened panels
+      sheetToOpen.removeAttribute('style');
+      sheetToOpen.removeAttribute('open');
+      // Force a reflow to ensure the browser recognizes the change
+      sheetToOpen.offsetHeight;
+    }
+
+    // Mark panel as opened
+    this.openedPanels.add(tabValue);
+
+    // Small delay to ensure previous panel is fully closed
     setTimeout(() => {
-      // Check if element is visible before trying to open
-      const computedStyle = window.getComputedStyle(sheetToOpen);
-      console.log('📱 Panel display style:', computedStyle.display);
-      console.log('📱 Panel visibility:', computedStyle.visibility);
-      
-      // If the panel is hidden due to CSS, temporarily override
-      if (computedStyle.display === 'none') {
-        console.log('📱 Panel is hidden by CSS, forcing display...');
-        sheetToOpen.style.display = 'block';
-        // Also ensure it's visible after Calcite processes it
-        requestAnimationFrame(() => {
-          sheetToOpen.style.display = '';
-        });
-      }
-      
+      // Force the panel to be visible before opening
+      console.log('📱 Opening panel...');
+
+      // Simply open the dialog using the standard API
       sheetToOpen.open = true;
+
       this.currentSheet = sheetToOpen;
       this.setupUIForOpenSheet();
       this.setActiveTab(tabValue);
-      
-      // Verify it opened
+
+      // Verify it opened after a brief delay
       setTimeout(() => {
         console.log('📱 Panel open state after setting:', sheetToOpen.open);
         console.log('📱 Panel has open attribute:', sheetToOpen.hasAttribute('open'));
-        
-        // Double-check visibility
+
         const finalStyle = window.getComputedStyle(sheetToOpen);
-        if (finalStyle.display === 'none') {
-          console.error('📱 Panel still hidden after opening! Force showing...');
-          sheetToOpen.style.display = 'block !important';
+        console.log('📱 Final panel visibility:', {
+          display: finalStyle.display,
+          visibility: finalStyle.visibility,
+          opacity: finalStyle.opacity,
+          zIndex: finalStyle.zIndex
+        });
+
+        // If still not visible, try one more time
+        if (finalStyle.display === 'none' || finalStyle.visibility === 'hidden') {
+          console.error('📱 Panel STILL not visible! Attempting final fix...');
+          sheetToOpen.style.setProperty('display', 'block', 'important');
+          sheetToOpen.style.setProperty('visibility', 'visible', 'important');
+          sheetToOpen.style.setProperty('opacity', '1', 'important');
         }
       }, 100);
-      
-      // Reset switching flag
+
+      // Reset switching flag after a longer delay to ensure all events have fired
       setTimeout(() => {
         this.isSwitching = false;
-      }, 300);
-    }, previousSheet ? 50 : 0);
+        console.log('📱 Switching complete, flag reset');
+      }, 500);
+    }, previousSheet ? 100 : 0);
   }
 
   setActiveTab(tabValue) {
@@ -2276,10 +2332,16 @@ class MobileTabBar {
   }
 
   setupUIForOpenSheet() {
-    this.createBlurOverlay();
-    this.setupAlternativeCloseHandlers(); // Depends on this.currentSheet
-    this.injectCustomCloseButton();
+    // Re-setup close buttons for the newly opened sheet
+    this.setupCloseButtons();
+    
+    // Show the mobile close button
+    const closeButton = document.getElementById('mobile-close-button');
+    if (closeButton) {
+      closeButton.classList.add('show');
+    }
 
+    // Focus search input if search sheet is opened
     if (this.currentSheet && this.currentSheet.id === 'mobile-search-sheet') {
       setTimeout(() => {
         const searchInput = document.getElementById('mobile-search-input');
@@ -2288,14 +2350,40 @@ class MobileTabBar {
     }
   }
 
+  ensureToolbarVisibility() {
+    // Toolbar visibility is handled by CSS - no forced styling needed
+  }
+
   cleanupUI() {
-    this.cleanupCustomCloseButton();
-    this.removeBlurOverlay();
-    
-    // Remove backdrop click handler if exists
-    if (this.currentSheet && this.backdropClickHandler) {
-      this.currentSheet.removeEventListener('click', this.backdropClickHandler);
-      this.backdropClickHandler = null;
+    // Cleanup is handled by Calcite components
+  }
+
+  closeCurrentPanel() {
+    if (this.currentSheet) {
+      console.log('📱 Closing current panel:', this.currentSheet.id);
+      this.currentSheet.open = false;
+      this.currentSheet = null;
+      
+      // Hide the mobile close button
+      const closeButton = document.getElementById('mobile-close-button');
+      if (closeButton) {
+        closeButton.classList.remove('show');
+      }
+      
+      // Cleanup UI handlers
+      this.cleanupUI();
+      
+      // Uncheck all tabs
+      const items = this.segmentedControl.querySelectorAll('calcite-segmented-control-item');
+      items.forEach(item => {
+        item.checked = false;
+        item.removeAttribute('checked');
+      });
+      
+      // Clear the segmented control value
+      this.segmentedControl.value = '';
+      
+      console.log('📱 Returned to map view');
     }
   }
 
@@ -2305,71 +2393,40 @@ class MobileTabBar {
     if (this.currentSheet && this.currentSheet.open) {
       this.isSwitching = false; // Ensure it's treated as a natural close
       this.currentSheet.open = false; // Trigger close, the general event listener will handle the rest.
+
+      // Fallback: If the dialog doesn't close properly, force it
+      setTimeout(() => {
+        if (this.currentSheet && this.currentSheet.open) {
+          console.log('📱 Force closing dialog that didn\'t close properly');
+          this.currentSheet.removeAttribute('open');
+          this.cleanupUI();
+          this.resetTabSelection();
+        }
+      }, 100);
     }
   }
 
   setupCloseButtons() {
     console.log('🔧 Setting up close buttons...');
-    setTimeout(() => {
-      const closeButtons = document.querySelectorAll('.close-modal-btn');
-      closeButtons.forEach((btn) => {
-        btn.addEventListener('click', (e) => {
-          console.log('📱 Close button clicked!', btn.closest('calcite-dialog')?.id);
-          e.preventDefault();
-          e.stopPropagation();
-          this.handleCloseClick();
-        });
-      });
+
+    // Add keyboard handler only once
+    if (!this.escapeHandlerAdded) {
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && this.currentSheet && this.currentSheet.open) {
           this.handleCloseClick();
         }
       });
-    }, 300);
+      this.escapeHandlerAdded = true;
+    }
   }
 
+
   setupAlternativeCloseHandlers() {
-    if (!this.currentSheet) return;
-    const modal = this.currentSheet;
-    this.backdropClickHandler = (e) => {
-      // Only close if clicking the actual backdrop, not during tab switching
-      if (e.target === modal && !this.isSwitching) {
-        this.handleCloseClick();
-      }
-    };
-    modal.addEventListener('click', this.backdropClickHandler);
+    // Not needed - using standard close buttons
   }
 
   injectCustomCloseButton() {
-    if (!this.currentSheet) return;
-    const existingBtn = document.querySelector('.in-panel-close-btn');
-    if (existingBtn) existingBtn.remove();
-    const closeButton = document.createElement('calcite-button');
-    closeButton.className = 'in-panel-close-btn';
-    closeButton.setAttribute('width', 'full');
-    closeButton.setAttribute('appearance', 'outline');
-    closeButton.setAttribute('scale', 'l');
-    closeButton.setAttribute('icon-start', 'x');
-    closeButton.textContent = 'Close';
-    closeButton.style.cssText = `
-       position: fixed !important; bottom: 124px !important; left: 16px !important;
-       right: 16px !important; z-index: 90 !important; margin: 0 !important; padding: 18px !important;
-       background: var(--calcite-color-foreground-1) !important; border: 2px solid var(--calcite-color-border-1) !important;
-       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important; border-radius: 8px !important;
-       min-height: 56px !important; font-size: 16px !important; font-weight: 600 !important;
-       cursor: pointer !important; touch-action: manipulation !important; user-select: none !important;
-       -webkit-user-select: none !important; -webkit-tap-highlight-color: transparent !important;
-       display: flex !important; align-items: center !important; justify-content: center !important;
-     `;
-    closeButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.handleCloseClick();
-    });
-    document.body.appendChild(closeButton);
-    const contentSlot = this.currentSheet.querySelector('[slot="content"]');
-    if (contentSlot) contentSlot.style.paddingBottom = '80px';
-    this.customCloseButton = closeButton;
+    // Not needed - using standard close buttons
   }
 
   setupMobileLayerToggles() {
@@ -2470,23 +2527,7 @@ class MobileTabBar {
     }
   }
 
-  cleanupCustomCloseButton() {
-    const btn = document.querySelector('.in-panel-close-btn');
-    if (btn) btn.remove();
-    this.customCloseButton = null;
-  }
-
-  createBlurOverlay() {
-    this.removeBlurOverlay();
-    const overlay = document.createElement('div');
-    overlay.className = 'mobile-panel-overlay';
-    document.body.appendChild(overlay);
-  }
-
-  removeBlurOverlay() {
-    const overlay = document.querySelector('.mobile-panel-overlay');
-    if (overlay) overlay.remove();
-  }
+  // Removed unused cleanup methods - handled by Calcite components
 
   resetTabSelection() {
     console.log('📱 Resetting tab selection');
@@ -2515,7 +2556,41 @@ class MobileTabBar {
   }
 
   testCloseButton() {
-    if (this.currentSheet && this.currentSheet.open) this.handleCloseClick();
+    console.log('🔧 Testing close button functionality...');
+
+    // Log current state
+    console.log('Current sheet:', this.currentSheet?.id);
+    console.log('Is open:', this.currentSheet?.open);
+
+    // Find all close buttons
+    const closeButtons = document.querySelectorAll('calcite-dialog.mobile-only [slot="primary"], .dialog-close-btn');
+    console.log('Found close buttons:', closeButtons.length);
+
+    closeButtons.forEach((btn, index) => {
+      const dialog = btn.closest('calcite-dialog');
+      console.log(`Button ${index + 1}:`, {
+        parentDialog: dialog?.id,
+        isVisible: btn.offsetParent !== null,
+        hasClickHandler: btn.onclick !== null,
+        computedStyles: {
+          display: window.getComputedStyle(btn).display,
+          pointerEvents: window.getComputedStyle(btn).pointerEvents,
+          cursor: window.getComputedStyle(btn).cursor
+        }
+      });
+
+      // Try to simulate a click
+      if (dialog?.open) {
+        console.log(`🔧 Simulating click on button ${index + 1}`);
+        btn.click();
+      }
+    });
+
+    // If still open, try direct close
+    if (this.currentSheet && this.currentSheet.open) {
+      console.log('🔧 Direct close attempt...');
+      this.handleCloseClick();
+    }
   }
 
   testMobileTab(tabName) {
@@ -2527,11 +2602,13 @@ class MobileTabBar {
     this.cleanupUI();
     this.resetTabSelection();
   }
-  
+
   checkResponsiveState() {
     const isMobile = window.innerWidth <= 768;
     console.log('📱 Responsive check - Width:', window.innerWidth, 'Is mobile:', isMobile);
-    
+
+    // Mobile toolbar visibility is handled by CSS
+
     // If we're on desktop but mobile UI is visible, log a warning
     if (!isMobile && this.segmentedControl) {
       const segmentedControlStyle = window.getComputedStyle(this.segmentedControl);
@@ -2539,7 +2616,7 @@ class MobileTabBar {
         console.warn('📱 Mobile UI visible on desktop! This may cause issues.');
       }
     }
-    
+
     // Ensure dialogs are properly styled for current viewport
     Object.values(this.sheets).forEach(sheet => {
       if (sheet && !isMobile && sheet.classList.contains('mobile-only')) {
@@ -2554,7 +2631,7 @@ class MobileTabBar {
       }
     });
   }
-  
+
   // Debug method to test panel opening
   testOpenPanel(panelName) {
     console.log('📱 TEST: Attempting to open panel:', panelName);
@@ -2567,11 +2644,11 @@ class MobileTabBar {
     console.log('📱 TEST: Panel open before:', panel.open);
     panel.open = true;
     console.log('📱 TEST: Panel open after:', panel.open);
-    
+
     // Also try with setAttribute
     panel.setAttribute('open', '');
     console.log('📱 TEST: Added open attribute');
-    
+
     // Check computed style
     setTimeout(() => {
       const computed = window.getComputedStyle(panel);
@@ -2581,7 +2658,7 @@ class MobileTabBar {
       console.log('📱 TEST: Panel hasAttribute open:', panel.hasAttribute('open'));
     }, 100);
   }
-  
+
   // Debug method to check initialization state
   debugState() {
     console.log('📱 DEBUG: MobileTabBar state');
@@ -2591,13 +2668,180 @@ class MobileTabBar {
     console.log('  - Current sheet:', this.currentSheet?.id || 'none');
     console.log('  - Viewport width:', window.innerWidth);
     console.log('  - Is mobile:', window.innerWidth <= 768);
-    
+
     // Check if components are visible
     if (this.segmentedControl) {
       const style = window.getComputedStyle(this.segmentedControl);
       console.log('  - Tab bar display:', style.display);
       console.log('  - Tab bar visibility:', style.visibility);
     }
+  }
+
+  // Debug method to check toolbar visibility
+  debugToolbarVisibility() {
+    const toolbar = document.getElementById('mobile-tab-bar');
+    if (!toolbar) {
+      console.error('❌ Mobile toolbar not found!');
+      return;
+    }
+
+    const style = window.getComputedStyle(toolbar);
+    console.log('📱 Toolbar Debug Info:');
+    console.log('  - Display:', style.display);
+    console.log('  - Visibility:', style.visibility);
+    console.log('  - Opacity:', style.opacity);
+    console.log('  - Z-index:', style.zIndex);
+    console.log('  - Position:', style.position);
+    console.log('  - Bottom:', style.bottom);
+    console.log('  - Transform:', style.transform);
+    console.log('  - Pointer Events:', style.pointerEvents);
+    console.log('  - Offset Height:', toolbar.offsetHeight);
+    console.log('  - Client Height:', toolbar.clientHeight);
+    console.log('  - Bounding Rect:', toolbar.getBoundingClientRect());
+
+    // Check if it's being overlapped
+    const rect = toolbar.getBoundingClientRect();
+    const elementAtCenter = document.elementFromPoint(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2
+    );
+    console.log('  - Element at toolbar center:', elementAtCenter);
+
+    // Force visibility
+    console.log('📱 Forcing toolbar visibility...');
+    this.ensureToolbarVisibility();
+  }
+
+  // Method to manually close current panel
+  closeCurrentPanel() {
+    console.log('📱 Manually closing current panel...');
+    if (this.currentSheet && this.currentSheet.open) {
+      this.handleCloseClick();
+    } else {
+      console.log('📱 No panel is currently open');
+    }
+  }
+
+  // Simple test to check if dialogs work at all
+  testSimpleDialog() {
+    console.log('📱 Testing simple dialog visibility...');
+
+    // Get the first dialog
+    const panel = this.sheets.search;
+    if (!panel) {
+      console.error('❌ Search panel not found');
+      return;
+    }
+
+    // Remove all styles
+    panel.removeAttribute('style');
+
+    // Simply set open
+    panel.open = true;
+
+    console.log('📱 Dialog open state:', panel.open);
+    console.log('📱 Dialog has open attribute:', panel.hasAttribute('open'));
+
+    // Check computed style
+    setTimeout(() => {
+      const style = window.getComputedStyle(panel);
+      console.log('📱 After setting open:');
+      console.log('  - Display:', style.display);
+      console.log('  - Position:', style.position);
+      console.log('  - Visibility:', style.visibility);
+      console.log('  - Z-index:', style.zIndex);
+      console.log('  - Width:', style.width);
+      console.log('  - Height:', style.height);
+
+      // Check if it's actually visible on screen
+      const rect = panel.getBoundingClientRect();
+      console.log('  - Bounding rect:', rect);
+      console.log('  - Is visible:', rect.width > 0 && rect.height > 0);
+    }, 100);
+  }
+
+  // Debug method to manually open a panel
+  debugOpenPanel(panelName) {
+    console.log('📱 DEBUG: Manually opening panel:', panelName);
+
+    const panel = this.sheets[panelName];
+    if (!panel) {
+      console.error('❌ Panel not found:', panelName);
+      return;
+    }
+
+    // Force panel to be visible
+    console.log('📱 Forcing panel visibility...');
+    panel.style.cssText = `
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 64px !important;
+      z-index: 900 !important;
+      background: white !important;
+    `;
+
+    // Set attributes
+    panel.setAttribute('open', '');
+    panel.setAttribute('fullscreen', '');
+    panel.open = true;
+
+    // Check visibility
+    const style = window.getComputedStyle(panel);
+    console.log('📱 Panel Debug Info:');
+    console.log('  - Display:', style.display);
+    console.log('  - Visibility:', style.visibility);
+    console.log('  - Opacity:', style.opacity);
+    console.log('  - Z-index:', style.zIndex);
+    console.log('  - Position:', style.position);
+    console.log('  - Dimensions:', panel.offsetWidth + 'x' + panel.offsetHeight);
+
+    // Check if Calcite dialog internals are visible
+    const dialogContent = panel.querySelector('.calcite-dialog');
+    if (dialogContent) {
+      const contentStyle = window.getComputedStyle(dialogContent);
+      console.log('📱 Dialog Content:');
+      console.log('  - Display:', contentStyle.display);
+      console.log('  - Visibility:', contentStyle.visibility);
+    }
+
+    // Check shadow DOM
+    if (panel.shadowRoot) {
+      console.log('📱 Shadow DOM found, checking internals...');
+      const wrapper = panel.shadowRoot.querySelector('.calcite-dialog-wrapper');
+      if (wrapper) {
+        const wrapperStyle = window.getComputedStyle(wrapper);
+        console.log('📱 Dialog Wrapper:');
+        console.log('  - Display:', wrapperStyle.display);
+        console.log('  - Visibility:', wrapperStyle.visibility);
+        console.log('  - Opacity:', wrapperStyle.opacity);
+
+        // Force visibility
+        wrapper.style.display = 'block';
+        wrapper.style.visibility = 'visible';
+        wrapper.style.opacity = '1';
+      }
+
+      const scrim = panel.shadowRoot.querySelector('.calcite-scrim');
+      if (scrim) {
+        const scrimStyle = window.getComputedStyle(scrim);
+        console.log('📱 Dialog Scrim:');
+        console.log('  - Display:', scrimStyle.display);
+        console.log('  - Visibility:', scrimStyle.visibility);
+
+        // Force visibility
+        scrim.style.display = 'block';
+        scrim.style.visibility = 'visible';
+        scrim.style.opacity = '1';
+      }
+    }
+
+    this.currentSheet = panel;
+    this.setupUIForOpenSheet();
   }
 }
 
@@ -2648,6 +2892,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.mapApp?.layers?.onlineSubscribers) {
         log.info('Online layer visible:', window.mapApp.layers.onlineSubscribers.visible)
         log.info('Online layer source length:', window.mapApp.layers.onlineSubscribers.source?.length || 0)
+      }
+    };
+
+    // Debug close button functionality
+    window.testCloseButton = () => {
+      if (window.mobileTabBar) {
+        window.mobileTabBar.testCloseButton();
+      } else {
+        console.log('❌ MobileTabBar not initialized');
       }
     };
     window.debugMobile = () => {
