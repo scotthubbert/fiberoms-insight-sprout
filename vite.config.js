@@ -17,6 +17,7 @@ export default defineConfig({
     },
     include: [
       '@arcgis/core/intl',
+      '@arcgis/map-components',
       '@esri/calcite-components',
       '@supabase/supabase-js'
     ],
@@ -89,11 +90,9 @@ export default defineConfig({
       external: [],
       output: {
         manualChunks: (id) => {
-          if (id.includes('@arcgis/core')) {
-            return 'arcgis-core';
-          }
-          if (id.includes('@arcgis/map-components')) {
-            return 'arcgis-components';
+          // Keep all ArcGIS modules together to avoid circular dependencies
+          if (id.includes('@arcgis/core') || id.includes('@arcgis/map-components')) {
+            return 'arcgis';
           }
           if (id.includes('@esri/calcite-components')) {
             return 'calcite-ui';
