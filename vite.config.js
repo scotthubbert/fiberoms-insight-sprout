@@ -3,6 +3,20 @@ import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
+  resolve: {
+    conditions: ['import', 'module', 'browser', 'default'],
+    mainFields: ['module', 'main', 'browser']
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2020'
+    },
+    include: [
+      '@arcgis/core/intl',
+      '@esri/calcite-components',
+      '@supabase/supabase-js'
+    ]
+  },
   plugins: [
     // Only use SSL in production or when explicitly requested
     ...(process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS ? [basicSsl()] : []),
@@ -18,6 +32,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15MB to handle large ArcGIS chunks
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/js\.arcgis\.com\/.*/i,
@@ -52,14 +67,25 @@ export default defineConfig({
   build: {
     target: 'es2020',
     sourcemap: false, // Disable source maps in production for security and performance
+    commonjsOptions: {
+      transformMixedEsModules: true
+    },
     rollupOptions: {
+      external: [],
       output: {
-        manualChunks: {
-          // Split large dependencies into separate chunks for better caching
-          'arcgis-core': ['@arcgis/core'],
-          'arcgis-components': ['@arcgis/map-components'],
-          'calcite-ui': ['@esri/calcite-components'],
-          'vendor': ['@supabase/supabase-js']
+        manualChunks: (id) => {
+          if (id.includes('@arcgis/core')) {
+            return 'arcgis-core';
+          }
+          if (id.includes('@arcgis/map-components')) {
+            return 'arcgis-components';
+          }
+          if (id.includes('@esri/calcite-components')) {
+            return 'calcite-ui';
+          }
+          if (id.includes('@supabase/supabase-js')) {
+            return 'vendor';
+          }
         }
       }
     },
