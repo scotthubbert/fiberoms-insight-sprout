@@ -9,14 +9,14 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#1976d2">
   <title>FiberOMS Insight</title>
-  
+
   <!-- Polyfill for Node.js globals in browser -->
   <script>
     if (typeof global === 'undefined') {
       window.global = window;
     }
   </script>
-  
+
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/icons/icon.svg">
   <link rel="manifest" href="/manifest.json">
@@ -45,10 +45,8 @@
             </calcite-autocomplete>
           </div>
           <div class="metrics-section">
-            <calcite-chip class="inline-metric offline-metric" value="offline" appearance="outline" scale="s">
-              <calcite-icon slot="icon" icon="circle" scale="s"></calcite-icon>
-              <span class="metric-count" id="offline-count">0</span>
-              <span class="metric-label">Offline</span>
+            <calcite-chip scale="l" appearance="outline" id="metrics-chip">
+              <span id="offline-count">0</span>
             </calcite-chip>
           </div>
         </div>
@@ -203,24 +201,12 @@
         </calcite-block>
 
         <calcite-block heading="Recent Searches" expanded>
-          <calcite-list selection-mode="none">
-            <calcite-list-item label="123 Main Street" description="John Doe - Account #1234">
-              <calcite-icon slot="content-start" icon="clock"></calcite-icon>
-              <calcite-action slot="actions-end" icon="arrow-right"></calcite-action>
-            </calcite-list-item>
-            <calcite-list-item label="456 Oak Avenue" description="Jane Smith - Account #5678">
-              <calcite-icon slot="content-start" icon="clock"></calcite-icon>
-              <calcite-action slot="actions-end" icon="arrow-right"></calcite-action>
-            </calcite-list-item>
+          <calcite-list selection-mode="none" class="recent-searches-list">
+            <!-- Recent searches will be populated dynamically -->
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Search Options" expanded>
-          <calcite-button width="full" icon-start="person" appearance="outline">Search by Customer Name</calcite-button>
-          <calcite-button width="full" icon-start="number" appearance="outline">Search by Account
-            Number</calcite-button>
-          <calcite-button width="full" icon-start="map-pin" appearance="outline">Search by Address</calcite-button>
-        </calcite-block>
+
       </div>
     </calcite-dialog>
 
@@ -235,7 +221,7 @@
           <calcite-list-item label="Online Subscribers" description="Show active subscribers" class="layer-toggle-item">
             <calcite-icon slot="content-start" icon="circle"
               style="color: var(--calcite-color-status-success);"></calcite-icon>
-            <calcite-switch slot="content-end" checked></calcite-switch>
+            <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="Offline Subscribers" description="Show disconnected subscribers"
@@ -249,7 +235,6 @@
         <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="refresh" appearance="outline" id="refresh-subscriber-data">Refresh
             Data</calcite-button>
-          <calcite-button width="full" icon-start="search" appearance="outline">Search Customers</calcite-button>
           <calcite-button width="full" icon-start="download" appearance="outline">Export Offline CSV</calcite-button>
         </calcite-block>
       </div>

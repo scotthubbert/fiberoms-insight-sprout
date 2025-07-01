@@ -43,6 +43,8 @@ import '@esri/calcite-components/dist/components/calcite-list-item';
 import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-dialog';
 import '@esri/calcite-components/dist/components/calcite-chip';
+import '@esri/calcite-components/dist/components/calcite-card';
+
 import '@esri/calcite-components/dist/components/calcite-autocomplete';
 import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
@@ -381,41 +383,95 @@ class MobileTabBar {
 // Dashboard Manager - Single Responsibility Principle
 class DashboardManager {
   constructor() {
-    this.refreshButton = document.getElementById('refresh-dashboard');
-    this.offlineMetric = document.getElementById('offline-count');
+    this.refreshButton = null;
+    this.lastUpdated = null;
   }
 
   async init() {
+    await customElements.whenDefined('calcite-button');
+    await customElements.whenDefined('calcite-chip');
     this.setupEventListeners();
-    await this.updateDashboard();
   }
 
   setupEventListeners() {
+    this.refreshButton = document.getElementById('refresh-dashboard');
     if (this.refreshButton) {
-      this.refreshButton.addEventListener('click', () => {
-        this.refreshDashboard();
-      });
+      this.refreshButton.addEventListener('click', () => this.refreshDashboard());
     }
+  }
+
+  updateLastUpdatedTime() {
+    this.lastUpdated = new Date();
+    const timeString = this.lastUpdated.toLocaleTimeString();
+    log.info(`📅 Last updated: ${timeString}`);
   }
 
   async updateDashboard() {
+    log.info('📊 Updating dashboard metrics...');
+
     try {
+      // Import data service dynamically to avoid circular imports
+      const { subscriberDataService } = await import('./dataService.js');
+
+      // Get subscriber summary with offline count
       const summary = await subscriberDataService.getSubscribersSummary();
+
+      // Update the offline count display
       this.updateOfflineCount(summary.offline || 0);
+
+      log.info(`📊 Dashboard updated: ${summary.offline} offline subscribers`);
+
     } catch (error) {
-      log.error('Failed to update dashboard:', error);
+      log.error('❌ Failed to update dashboard:', error);
+      // Show 0 if there's an error to prevent showing stale data
+      this.updateOfflineCount(0);
     }
+
+    // Update the timestamp
+    this.updateLastUpdatedTime();
   }
 
   updateOfflineCount(count) {
-    if (this.offlineMetric) {
-      this.offlineMetric.textContent = count;
+    const offlineCountElement = document.getElementById('offline-count');
+    if (offlineCountElement) {
+      offlineCountElement.textContent = count.toString();
+
+      // Update alert count in popover
+      const alertCountElement = document.getElementById('alert-count');
+      if (alertCountElement) {
+        const alertText = count > 0 ? `${count} New` : '0 New';
+        alertCountElement.textContent = alertText;
+      }
+
+      log.info(`📊 Updated offline count: ${count}`);
     }
   }
 
   async refreshDashboard() {
-    subscriberDataService.clearCache();
-    await this.updateDashboard();
+    log.info('🔄 Refreshing dashboard...');
+
+    // Add loading state to refresh button
+    if (this.refreshButton) {
+      this.refreshButton.setAttribute('loading', '');
+    }
+
+    try {
+      // Clear cache to ensure fresh data
+      subscriberDataService.clearCache();
+
+      await this.updateDashboard();
+      // Simulate brief loading for user feedback
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      log.info('✅ Dashboard refreshed successfully');
+    } catch (error) {
+      log.error('❌ Error refreshing dashboard:', error);
+    } finally {
+      // Remove loading state
+      if (this.refreshButton) {
+        this.refreshButton.removeAttribute('loading');
+      }
+    }
   }
 }
 
@@ -430,6 +486,130 @@ class HeaderSearch {
     this.desktopSearchTimeout = null;
     this.currentResults = [];
     this.currentIndicatorGraphics = null;
+    this.recentSearches = [];
+    this.maxRecentSearches = 5;
+  }
+
+  // Recent searches management
+  loadRecentSearches() {
+    try {
+      const stored = localStorage.getItem('fiberoms-recent-searches');
+      this.recentSearches = stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      log.warn('Failed to load recent searches:', error);
+      this.recentSearches = [];
+    }
+  }
+
+  saveRecentSearches() {
+    try {
+      localStorage.setItem('fiberoms-recent-searches', JSON.stringify(this.recentSearches));
+    } catch (error) {
+      log.warn('Failed to save recent searches:', error);
+    }
+  }
+
+  addToRecentSearches(result) {
+    if (!result || !result.customer_name) return;
+
+    // Create a recent search entry
+    const recentEntry = {
+      id: result.id,
+      customer_name: result.customer_name,
+      customer_number: result.customer_number,
+      address: result.address,
+      city: result.city,
+      state: result.state,
+      zip: result.zip,
+      latitude: result.latitude,
+      longitude: result.longitude,
+      status: result.status,
+      timestamp: Date.now()
+    };
+
+    // Remove existing entry with same ID if it exists
+    this.recentSearches = this.recentSearches.filter(item => item.id !== result.id);
+
+    // Add to beginning of array
+    this.recentSearches.unshift(recentEntry);
+
+    // Keep only the most recent searches
+    if (this.recentSearches.length > this.maxRecentSearches) {
+      this.recentSearches = this.recentSearches.slice(0, this.maxRecentSearches);
+    }
+
+    this.saveRecentSearches();
+    this.updateRecentSearchesUI();
+  }
+
+  updateRecentSearchesUI() {
+    const recentSearchesList = document.querySelector('#mobile-search-sheet .recent-searches-list');
+    if (!recentSearchesList) return;
+
+    // Clear existing items
+    recentSearchesList.innerHTML = '';
+
+    if (this.recentSearches.length === 0) {
+      // Show empty state
+      const emptyItem = document.createElement('calcite-list-item');
+      emptyItem.setAttribute('label', 'No recent searches');
+      emptyItem.setAttribute('description', 'Your recent searches will appear here');
+      emptyItem.innerHTML = '<calcite-icon slot="content-start" icon="information"></calcite-icon>';
+      recentSearchesList.appendChild(emptyItem);
+      return;
+    }
+
+    // Add recent search items
+    this.recentSearches.forEach(recentItem => {
+      const listItem = document.createElement('calcite-list-item');
+      listItem.setAttribute('label', recentItem.customer_name || 'Unnamed Customer');
+      listItem.setAttribute('description', this.formatEnhancedDescription(recentItem));
+
+      const statusColor = recentItem.status === 'Online' ? 'success' : 'danger';
+      listItem.innerHTML = `
+        <calcite-icon slot="content-start" icon="clock" style="color: var(--calcite-color-text-3);"></calcite-icon>
+        <calcite-icon slot="content-end" icon="person" style="color: var(--calcite-color-status-${statusColor}); margin-right: 8px;"></calcite-icon>
+        <calcite-action slot="actions-end" icon="arrow-right"></calcite-action>
+      `;
+
+      // Store result data and add click handler
+      listItem._resultData = recentItem;
+      listItem.addEventListener('click', () => {
+        this.handleRecentSearchSelection(recentItem);
+      });
+
+      recentSearchesList.appendChild(listItem);
+    });
+  }
+
+  handleRecentSearchSelection(result) {
+    // Clear the mobile search input
+    if (this.mobileSearchInput) {
+      this.mobileSearchInput.value = '';
+    }
+
+    // Clear mobile search results
+    this.clearMobileSearchResults();
+
+    // Close the mobile search dialog
+    const mobileDialog = document.getElementById('mobile-search-sheet');
+    if (mobileDialog) {
+      mobileDialog.open = false;
+    }
+
+    // Close any open mobile panels
+    if (window.app?.services?.mobileTabBar) {
+      window.app.services.mobileTabBar.closeCurrentPanel();
+    }
+
+    // Navigate to result
+    this.navigateToResult(result);
+  }
+
+  clearRecentSearches() {
+    this.recentSearches = [];
+    localStorage.removeItem('fiberoms-recent-searches');
+    this.updateRecentSearchesUI();
   }
 
   async init() {
@@ -438,6 +618,10 @@ class HeaderSearch {
     await customElements.whenDefined('calcite-autocomplete');
     await customElements.whenDefined('calcite-autocomplete-item');
     await customElements.whenDefined('calcite-input');
+
+    // Load recent searches
+    this.loadRecentSearches();
+    this.updateRecentSearchesUI();
 
     this.setupEventListeners();
   }
@@ -570,8 +754,6 @@ class HeaderSearch {
       // Perform the search
       const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
 
-
-
       // Update search results for autocomplete inputs
       this.updateSearchResults(searchResult, targetInput);
 
@@ -668,6 +850,10 @@ class HeaderSearch {
 
     if (resultData) {
       log.info('🎯 Selected search result:', resultData);
+
+      // Add to recent searches
+      this.addToRecentSearches(resultData);
+
       this.navigateToResult(resultData);
 
       // Clear search input values
@@ -848,8 +1034,6 @@ class HeaderSearch {
       });
     });
   }
-
-
 
   clearLocationIndicator() {
     if (this.currentIndicatorGraphics && window.mapView) {
@@ -1096,6 +1280,17 @@ class HeaderSearch {
   }
 
   handleMobileSearchSelection(result) {
+    // Add to recent searches
+    this.addToRecentSearches(result);
+
+    // Clear the mobile search input
+    if (this.mobileSearchInput) {
+      this.mobileSearchInput.value = '';
+    }
+
+    // Clear mobile search results
+    this.clearMobileSearchResults();
+
     // Close the mobile search dialog
     const mobileDialog = document.getElementById('mobile-search-sheet');
     if (mobileDialog) {
@@ -1128,8 +1323,31 @@ class HeaderSearch {
         const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
 
         if (searchResult.results && searchResult.results.length > 0) {
-          // Directly navigate to first result without updating the UI
-          this.handleMobileSearchSelection(searchResult.results[0]);
+          // Directly navigate to first result and add to recent searches
+          const firstResult = searchResult.results[0];
+          this.addToRecentSearches(firstResult);
+
+          // Clear the mobile search input
+          if (this.mobileSearchInput) {
+            this.mobileSearchInput.value = '';
+          }
+
+          // Clear mobile search results
+          this.clearMobileSearchResults();
+
+          // Close the mobile search dialog
+          const mobileDialog = document.getElementById('mobile-search-sheet');
+          if (mobileDialog) {
+            mobileDialog.open = false;
+          }
+
+          // Close any open mobile panels
+          if (window.app?.services?.mobileTabBar) {
+            window.app.services.mobileTabBar.closeCurrentPanel();
+          }
+
+          // Navigate to result
+          this.navigateToResult(firstResult);
         } else {
           // Perform normal search to show "no results"
           this.performMobileSearch(searchTerm);
@@ -1263,6 +1481,9 @@ class HeaderSearch {
     // Clear search results
     this.clearSearchResults();
     this.clearMobileSearchResults();
+
+    // Clear recent searches array (but keep localStorage for persistence)
+    this.recentSearches = [];
   }
 }
 

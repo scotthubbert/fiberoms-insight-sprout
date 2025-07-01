@@ -112,6 +112,56 @@ calcite-navigation.unified-header .navigation-content-center {
   opacity: 0.8;
 }
 
+/* Dashboard Metrics Chip - Simple and Clean */
+#metrics-chip {
+  --calcite-chip-border-color: var(--calcite-color-status-danger);
+  --calcite-chip-text-color: var(--calcite-color-status-danger);
+  font-family: "SF Mono", "Monaco", "Cascadia Code", monospace;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+#metrics-chip span {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* Mobile responsiveness for metrics chip - Enhanced styling */
+@media (max-width: 768px) {
+  #metrics-chip {
+    font-size: 20px;
+    font-weight: 800;
+    padding: var(--calcite-spacing-sm) var(--calcite-spacing-lg);
+    --calcite-chip-border-width: 2px;
+    --calcite-chip-background-color: var(--calcite-color-foreground-1);
+    --calcite-chip-border-color: var(--calcite-color-status-danger);
+    --calcite-chip-text-color: var(--calcite-color-status-danger);
+    border-radius: 28px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.5px;
+  }
+
+  #metrics-chip span {
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+  }
+}
+
+@media (max-width: 480px) {
+  #metrics-chip {
+    font-size: 18px;
+    min-height: 44px;
+    padding: var(--calcite-spacing-sm) var(--calcite-spacing-md);
+    border-radius: 24px;
+  }
+}
+
 /* Navigation Actions */
 calcite-navigation.unified-header .navigation-actions {
   padding-right: var(--calcite-spacing-md);
@@ -261,10 +311,14 @@ calcite-dialog.mobile-only[fullscreen]::part(container) {
 calcite-dialog.mobile-only[fullscreen] [slot="content"] {
   flex: 1 1 auto !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   background: var(
     --calcite-color-foreground-1
   ) !important; /* Ensure content is opaque */
   padding-bottom: 10px !important;
+  max-height: calc(
+    100vh - 160px
+  ) !important; /* Account for header and mobile nav */
 }
 
 /* Ensure header is visible */
@@ -374,14 +428,16 @@ calcite-dialog.mobile-only [slot="content"] {
 @media (max-width: 768px) {
   /* More compact unified header on mobile */
   calcite-navigation.unified-header {
-    --calcite-navigation-height: 56px;
-    min-height: 56px;
-    max-height: 56px;
+    --calcite-navigation-height: 64px;
+    min-height: 64px;
+    max-height: 64px;
+    background: var(--calcite-color-foreground-1);
+    border-bottom: 1px solid var(--calcite-color-border-1);
   }
 
+  /* Hide app logo/name on mobile */
   calcite-navigation.unified-header calcite-navigation-logo {
-    --calcite-navigation-logo-padding: var(--calcite-spacing-xs);
-    font-size: 14px;
+    display: none !important;
   }
 
   calcite-navigation.unified-header calcite-button {
@@ -390,49 +446,42 @@ calcite-dialog.mobile-only [slot="content"] {
     --calcite-button-padding-y: var(--calcite-spacing-xs);
   }
 
-  /* Stack search and metrics vertically on very small screens */
-  .navigation-content-center {
-    flex-direction: column;
-    gap: var(--calcite-spacing-xs);
-    padding: var(--calcite-spacing-sm) var(--calcite-spacing-md);
+  /* Hide search section and navigation actions on mobile - only show offline counter */
+  .search-section {
+    display: none !important;
   }
 
-  .search-section {
-    width: 100%;
+  .navigation-actions {
+    display: none !important;
+  }
+
+  /* Hide ArcGIS search widget on mobile */
+  arcgis-search {
+    display: none !important;
+  }
+
+  /* Center the metrics section on mobile since it's the only visible element */
+  .navigation-content-center {
+    justify-content: center;
+    align-items: center;
+    padding: var(--calcite-spacing-md);
+    height: 100%;
   }
 
   .metrics-section {
-    align-self: flex-end;
+    align-self: center;
+    display: flex;
+    justify-content: center;
+    width: 100%;
   }
 
   .inline-metric {
     --calcite-chip-scale: s;
   }
 
-  .header-search-input {
-    max-width: none;
-  }
-
-  @media (max-width: 480px) {
-    .navigation-content-center {
-      padding: var(--calcite-spacing-xs);
-    }
-
-    .header-search-input::placeholder {
-      font-size: 14px;
-    }
-
-    .inline-metric .metric-label {
-      display: none; /* Hide label on very small screens */
-    }
-  }
-
-  calcite-navigation.unified-header [slot="content-end"] {
-    padding-right: var(--calcite-spacing-sm);
-  }
-
+  /* Adjust map to account for header and bottom navigation */
   .map-container {
-    height: calc(100% - 64px); /* Account for taller bottom nav height */
+    height: calc(100% - 64px); /* Account for bottom nav height */
     margin-bottom: 0;
   }
 
@@ -444,7 +493,6 @@ calcite-dialog.mobile-only [slot="content"] {
     display: none !important;
   }
 
-  /* Adjust map to account for bottom navigation */
   arcgis-map {
     height: 100%;
   }
@@ -695,6 +743,9 @@ calcite-autocomplete-item #search-loading-item calcite-icon {
 /* Mobile search results */
 .mobile-search-results {
   margin-top: var(--calcite-spacing-sm);
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .mobile-search-results calcite-list-item {
@@ -770,7 +821,6 @@ calcite-autocomplete-item[data-status="Offline"] {
   background-color: rgba(220, 38, 38, 0.03);
 }
 
-
 /* Better visual hierarchy for person icons */
 calcite-autocomplete-item calcite-icon[icon="person"] {
   --calcite-icon-size: 16px;
@@ -780,6 +830,7 @@ calcite-autocomplete-item calcite-icon[icon="person"] {
 /* Improved autocomplete dropdown */
 calcite-autocomplete {
   --calcite-autocomplete-max-height: 320px;
+  --calcite-autocomplete-overflow-y: auto;
 }
 
 /* Better spacing and legibility */
@@ -810,3 +861,96 @@ calcite-autocomplete-item:focus {
   }
 }
 
+/* Recent searches styling */
+.recent-searches-list {
+  background: var(--calcite-color-foreground-1);
+  max-height: 250px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.recent-searches-list calcite-list-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid var(--calcite-color-border-3);
+}
+
+.recent-searches-list calcite-list-item:hover {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+.recent-searches-list calcite-list-item:active {
+  background-color: var(--calcite-color-foreground-3);
+}
+
+.recent-searches-list calcite-list-item:last-child {
+  border-bottom: none;
+}
+
+/* Recent search item styling */
+.recent-searches-list calcite-list-item[label="No recent searches"] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.recent-searches-list calcite-list-item[label="No recent searches"]:hover {
+  background-color: transparent;
+}
+
+/* Recent search icons */
+.recent-searches-list calcite-icon[icon="clock"] {
+  color: var(--calcite-color-text-3);
+  opacity: 0.6;
+}
+
+.recent-searches-list calcite-icon[icon="person"] {
+  margin-right: var(--calcite-spacing-xs);
+}
+
+/* Status colors for recent searches */
+.recent-searches-list calcite-icon[icon="person"][style*="success"] {
+  color: var(--calcite-color-status-success);
+}
+
+.recent-searches-list calcite-icon[icon="person"][style*="danger"] {
+  color: var(--calcite-color-status-danger);
+}
+
+/* Compact recent search items on mobile */
+@media (max-width: 768px) {
+  .recent-searches-list calcite-list-item {
+    padding: var(--calcite-spacing-sm);
+    min-height: 60px;
+  }
+
+  .recent-searches-list calcite-list-item[description] {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+}
+
+/* Search results scrolling improvements */
+.mobile-search-results calcite-list,
+.recent-searches-list {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+}
+
+/* Search content blocks scrollable on mobile */
+@media (max-width: 768px) {
+  calcite-dialog.mobile-only calcite-block {
+    max-height: none; /* Allow blocks to grow */
+  }
+
+  calcite-dialog.mobile-only calcite-block[expanded] {
+    flex: 1;
+    overflow: visible;
+  }
+
+  /* Ensure search results blocks are scrollable */
+  .mobile-search-results,
+  .recent-searches-list {
+    max-height: 40vh; /* Limit height on mobile */
+    min-height: 100px;
+  }
+}
