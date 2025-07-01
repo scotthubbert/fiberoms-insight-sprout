@@ -18,9 +18,9 @@ export default defineConfig({
     include: [
       '@arcgis/core/intl',
       '@arcgis/map-components',
+      '@esri/calcite-components',
       '@supabase/supabase-js'
-    ],
-    exclude: ['@esri/calcite-components']
+    ]
   },
   plugins: [
     // Node.js polyfills for Supabase compatibility
@@ -87,19 +87,8 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [],
-      output: {
-        manualChunks: (id) => {
-          // Keep all ArcGIS modules together to avoid circular dependencies
-          if (id.includes('@arcgis/core') || id.includes('@arcgis/map-components')) {
-            return 'arcgis';
-          }
-          // Don't separate Calcite components - let them be part of main bundle
-          // to avoid circular dependencies between individual components
-          if (id.includes('@supabase/supabase-js')) {
-            return 'vendor';
-          }
-        }
-      }
+      // Remove manual chunking - let Vite handle optimization automatically
+      // This prevents circular dependency issues and follows best practices
     },
     // Optimize chunk size
     chunkSizeWarningLimit: 1000
