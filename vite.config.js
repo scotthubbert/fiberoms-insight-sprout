@@ -3,18 +3,31 @@ import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
+  define: {
+    global: 'globalThis',
+  },
   resolve: {
     conditions: ['import', 'module', 'browser', 'default'],
-    mainFields: ['module', 'main', 'browser']
+    mainFields: ['module', 'main', 'browser'],
+    alias: {
+      // Provide browser-compatible versions
+      stream: 'stream-browserify',
+      util: 'util'
+    }
   },
   optimizeDeps: {
     esbuildOptions: {
-      target: 'es2020'
+      target: 'es2020',
+      define: {
+        global: 'globalThis'
+      }
     },
     include: [
       '@arcgis/core/intl',
       '@esri/calcite-components',
-      '@supabase/supabase-js'
+      '@supabase/supabase-js',
+      'stream-browserify',
+      'util'
     ]
   },
   plugins: [
