@@ -3,6 +3,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
+  define: {
+    global: 'globalThis',
+  },
   resolve: {
     conditions: ['import', 'module', 'browser', 'default'],
     mainFields: ['module', 'main', 'browser']
