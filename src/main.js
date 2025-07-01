@@ -597,10 +597,13 @@ class HeaderSearch {
       // Use text-label for the customer name only
       item.setAttribute('text-label', this.formatSearchResultLabel(result));
 
-      // Use simple description (calcite-autocomplete may not support complex HTML)
+      // Use description for all the details
       item.setAttribute('description', this.formatEnhancedDescription(result));
 
-      // Add status indicator icon
+      // Add data attribute for status-based styling
+      item.setAttribute('data-status', result.status || 'unknown');
+
+      // Add status indicator icon using CalciteUI colors
       const statusColor = result.status === 'Online' ? 'success' : 'danger';
       item.innerHTML = `
         <calcite-icon slot="icon" icon="person" style="color: var(--calcite-color-status-${statusColor});"></calcite-icon>
@@ -637,23 +640,20 @@ class HeaderSearch {
 
   formatEnhancedDescription(result) {
     const parts = [];
-
-    // Add status with proper CalciteUI styling
-    if (result.status) {
-      parts.push(result.status.toUpperCase());
+    
+    if (result.customer_name) {
+      parts.push(result.customer_name);
     }
-
-    // Add account number
+    
     if (result.customer_number) {
-      parts.push(`Account: ${result.customer_number}`);
+      parts.push(result.customer_number);
     }
-
-    // Add address
+    
     const address = this.formatFullAddress(result);
     if (address !== 'No address available') {
       parts.push(address);
     }
-
+    
     return parts.join(' • ');
   }
 
@@ -735,8 +735,11 @@ class HeaderSearch {
       // Show location indicator (ring)
       this.showLocationIndicator(point, result);
 
-      // Show popup from actual layer feature
-      this.showLayerPopup(result, point);
+      // Small delay to ensure map has finished rendering
+      setTimeout(() => {
+        // Show popup from actual layer feature
+        this.showLayerPopup(result, point);
+      }, 300);
     }).catch(error => {
       log.error('Navigation failed:', error);
     });

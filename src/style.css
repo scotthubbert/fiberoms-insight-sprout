@@ -759,25 +759,17 @@ calcite-autocomplete-item[description] {
   overflow-wrap: break-word;
 }
 
-/* Status emphasis in descriptions - CalciteUI pattern with proper color coding */
-calcite-autocomplete-item[description*="ONLINE"] {
+/* Status emphasis using data attributes - CalciteUI pattern with proper color coding */
+calcite-autocomplete-item[data-status="Online"] {
   border-left: 3px solid var(--calcite-color-status-success);
   background-color: rgba(34, 197, 94, 0.03);
 }
 
-calcite-autocomplete-item[description*="OFFLINE"] {
+calcite-autocomplete-item[data-status="Offline"] {
   border-left: 3px solid var(--calcite-color-status-danger);
   background-color: rgba(220, 38, 38, 0.03);
 }
 
-/* Enhanced status text styling */
-calcite-autocomplete-item[description*="ONLINE"] .description-content::before,
-calcite-autocomplete-item[description*="OFFLINE"] .description-content::before {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 11px;
-}
 
 /* Better visual hierarchy for person icons */
 calcite-autocomplete-item calcite-icon[icon="person"] {
@@ -817,3 +809,4 @@ calcite-autocomplete-item:focus {
     --calcite-icon-size: 14px;
   }
 }
+
