@@ -1,4 +1,6 @@
 // main.js - SOLID-compliant application entry point following CLAUDE.md principles
+// FiberOMS Insight PWA - Mobile-first fiber network management application
+// Features: Search functionality, recent searches, layer management, theme switching
 
 // Configure ArcGIS intl
 import * as intl from '@arcgis/core/intl';
@@ -213,7 +215,6 @@ class PollingService {
 
   startPolling(layerName) {
     // Polling disabled for Phase 1 - will implement in Phase 2
-    log.info(`🔄 Polling requested for ${layerName} - disabled for Phase 1`);
     return;
   }
 
@@ -221,7 +222,6 @@ class PollingService {
     if (this.pollingTimers[layerName]) {
       clearInterval(this.pollingTimers[layerName]);
       delete this.pollingTimers[layerName];
-      log.info(`⏹️ Stopped polling for ${layerName}`);
     }
   }
 
@@ -231,7 +231,6 @@ class PollingService {
   }
 
   cleanup() {
-    log.info('🧹 Cleaning up polling timers...');
     Object.keys(this.pollingTimers).forEach(layerName => {
       this.stopPolling(layerName);
     });
@@ -343,6 +342,19 @@ class MobileTabBar {
     }
 
     this.setupCloseButtons();
+    this.setupMobileSearchDialogListeners();
+  }
+
+  setupMobileSearchDialogListeners() {
+    const mobileSearchDialog = document.getElementById('mobile-search-sheet');
+    if (mobileSearchDialog) {
+      mobileSearchDialog.addEventListener('calciteDialogOpen', () => {
+        // Refresh recent searches when dialog opens
+        if (window.app?.services?.headerSearch) {
+          window.app.services.headerSearch.updateRecentSearchesUI();
+        }
+      });
+    }
   }
 
   handleTabSelection(tabValue) {
@@ -402,13 +414,9 @@ class DashboardManager {
 
   updateLastUpdatedTime() {
     this.lastUpdated = new Date();
-    const timeString = this.lastUpdated.toLocaleTimeString();
-    log.info(`📅 Last updated: ${timeString}`);
   }
 
   async updateDashboard() {
-    log.info('📊 Updating dashboard metrics...');
-
     try {
       // Import data service dynamically to avoid circular imports
       const { subscriberDataService } = await import('./dataService.js');
@@ -419,10 +427,8 @@ class DashboardManager {
       // Update the offline count display
       this.updateOfflineCount(summary.offline || 0);
 
-      log.info(`📊 Dashboard updated: ${summary.offline} offline subscribers`);
-
     } catch (error) {
-      log.error('❌ Failed to update dashboard:', error);
+      log.error('Failed to update dashboard:', error);
       // Show 0 if there's an error to prevent showing stale data
       this.updateOfflineCount(0);
     }
@@ -442,14 +448,10 @@ class DashboardManager {
         const alertText = count > 0 ? `${count} New` : '0 New';
         alertCountElement.textContent = alertText;
       }
-
-      log.info(`📊 Updated offline count: ${count}`);
     }
   }
 
   async refreshDashboard() {
-    log.info('🔄 Refreshing dashboard...');
-
     // Add loading state to refresh button
     if (this.refreshButton) {
       this.refreshButton.setAttribute('loading', '');
@@ -463,9 +465,8 @@ class DashboardManager {
       // Simulate brief loading for user feedback
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      log.info('✅ Dashboard refreshed successfully');
     } catch (error) {
-      log.error('❌ Error refreshing dashboard:', error);
+      log.error('Error refreshing dashboard:', error);
     } finally {
       // Remove loading state
       if (this.refreshButton) {
@@ -476,6 +477,8 @@ class DashboardManager {
 }
 
 // Header Search Manager - Single Responsibility Principle
+// Manages search functionality across desktop and mobile interfaces
+// Includes recent searches functionality with localStorage persistence
 class HeaderSearch {
   constructor() {
     this.searchInput = document.getElementById('header-search');
@@ -486,6 +489,7 @@ class HeaderSearch {
     this.desktopSearchTimeout = null;
     this.currentResults = [];
     this.currentIndicatorGraphics = null;
+    // Recent searches functionality
     this.recentSearches = [];
     this.maxRecentSearches = 5;
   }
@@ -758,7 +762,7 @@ class HeaderSearch {
       this.updateSearchResults(searchResult, targetInput);
 
     } catch (error) {
-      log.error(`${source} search failed:`, error);
+      log.error('Search failed:', error);
       this.showSearchError(source === 'desktop' ? this.desktopSearchInput : this.searchInput);
     } finally {
       this.setSearchLoading(false, source === 'desktop' ? this.desktopSearchInput : this.searchInput);
@@ -849,8 +853,6 @@ class HeaderSearch {
     const resultData = selectedItem._resultData;
 
     if (resultData) {
-      log.info('🎯 Selected search result:', resultData);
-
       // Add to recent searches
       this.addToRecentSearches(resultData);
 
@@ -920,8 +922,6 @@ class HeaderSearch {
     // Set view instantly without animation
     window.mapView.center = [parseFloat(result.longitude), parseFloat(result.latitude)];
     window.mapView.zoom = Math.max(window.mapView.zoom, 16); // Ensure minimum zoom level 16
-
-    log.info('📍 Positioned at:', result.customer_name);
 
     // Show location indicator (ring) at the point
     this.showLocationIndicator(point, result);
@@ -1089,7 +1089,7 @@ class HeaderSearch {
       }
 
     } catch (error) {
-      log.error('Error finding layer feature:', error);
+      log.error('Layer feature error:', error);
       this.fallbackPopup(result, point);
     }
   }
@@ -1114,7 +1114,7 @@ class HeaderSearch {
         this.fallbackPopup(result, point);
       }
     } catch (error) {
-      log.error('Customer number query failed:', error);
+      log.error('Customer query failed:', error);
       this.fallbackPopup(result, point);
     }
   }
@@ -1211,9 +1211,9 @@ class HeaderSearch {
       clearTimeout(this.mobileSearchTimeout);
     }
 
-    // If search field is completely cleared, clear everything
+    // If search field is completely cleared, clear search results only (keep recent searches)
     if (!searchTerm || searchTerm.trim() === '') {
-      this.clearEverything('mobile');
+      this.clearMobileSearchResults();
       return;
     }
 
@@ -1243,8 +1243,8 @@ class HeaderSearch {
   }
 
   updateMobileSearchResults(searchResult) {
-    const resultsContainer = document.querySelector('#mobile-search-sheet .recent-searches-list') ||
-      this.createMobileResultsContainer();
+    const resultsContainer = this.createMobileResultsContainer();
+    if (!resultsContainer) return;
 
     // Clear existing results
     resultsContainer.innerHTML = '';
@@ -1277,6 +1277,12 @@ class HeaderSearch {
 
       resultsContainer.appendChild(listItem);
     });
+
+    // Show the search results block
+    const resultsBlock = resultsContainer.closest('calcite-block');
+    if (resultsBlock) {
+      resultsBlock.hidden = false;
+    }
   }
 
   handleMobileSearchSelection(result) {
@@ -1308,7 +1314,7 @@ class HeaderSearch {
 
   async handleMobileEnterKey(searchTerm) {
     // Check if we have results from previous search
-    const resultsContainer = document.querySelector('#mobile-search-sheet .recent-searches-list');
+    const resultsContainer = document.querySelector('#mobile-search-sheet .mobile-search-results-list');
     const firstResultItem = resultsContainer?.querySelector('calcite-list-item');
 
     if (firstResultItem && firstResultItem._resultData) {
@@ -1353,7 +1359,7 @@ class HeaderSearch {
           this.performMobileSearch(searchTerm);
         }
       } catch (error) {
-        log.error('Mobile Enter key search failed:', error);
+        log.error('Mobile search failed:', error);
         // Fallback to normal search
         this.performMobileSearch(searchTerm);
       }
@@ -1374,25 +1380,26 @@ class HeaderSearch {
       resultsBlock.className = 'mobile-search-results';
       resultsBlock.setAttribute('heading', 'Search Results');
       resultsBlock.setAttribute('expanded', '');
+      resultsBlock.hidden = true; // Hidden by default
 
-      // Find the right place to insert it
+      // Find the right place to insert it (after the Quick Search block, before Recent Searches)
       const content = searchSheet.querySelector('[slot="content"]');
       if (content) {
-        // Insert after the search input block
-        const searchBlock = content.querySelector('calcite-block');
-        if (searchBlock && searchBlock.nextSibling) {
-          content.insertBefore(resultsBlock, searchBlock.nextSibling);
+        const recentSearchesBlock = content.querySelector('calcite-block[heading="Recent Searches"]');
+        if (recentSearchesBlock) {
+          content.insertBefore(resultsBlock, recentSearchesBlock);
         } else {
+          // Fallback: append to content
           content.appendChild(resultsBlock);
         }
       }
     }
 
-    // Create or get the list
+    // Create or get the list (with a different class name to avoid conflicts)
     let resultsList = resultsBlock.querySelector('calcite-list');
     if (!resultsList) {
       resultsList = document.createElement('calcite-list');
-      resultsList.className = 'recent-searches-list';
+      resultsList.className = 'mobile-search-results-list';
       resultsList.setAttribute('selection-mode', 'none');
       resultsBlock.appendChild(resultsList);
     }
@@ -1409,9 +1416,16 @@ class HeaderSearch {
   }
 
   clearMobileSearchResults() {
-    const resultsContainer = document.querySelector('#mobile-search-sheet .recent-searches-list');
+    // Clear search results (not recent searches)
+    const resultsContainer = document.querySelector('#mobile-search-sheet .mobile-search-results-list');
     if (resultsContainer) {
       resultsContainer.innerHTML = '';
+    }
+
+    // Hide the search results block
+    const resultsBlock = document.querySelector('#mobile-search-sheet .mobile-search-results');
+    if (resultsBlock) {
+      resultsBlock.hidden = true;
     }
   }
 
@@ -1495,8 +1509,6 @@ class Application {
   }
 
   async init() {
-    log.info('🚀 Starting FiberOMS Insight PWA...');
-
     // Create services with dependency injection (DIP - Dependency Inversion Principle)
     this.services.themeManager = new ThemeManager();
     this.services.layerManager = new LayerManager(subscriberDataService);
@@ -1533,13 +1545,9 @@ class Application {
 
     // Store app instance globally for cross-component access
     window.app = this;
-
-    log.info('✅ Application initialized successfully');
   }
 
   async onMapReady() {
-    log.info('🗺️ Map ready, initializing layers and features...');
-
     // Initialize subscriber layers first
     await this.initializeSubscriberLayers();
 
@@ -1556,8 +1564,6 @@ class Application {
 
     // Polling disabled for Phase 1
     // this.services.pollingService.startPolling('offlineSubscribers');
-
-    log.info('🎯 Phase 1 features initialized successfully');
   }
 
   async initializeSubscriberLayers() {
@@ -1568,7 +1574,6 @@ class Application {
         const offlineLayer = await this.createLayerFromConfig(offlineConfig);
         if (offlineLayer) {
           this.services.mapController.addLayer(offlineLayer, offlineConfig.zOrder);
-          log.info('✅ Offline subscribers layer created and added to map');
         }
       }
 
@@ -1579,12 +1584,11 @@ class Application {
         if (onlineLayer) {
           onlineLayer.visible = false; // Hidden by default per Phase 1 requirements
           this.services.mapController.addLayer(onlineLayer, onlineConfig.zOrder);
-          log.info('✅ Online subscribers layer created (hidden by default)');
         }
       }
 
     } catch (error) {
-      log.error('❌ Failed to initialize subscriber layers:', error);
+      log.error('Failed to initialize subscriber layers:', error);
     }
   }
 
@@ -1592,7 +1596,7 @@ class Application {
     try {
       const data = await config.dataServiceMethod();
       if (!data?.features?.length) {
-        log.warn(`⚠️ No data available for layer: ${config.id}`);
+        log.warn(`No data available for layer: ${config.id}`);
         return null;
       }
 
@@ -1601,7 +1605,7 @@ class Application {
         dataSource: data
       });
     } catch (error) {
-      log.error(`❌ Failed to create layer ${config.id}:`, error);
+      log.error(`Failed to create layer ${config.id}:`, error);
       return null;
     }
   }
@@ -1715,11 +1719,10 @@ class PWAInstaller {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       this.deferredPrompt = e;
-      log.info('📱 PWA install prompt available');
     });
 
     window.addEventListener('appinstalled', () => {
-      log.info('📱 PWA installed successfully');
+      // PWA installed successfully
     });
   }
 }
@@ -1732,12 +1735,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Start the main application
   window.app = new Application();
-
-  log.info('🎯 FiberOMS Insight PWA - Phase 1 Complete');
-  log.info('📱 Mobile-first design with CalciteUI components');
-  log.info('🗺️ Map with offline subscriber visualization');
-  log.info('🎨 Theme switching with system preference support');
-  log.info('⚡ Real-time data polling ready for Phase 2');
 });
 
 

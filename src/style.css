@@ -743,21 +743,31 @@ calcite-autocomplete-item #search-loading-item calcite-icon {
 /* Mobile search results */
 .mobile-search-results {
   margin-top: var(--calcite-spacing-sm);
+}
+
+.mobile-search-results-list {
   max-height: 300px;
   overflow-y: auto;
   overflow-x: hidden;
+  background: var(--calcite-color-foreground-1);
 }
 
-.mobile-search-results calcite-list-item {
+.mobile-search-results-list calcite-list-item {
   cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid var(--calcite-color-border-3);
 }
 
-.mobile-search-results calcite-list-item:hover {
+.mobile-search-results-list calcite-list-item:hover {
   background-color: var(--calcite-color-foreground-2);
 }
 
-.mobile-search-results calcite-list-item:active {
+.mobile-search-results-list calcite-list-item:active {
   background-color: var(--calcite-color-foreground-3);
+}
+
+.mobile-search-results-list calcite-list-item:last-child {
+  border-bottom: none;
 }
 
 /* Search input styling improvements */
@@ -930,7 +940,7 @@ calcite-autocomplete-item:focus {
 }
 
 /* Search results scrolling improvements */
-.mobile-search-results calcite-list,
+.mobile-search-results-list,
 .recent-searches-list {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
@@ -948,7 +958,7 @@ calcite-autocomplete-item:focus {
   }
 
   /* Ensure search results blocks are scrollable */
-  .mobile-search-results,
+  .mobile-search-results-list,
   .recent-searches-list {
     max-height: 40vh; /* Limit height on mobile */
     min-height: 100px;
