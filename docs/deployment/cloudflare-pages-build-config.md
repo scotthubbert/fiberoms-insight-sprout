@@ -85,11 +85,11 @@ The following changes were made to `vite.config.js` to ensure compatibility:
 
 ### 3. Node.js Module Warnings
 **Issue**: Warnings about stream, http, url modules from Supabase
-**Solution**: Added browser polyfills and global definition:
-- Installed `stream-browserify` and `util` packages
-- Added `global: 'globalThis'` define in Vite config
-- Configured aliases for Node.js modules to use browser-compatible versions
-- These warnings are now handled and won't cause runtime errors
+**Solution**: These warnings are expected and harmless:
+- Supabase includes `node-fetch` which references Node.js modules
+- Vite properly externalizes these for browser compatibility
+- The warnings don't affect functionality - Supabase handles browser compatibility internally
+- No polyfills needed - adding them causes more issues than they solve
 
 ## Performance Considerations
 
