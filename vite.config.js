@@ -18,10 +18,9 @@ export default defineConfig({
     include: [
       '@arcgis/core/intl',
       '@arcgis/map-components',
-      '@esri/calcite-components',
       '@supabase/supabase-js'
     ],
-    exclude: []
+    exclude: ['@esri/calcite-components']
   },
   plugins: [
     // Node.js polyfills for Supabase compatibility
@@ -94,9 +93,8 @@ export default defineConfig({
           if (id.includes('@arcgis/core') || id.includes('@arcgis/map-components')) {
             return 'arcgis';
           }
-          if (id.includes('@esri/calcite-components')) {
-            return 'calcite-ui';
-          }
+          // Don't separate Calcite components - let them be part of main bundle
+          // to avoid circular dependencies between individual components
           if (id.includes('@supabase/supabase-js')) {
             return 'vendor';
           }
