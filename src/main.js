@@ -44,6 +44,7 @@ import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-dialog';
 import '@esri/calcite-components/dist/components/calcite-chip';
 import '@esri/calcite-components/dist/components/calcite-autocomplete';
+import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path to NPM bundled assets (CLAUDE.md compliance)
@@ -416,28 +417,850 @@ class DashboardManager {
 class HeaderSearch {
   constructor() {
     this.searchInput = document.getElementById('header-search');
+    this.mobileSearchInput = document.getElementById('mobile-search-input');
+    this.desktopSearchInput = document.getElementById('desktop-search');
+    this.searchTimeout = null;
+    this.mobileSearchTimeout = null;
+    this.desktopSearchTimeout = null;
+    this.currentResults = [];
+    this.currentIndicatorGraphics = null;
   }
 
   async init() {
-    if (!this.searchInput) return;
+    if (!this.searchInput && !this.mobileSearchInput && !this.desktopSearchInput) return;
 
     await customElements.whenDefined('calcite-autocomplete');
+    await customElements.whenDefined('calcite-autocomplete-item');
+    await customElements.whenDefined('calcite-input');
+
     this.setupEventListeners();
   }
 
   setupEventListeners() {
+    // Header search (autocomplete)
     if (this.searchInput) {
+      // Use input event which reliably fires and contains inputValue
+      this.searchInput.addEventListener('input', (e) => {
+        // Try both inputValue and value properties
+        const searchValue = e.target.inputValue || e.target.value;
+        if (searchValue) {
+          this.handleSearchInput(searchValue, 'header');
+        }
+      });
+
+      // Enter key to select first result
+      this.searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          this.handleEnterKeySelection(this.searchInput);
+        }
+      });
+
+      // Escape to clear everything (use keyup to fire after calcite processing)
+      this.searchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Escape') {
+          this.clearEverything('header');
+        }
+      });
+
+      // Selection event for when user picks a result
       this.searchInput.addEventListener('calciteAutocompleteChange', (e) => {
-        this.handleSearchInput(e.target.value);
+        if (e.target.selectedItem) {
+          this.handleSearchSelection(e.target.selectedItem);
+        } else {
+          // Try to find the selected item by value
+          if (e.target.value) {
+            const selectedElement = e.target.querySelector(`calcite-autocomplete-item[value="${e.target.value}"]`);
+            if (selectedElement && selectedElement._resultData) {
+              this.handleSearchSelection(selectedElement);
+            }
+          }
+        }
+      });
+    }
+
+    // Desktop search (autocomplete)
+    if (this.desktopSearchInput) {
+      // Use input event for desktop search too
+      this.desktopSearchInput.addEventListener('input', (e) => {
+        if (e.target.inputValue) {
+          this.handleSearchInput(e.target.inputValue, 'desktop');
+        }
+      });
+
+      // Enter key to select first result
+      this.desktopSearchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          this.handleEnterKeySelection(this.desktopSearchInput);
+        }
+      });
+
+      // Escape to clear everything (use keyup to fire after calcite processing)
+      this.desktopSearchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Escape') {
+          this.clearEverything('desktop');
+        }
+      });
+
+      this.desktopSearchInput.addEventListener('calciteAutocompleteChange', (e) => {
+        if (e.target.selectedItem) {
+          this.handleSearchSelection(e.target.selectedItem);
+        }
+      });
+    }
+
+    // Mobile search (regular input)
+    if (this.mobileSearchInput) {
+      this.mobileSearchInput.addEventListener('input', (e) => {
+        this.handleMobileSearchInput(e.target.value);
+      });
+
+      this.mobileSearchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          this.handleMobileEnterKey(e.target.value);
+        }
+      });
+
+      this.mobileSearchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Escape') {
+          this.clearEverything('mobile');
+        }
       });
     }
   }
 
-  handleSearchInput(searchTerm) {
-    if (searchTerm.length >= 4) {
-      log.info('🔍 Searching for:', searchTerm);
-      // Search implementation will be added in future phases
+  handleSearchInput(searchTerm, source = 'header') {
+    const timeoutKey = source === 'desktop' ? 'desktopSearchTimeout' : 'searchTimeout';
+
+    // Clear previous timeout
+    if (this[timeoutKey]) {
+      clearTimeout(this[timeoutKey]);
     }
+
+    // If search field is completely cleared, clear everything
+    if (!searchTerm || searchTerm.trim() === '') {
+      this.clearEverything(source);
+      return;
+    }
+
+    // Clear results if search term is too short (but not empty)
+    if (searchTerm.length < 4) {
+      this.clearSearchResults(source);
+      return;
+    }
+
+    // Debounce search to avoid too many API calls
+    this[timeoutKey] = setTimeout(() => {
+      this.performSearch(searchTerm, source);
+    }, 300);
+  }
+
+  async performSearch(searchTerm, source = 'header') {
+    try {
+      const targetInput = source === 'desktop' ? this.desktopSearchInput : this.searchInput;
+
+      // Show loading state
+      this.setSearchLoading(true, targetInput);
+
+      // Perform the search
+      const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
+
+
+
+      // Update search results for autocomplete inputs
+      this.updateSearchResults(searchResult, targetInput);
+
+    } catch (error) {
+      log.error(`${source} search failed:`, error);
+      this.showSearchError(source === 'desktop' ? this.desktopSearchInput : this.searchInput);
+    } finally {
+      this.setSearchLoading(false, source === 'desktop' ? this.desktopSearchInput : this.searchInput);
+    }
+  }
+
+  updateSearchResults(searchResult, targetInput) {
+    // Clear existing DOM items FIRST, but don't clear internal state
+    this.clearSearchResults(null, targetInput, false);
+
+    // Now set the new results
+    this.currentResults = searchResult.results;
+
+    if (this.currentResults.length === 0) {
+      this.showNoResults(searchResult.searchTerm, targetInput);
+      return;
+    }
+
+    // Add search result items
+    this.currentResults.forEach((result, index) => {
+      const item = document.createElement('calcite-autocomplete-item');
+      item.setAttribute('value', result.id);
+
+      // Use text-label for the customer name only
+      item.setAttribute('text-label', this.formatSearchResultLabel(result));
+
+      // Use simple description (calcite-autocomplete may not support complex HTML)
+      item.setAttribute('description', this.formatEnhancedDescription(result));
+
+      // Add status indicator icon
+      const statusColor = result.status === 'Online' ? 'success' : 'danger';
+      item.innerHTML = `
+        <calcite-icon slot="icon" icon="person" style="color: var(--calcite-color-status-${statusColor});"></calcite-icon>
+      `;
+
+      // Store full result data
+      item._resultData = result;
+
+      targetInput.appendChild(item);
+    });
+  }
+
+  formatSearchResultLabel(result) {
+    return result.customer_name || 'Unnamed Customer';
+  }
+
+  formatSearchResultDescription(result) {
+    const parts = [];
+    if (result.customer_number) parts.push(`#${result.customer_number}`);
+    if (result.address) parts.push(result.address);
+    if (result.city) parts.push(result.city);
+    return parts.join(' • ');
+  }
+
+  formatFullAddress(result) {
+    const parts = [];
+    if (result.address) parts.push(result.address);
+    if (result.city) parts.push(result.city);
+    if (result.state) parts.push(result.state);
+    if (result.zip) parts.push(result.zip);
+
+    return parts.length > 0 ? parts.join(', ') : 'No address available';
+  }
+
+  formatEnhancedDescription(result) {
+    const parts = [];
+
+    // Add status with proper CalciteUI styling
+    if (result.status) {
+      parts.push(result.status.toUpperCase());
+    }
+
+    // Add account number
+    if (result.customer_number) {
+      parts.push(`Account: ${result.customer_number}`);
+    }
+
+    // Add address
+    const address = this.formatFullAddress(result);
+    if (address !== 'No address available') {
+      parts.push(address);
+    }
+
+    return parts.join(' • ');
+  }
+
+  handleSearchSelection(selectedItem) {
+    const resultData = selectedItem._resultData;
+
+    if (resultData) {
+      log.info('🎯 Selected search result:', resultData);
+      this.navigateToResult(resultData);
+
+      // Clear search input values
+      if (this.searchInput) {
+        this.searchInput.value = '';
+        this.clearSearchResults('header');
+      }
+      if (this.desktopSearchInput) {
+        this.desktopSearchInput.value = '';
+        this.clearSearchResults('desktop');
+      }
+    }
+  }
+
+  handleEnterKeySelection(targetInput) {
+    // Find the first search result item
+    const firstItem = targetInput.querySelector('calcite-autocomplete-item:not([disabled])');
+
+    if (firstItem && firstItem._resultData) {
+      this.handleSearchSelection(firstItem);
+    } else {
+      // If no results available, check if we have current results in memory
+      if (this.currentResults && this.currentResults.length > 0) {
+        const firstResult = this.currentResults[0];
+
+        // Create a mock selected item with the result data
+        const mockSelectedItem = {
+          _resultData: firstResult
+        };
+
+        this.handleSearchSelection(mockSelectedItem);
+      }
+    }
+  }
+
+  navigateToResult(result) {
+    if (!result.latitude || !result.longitude) {
+      log.warn('Missing coordinates for navigation');
+      return;
+    }
+
+    if (!window.mapView) {
+      // Try to get view from application services
+      const mapView = window.app?.services?.mapController?.view;
+
+      if (!mapView) {
+        log.error('No mapView available');
+        return;
+      }
+
+      // Use the fallback view
+      window.mapView = mapView;
+    }
+
+    // Clear any existing location indicators first
+    this.clearLocationIndicator();
+
+    const point = {
+      type: "point",
+      longitude: parseFloat(result.longitude),
+      latitude: parseFloat(result.latitude)
+    };
+
+    // Zoom to the selected location
+    window.mapView.goTo({
+      center: [parseFloat(result.longitude), parseFloat(result.latitude)],
+      zoom: 16
+    }).then(() => {
+      log.info('🗺️ Navigated to:', result.customer_name);
+
+      // Show location indicator (ring)
+      this.showLocationIndicator(point, result);
+
+      // Show popup from actual layer feature
+      this.showLayerPopup(result, point);
+    }).catch(error => {
+      log.error('Navigation failed:', error);
+    });
+  }
+
+  showLocationIndicator(point, result) {
+    if (!window.mapView) return;
+
+    // Clean up any existing indicators
+    this.clearLocationIndicator();
+
+    // Create ring indicator with layer-consistent styling
+    this.createRingIndicator(point, result);
+  }
+
+  createRingIndicator(point, result) {
+    if (!window.mapView) return;
+
+    import('@arcgis/core/Graphic').then(({ default: Graphic }) => {
+      import('@arcgis/core/symbols/SimpleMarkerSymbol').then(({ default: SimpleMarkerSymbol }) => {
+        const indicatorGraphics = [];
+
+        // Determine subscriber type and layer visibility
+        const isOnline = result.status === 'Online';
+        const layerId = isOnline ? 'online-subscribers' : 'offline-subscribers';
+        const layer = window.mapView.map.layers.find(l => l.id === layerId);
+        const isLayerVisible = layer ? layer.visible : false;
+
+        // Get layer-consistent colors and sizes
+        let centerColor, centerSize, outlineWidth;
+        if (isOnline) {
+          centerColor = [34, 197, 94, 1]; // Green from online config
+          centerSize = 6;
+          outlineWidth = 1;
+        } else {
+          centerColor = [220, 38, 38, 1]; // Red from offline config  
+          centerSize = 8;
+          outlineWidth = 2;
+        }
+
+        // Create center dot using layer colors
+        const centerDot = new Graphic({
+          geometry: point,
+          symbol: new SimpleMarkerSymbol({
+            style: 'circle',
+            color: centerColor,
+            size: centerSize,
+            outline: {
+              color: [255, 255, 255, 1], // White outline for visibility
+              width: outlineWidth
+            }
+          })
+        });
+
+        // If layer is not visible, create a temporary point that matches layer style
+        let temporaryPoint = null;
+        if (!isLayerVisible) {
+          temporaryPoint = new Graphic({
+            geometry: point,
+            symbol: new SimpleMarkerSymbol({
+              style: 'circle',
+              color: isOnline ? [34, 197, 94, 0.8] : [220, 38, 38, 0.8], // Layer colors with alpha
+              size: isOnline ? 6 : 8,
+              outline: {
+                color: centerColor,
+                width: isOnline ? 1 : 2
+              }
+            })
+          });
+        }
+
+        // Create unfilled ring around the point
+        const ring = new Graphic({
+          geometry: point,
+          symbol: new SimpleMarkerSymbol({
+            style: 'circle',
+            color: [0, 0, 0, 0], // Transparent fill (unfilled)
+            size: 45,
+            outline: {
+              color: [0, 150, 255, 1], // Blue ring
+              width: 3
+            }
+          })
+        });
+
+        // Add graphics to map
+        indicatorGraphics.push(ring);
+
+        // Add temporary point if layer is not visible
+        if (temporaryPoint) {
+          indicatorGraphics.push(temporaryPoint);
+        }
+
+        indicatorGraphics.push(centerDot);
+
+        indicatorGraphics.forEach(graphic => {
+          window.mapView.graphics.add(graphic);
+        });
+
+        // Store reference for cleanup
+        this.currentIndicatorGraphics = indicatorGraphics;
+
+        // Auto cleanup after 10 seconds
+        setTimeout(() => {
+          this.clearLocationIndicator();
+        }, 10000);
+      });
+    });
+  }
+
+
+
+  clearLocationIndicator() {
+    if (this.currentIndicatorGraphics && window.mapView) {
+      this.currentIndicatorGraphics.forEach(graphic => {
+        window.mapView.graphics.remove(graphic);
+      });
+      this.currentIndicatorGraphics = null;
+    }
+  }
+
+  async showLayerPopup(result, point) {
+    if (!window.mapView) return;
+
+    try {
+      // Determine which layer this result belongs to based on status
+      const layerId = result.status === 'Online' ? 'online-subscribers' : 'offline-subscribers';
+
+      // Find the layer in the map
+      const layer = window.mapView.map.layers.find(l => l.id === layerId);
+      if (!layer) {
+        log.warn('Layer not found:', layerId);
+        this.fallbackPopup(result, point);
+        return;
+      }
+
+      // Query the layer for features at this location
+      const query = layer.createQuery();
+      query.geometry = point;
+      query.spatialRelationship = 'intersects';
+      query.distance = 10; // 10 meter tolerance
+      query.units = 'meters';
+      query.returnGeometry = true;
+      query.outFields = ['*'];
+
+      const queryResult = await layer.queryFeatures(query);
+
+      if (queryResult.features.length > 0) {
+        // Use the first matching feature
+        const feature = queryResult.features[0];
+
+        // Open popup with the actual layer feature
+        window.mapView.openPopup({
+          features: [feature],
+          location: point
+        });
+      } else {
+        // Try querying by customer number if available
+        if (result.customer_number) {
+          await this.queryByCustomerNumber(layer, result, point);
+        } else {
+          this.fallbackPopup(result, point);
+        }
+      }
+
+    } catch (error) {
+      log.error('Error finding layer feature:', error);
+      this.fallbackPopup(result, point);
+    }
+  }
+
+  async queryByCustomerNumber(layer, result, point) {
+    try {
+      const query = layer.createQuery();
+      query.where = `customer_number = '${result.customer_number}' OR customer_number = ${result.customer_number}`;
+      query.returnGeometry = true;
+      query.outFields = ['*'];
+
+      const queryResult = await layer.queryFeatures(query);
+
+      if (queryResult.features.length > 0) {
+        const feature = queryResult.features[0];
+
+        window.mapView.openPopup({
+          features: [feature],
+          location: feature.geometry || point
+        });
+      } else {
+        this.fallbackPopup(result, point);
+      }
+    } catch (error) {
+      log.error('Customer number query failed:', error);
+      this.fallbackPopup(result, point);
+    }
+  }
+
+  fallbackPopup(result, point) {
+    // Simple fallback popup
+    window.mapView.openPopup({
+      title: `Search Result: ${result.customer_name}`,
+      content: `
+        <div class="search-result-popup">
+          <p><strong>Customer:</strong> ${result.customer_name || 'Unknown'}</p>
+          <p><strong>Account:</strong> ${result.customer_number || 'N/A'}</p>
+          <p><strong>Address:</strong> ${result.address || 'No address'}</p>
+          <p><strong>City:</strong> ${result.city || 'N/A'}</p>
+          <p><strong>Status:</strong> <span class="status-${result.status}">${result.status || 'Unknown'}</span></p>
+          <p><strong>County:</strong> ${result.county || 'N/A'}</p>
+          <p><em>Note: Using search result data (layer feature not found)</em></p>
+        </div>
+      `,
+      location: point
+    });
+  }
+
+  clearSearchResults(source = null, targetInput = null, clearState = true) {
+    if (targetInput) {
+      // Clear specific input
+      const items = targetInput.querySelectorAll('calcite-autocomplete-item');
+      items.forEach(item => item.remove());
+    } else if (source === 'desktop' && this.desktopSearchInput) {
+      // Clear desktop search
+      const items = this.desktopSearchInput.querySelectorAll('calcite-autocomplete-item');
+      items.forEach(item => item.remove());
+    } else if (source === 'header' && this.searchInput) {
+      // Clear header search
+      const items = this.searchInput.querySelectorAll('calcite-autocomplete-item');
+      items.forEach(item => item.remove());
+    } else {
+      // Clear all autocomplete inputs
+      [this.searchInput, this.desktopSearchInput].forEach(input => {
+        if (input) {
+          const items = input.querySelectorAll('calcite-autocomplete-item');
+          items.forEach(item => item.remove());
+        }
+      });
+    }
+
+    // Only clear internal state if requested
+    if (clearState) {
+      this.currentResults = [];
+    }
+  }
+
+  showNoResults(searchTerm, targetInput) {
+    const item = document.createElement('calcite-autocomplete-item');
+    item.setAttribute('value', '');
+    item.setAttribute('text-label', 'No results found');
+    item.setAttribute('description', `No subscribers found for "${searchTerm}"`);
+    item.innerHTML = `<calcite-icon slot="icon" icon="information"></calcite-icon>`;
+    item.disabled = true;
+    targetInput.appendChild(item);
+  }
+
+  showSearchError(targetInput) {
+    const item = document.createElement('calcite-autocomplete-item');
+    item.setAttribute('value', '');
+    item.setAttribute('text-label', 'Search Error');
+    item.setAttribute('description', 'Unable to perform search. Please try again.');
+    item.innerHTML = `<calcite-icon slot="icon" icon="exclamation-mark-triangle"></calcite-icon>`;
+    item.disabled = true;
+    targetInput.appendChild(item);
+  }
+
+  setSearchLoading(loading, targetInput) {
+    if (loading) {
+      const item = document.createElement('calcite-autocomplete-item');
+      item.setAttribute('value', '');
+      item.setAttribute('text-label', 'Searching...');
+      item.setAttribute('description', 'Please wait while we search for subscribers');
+      item.innerHTML = `<calcite-icon slot="icon" icon="loading"></calcite-icon>`;
+      item.disabled = true;
+      item.id = 'search-loading-item';
+      targetInput.appendChild(item);
+    } else {
+      const loadingItem = targetInput.querySelector('#search-loading-item');
+      if (loadingItem) {
+        loadingItem.remove();
+      }
+    }
+  }
+
+  handleMobileSearchInput(searchTerm) {
+    // Clear previous timeout
+    if (this.mobileSearchTimeout) {
+      clearTimeout(this.mobileSearchTimeout);
+    }
+
+    // If search field is completely cleared, clear everything
+    if (!searchTerm || searchTerm.trim() === '') {
+      this.clearEverything('mobile');
+      return;
+    }
+
+    // Clear results if search term is too short (but not empty)
+    if (searchTerm.length < 4) {
+      this.clearMobileSearchResults();
+      return;
+    }
+
+    // Debounce search to avoid too many API calls
+    this.mobileSearchTimeout = setTimeout(() => {
+      this.performMobileSearch(searchTerm);
+    }, 300);
+  }
+
+  async performMobileSearch(searchTerm) {
+    try {
+      // Perform the search
+      const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
+
+      // Update mobile search results
+      this.updateMobileSearchResults(searchResult);
+
+    } catch (error) {
+      log.error('Mobile search failed:', error);
+    }
+  }
+
+  updateMobileSearchResults(searchResult) {
+    const resultsContainer = document.querySelector('#mobile-search-sheet .recent-searches-list') ||
+      this.createMobileResultsContainer();
+
+    // Clear existing results
+    resultsContainer.innerHTML = '';
+
+    if (searchResult.results.length === 0) {
+      this.showMobileNoResults(resultsContainer, searchResult.searchTerm);
+      return;
+    }
+
+    // Add search result items
+    searchResult.results.forEach(result => {
+      const listItem = document.createElement('calcite-list-item');
+      listItem.setAttribute('label', result.customer_name || 'Unnamed Customer');
+
+      // Create rich description for mobile list items too
+      const statusColor = result.status === 'Online' ? 'success' : 'danger';
+
+      listItem.setAttribute('description', this.formatEnhancedDescription(result));
+
+      listItem.innerHTML = `
+        <calcite-icon slot="content-start" icon="person" style="color: var(--calcite-color-status-${statusColor});"></calcite-icon>
+        <calcite-action slot="actions-end" icon="arrow-right"></calcite-action>
+      `;
+
+      // Store result data and add click handler
+      listItem._resultData = result;
+      listItem.addEventListener('click', () => {
+        this.handleMobileSearchSelection(result);
+      });
+
+      resultsContainer.appendChild(listItem);
+    });
+  }
+
+  handleMobileSearchSelection(result) {
+    // Close the mobile search dialog
+    const mobileDialog = document.getElementById('mobile-search-sheet');
+    if (mobileDialog) {
+      mobileDialog.open = false;
+    }
+
+    // Close any open mobile panels
+    if (window.app?.services?.mobileTabBar) {
+      window.app.services.mobileTabBar.closeCurrentPanel();
+    }
+
+    // Navigate to result
+    this.navigateToResult(result);
+  }
+
+  async handleMobileEnterKey(searchTerm) {
+    // Check if we have results from previous search
+    const resultsContainer = document.querySelector('#mobile-search-sheet .recent-searches-list');
+    const firstResultItem = resultsContainer?.querySelector('calcite-list-item');
+
+    if (firstResultItem && firstResultItem._resultData) {
+      // Select the first available result
+      this.handleMobileSearchSelection(firstResultItem._resultData);
+      return;
+    }
+
+    // If no existing results, perform search and select first result
+    if (searchTerm && searchTerm.length >= 4) {
+      try {
+        const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
+
+        if (searchResult.results && searchResult.results.length > 0) {
+          // Directly navigate to first result without updating the UI
+          this.handleMobileSearchSelection(searchResult.results[0]);
+        } else {
+          // Perform normal search to show "no results"
+          this.performMobileSearch(searchTerm);
+        }
+      } catch (error) {
+        log.error('Mobile Enter key search failed:', error);
+        // Fallback to normal search
+        this.performMobileSearch(searchTerm);
+      }
+    } else {
+      // Search term too short, just perform normal search
+      this.performMobileSearch(searchTerm);
+    }
+  }
+
+  createMobileResultsContainer() {
+    const searchSheet = document.getElementById('mobile-search-sheet');
+    if (!searchSheet) return null;
+
+    // Find or create results block
+    let resultsBlock = searchSheet.querySelector('.mobile-search-results');
+    if (!resultsBlock) {
+      resultsBlock = document.createElement('calcite-block');
+      resultsBlock.className = 'mobile-search-results';
+      resultsBlock.setAttribute('heading', 'Search Results');
+      resultsBlock.setAttribute('expanded', '');
+
+      // Find the right place to insert it
+      const content = searchSheet.querySelector('[slot="content"]');
+      if (content) {
+        // Insert after the search input block
+        const searchBlock = content.querySelector('calcite-block');
+        if (searchBlock && searchBlock.nextSibling) {
+          content.insertBefore(resultsBlock, searchBlock.nextSibling);
+        } else {
+          content.appendChild(resultsBlock);
+        }
+      }
+    }
+
+    // Create or get the list
+    let resultsList = resultsBlock.querySelector('calcite-list');
+    if (!resultsList) {
+      resultsList = document.createElement('calcite-list');
+      resultsList.className = 'recent-searches-list';
+      resultsList.setAttribute('selection-mode', 'none');
+      resultsBlock.appendChild(resultsList);
+    }
+
+    return resultsList;
+  }
+
+  showMobileNoResults(container, searchTerm) {
+    const listItem = document.createElement('calcite-list-item');
+    listItem.setAttribute('label', 'No results found');
+    listItem.setAttribute('description', `No subscribers found for "${searchTerm}"`);
+    listItem.innerHTML = `<calcite-icon slot="content-start" icon="information"></calcite-icon>`;
+    container.appendChild(listItem);
+  }
+
+  clearMobileSearchResults() {
+    const resultsContainer = document.querySelector('#mobile-search-sheet .recent-searches-list');
+    if (resultsContainer) {
+      resultsContainer.innerHTML = '';
+    }
+  }
+
+  clearEverything(source = null) {
+    // Close popup if open
+    if (window.mapView && window.mapView.popup) {
+      window.mapView.popup.close();
+    }
+
+    // Clear location indicator (ring and temporary points)
+    this.clearLocationIndicator();
+
+    // Clear search results
+    if (source === 'mobile') {
+      this.clearMobileSearchResults();
+      // Clear mobile search input
+      if (this.mobileSearchInput) {
+        this.mobileSearchInput.value = '';
+      }
+    } else {
+      this.clearSearchResults(source);
+      // Clear appropriate search input with enhanced clearing
+      if (source === 'desktop' && this.desktopSearchInput) {
+        this.desktopSearchInput.value = '';
+        this.desktopSearchInput.inputValue = '';
+        // Force calcite to update its internal state
+        this.desktopSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      } else if (source === 'header' && this.searchInput) {
+        this.searchInput.value = '';
+        this.searchInput.inputValue = '';
+        // Force calcite to update its internal state
+        this.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+
+    // Clear timeouts
+    const timeoutKey = source === 'desktop' ? 'desktopSearchTimeout' :
+      source === 'mobile' ? 'mobileSearchTimeout' : 'searchTimeout';
+    if (this[timeoutKey]) {
+      clearTimeout(this[timeoutKey]);
+      this[timeoutKey] = null;
+    }
+
+    // Clear internal state
+    this.currentResults = [];
+  }
+
+  // Cleanup method for proper resource management
+  cleanup() {
+    // Clear all timeouts
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = null;
+    }
+    if (this.mobileSearchTimeout) {
+      clearTimeout(this.mobileSearchTimeout);
+      this.mobileSearchTimeout = null;
+    }
+    if (this.desktopSearchTimeout) {
+      clearTimeout(this.desktopSearchTimeout);
+      this.desktopSearchTimeout = null;
+    }
+
+    // Clear location indicators
+    this.clearLocationIndicator();
+
+    // Clear search results
+    this.clearSearchResults();
+    this.clearMobileSearchResults();
   }
 }
 
@@ -465,6 +1288,11 @@ class Application {
     // Store theme manager globally for component access
     window.themeManager = this.services.themeManager;
 
+    // Initialize all services
+    await this.services.dashboard.init();
+    await this.services.headerSearch.init();
+    await this.services.mobileTabBar.init();
+
     // Initialize map controller
     await this.services.mapController.initialize();
 
@@ -480,6 +1308,9 @@ class Application {
       await this.onMapReady();
     }
 
+    // Store app instance globally for cross-component access
+    window.app = this;
+
     log.info('✅ Application initialized successfully');
   }
 
@@ -488,6 +1319,9 @@ class Application {
 
     // Initialize subscriber layers first
     await this.initializeSubscriberLayers();
+
+    // Update dashboard after layers are loaded
+    await this.services.dashboard.updateDashboard();
 
     // Set up layer toggle handlers
     this.setupLayerToggleHandlers();

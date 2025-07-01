@@ -58,6 +58,7 @@ export class LayerManager {
                 renderer: layerConfig.renderer,
                 popupTemplate: layerConfig.popupTemplate,
                 featureReduction: layerConfig.featureReduction,
+                fields: layerConfig.fields, // Explicit field definitions to prevent inference warnings
                 listMode: layerConfig.visible ? 'show' : 'hide',
                 visible: layerConfig.visible
             });

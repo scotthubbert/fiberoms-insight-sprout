@@ -79,7 +79,7 @@ const createOfflineClusterConfig = () => ({
 
 // Online subscribers use individual points (no clustering) for service disruption analysis
 
-// Enhanced popup templates for field workers
+// Enhanced popup templates for field workers (updated for actual database schema)
 const createSubscriberPopup = (status) => ({
     title: '{customer_name}',
     content: [
@@ -92,8 +92,10 @@ const createSubscriberPopup = (status) => ({
                 { fieldName: 'state', label: 'State', visible: true },
                 { fieldName: 'zip', label: 'ZIP', visible: true },
                 { fieldName: 'status', label: 'Connection Status', visible: true },
-                { fieldName: 'phone_number', label: 'Phone', visible: true },
-                { fieldName: 'county', label: 'County', visible: true }
+                { fieldName: 'county', label: 'County', visible: true },
+                { fieldName: 'account_status', label: 'Account Status', visible: true },
+                { fieldName: 'plan_name', label: 'Service Plan', visible: true },
+                { fieldName: 'service_type', label: 'Service Type', visible: true }
             ]
         }
     ],
@@ -101,17 +103,37 @@ const createSubscriberPopup = (status) => ({
         {
             id: 'copy-info',
             title: 'Copy Info',
-            icon: 'copy',
+            icon: 'duplicate',
             type: 'button'
         },
         {
             id: 'directions',
             title: 'Get Directions',
-            icon: 'navigation',
+            icon: 'pin-tear',
             type: 'button'
         }
     ]
 });
+
+// Field definitions to prevent GeoJSONLayer field type inference warnings
+// Updated to match actual database schema
+const subscriberFields = [
+    { name: 'customer_name', type: 'string', alias: 'Customer Name' },
+    { name: 'customer_number', type: 'string', alias: 'Account Number' },
+    { name: 'address', type: 'string', alias: 'Service Address' },
+    { name: 'city', type: 'string', alias: 'City' },
+    { name: 'state', type: 'string', alias: 'State' },
+    { name: 'zip', type: 'string', alias: 'ZIP Code' },
+    { name: 'status', type: 'string', alias: 'Connection Status' },
+    { name: 'county', type: 'string', alias: 'County' },
+    { name: 'latitude', type: 'double', alias: 'Latitude' },
+    { name: 'longitude', type: 'double', alias: 'Longitude' },
+    // Additional fields from actual schema
+    { name: 'account_status', type: 'string', alias: 'Account Status' },
+    { name: 'ont', type: 'string', alias: 'ONT' },
+    { name: 'plan_name', type: 'string', alias: 'Service Plan' },
+    { name: 'service_type', type: 'string', alias: 'Service Type' }
+];
 
 // Layer configurations - OCP: Add new layers without modifying existing code
 export const layerConfigs = {
@@ -122,6 +144,7 @@ export const layerConfigs = {
         renderer: createOfflineRenderer(),
         popupTemplate: createSubscriberPopup('offline'),
         featureReduction: createOfflineClusterConfig(),
+        fields: subscriberFields,
         visible: true,
         zOrder: 100,
         dataServiceMethod: () => subscriberDataService.getOfflineSubscribers()
@@ -133,6 +156,7 @@ export const layerConfigs = {
         dataSource: 'online_subscribers',
         renderer: createOnlineRenderer(),
         popupTemplate: createSubscriberPopup('online'),
+        fields: subscriberFields,
         // No clustering for online subscribers - individual points needed for service disruption analysis
         visible: false,
         zOrder: 0,

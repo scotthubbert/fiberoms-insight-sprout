@@ -33,14 +33,12 @@ export class PopupManager {
             const buttonText = button.textContent?.toLowerCase() || button.title?.toLowerCase() || '';
 
             if (actionId === 'copy-info' || buttonText.includes('copy')) {
-                console.log('🎯 Copy button clicked!', button);
                 e.preventDefault();
                 e.stopPropagation();
                 setTimeout(() => {
                     this.handleCopyAction(button);
                 }, 100);
             } else if (actionId === 'directions' || buttonText.includes('directions')) {
-                console.log('🎯 Directions button clicked!', button);
                 e.preventDefault();
                 e.stopPropagation();
                 setTimeout(() => {
@@ -132,8 +130,6 @@ export class PopupManager {
         const data = [];
 
         try {
-            console.log('🔍 Extracting popup data from:', popup);
-
             // Get the popup title (customer name)
             const titleElement = popup.querySelector('.esri-popup__header-title');
             if (titleElement) {
@@ -151,7 +147,6 @@ export class PopupManager {
             let foundFields = false;
             for (const selector of fieldSelectors) {
                 const elements = popup.querySelectorAll(selector);
-                console.log(`🔍 Trying selector "${selector}": found ${elements.length} elements`);
 
                 if (elements.length > 0) {
                     elements.forEach(element => {
@@ -176,11 +171,9 @@ export class PopupManager {
 
             // If no fields found in tables, try to get from the feature attributes directly
             if (!foundFields) {
-                console.log('🔍 No fields found in DOM, trying feature attributes...');
                 const graphic = this.view.popup?.selectedFeature;
                 if (graphic?.attributes) {
                     const attrs = graphic.attributes;
-                    console.log('🔍 Feature attributes:', attrs);
 
                     // Add common subscriber fields
                     if (attrs.customer_number) data.push(`Account #: ${attrs.customer_number}`);
@@ -208,7 +201,6 @@ export class PopupManager {
                 }
             }
 
-            console.log('🔍 Final extracted data:', data);
             return data.length > 0 ? data.join('\n') : null;
 
         } catch (error) {
@@ -233,7 +225,7 @@ export class PopupManager {
             button.style.backgroundColor = 'var(--calcite-color-status-success)';
         } else if (state === 'error') {
             button.setAttribute('text', 'Error');
-            button.setAttribute('icon', 'exclamation-mark-triangle');
+            button.setAttribute('icon', 'x');
             button.setAttribute('appearance', 'solid');
             button.style.backgroundColor = 'var(--calcite-color-status-danger)';
         }
@@ -241,7 +233,17 @@ export class PopupManager {
         // Reset button after 2 seconds
         setTimeout(() => {
             button.setAttribute('text', originalText);
-            button.setAttribute('icon', originalIcon || 'duplicate');
+            if (originalIcon) {
+                button.setAttribute('icon', originalIcon);
+            } else {
+                // Default icons based on button type
+                const buttonText = originalText.toLowerCase();
+                if (buttonText.includes('copy')) {
+                    button.setAttribute('icon', 'duplicate');
+                } else if (buttonText.includes('directions')) {
+                    button.setAttribute('icon', 'pin-tear');
+                }
+            }
             button.setAttribute('appearance', originalAppearance);
             button.style.backgroundColor = '';
         }, 2000);

@@ -17,8 +17,8 @@
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial,
+    sans-serif;
   background-color: var(--calcite-color-foreground-1);
   color: var(--calcite-color-text-1);
   overflow: hidden;
@@ -236,7 +236,7 @@ calcite-modal.mobile-only calcite-button + calcite-button {
     --calcite-button-border-color: var(--calcite-color-brand);
     border-top: 2px solid var(--calcite-color-brand);
   }
-  
+
   /* Show state controlled by JavaScript */
   #mobile-close-button.show {
     display: block !important;
@@ -503,24 +503,29 @@ calcite-dialog.mobile-only [slot="content"] {
 /* PWA install prompt styles */
 .install-prompt {
   position: fixed;
-  bottom: var(--calcite-spacing-lg);
-  left: var(--calcite-spacing-lg);
-  right: var(--calcite-spacing-lg);
+  bottom: 80px;
+  left: 20px;
+  right: 20px;
   background: var(--calcite-color-brand);
-  color: var(--calcite-color-text-inverse);
-  padding: var(--calcite-spacing-md);
-  border-radius: var(--calcite-border-radius);
-  box-shadow: var(--calcite-shadow-2);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: var(--calcite-z-index-toast);
-  animation: slideUp 0.3s ease;
+  color: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(120px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.install-prompt.show {
+  transform: translateY(0);
+  opacity: 1;
+  animation: slideUp 0.3s ease-out;
 }
 
 @keyframes slideUp {
   from {
-    transform: translateY(100%);
+    transform: translateY(120px);
     opacity: 0;
   }
   to {
@@ -531,24 +536,23 @@ calcite-dialog.mobile-only [slot="content"] {
 
 /* Error state styling for data items */
 .error {
-  --calcite-color-text-2: var(--calcite-color-status-danger);
+  color: var(--calcite-color-status-danger);
 }
 
 .error calcite-icon {
-  color: var(--calcite-color-status-danger) !important;
+  color: var(--calcite-color-status-danger);
 }
 
 /* Loading state animation for refresh button */
 #refresh-subscriber-data[loading] {
-  --calcite-button-icon-start-spacing: 0;
-  animation: spin 1s linear infinite;
+  pointer-events: none;
 }
 
 @keyframes spin {
-  from {
+  0% {
     transform: rotate(0deg);
   }
-  to {
+  100% {
     transform: rotate(360deg);
   }
 }
@@ -559,57 +563,56 @@ calcite-dialog.mobile-only [slot="content"] {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
+  margin-bottom: 8px;
 }
 
 .popup-status-dot {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  flex-shrink: 0;
+  display: inline-block;
 }
 
 .popup-status-dot.offline {
-  background-color: #dc2626;
+  background-color: var(--calcite-color-status-danger);
 }
 
 .popup-status-dot.online {
-  background-color: #22c55e;
+  background-color: var(--calcite-color-status-success);
 }
 
 .popup-status-indicator.offline {
-  color: #dc2626;
+  color: var(--calcite-color-status-danger);
 }
 
 .popup-status-indicator.online {
-  color: #22c55e;
+  color: var(--calcite-color-status-success);
 }
 
 /* Status badge styling */
 .popup-status-badge {
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
+  background-color: var(--calcite-color-foreground-2);
+  border: 1px solid var(--calcite-color-border-2);
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 .popup-status-badge.offline {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background-color: rgba(220, 38, 38, 0.1);
+  border-color: var(--calcite-color-status-danger);
+  color: var(--calcite-color-status-danger);
 }
 
 .popup-status-badge.online {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: var(--calcite-color-status-success);
+  color: var(--calcite-color-status-success);
 }
 
 .popup-status-badge strong {
-  display: block;
-  margin-bottom: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 /* Metric loading and alert states for unified header */
@@ -622,34 +625,195 @@ calcite-dialog.mobile-only [slot="content"] {
 }
 
 @keyframes pulse {
-  0% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
     opacity: 0.5;
   }
-  100% {
-    opacity: 1;
-  }
 }
 
 .inline-metric.alert {
   animation: alertPulse 2s ease-in-out infinite;
-  --calcite-chip-background-color: var(
-    --calcite-color-status-danger
-  ) !important;
-  --calcite-chip-color: var(--calcite-color-text-inverse) !important;
-  --calcite-chip-border-color: var(--calcite-color-status-danger) !important;
+  --calcite-chip-border-color: var(--calcite-color-status-warning);
+  --calcite-chip-color: var(--calcite-color-status-warning);
 }
 
 @keyframes alertPulse {
-  0% {
-    opacity: 1;
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
   }
   50% {
-    opacity: 0.8;
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
   }
-  100% {
-    opacity: 1;
+}
+
+/* Search Results Styling */
+.search-result-popup {
+  font-family: inherit;
+}
+
+.search-result-popup p {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.search-result-popup strong {
+  font-weight: 600;
+  color: var(--calcite-color-text-1);
+}
+
+/* Status indicators in search results */
+.status-Online {
+  color: var(--calcite-color-status-success);
+  font-weight: 600;
+}
+
+.status-Offline {
+  color: var(--calcite-color-status-danger);
+  font-weight: 600;
+}
+
+.status-Unknown {
+  color: var(--calcite-color-text-3);
+  font-style: italic;
+}
+
+/* Search result autocomplete items */
+calcite-autocomplete-item[disabled] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Search loading state */
+calcite-autocomplete-item #search-loading-item calcite-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* Mobile search results */
+.mobile-search-results {
+  margin-top: var(--calcite-spacing-sm);
+}
+
+.mobile-search-results calcite-list-item {
+  cursor: pointer;
+}
+
+.mobile-search-results calcite-list-item:hover {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+.mobile-search-results calcite-list-item:active {
+  background-color: var(--calcite-color-foreground-3);
+}
+
+/* Search input styling improvements */
+.header-search-input {
+  --calcite-input-border-color-focus: var(--calcite-color-brand);
+}
+
+/* Enhanced search result item styling */
+calcite-autocomplete-item[text-label] {
+  font-weight: 500;
+}
+
+calcite-autocomplete-item[description] {
+  color: var(--calcite-color-text-2);
+}
+
+/* Search result icons */
+calcite-autocomplete-item calcite-icon[icon="person"] {
+  margin-right: var(--calcite-spacing-xs);
+}
+
+calcite-autocomplete-item calcite-icon[icon="loading"] {
+  animation: spin 1s linear infinite;
+}
+
+calcite-autocomplete-item calcite-icon[icon="information"],
+calcite-autocomplete-item calcite-icon[icon="exclamation-mark-triangle"] {
+  color: var(--calcite-color-text-3);
+}
+
+/* Enhanced Search Result Styling - CalciteUI Pattern */
+calcite-autocomplete-item {
+  --calcite-autocomplete-item-text-label-font-size: 14px;
+  --calcite-autocomplete-item-text-label-font-weight: 500;
+  --calcite-autocomplete-item-text-label-color: var(--calcite-color-text-1);
+  --calcite-autocomplete-item-description-font-size: 12px;
+  --calcite-autocomplete-item-description-line-height: 1.4;
+  --calcite-autocomplete-item-description-color: var(--calcite-color-text-2);
+  --calcite-autocomplete-item-spacing-internal: var(--calcite-spacing-sm);
+  min-height: auto;
+  padding: var(--calcite-spacing-sm) var(--calcite-spacing-md);
+}
+
+/* Better description formatting */
+calcite-autocomplete-item[description] {
+  --calcite-autocomplete-item-description-color: var(--calcite-color-text-2);
+  white-space: normal;
+  overflow: visible;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Status emphasis in descriptions - CalciteUI pattern with proper color coding */
+calcite-autocomplete-item[description*="ONLINE"] {
+  border-left: 3px solid var(--calcite-color-status-success);
+  background-color: rgba(34, 197, 94, 0.03);
+}
+
+calcite-autocomplete-item[description*="OFFLINE"] {
+  border-left: 3px solid var(--calcite-color-status-danger);
+  background-color: rgba(220, 38, 38, 0.03);
+}
+
+/* Enhanced status text styling */
+calcite-autocomplete-item[description*="ONLINE"] .description-content::before,
+calcite-autocomplete-item[description*="OFFLINE"] .description-content::before {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+}
+
+/* Better visual hierarchy for person icons */
+calcite-autocomplete-item calcite-icon[icon="person"] {
+  --calcite-icon-size: 16px;
+  margin-right: var(--calcite-spacing-xs);
+}
+
+/* Improved autocomplete dropdown */
+calcite-autocomplete {
+  --calcite-autocomplete-max-height: 320px;
+}
+
+/* Better spacing and legibility */
+calcite-autocomplete-item:not(:last-child) {
+  border-bottom: 1px solid var(--calcite-color-border-3);
+}
+
+calcite-autocomplete-item:hover,
+calcite-autocomplete-item:focus {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  calcite-autocomplete-item {
+    --calcite-autocomplete-item-text-label-font-size: 13px;
+    --calcite-autocomplete-item-description-font-size: 11px;
+    padding: var(--calcite-spacing-xs) var(--calcite-spacing-sm);
+    min-height: auto;
+  }
+
+  calcite-autocomplete {
+    --calcite-autocomplete-max-height: 280px;
+  }
+
+  calcite-autocomplete-item calcite-icon[icon="person"] {
+    --calcite-icon-size: 14px;
   }
 }

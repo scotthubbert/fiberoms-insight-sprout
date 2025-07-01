@@ -125,8 +125,12 @@
         </calcite-panel>
         <calcite-panel heading="Search" id="search-content" hidden>
           <calcite-block heading="MFS Database Search">
-            <calcite-input placeholder="Search addresses, customers..." type="search"></calcite-input>
-            <calcite-button width="full" appearance="solid" scale="s">Search</calcite-button>
+            <calcite-autocomplete id="desktop-search" placeholder="Search addresses, customers, accounts..."
+              icon="search" clearable scale="m">
+              <!-- Search results will be populated here -->
+            </calcite-autocomplete>
+            <calcite-button width="full" appearance="solid" scale="s"
+              style="margin-top: var(--calcite-spacing-sm);">Advanced Search</calcite-button>
           </calcite-block>
         </calcite-panel>
         <calcite-panel heading="Tools" id="tools-content" hidden>
@@ -286,7 +290,7 @@
           <calcite-list selection-mode="none">
             <calcite-list-item label="Fiber Network Outages" description="Current fiber outages"
               class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="warning"
+              <calcite-icon slot="content-start" icon="notice-triangle"
                 style="color: var(--calcite-color-status-danger);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>

@@ -21,14 +21,101 @@ if (isDevelopment) {
 
 if (!supabaseUrl || !supabaseKey) {
     log.error('❌ Missing Supabase environment variables! Check your .env file.')
+    console.error('🔍 DEBUG: Missing environment variables:', {
+        supabaseUrl: !!supabaseUrl,
+        supabaseKey: !!supabaseKey,
+        allEnvVars: import.meta.env
+    });
     if (isDevelopment) {
         log.info('Required variables:')
         log.info('VITE_SUPABASE_URL=https://your-project.supabase.co')
         log.info('VITE_SUPABASE_ANON_KEY=your-anon-key')
     }
+} else {
+    console.log('🔍 DEBUG: Supabase environment variables are set correctly');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
+
+// Mock data for testing when Supabase is not configured
+const MOCK_SUBSCRIBERS = [
+    {
+        id: 1,
+        customer_name: "John Smith",
+        customer_number: "ACC001",
+        address: "123 Main Street",
+        city: "Birmingham",
+        state: "AL",
+        zip: "35203",
+        phone_number: "(205) 555-0101",
+        status: "Offline",
+        latitude: 33.5186,
+        longitude: -86.8104
+    },
+    {
+        id: 2,
+        customer_name: "Sarah Johnson",
+        customer_number: "ACC002",
+        address: "456 Oak Avenue",
+        city: "Montgomery",
+        state: "AL",
+        zip: "36104",
+        phone_number: "(334) 555-0202",
+        status: "Online",
+        latitude: 32.3668,
+        longitude: -86.3000
+    },
+    {
+        id: 3,
+        customer_name: "Michael Brown",
+        customer_number: "ACC003",
+        address: "789 Pine Road",
+        city: "Huntsville",
+        state: "AL",
+        zip: "35801",
+        phone_number: "(256) 555-0303",
+        status: "Offline",
+        latitude: 34.7304,
+        longitude: -86.5861
+    },
+    {
+        id: 4,
+        customer_name: "Lisa Davis",
+        customer_number: "ACC004",
+        address: "321 Elm Street",
+        city: "Mobile",
+        state: "AL",
+        zip: "36602",
+        phone_number: "(251) 555-0404",
+        status: "Online",
+        latitude: 30.6954,
+        longitude: -88.0399
+    },
+    {
+        id: 5,
+        customer_name: "David Wilson",
+        customer_number: "ACC005",
+        address: "654 Maple Drive",
+        city: "Tuscaloosa",
+        state: "AL",
+        zip: "35401",
+        phone_number: "(205) 555-0505",
+        status: "Offline",
+        latitude: 33.2098,
+        longitude: -87.5692
+    }
+];
+
+// Check if running in mock mode
+const isMockMode = !supabaseUrl || !supabaseKey;
+
+if (isMockMode) {
+    console.log('🚨 RUNNING IN MOCK MODE - No Supabase credentials found');
+    console.log('📝 Create a .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to connect to real database');
+    console.log('🔍 Mock subscribers available:', MOCK_SUBSCRIBERS.length);
+} else {
+    console.log('✅ RUNNING IN SUPABASE MODE - Database connected');
+}
 
 // Data service class for subscriber operations
 export class SubscriberDataService {
@@ -272,6 +359,154 @@ export class SubscriberDataService {
         this.cacheExpiry.clear()
     }
 
+    // Search subscribers by various criteria
+    async searchSubscribers(searchTerm, limit = 10) {
+        if (!searchTerm || searchTerm.length < 2) {
+            return { results: [], count: 0 }
+        }
+
+        const cacheKey = `search_${searchTerm.toLowerCase()}_${limit}`
+
+        // Return cached results if valid
+        if (this.isCacheValid(cacheKey)) {
+            return this.cache.get(cacheKey)
+        }
+
+        // Use mock data if Supabase not configured
+        if (isMockMode) {
+            return this.searchMockData(searchTerm, limit);
+        }
+
+        try {
+            log.info('🔍 Searching subscribers for:', searchTerm)
+
+            // Search across multiple fields using OR conditions
+            // Use only columns that actually exist in the database schema
+            const { data, error, count } = await supabase
+                .from('mfs')
+                .select('*', { count: 'exact' })
+                .or(`name.ilike.%${searchTerm}%,account.ilike.%${searchTerm}%,service_address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,county.ilike.%${searchTerm}%`)
+                .not('latitude', 'is', null)
+                .not('longitude', 'is', null)
+                .limit(limit)
+
+            if (error) {
+                log.error('❌ Error searching subscribers:', error)
+                throw error
+            }
+
+            const results = data?.map(record => ({
+                id: record.id,
+                customer_name: record.name || 'Unknown',
+                customer_number: record.account || '',
+                address: record.service_address || '',
+                city: record.city || '',
+                state: record.state || '',
+                zip: record.zip_code || '',
+                phone_number: '', // No phone_number column in schema
+                status: record.status || 'Unknown',
+                latitude: record.latitude,
+                longitude: record.longitude,
+                county: record.county || '',
+                // Include full record for detailed view
+                fullRecord: record
+            })) || []
+
+            const searchResult = {
+                results,
+                count: count || 0,
+                searchTerm,
+                lastUpdated: new Date().toISOString()
+            }
+
+            // Cache the result (shorter cache time for search results)
+            this.cache.set(cacheKey, searchResult)
+            this.cacheExpiry.set(cacheKey, Date.now() + (2 * 60 * 1000)) // 2 minutes cache
+
+            log.info('🔍 Search completed:', results.length, 'results found')
+            return searchResult
+
+        } catch (error) {
+            log.error('Failed to search subscribers:', error)
+            throw error
+        }
+    }
+
+    // Mock search function for testing
+    searchMockData(searchTerm, limit = 10) {
+        const searchLower = searchTerm.toLowerCase();
+        const filtered = MOCK_SUBSCRIBERS.filter(subscriber => {
+            return (
+                subscriber.customer_name.toLowerCase().includes(searchLower) ||
+                subscriber.address.toLowerCase().includes(searchLower) ||
+                subscriber.customer_number.toLowerCase().includes(searchLower) ||
+                subscriber.phone_number.includes(searchTerm) ||
+                subscriber.city.toLowerCase().includes(searchLower)
+            );
+        }).slice(0, limit);
+
+        const results = filtered.map(record => ({
+            id: record.id,
+            customer_name: record.customer_name,
+            customer_number: record.customer_number,
+            address: record.address,
+            city: record.city,
+            state: record.state,
+            zip: record.zip,
+            phone_number: record.phone_number,
+            status: record.status,
+            latitude: record.latitude,
+            longitude: record.longitude,
+            fullRecord: record
+        }));
+
+        const searchResult = {
+            results,
+            count: filtered.length,
+            searchTerm,
+            lastUpdated: new Date().toISOString(),
+            mockData: true
+        };
+
+        log.info('🔍 Mock search found', results.length, 'results for:', searchTerm);
+
+        // Cache the mock result
+        this.cache.set(`search_${searchTerm.toLowerCase()}_${limit}`, searchResult);
+        this.cacheExpiry.set(`search_${searchTerm.toLowerCase()}_${limit}`, Date.now() + (2 * 60 * 1000));
+
+        return searchResult;
+    }
+
+    // Get subscriber by ID for detailed view
+    async getSubscriberById(id) {
+        const cacheKey = `subscriber_${id}`
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.cache.get(cacheKey)
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('mfs')
+                .select('*')
+                .eq('id', id)
+                .single()
+
+            if (error) {
+                log.error('❌ Error fetching subscriber by ID:', error)
+                throw error
+            }
+
+            // Cache the result
+            this.setCache(cacheKey, data)
+            return data
+
+        } catch (error) {
+            log.error('Failed to fetch subscriber by ID:', error)
+            throw error
+        }
+    }
+
     // Test database connection and data
     async testConnection() {
         try {
@@ -363,15 +598,15 @@ export class SubscriberDataService {
                     objectId: record.id || index,
                     status: record.status || status,
 
-                    // Map database fields to display fields
-                    customer_name: record.customer_name || record.name || 'Unknown',
-                    customer_number: record.customer_number || record.account || '',
-                    address: record.address || record.service_address || '',
+                    // Map database fields to display fields (using actual schema)
+                    customer_name: record.name || 'Unknown',
+                    customer_number: record.account || '',
+                    address: record.service_address || '',
                     city: record.city || '',
                     state: record.state || '',
-                    zip: record.zip || record.zip_code || '',
+                    zip: record.zip_code || '',
                     county: record.county || '',
-                    phone_number: record.phone_number || '',
+                    phone_number: '', // No phone_number in schema
 
                     // Include all original fields
                     ...record
