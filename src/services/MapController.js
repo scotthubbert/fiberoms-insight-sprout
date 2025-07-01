@@ -85,12 +85,13 @@ export class MapController {
     // Helper method to get z-order for existing layers
     getLayerZOrder(layerId) {
         const zOrderMap = {
-            'online-subscribers': 0,
-            'fsa-boundaries': 10,
-            'main-line-fiber': 20,
-            'drop-fiber': 30,
-            'mst-terminals': 40,
-            'splitters': 50,
+            'rainviewer-radar': -10,    // Weather radar at bottom (below all basemap layers)
+            'online-subscribers': 10,
+            'fsa-boundaries': 20,
+            'main-line-fiber': 30,
+            'drop-fiber': 40,
+            'mst-terminals': 50,
+            'splitters': 60,
             'offline-subscribers': 100,  // Highest priority - always on top
             'power-outages': 110,
             'fiber-outages': 120,

@@ -122,12 +122,6 @@
               Fiber Vehicles
             </calcite-label>
           </calcite-block>
-          <calcite-block heading="Environmental" collapsible>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Weather Radar
-            </calcite-label>
-          </calcite-block>
         </calcite-panel>
         <calcite-panel heading="Search" id="search-content" hidden>
           <calcite-block heading="MFS Database Search">
@@ -140,7 +134,13 @@
           </calcite-block>
         </calcite-panel>
         <calcite-panel heading="Tools" id="tools-content" hidden>
-          <calcite-block heading="Sketch Tools">
+          <calcite-block heading="Weather Overlays" collapsible>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Weather Radar
+            </calcite-label>
+          </calcite-block>
+          <calcite-block heading="Sketch Tools" collapsible>
             <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
             <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
           </calcite-block>
@@ -305,6 +305,8 @@
 
         <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="polygon" appearance="outline">Draw Outage Area</calcite-button>
+          <calcite-button width="full" icon-start="cloud-rain" appearance="outline" id="mobile-radar-toggle">Weather
+            Radar</calcite-button>
         </calcite-block>
       </div>
     </calcite-dialog>
@@ -345,8 +347,10 @@
       <div slot="content">
         <calcite-block heading="Environmental" expanded>
           <calcite-list selection-mode="none">
-            <calcite-list-item label="Weather Radar" description="Live weather overlay" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="layer" style="color: var(--calcite-color-info);"></calcite-icon>
+            <calcite-list-item label="Weather Radar" description="Live weather overlay from RainViewer"
+              class="layer-toggle-item">
+              <calcite-icon slot="content-start" icon="cloud-rain"
+                style="color: var(--calcite-color-info);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>

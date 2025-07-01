@@ -10,6 +10,7 @@ intl.setLocale('en');
 import { MapController } from './services/MapController.js';
 import { LayerManager } from './services/LayerManager.js';
 import { PopupManager } from './services/PopupManager.js';
+import { RainViewerService } from './services/RainViewerService.js';
 import { subscriberDataService } from './dataService.js';
 import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConfigs.js';
 
@@ -160,6 +161,11 @@ class ThemeManager {
 
     if (window.mapView) {
       this.applyThemeToView(window.mapView);
+    }
+
+    // Update RainViewer layer for theme change
+    if (window.app?.services?.rainViewerService) {
+      window.app.services.rainViewerService.updateTheme();
     }
   }
 
@@ -1519,6 +1525,7 @@ class Application {
     this.services.mobileTabBar = new MobileTabBar();
     this.services.dashboard = new DashboardManager();
     this.services.headerSearch = new HeaderSearch();
+    this.services.rainViewerService = new RainViewerService();
 
     // Store theme manager globally for component access
     window.themeManager = this.services.themeManager;
@@ -1530,6 +1537,12 @@ class Application {
 
     // Initialize map controller
     await this.services.mapController.initialize();
+
+    // Initialize RainViewer service
+    const rainViewerInitialized = await this.services.rainViewerService.initialize();
+    if (rainViewerInitialized) {
+      log.info('✅ RainViewer service initialized');
+    }
 
     // Set up map ready handler
     this.services.mapController.mapElement.addEventListener('arcgisViewReadyChange', async (event) => {
@@ -1550,6 +1563,9 @@ class Application {
   async onMapReady() {
     // Initialize subscriber layers first
     await this.initializeSubscriberLayers();
+
+    // Initialize radar layer
+    await this.initializeRadarLayer();
 
     // Update dashboard after layers are loaded
     await this.services.dashboard.updateDashboard();
@@ -1592,6 +1608,42 @@ class Application {
     }
   }
 
+  async initializeRadarLayer() {
+    try {
+      // Create radar layer if RainViewer service is available
+      if (this.services.rainViewerService) {
+        const radarLayer = this.services.rainViewerService.createRadarLayer();
+        if (radarLayer) {
+          // Create layer configuration for LayerManager
+          const radarConfig = {
+            id: 'rainviewer-radar',
+            title: 'Weather Radar',
+            layerType: 'WebTileLayer',
+            layerInstance: radarLayer,
+            visible: false,
+            zOrder: -10,  // Place at bottom (below all basemap layers)
+            onVisibilityChange: (visible) => {
+              this.services.rainViewerService.toggleVisibility(visible);
+            },
+            onCleanup: () => {
+              this.services.rainViewerService.cleanup();
+            }
+          };
+
+          // Add to LayerManager
+          const managedLayer = await this.services.layerManager.createLayer(radarConfig);
+          if (managedLayer) {
+            // Add to map with high z-order
+            this.services.mapController.addLayer(managedLayer, radarConfig.zOrder);
+            log.info('✅ RainViewer radar layer created and added to map');
+          }
+        }
+      }
+    } catch (error) {
+      log.error('❌ Failed to initialize radar layer:', error);
+    }
+  }
+
   async createLayerFromConfig(config) {
     try {
       const data = await config.dataServiceMethod();
@@ -1611,8 +1663,8 @@ class Application {
   }
 
   setupLayerToggleHandlers() {
-    // Desktop layer toggles (checkboxes)
-    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox');
+    // Desktop layer toggles (checkboxes) - include both layers and tools panels
+    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #tools-content calcite-checkbox');
     checkboxes.forEach(checkbox => {
       checkbox.addEventListener('calciteCheckboxChange', (e) => {
         this.handleLayerToggle(e.target, e.target.checked);
@@ -1638,6 +1690,14 @@ class Application {
         }
       });
     });
+
+    // Mobile radar toggle button
+    const mobileRadarToggle = document.getElementById('mobile-radar-toggle');
+    if (mobileRadarToggle) {
+      mobileRadarToggle.addEventListener('click', () => {
+        this.toggleMobileRadar();
+      });
+    }
   }
 
   async handleLayerToggle(element, checked) {
@@ -1673,7 +1733,8 @@ class Application {
     // Map UI labels to layer IDs
     const mapping = {
       'Online Subscribers': 'online-subscribers',
-      'Offline Subscribers': 'offline-subscribers'
+      'Offline Subscribers': 'offline-subscribers',
+      'Weather Radar': 'rainviewer-radar'
     };
 
     return mapping[labelText] || null;
@@ -1683,14 +1744,15 @@ class Application {
     // Sync between desktop and mobile UI elements
     const labelMapping = {
       'offline-subscribers': 'Offline Subscribers',
-      'online-subscribers': 'Online Subscribers'
+      'online-subscribers': 'Online Subscribers',
+      'rainviewer-radar': 'Weather Radar'
     };
 
     const labelText = labelMapping[layerId];
     if (!labelText) return;
 
-    // Sync desktop checkboxes
-    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox');
+    // Sync desktop checkboxes (both layers and tools panels)
+    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #tools-content calcite-checkbox');
     desktopCheckboxes.forEach(checkbox => {
       const label = checkbox.closest('calcite-label');
       if (label && label.textContent.trim() === labelText) {
@@ -1706,6 +1768,34 @@ class Application {
         switchElement.checked = checked;
       }
     });
+  }
+
+  toggleMobileRadar() {
+    // Find the radar layer and toggle its visibility
+    const radarLayer = this.services.layerManager.getLayer('rainviewer-radar');
+    if (radarLayer) {
+      const newVisibility = !radarLayer.visible;
+
+      // Toggle the layer
+      this.services.layerManager.toggleLayerVisibility('rainviewer-radar', newVisibility);
+
+      // Sync toggle states across all UI elements
+      this.syncToggleStates('rainviewer-radar', newVisibility);
+
+      // Update mobile button appearance
+      const mobileButton = document.getElementById('mobile-radar-toggle');
+      if (mobileButton) {
+        mobileButton.appearance = newVisibility ? 'solid' : 'outline';
+        mobileButton.setAttribute('appearance', newVisibility ? 'solid' : 'outline');
+      }
+
+      // Close current mobile panel after action
+      if (this.services.mobileTabBar) {
+        this.services.mobileTabBar.closeCurrentPanel();
+      }
+
+      log.info(`🌧️ Mobile radar toggled: ${newVisibility}`);
+    }
   }
 }
 
