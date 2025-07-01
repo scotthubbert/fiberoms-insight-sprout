@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
   define: {
@@ -23,6 +24,15 @@ export default defineConfig({
     ]
   },
   plugins: [
+    // Copy CalciteUI assets for production build
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'node_modules/@esri/calcite-components/dist/calcite/assets/*',
+          dest: 'calcite/assets'
+        }
+      ]
+    }),
     // Node.js polyfills for Supabase compatibility
     nodePolyfills({
       // Only polyfill what Supabase needs

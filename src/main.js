@@ -47,8 +47,14 @@ import '@esri/calcite-components/dist/components/calcite-autocomplete';
 import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
-// Set Calcite assets path to NPM bundled assets (CLAUDE.md compliance)
-setAssetPath('/node_modules/@esri/calcite-components/dist/calcite/assets');
+// Set Calcite assets path for both dev and production
+// In development, Vite serves node_modules directly
+// In production, Vite copies assets to dist folder
+const isProduction = import.meta.env.PROD;
+const assetsPath = isProduction
+  ? window.location.origin + '/calcite/assets'
+  : '/node_modules/@esri/calcite-components/dist/calcite/assets';
+setAssetPath(assetsPath);
 
 // Production logging utility
 const isDevelopment = import.meta.env.DEV;
@@ -640,20 +646,20 @@ class HeaderSearch {
 
   formatEnhancedDescription(result) {
     const parts = [];
-    
+
     if (result.customer_name) {
       parts.push(result.customer_name);
     }
-    
+
     if (result.customer_number) {
       parts.push(result.customer_number);
     }
-    
+
     const address = this.formatFullAddress(result);
     if (address !== 'No address available') {
       parts.push(address);
     }
-    
+
     return parts.join(' • ');
   }
 
