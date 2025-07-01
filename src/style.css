@@ -775,6 +775,33 @@ calcite-autocomplete-item #search-loading-item calcite-icon {
   --calcite-input-border-color-focus: var(--calcite-color-brand);
 }
 
+/* Prevent mobile zoom on input focus - Mobile UX Fix */
+/* iOS Safari and other mobile browsers zoom when tapping inputs with font-size < 16px */
+/* This prevents the unwanted zoom behavior while maintaining accessibility */
+calcite-input,
+calcite-autocomplete {
+  --calcite-input-font-size: 16px; /* Prevents iOS zoom */
+}
+
+/* Mobile input font-size optimization to prevent zoom */
+@media (max-width: 768px) {
+  calcite-input,
+  calcite-autocomplete,
+  calcite-input input,
+  calcite-autocomplete input {
+    font-size: 16px !important; /* Prevents mobile browser zoom on input focus */
+    --calcite-input-font-size: 16px !important;
+  }
+
+  /* Ensure mobile search input has proper font size */
+  #mobile-search-input,
+  #header-search,
+  #desktop-search {
+    font-size: 16px !important;
+    --calcite-input-font-size: 16px !important;
+  }
+}
+
 /* Enhanced search result item styling */
 calcite-autocomplete-item[text-label] {
   font-weight: 500;
