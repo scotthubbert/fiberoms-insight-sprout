@@ -83,14 +83,15 @@ The following changes were made to `vite.config.js` to ensure compatibility:
 - Manual chunk splitting
 - Runtime caching for map assets
 
-### 3. Node.js Module Warnings
-**Issue**: Warnings about stream, http, url modules from Supabase
-**Solution**: Simple global polyfill approach:
-- Added `global` polyfill in index.html before any modules load
-- Defined `global: 'globalThis'` in Vite config for build consistency
-- Warnings about externalized modules are informational only
-- No complex polyfills needed - they cause more issues than they solve
-- This minimal approach works for both development and production
+### 3. Node.js Module Warnings and Runtime Errors
+**Issue**: Supabase dependencies require Node.js modules (stream, buffer, util) in browser
+**Solution**: Using vite-plugin-node-polyfills:
+- Installed `vite-plugin-node-polyfills` for proper browser compatibility
+- Configured to polyfill only what Supabase needs: stream, util, buffer, process
+- Added `global` polyfill in index.html as additional safety
+- Defined `global: 'globalThis'` in Vite config for consistency
+- Some warnings about externalized modules remain but are harmless
+- This approach works reliably for both development and production
 
 ## Performance Considerations
 

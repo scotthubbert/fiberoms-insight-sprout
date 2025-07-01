@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
   define: {
@@ -19,10 +20,19 @@ export default defineConfig({
       '@esri/calcite-components',
       '@supabase/supabase-js'
     ],
-    // Force Vite to bundle these dependencies
     exclude: []
   },
   plugins: [
+    // Node.js polyfills for Supabase compatibility
+    nodePolyfills({
+      // Only polyfill what Supabase needs
+      include: ['stream', 'util', 'buffer', 'process'],
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true
+      }
+    }),
     // Only use SSL in production or when explicitly requested
     ...(process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS ? [basicSsl()] : []),
     VitePWA({
