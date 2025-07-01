@@ -18,7 +18,9 @@ export default defineConfig({
       '@arcgis/core/intl',
       '@esri/calcite-components',
       '@supabase/supabase-js'
-    ]
+    ],
+    // Force Vite to bundle these dependencies
+    exclude: []
   },
   plugins: [
     // Only use SSL in production or when explicitly requested
