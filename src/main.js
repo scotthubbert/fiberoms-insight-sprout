@@ -725,24 +725,17 @@ class HeaderSearch {
       latitude: parseFloat(result.latitude)
     };
 
-    // Zoom to the selected location
-    window.mapView.goTo({
-      center: [parseFloat(result.longitude), parseFloat(result.latitude)],
-      zoom: 16
-    }).then(() => {
-      log.info('🗺️ Navigated to:', result.customer_name);
+    // Set view instantly without animation
+    window.mapView.center = [parseFloat(result.longitude), parseFloat(result.latitude)];
+    window.mapView.zoom = Math.max(window.mapView.zoom, 16); // Ensure minimum zoom level 16
 
-      // Show location indicator (ring)
-      this.showLocationIndicator(point, result);
+    log.info('📍 Positioned at:', result.customer_name);
 
-      // Small delay to ensure map has finished rendering
-      setTimeout(() => {
-        // Show popup from actual layer feature
-        this.showLayerPopup(result, point);
-      }, 300);
-    }).catch(error => {
-      log.error('Navigation failed:', error);
-    });
+    // Show location indicator (ring) at the point
+    this.showLocationIndicator(point, result);
+
+    // Show popup immediately
+    this.showLayerPopup(result, point);
   }
 
   showLocationIndicator(point, result) {
