@@ -783,7 +783,16 @@ calcite-autocomplete {
   --calcite-input-font-size: 16px; /* Prevents iOS zoom */
 }
 
-/* Mobile input font-size optimization to prevent zoom */
+/* Mobile input font-size optimization to prevent zoom 
+   
+   SOLUTION: iOS Safari auto-zooms when focusing on input fields with font-size < 16px.
+   This causes the page to zoom in but often doesn't zoom back out, creating UX issues.
+   
+   APPROACH 1 (Current): Set all input font-sizes to 16px+ (accessibility-friendly)
+   APPROACH 2 (Alternative): Add 'maximum-scale=1.0' to viewport meta tag (less accessible)
+   
+   Current implementation prevents zoom while maintaining accessibility compliance.
+*/
 @media (max-width: 768px) {
   calcite-input,
   calcite-autocomplete,
@@ -799,6 +808,26 @@ calcite-autocomplete {
   #desktop-search {
     font-size: 16px !important;
     --calcite-input-font-size: 16px !important;
+  }
+
+  /* Comprehensive coverage for all search inputs including ArcGIS widgets */
+  arcgis-search,
+  arcgis-search input,
+  arcgis-search calcite-input,
+  arcgis-search calcite-autocomplete,
+  calcite-combobox input,
+  .esri-search input,
+  .esri-search__input,
+  .esri-widget input {
+    font-size: 16px !important; /* Prevents iOS auto-zoom */
+    --calcite-input-font-size: 16px !important;
+  }
+
+  /* Global fallback for any input/textarea elements */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents iOS Safari auto-zoom on any input focus */
   }
 }
 
