@@ -282,7 +282,7 @@
           <calcite-list selection-mode="none">
             <calcite-list-item label="Fiber Network Outages" description="Current fiber outages"
               class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="notice-triangle"
+              <calcite-icon slot="content-start" icon="exclamationMarkTriangle"
                 style="color: var(--calcite-color-status-danger);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
@@ -304,7 +304,7 @@
 
         <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="polygon" appearance="outline">Draw Outage Area</calcite-button>
-          <calcite-button width="full" icon-start="cloud-rain" appearance="outline" id="mobile-radar-toggle">Weather
+          <calcite-button width="full" icon-start="rain" appearance="outline" id="mobile-radar-toggle">Weather
             Radar</calcite-button>
         </calcite-block>
       </div>
@@ -348,8 +348,7 @@
           <calcite-list selection-mode="none">
             <calcite-list-item label="Weather Radar" description="Live weather overlay from RainViewer"
               class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="cloud-rain"
-                style="color: var(--calcite-color-info);"></calcite-icon>
+              <calcite-icon slot="content-start" icon="rain" style="color: var(--calcite-color-info);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>

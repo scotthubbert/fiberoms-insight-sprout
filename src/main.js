@@ -579,7 +579,7 @@ class HeaderSearch {
       listItem.innerHTML = `
         <calcite-icon slot="content-start" icon="clock" style="color: var(--calcite-color-text-3);"></calcite-icon>
         <calcite-icon slot="content-end" icon="person" style="color: var(--calcite-color-status-${statusColor}); margin-right: 8px;"></calcite-icon>
-        <calcite-action slot="actions-end" icon="arrow-right"></calcite-action>
+        <calcite-action slot="actions-end" icon="arrowRight"></calcite-action>
       `;
 
       // Store result data and add click handler
@@ -1199,7 +1199,7 @@ class HeaderSearch {
       item.setAttribute('value', '');
       item.setAttribute('text-label', 'Searching...');
       item.setAttribute('description', 'Please wait while we search for subscribers');
-      item.innerHTML = `<calcite-icon slot="icon" icon="loading"></calcite-icon>`;
+      item.innerHTML = `<calcite-icon slot="icon" icon="spinner"></calcite-icon>`;
       item.disabled = true;
       item.id = 'search-loading-item';
       targetInput.appendChild(item);
@@ -1272,7 +1272,7 @@ class HeaderSearch {
 
       listItem.innerHTML = `
         <calcite-icon slot="content-start" icon="person" style="color: var(--calcite-color-status-${statusColor});"></calcite-icon>
-        <calcite-action slot="actions-end" icon="arrow-right"></calcite-action>
+        <calcite-action slot="actions-end" icon="arrowRight"></calcite-action>
       `;
 
       // Store result data and add click handler

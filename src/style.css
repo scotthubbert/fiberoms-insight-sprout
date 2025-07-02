@@ -816,7 +816,7 @@ calcite-autocomplete-item calcite-icon[icon="person"] {
   margin-right: var(--calcite-spacing-xs);
 }
 
-calcite-autocomplete-item calcite-icon[icon="loading"] {
+calcite-autocomplete-item calcite-icon[icon="spinner"] {
   animation: spin 1s linear infinite;
 }
 
