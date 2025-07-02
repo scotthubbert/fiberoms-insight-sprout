@@ -945,6 +945,62 @@ export class SubscriberDataService {
             }
         }
     }
+
+    // Get Node Sites data from external GeoJSON source
+    async getNodeSites() {
+        const cacheKey = 'node_sites'
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.cache.get(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching Node Sites data...')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/node-sites.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL25vZGUtc2l0ZXMuZ2VvanNvbiIsImlhdCI6MTc1MTQ4OTgyNiwiZXhwIjoxNzgzMDI1ODI2fQ.mhkiSZITSzBnJhIQUuQNojPc5_ijDGzV09grQYbhHSo')
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch Node Sites data: ${response.status} ${response.statusText}`)
+            }
+
+            const geojson = await response.json()
+
+            // Process the features - they're already in GeoJSON format
+            const processedFeatures = geojson.features || []
+
+            const result = {
+                count: processedFeatures.length,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            // Cache the result (node sites don't change frequently, so longer cache)
+            this.cache.set(cacheKey, result)
+            this.cacheExpiry.set(cacheKey, Date.now() + (30 * 60 * 1000)) // 30 minutes
+
+            log.info(`✅ Fetched ${processedFeatures.length} Node Sites`)
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch Node Sites:', error)
+            // Return cached data if available, even if expired
+            if (this.cache.has(cacheKey)) {
+                const cachedData = this.cache.get(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+            // Return empty result on error
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
 }
 
 // Create singleton instance

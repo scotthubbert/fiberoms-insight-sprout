@@ -253,10 +253,12 @@ class LayerPanel {
     this.layersAction = document.getElementById('layers-action');
     this.powerOutagesAction = document.getElementById('power-outages-action');
     this.searchAction = document.getElementById('search-action');
+    this.networkParentAction = document.getElementById('network-parent-action');
     this.toolsAction = document.getElementById('tools-action');
     this.layersContent = document.getElementById('layers-content');
     this.powerOutagesContent = document.getElementById('power-outages-content');
     this.searchContent = document.getElementById('search-content');
+    this.networkParentContent = document.getElementById('network-parent-content');
     this.toolsContent = document.getElementById('tools-content');
 
     this.init();
@@ -273,6 +275,7 @@ class LayerPanel {
     this.layersAction?.addEventListener('click', () => this.handleActionClick('layers'));
     this.powerOutagesAction?.addEventListener('click', () => this.handleActionClick('power-outages'));
     this.searchAction?.addEventListener('click', () => this.handleActionClick('search'));
+    this.networkParentAction?.addEventListener('click', () => this.handleActionClick('network-parent'));
     this.toolsAction?.addEventListener('click', () => this.handleActionClick('tools'));
   }
 
@@ -295,6 +298,7 @@ class LayerPanel {
       case 'layers': return this.layersAction;
       case 'power-outages': return this.powerOutagesAction;
       case 'search': return this.searchAction;
+      case 'network-parent': return this.networkParentAction;
       case 'tools': return this.toolsAction;
       default: return null;
     }
@@ -308,6 +312,8 @@ class LayerPanel {
     this.powerOutagesContent.style.display = 'none';
     this.searchContent.hidden = true;
     this.searchContent.style.display = 'none';
+    this.networkParentContent.hidden = true;
+    this.networkParentContent.style.display = 'none';
     this.toolsContent.hidden = true;
     this.toolsContent.style.display = 'none';
 
@@ -315,6 +321,7 @@ class LayerPanel {
     this.layersAction.active = false;
     this.powerOutagesAction.active = false;
     this.searchAction.active = false;
+    this.networkParentAction.active = false;
     this.toolsAction.active = false;
 
     // Show selected panel and set active action
@@ -333,6 +340,11 @@ class LayerPanel {
         this.searchContent.hidden = false;
         this.searchContent.style.display = 'block';
         this.searchAction.active = true;
+        break;
+      case 'network-parent':
+        this.networkParentContent.hidden = false;
+        this.networkParentContent.style.display = 'block';
+        this.networkParentAction.active = true;
         break;
       case 'tools':
         this.toolsContent.hidden = false;
@@ -1586,6 +1598,9 @@ class Application {
     // Initialize subscriber layers first
     await this.initializeSubscriberLayers();
 
+    // Initialize infrastructure layers
+    await this.initializeInfrastructureLayers();
+
     // Initialize radar layer
     await this.initializeRadarLayer();
 
@@ -1694,6 +1709,25 @@ class Application {
     }
   }
 
+  async initializeInfrastructureLayers() {
+    try {
+      // Create Node Sites layer
+      const nodeSitesConfig = getLayerConfig('nodeSites');
+      if (nodeSitesConfig) {
+        const nodeSitesLayer = await this.createLayerFromConfig(nodeSitesConfig);
+        if (nodeSitesLayer) {
+          nodeSitesLayer.visible = nodeSitesConfig.visible; // Use config default (false)
+          this.services.mapController.addLayer(nodeSitesLayer, nodeSitesConfig.zOrder);
+          log.info('✅ Node Sites layer initialized');
+        }
+      }
+
+    } catch (error) {
+      log.error('Failed to initialize infrastructure layers:', error);
+      // Continue without infrastructure layers if they fail to load
+    }
+  }
+
   async initializeRadarLayer() {
     try {
       // Create radar layer if RainViewer service is available
@@ -1749,8 +1783,8 @@ class Application {
   }
 
   setupLayerToggleHandlers() {
-    // Desktop layer toggles (checkboxes) - only layers and tools panels now
-    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #tools-content calcite-checkbox');
+    // Desktop layer toggles (checkboxes) - layers, network-parent, and tools panels
+    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
     checkboxes.forEach(checkbox => {
       checkbox.addEventListener('calciteCheckboxChange', (e) => {
         this.handleLayerToggle(e.target, e.target.checked);
@@ -1836,6 +1870,7 @@ class Application {
     const mapping = {
       'Online Subscribers': 'online-subscribers',
       'Offline Subscribers': 'offline-subscribers',
+      'Node Sites': 'node-sites',
       'Weather Radar': 'rainviewer-radar',
       'APCo Power Outages': 'apco-outages',
       'Tombigbee Power Outages': 'tombigbee-outages'
@@ -1849,6 +1884,7 @@ class Application {
     const labelMapping = {
       'offline-subscribers': 'Offline Subscribers',
       'online-subscribers': 'Online Subscribers',
+      'node-sites': 'Node Sites',
       'rainviewer-radar': 'Weather Radar',
       'apco-outages': 'APCo Power Outages',
       'tombigbee-outages': 'Tombigbee Power Outages'
@@ -1870,8 +1906,8 @@ class Application {
     const labelText = labelMapping[layerId];
     if (!labelText) return;
 
-    // Sync desktop checkboxes (layers and tools panels only)
-    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #tools-content calcite-checkbox');
+    // Sync desktop checkboxes (layers, network-parent, and tools panels)
+    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
     desktopCheckboxes.forEach(checkbox => {
       const label = checkbox.closest('calcite-label');
       if (label && label.textContent.trim() === labelText) {

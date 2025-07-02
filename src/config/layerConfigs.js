@@ -222,6 +222,47 @@ const createPowerOutagePopup = (company) => {
     }
 };
 
+// Node Sites renderer
+const createNodeSiteRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-marker',
+        style: 'circle',
+        color: [0, 120, 212, 0.8], // Blue color for network infrastructure
+        size: 10,
+        outline: {
+            color: [0, 120, 212, 1],
+            width: 2
+        }
+    }
+});
+
+// Node Sites popup template
+const createNodeSitePopup = () => ({
+    title: '{Name}',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'Name', label: 'Site Name', visible: true }
+            ]
+        }
+    ],
+    actions: [
+        {
+            id: 'directions',
+            title: 'Get Directions',
+            icon: 'pin-tear',
+            type: 'button'
+        }
+    ]
+});
+
+// Node Sites field definitions
+const createNodeSiteFields = () => [
+    { name: 'Name', type: 'string', alias: 'Site Name' }
+];
+
 // Power outage field definitions
 const createPowerOutageFields = () => [
     { name: 'outage_id', type: 'string', alias: 'Outage ID' },
@@ -354,6 +395,19 @@ export const layerConfigs = {
         visible: true,
         zOrder: 51,
         dataServiceMethod: () => subscriberDataService.getTombigbeeOutages()
+    },
+
+    // Node Sites Layer
+    nodeSites: {
+        id: 'node-sites',
+        title: 'Node Sites',
+        dataSource: 'node_sites',
+        renderer: createNodeSiteRenderer(),
+        popupTemplate: createNodeSitePopup(),
+        fields: createNodeSiteFields(),
+        visible: false,
+        zOrder: 40,
+        dataServiceMethod: () => subscriberDataService.getNodeSites()
     }
 
     // Additional layers can be added here as needed
