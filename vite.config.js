@@ -29,17 +29,22 @@ export default defineConfig({
       targets: [
         // Copy only the specific icons we actually use (much more efficient than copying 3,945 icons)
         // Fixed: Use 'spinner' instead of 'loading' and only copy sizes that exist
+        // Added: Essential ArcGIS Map widget icons for zoom, compass, basemap picker, etc.
         ...['search', 'layer', 'apps', 'circle', 'polygon', 'line', 'ellipsis', 'rain',
           'exclamationMarkTriangle', 'flash', 'car', 'person', 'information', 'clock',
           'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x',
-          'users', 'linkChart', 'layers'].flatMap(iconName => {
-            return [16, 24, 32].map(size => ({
-              src: `node_modules/@esri/calcite-components/dist/calcite/assets/icon/${iconName}${size}.json`,
-              dest: 'calcite/assets/icon',
-              // Don't fail if the icon doesn't exist in this size
-              noErrorOnMissing: true
-            }));
-          }),
+          'users', 'linkChart', 'layers',
+          // ArcGIS Map widget icons (essential for map functionality)
+          'zoomOutFixed', 'zoomInFixed', 'compassNorthCircle', 'home', 'chevronsRight',
+          'basemap', 'pause', 'moon', 'chevronUp', 'chevronDown', 'chevronLeft', 'chevronRight'
+        ].flatMap(iconName => {
+          return [16, 24, 32].map(size => ({
+            src: `node_modules/@esri/calcite-components/dist/calcite/assets/icon/${iconName}${size}.json`,
+            dest: 'calcite/assets/icon',
+            // Don't fail if the icon doesn't exist in this size
+            noErrorOnMissing: true
+          }));
+        }),
         // Copy ArcGIS theme CSS files for proper theming
         {
           src: 'node_modules/@arcgis/core/assets/esri/themes/light/main.css',
