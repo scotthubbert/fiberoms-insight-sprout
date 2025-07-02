@@ -614,6 +614,311 @@ export class SubscriberDataService {
             }
         }).filter(feature => feature !== null) // Remove null features
     }
+
+    // Convert power outage data to GeoJSON features with polygon support
+    convertPowerOutageToGeoJSONFeatures(data, company, originalFeatures = []) {
+        if (!data || !Array.isArray(data)) return []
+
+        return data.map((record, index) => {
+            // Get the original GeoJSON feature to preserve geometry
+            const originalFeature = originalFeatures[index]
+            let geometry
+            let geometryType = 'Point' // Default
+
+            if (originalFeature && originalFeature.geometry) {
+                geometryType = originalFeature.geometry.type
+                geometry = originalFeature.geometry
+            } else {
+                // Fallback to point geometry using lat/lng
+                const lat = record.latitude
+                const lng = record.longitude
+
+                if (!lat || !lng) {
+                    log.warn(`Skipping power outage record ${index}: missing coordinates`, record)
+                    return null
+                }
+
+                geometry = {
+                    type: 'Point',
+                    coordinates: [parseFloat(lng), parseFloat(lat)]
+                }
+            }
+
+            return {
+                type: 'Feature',
+                geometry: geometry,
+                properties: {
+                    objectId: record.id || index,
+                    outage_id: record.outage_id || `${company}-${index}`,
+                    customers_affected: record.customers_affected || 0,
+                    cause: record.cause || 'Unknown',
+                    start_time: record.start_time || new Date().toISOString(),
+                    estimated_restore: record.estimated_restore || null,
+                    status: record.status || 'Active',
+                    area_description: record.area_description || '',
+                    county: record.county || '',
+                    company: company,
+
+                    latitude: record.latitude || null,
+                    longitude: record.longitude || null,
+                    // Include all original fields
+                    ...record
+                }
+            }
+        }).filter(feature => feature !== null)
+    }
+
+    // Get APCo power outages from Supabase storage
+    async getApcoOutages() {
+        const cacheKey = 'apco_outages'
+
+        // Return cached data if valid
+        if (this.isCacheValid(cacheKey)) {
+            return this.cache.get(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching APCo power outages from Supabase storage...')
+
+            let geojsonData;
+
+            // Direct fetch from Supabase public URL
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/outages.geojson')
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            }
+            geojsonData = await response.json()
+            log.info('✅ Loaded APCo outages from Supabase public URL')
+            log.info(`📊 Total features in APCo GeoJSON: ${geojsonData.features?.length || 0}`)
+
+            // Extract features and properties - handle Kubra data format for APCo
+            const features = geojsonData.features || []
+            const outageData = features.map(feature => {
+                const props = feature.properties
+                const desc = props.desc || {}
+
+                // Extract coordinates based on geometry type
+                let latitude, longitude;
+                if (feature.geometry.type === 'Point') {
+                    longitude = feature.geometry.coordinates[0];
+                    latitude = feature.geometry.coordinates[1];
+                } else if (feature.geometry.type === 'Polygon') {
+                    // For polygons, calculate centroid from first ring
+                    const ring = feature.geometry.coordinates[0];
+                    let sumLng = 0, sumLat = 0;
+                    for (const coord of ring) {
+                        sumLng += coord[0];
+                        sumLat += coord[1];
+                    }
+                    longitude = sumLng / ring.length;
+                    latitude = sumLat / ring.length;
+                }
+
+                return {
+                    id: props.id,
+                    outage_id: desc.inc_id || props.id,
+                    customers_affected: desc.cust_a?.val || 0,
+                    cause: desc.cause || 'Unknown',
+                    start_time: desc.start_time || null,
+                    estimated_restore: desc.etr && desc.etr !== 'ETR-EXP' ? desc.etr : null,
+                    status: desc.crew_status || (desc.comments ? 'In Progress' : 'Reported'),
+                    area_description: props.title || 'Area Outage',
+                    county: 'Alabama', // Default for APCo
+                    comments: desc.comments || '',
+                    crew_on_site: desc.crew_icon || false,
+                    latitude: latitude,
+                    longitude: longitude,
+                    // Include original data for debugging
+                    ...props
+                }
+            })
+
+            // Apply geographic filtering for APCo (Alabama Power service area)
+            const filteredData = outageData.filter(outage => {
+                const lng = outage.longitude
+                const lat = outage.latitude
+                // APCo service area bounds
+                return lng >= -88.277 && lng <= -87.263 && lat >= 33.510 && lat <= 34.632
+            })
+
+            log.info(`📍 Features after processing: ${outageData.length}`)
+            log.info(`🗺️ Features after geographic filtering: ${filteredData.length}`)
+
+            // Log some sample data for debugging
+            if (filteredData.length > 0) {
+                const totalCustomers = filteredData.reduce((sum, outage) => sum + (outage.customers_affected || 0), 0);
+                log.info(`👥 Total customers affected: ${totalCustomers}`)
+                log.info(`📋 Sample outages:`, filteredData.slice(0, 3).map(o => ({
+                    id: o.outage_id,
+                    customers: o.customers_affected
+                })))
+            }
+
+            // Convert to the expected format, preserving original geometries
+            // Use the same centroid calculation logic for filtering
+            const filteredFeatures = features.filter(feature => {
+                let longitude, latitude;
+                if (feature.geometry.type === 'Point') {
+                    longitude = feature.geometry.coordinates[0];
+                    latitude = feature.geometry.coordinates[1];
+                } else if (feature.geometry.type === 'Polygon') {
+                    // Calculate centroid for filtering
+                    const ring = feature.geometry.coordinates[0];
+                    let sumLng = 0, sumLat = 0;
+                    for (const coord of ring) {
+                        sumLng += coord[0];
+                        sumLat += coord[1];
+                    }
+                    longitude = sumLng / ring.length;
+                    latitude = sumLat / ring.length;
+                }
+                // APCo service area bounds (using centroid for both points and polygons)
+                return longitude >= -88.277 && longitude <= -87.263 && latitude >= 33.510 && latitude <= 34.632;
+            })
+            const processedFeatures = this.convertPowerOutageToGeoJSONFeatures(filteredData, 'apco', filteredFeatures)
+
+            const result = {
+                count: filteredData.length,
+                data: filteredData,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            // Cache the result with shorter cache time for outage data (2 minutes)
+            this.cache.set(cacheKey, result)
+            this.cacheExpiry.set(cacheKey, Date.now() + (2 * 60 * 1000))
+
+            log.info('🔌 APCo outages loaded:', result.count, 'outages')
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch APCo outages:', error)
+            // Return cached data if available, even if expired
+            if (this.cache.has(cacheKey)) {
+                const cachedData = this.cache.get(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+
+            // Return empty result as fallback
+            return {
+                count: 0,
+                data: [],
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
+
+    // Get Tombigbee Electric power outages from Supabase storage
+    async getTombigbeeOutages() {
+        const cacheKey = 'tombigbee_outages'
+
+        // Return cached data if valid
+        if (this.isCacheValid(cacheKey)) {
+            return this.cache.get(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching Tombigbee Electric power outages from Supabase storage...')
+
+            let geojsonData;
+
+            // Direct fetch from Supabase public URL
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/tec_outages.geojson')
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            }
+            geojsonData = await response.json()
+            log.info('✅ Loaded Tombigbee outages from Supabase public URL')
+
+            // Extract features and properties - handle Kubra data format for Tombigbee
+            const features = geojsonData.features || []
+            const outageData = features.map(feature => {
+                const props = feature.properties
+                const desc = props.desc || {}
+
+                // Extract coordinates based on geometry type
+                let latitude, longitude;
+                if (feature.geometry.type === 'Point') {
+                    longitude = feature.geometry.coordinates[0];
+                    latitude = feature.geometry.coordinates[1];
+                } else if (feature.geometry.type === 'Polygon') {
+                    // For polygons, calculate centroid from first ring
+                    const ring = feature.geometry.coordinates[0];
+                    let sumLng = 0, sumLat = 0;
+                    for (const coord of ring) {
+                        sumLng += coord[0];
+                        sumLat += coord[1];
+                    }
+                    longitude = sumLng / ring.length;
+                    latitude = sumLat / ring.length;
+                }
+
+                return {
+                    id: props.id,
+                    outage_id: desc.inc_id || props.id,
+                    customers_affected: desc.cust_a?.val || 0,
+                    cause: desc.cause || 'Unknown',
+                    start_time: desc.start_time || null,
+                    estimated_restore: desc.etr && desc.etr !== 'ETR-EXP' ? desc.etr : null,
+                    status: desc.crew_status || (desc.comments ? 'In Progress' : 'Reported'),
+                    area_description: props.title || 'Area Outage',
+                    county: 'Greene/Sumter', // Default for Tombigbee
+                    comments: desc.comments || '',
+                    crew_on_site: desc.crew_icon || false,
+                    latitude: latitude,
+                    longitude: longitude,
+                    // Include original data for debugging
+                    ...props
+                }
+            })
+
+            // Convert to the expected format, preserving original geometries
+            const processedFeatures = this.convertPowerOutageToGeoJSONFeatures(outageData, 'tombigbee', features)
+
+            const result = {
+                count: outageData.length,
+                data: outageData,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            // Cache the result with shorter cache time for outage data (2 minutes)
+            this.cache.set(cacheKey, result)
+            this.cacheExpiry.set(cacheKey, Date.now() + (2 * 60 * 1000))
+
+            log.info('🔌 Tombigbee outages loaded:', result.count, 'outages')
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch Tombigbee outages:', error)
+            // Return cached data if available, even if expired
+            if (this.cache.has(cacheKey)) {
+                const cachedData = this.cache.get(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+
+            // Return empty result as fallback
+            return {
+                count: 0,
+                data: [],
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
 }
 
 // Create singleton instance

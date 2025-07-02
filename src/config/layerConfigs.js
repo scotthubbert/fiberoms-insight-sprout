@@ -111,6 +111,97 @@ const createOfflineClusterConfig = () => ({
 
 // Online subscribers use individual points (no clustering) for service disruption analysis
 
+// Power outage renderers with company logos
+const createPowerOutageRenderer = (company) => {
+    const symbols = {
+        apco: {
+            type: 'picture-marker',
+            url: '/apco-logo.png',
+            width: '24px',
+            height: '24px'
+        },
+        tombigbee: {
+            type: 'picture-marker',
+            url: '/tombigbee-logo.png',
+            width: '24px',
+            height: '24px'
+        }
+    };
+
+    return {
+        type: 'simple',
+        symbol: symbols[company] || {
+            type: 'simple-marker',
+            style: 'circle',
+            color: [255, 165, 0, 0.8], // Orange for generic outages
+            size: 12,
+            outline: {
+                color: [255, 165, 0, 1],
+                width: 2
+            }
+        }
+    };
+};
+
+// Power outage popup templates
+const createPowerOutagePopup = (company) => {
+    const companyNames = {
+        apco: 'Alabama Power Company',
+        tombigbee: 'Tombigbee Electric Cooperative'
+    };
+
+    return {
+        title: `${companyNames[company] || 'Power Outage'} - {outage_id}`,
+        content: [
+            {
+                type: 'fields',
+                fieldInfos: [
+                    { fieldName: 'outage_id', label: 'Outage ID', visible: true },
+                    { fieldName: 'customers_affected', label: 'Customers Affected', visible: true },
+                    { fieldName: 'status', label: 'Status', visible: true },
+                    { fieldName: 'cause', label: 'Cause', visible: true },
+                    { fieldName: 'estimated_restore', label: 'Estimated Restore', visible: true },
+                    { fieldName: 'start_time', label: 'Start Time', visible: true },
+                    { fieldName: 'area_description', label: 'Area', visible: true },
+                    { fieldName: 'county', label: 'County', visible: true },
+                    { fieldName: 'comments', label: 'Status Details', visible: true },
+                    { fieldName: 'crew_on_site', label: 'Crew On Site', visible: true }
+                ]
+            }
+        ],
+        actions: [
+            {
+                id: 'copy-outage-info',
+                title: 'Copy Outage Info',
+                icon: 'duplicate',
+                type: 'button'
+            },
+            {
+                id: 'view-affected-area',
+                title: 'View Affected Area',
+                icon: 'map',
+                type: 'button'
+            }
+        ]
+    };
+};
+
+// Power outage field definitions
+const createPowerOutageFields = () => [
+    { name: 'outage_id', type: 'string', alias: 'Outage ID' },
+    { name: 'customers_affected', type: 'integer', alias: 'Customers Affected' },
+    { name: 'cause', type: 'string', alias: 'Cause' },
+    { name: 'start_time', type: 'date', alias: 'Start Time' },
+    { name: 'estimated_restore', type: 'date', alias: 'Estimated Restore' },
+    { name: 'status', type: 'string', alias: 'Status' },
+    { name: 'area_description', type: 'string', alias: 'Area Description' },
+    { name: 'county', type: 'string', alias: 'County' },
+    { name: 'comments', type: 'string', alias: 'Status Details' },
+    { name: 'crew_on_site', type: 'string', alias: 'Crew On Site' },
+    { name: 'latitude', type: 'double', alias: 'Latitude' },
+    { name: 'longitude', type: 'double', alias: 'Longitude' }
+];
+
 // Enhanced popup templates for field workers (updated for actual database schema)
 const createSubscriberPopup = (status) => ({
     title: '{customer_name}',
@@ -193,6 +284,31 @@ export const layerConfigs = {
         visible: false,
         zOrder: 0,
         dataServiceMethod: () => subscriberDataService.getOnlineSubscribers()
+    },
+
+    // Power Outages Layers
+    apcoOutages: {
+        id: 'apco-outages',
+        title: 'APCo Power Outages',
+        dataSource: 'apco_outages',
+        renderer: createPowerOutageRenderer('apco'),
+        popupTemplate: createPowerOutagePopup('apco'),
+        fields: createPowerOutageFields(),
+        visible: true,
+        zOrder: 110,
+        dataServiceMethod: () => subscriberDataService.getApcoOutages()
+    },
+
+    tombigbeeOutages: {
+        id: 'tombigbee-outages',
+        title: 'Tombigbee Power Outages',
+        dataSource: 'tombigbee_outages',
+        renderer: createPowerOutageRenderer('tombigbee'),
+        popupTemplate: createPowerOutagePopup('tombigbee'),
+        fields: createPowerOutageFields(),
+        visible: true,
+        zOrder: 111,
+        dataServiceMethod: () => subscriberDataService.getTombigbeeOutages()
     }
 
     // Future layers can be added here without modifying existing code:

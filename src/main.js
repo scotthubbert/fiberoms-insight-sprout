@@ -14,6 +14,9 @@ import { RainViewerService } from './services/RainViewerService.js';
 import { subscriberDataService } from './dataService.js';
 import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConfigs.js';
 
+// Import components
+import './components/PowerOutageStats.js';
+
 // Import ArcGIS Map Components
 import "@arcgis/map-components/dist/components/arcgis-search";
 import '@arcgis/map-components/dist/components/arcgis-map';
@@ -248,11 +251,14 @@ class LayerPanel {
   constructor() {
     this.shellPanel = document.getElementById('layers-panel');
     this.layersAction = document.getElementById('layers-action');
+    this.powerOutagesAction = document.getElementById('power-outages-action');
     this.searchAction = document.getElementById('search-action');
     this.toolsAction = document.getElementById('tools-action');
     this.layersContent = document.getElementById('layers-content');
+    this.powerOutagesContent = document.getElementById('power-outages-content');
     this.searchContent = document.getElementById('search-content');
     this.toolsContent = document.getElementById('tools-content');
+
     this.init();
   }
 
@@ -265,6 +271,7 @@ class LayerPanel {
 
   setupActionBarNavigation() {
     this.layersAction?.addEventListener('click', () => this.handleActionClick('layers'));
+    this.powerOutagesAction?.addEventListener('click', () => this.handleActionClick('power-outages'));
     this.searchAction?.addEventListener('click', () => this.handleActionClick('search'));
     this.toolsAction?.addEventListener('click', () => this.handleActionClick('tools'));
   }
@@ -286,6 +293,7 @@ class LayerPanel {
   getActionByPanel(panelName) {
     switch (panelName) {
       case 'layers': return this.layersAction;
+      case 'power-outages': return this.powerOutagesAction;
       case 'search': return this.searchAction;
       case 'tools': return this.toolsAction;
       default: return null;
@@ -293,13 +301,19 @@ class LayerPanel {
   }
 
   showPanel(panelName) {
-    // Hide all panels
+    // Hide all panels using both hidden attribute AND display style for reliability
     this.layersContent.hidden = true;
+    this.layersContent.style.display = 'none';
+    this.powerOutagesContent.hidden = true;
+    this.powerOutagesContent.style.display = 'none';
     this.searchContent.hidden = true;
+    this.searchContent.style.display = 'none';
     this.toolsContent.hidden = true;
+    this.toolsContent.style.display = 'none';
 
     // Remove active state from all actions
     this.layersAction.active = false;
+    this.powerOutagesAction.active = false;
     this.searchAction.active = false;
     this.toolsAction.active = false;
 
@@ -307,14 +321,22 @@ class LayerPanel {
     switch (panelName) {
       case 'layers':
         this.layersContent.hidden = false;
+        this.layersContent.style.display = 'block';
         this.layersAction.active = true;
+        break;
+      case 'power-outages':
+        this.powerOutagesContent.hidden = false;
+        this.powerOutagesContent.style.display = 'block';
+        this.powerOutagesAction.active = true;
         break;
       case 'search':
         this.searchContent.hidden = false;
+        this.searchContent.style.display = 'block';
         this.searchAction.active = true;
         break;
       case 'tools':
         this.toolsContent.hidden = false;
+        this.toolsContent.style.display = 'block';
         this.toolsAction.active = true;
         break;
     }
@@ -1578,6 +1600,19 @@ class Application {
       this.services.popupManager.initialize(this.services.mapController.view);
     }
 
+    // Final refresh to ensure all layers render properly after initialization
+    setTimeout(() => {
+      if (this.services.mapController.view) {
+        // Force a complete view refresh to ensure all layers are properly rendered
+        this.services.mapController.view.map.layers.forEach(layer => {
+          if (layer.visible && layer.type === 'geojson') {
+            layer.refresh();
+          }
+        });
+        log.info('🎯 Final map refresh completed for all visible layers');
+      }
+    }, 1500);
+
     // Polling disabled for Phase 1
     // this.services.pollingService.startPolling('offlineSubscribers');
   }
@@ -1603,8 +1638,59 @@ class Application {
         }
       }
 
+      // Create power outage layers
+      await this.initializePowerOutageLayers();
+
     } catch (error) {
       log.error('Failed to initialize subscriber layers:', error);
+    }
+  }
+
+  async initializePowerOutageLayers() {
+    try {
+      // Create APCo power outages layer
+      const apcoConfig = getLayerConfig('apcoOutages');
+      if (apcoConfig) {
+        const apcoLayer = await this.createLayerFromConfig(apcoConfig);
+        if (apcoLayer) {
+          apcoLayer.visible = apcoConfig.visible; // Use config default (true)
+          this.services.mapController.addLayer(apcoLayer, apcoConfig.zOrder);
+
+          // Force layer refresh after a brief delay to ensure proper rendering
+          setTimeout(() => {
+            if (apcoLayer.visible) {
+              apcoLayer.refresh();
+              log.info('🔄 APCo layer refreshed for initial rendering');
+            }
+          }, 1000);
+
+          log.info('✅ APCo power outages layer initialized');
+        }
+      }
+
+      // Create Tombigbee power outages layer
+      const tombigbeeConfig = getLayerConfig('tombigbeeOutages');
+      if (tombigbeeConfig) {
+        const tombigbeeLayer = await this.createLayerFromConfig(tombigbeeConfig);
+        if (tombigbeeLayer) {
+          tombigbeeLayer.visible = tombigbeeConfig.visible; // Use config default (true)
+          this.services.mapController.addLayer(tombigbeeLayer, tombigbeeConfig.zOrder);
+
+          // Force layer refresh after a brief delay to ensure proper rendering
+          setTimeout(() => {
+            if (tombigbeeLayer.visible) {
+              tombigbeeLayer.refresh();
+              log.info('🔄 Tombigbee layer refreshed for initial rendering');
+            }
+          }, 1000);
+
+          log.info('✅ Tombigbee power outages layer initialized');
+        }
+      }
+
+    } catch (error) {
+      log.error('Failed to initialize power outage layers:', error);
+      // Continue without power outage layers if they fail to load
     }
   }
 
@@ -1663,10 +1749,18 @@ class Application {
   }
 
   setupLayerToggleHandlers() {
-    // Desktop layer toggles (checkboxes) - include both layers and tools panels
+    // Desktop layer toggles (checkboxes) - only layers and tools panels now
     const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #tools-content calcite-checkbox');
     checkboxes.forEach(checkbox => {
       checkbox.addEventListener('calciteCheckboxChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    });
+
+    // Power outage desktop toggles (switches in new design)
+    const powerOutageSwitches = document.querySelectorAll('#power-outages-content calcite-switch');
+    powerOutageSwitches.forEach(switchElement => {
+      switchElement.addEventListener('calciteSwitchChange', (e) => {
         this.handleLayerToggle(e.target, e.target.checked);
       });
     });
@@ -1720,6 +1814,14 @@ class Application {
   }
 
   getLayerIdFromElement(element) {
+    // Check for power outage switches with specific classes
+    if (element.classList.contains('apco-toggle')) {
+      return 'apco-outages';
+    }
+    if (element.classList.contains('tombigbee-toggle')) {
+      return 'tombigbee-outages';
+    }
+
     const listItem = element.closest('calcite-list-item');
     const label = element.closest('calcite-label');
 
@@ -1734,7 +1836,9 @@ class Application {
     const mapping = {
       'Online Subscribers': 'online-subscribers',
       'Offline Subscribers': 'offline-subscribers',
-      'Weather Radar': 'rainviewer-radar'
+      'Weather Radar': 'rainviewer-radar',
+      'APCo Power Outages': 'apco-outages',
+      'Tombigbee Power Outages': 'tombigbee-outages'
     };
 
     return mapping[labelText] || null;
@@ -1745,13 +1849,28 @@ class Application {
     const labelMapping = {
       'offline-subscribers': 'Offline Subscribers',
       'online-subscribers': 'Online Subscribers',
-      'rainviewer-radar': 'Weather Radar'
+      'rainviewer-radar': 'Weather Radar',
+      'apco-outages': 'APCo Power Outages',
+      'tombigbee-outages': 'Tombigbee Power Outages'
     };
+
+    // Sync power outage switches based on layer ID and classes
+    if (layerId === 'apco-outages') {
+      const apcoSwitches = document.querySelectorAll('.apco-toggle');
+      apcoSwitches.forEach(switchElement => {
+        switchElement.checked = checked;
+      });
+    } else if (layerId === 'tombigbee-outages') {
+      const tombigbeeSwitches = document.querySelectorAll('.tombigbee-toggle');
+      tombigbeeSwitches.forEach(switchElement => {
+        switchElement.checked = checked;
+      });
+    }
 
     const labelText = labelMapping[layerId];
     if (!labelText) return;
 
-    // Sync desktop checkboxes (both layers and tools panels)
+    // Sync desktop checkboxes (layers and tools panels only)
     const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #tools-content calcite-checkbox');
     desktopCheckboxes.forEach(checkbox => {
       const label = checkbox.closest('calcite-label');

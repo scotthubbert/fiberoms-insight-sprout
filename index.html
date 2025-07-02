@@ -61,6 +61,7 @@
       <calcite-shell-panel slot="panel-start" id="layers-panel" collapsed display-mode="dock" class="desktop-only">
         <calcite-action-bar slot="action-bar">
           <calcite-action id="layers-action" text="Layers" icon="layer" active></calcite-action>
+          <calcite-action id="power-outages-action" text="Power Outages" icon="flash"></calcite-action>
           <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
           <calcite-action id="tools-action" text="Tools" icon="apps"></calcite-action>
         </calcite-action-bar>
@@ -97,18 +98,10 @@
               Drop Fiber
             </calcite-label>
           </calcite-block>
-          <calcite-block heading="Outage Data" collapsible>
+          <calcite-block heading="Fiber Outages" collapsible>
             <calcite-label>
               <calcite-checkbox></calcite-checkbox>
               Fiber Network Outages
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              APCo Power Outages
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Tombigbee Power Outages
             </calcite-label>
           </calcite-block>
           <calcite-block heading="Vehicle Tracking" collapsible>
@@ -120,6 +113,39 @@
               <calcite-checkbox></calcite-checkbox>
               Fiber Vehicles
             </calcite-label>
+          </calcite-block>
+        </calcite-panel>
+        <calcite-panel heading="Power Outages" id="power-outages-content" hidden>
+          <calcite-block heading="Power Outages" summary="0/2" collapsible expanded>
+            <calcite-icon slot="icon" icon="exclamation-mark-triangle"></calcite-icon>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <img src="/apco-logo.png" alt="APCo Logo" style="width: 16px; height: 16px; object-fit: contain;">
+                <div>
+                  <div style="font-weight: 500;">APCo</div>
+                  <div style="font-size: 12px; color: var(--calcite-color-text-2);">Alabama Power Company outage data
+                  </div>
+                </div>
+              </div>
+              <calcite-switch checked class="apco-toggle"></calcite-switch>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <img src="/tombigbee-logo.png" alt="Tombigbee Logo"
+                  style="width: 16px; height: 16px; object-fit: contain;">
+                <div>
+                  <div style="font-weight: 500;">Tombigbee</div>
+                  <div style="font-size: 12px; color: var(--calcite-color-text-2);">Tombigbee Electric Cooperative
+                    outage data</div>
+                </div>
+              </div>
+              <calcite-switch checked class="tombigbee-toggle"></calcite-switch>
+            </div>
+
+            <!-- Power Outage Statistics -->
+            <power-outage-stats id="power-outage-stats"></power-outage-stats>
           </calcite-block>
         </calcite-panel>
         <calcite-panel heading="Search" id="search-content" hidden>
@@ -278,25 +304,14 @@
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Outages" expanded>
+
+
+        <calcite-block heading="Fiber Outages" expanded>
           <calcite-list selection-mode="none">
             <calcite-list-item label="Fiber Network Outages" description="Current fiber outages"
               class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="exclamationMarkTriangle"
                 style="color: var(--calcite-color-status-danger);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
-
-            <calcite-list-item label="APCo Power Outages" description="Alabama Power outages" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="flash"
-                style="color: var(--calcite-color-status-warning);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
-
-            <calcite-list-item label="Tombigbee Power Outages" description="Tombigbee EPA outages"
-              class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="flash"
-                style="color: var(--calcite-color-status-warning);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>
@@ -351,29 +366,24 @@
               <calcite-icon slot="content-start" icon="rain" style="color: var(--calcite-color-info);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
+
+            <calcite-list-item label="APCo Power Outages" description="Alabama Power Company outage data"
+              class="layer-toggle-item">
+              <img slot="content-start" src="/apco-logo.png" alt="APCo Logo"
+                style="width: 20px; height: 20px; object-fit: contain;">
+              <calcite-switch slot="content-end" checked class="apco-toggle"></calcite-switch>
+            </calcite-list-item>
+
+            <calcite-list-item label="Tombigbee Power Outages" description="Tombigbee Electric Cooperative outage data"
+              class="layer-toggle-item">
+              <img slot="content-start" src="/tombigbee-logo.png" alt="Tombigbee Logo"
+                style="width: 20px; height: 20px; object-fit: contain;">
+              <calcite-switch slot="content-end" checked class="tombigbee-toggle"></calcite-switch>
+            </calcite-list-item>
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Base Maps" expanded>
-          <calcite-radio-button-group name="basemap-selection" layout="vertical">
-            <calcite-label layout="inline">
-              <calcite-radio-button value="streets" checked></calcite-radio-button>
-              Streets Navigation
-            </calcite-label>
-            <calcite-label layout="inline">
-              <calcite-radio-button value="satellite"></calcite-radio-button>
-              Satellite Imagery
-            </calcite-label>
-            <calcite-label layout="inline">
-              <calcite-radio-button value="topographic"></calcite-radio-button>
-              Topographic
-            </calcite-label>
-          </calcite-radio-button-group>
-        </calcite-block>
 
-        <calcite-block heading="Tools" expanded>
-          <calcite-button width="full" icon-start="layer" appearance="outline">Layer Manager</calcite-button>
-        </calcite-block>
       </div>
     </calcite-dialog>
   </div>

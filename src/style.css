@@ -1020,3 +1020,418 @@ calcite-autocomplete-item:focus {
     min-height: 100px;
   }
 }
+
+/* Power Outage Controls */
+.power-outage-controls {
+  margin-bottom: var(--calcite-spacing-md);
+  padding-bottom: var(--calcite-spacing-sm);
+  border-bottom: 1px solid var(--calcite-color-border-3);
+}
+
+/* Power Outage Stats Component Styles */
+.power-outage-stats {
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+}
+
+.power-outage-stats .stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: var(--calcite-spacing-sm);
+}
+
+.power-outage-stats .outage-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calcite-spacing-xs);
+  margin-bottom: var(--calcite-spacing-md);
+  padding: var(--calcite-spacing-sm);
+  background: var(--calcite-color-foreground-2);
+  border-radius: var(--calcite-border-radius);
+}
+
+.power-outage-stats .summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.power-outage-stats .summary-label {
+  color: var(--calcite-color-text-2);
+}
+
+.power-outage-stats .summary-value {
+  font-weight: 600;
+  color: var(--calcite-color-text-1);
+}
+
+.power-outage-stats .provider-stats {
+  margin-bottom: var(--calcite-spacing-md);
+}
+
+.power-outage-stats .provider-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calcite-spacing-xs);
+  margin-bottom: var(--calcite-spacing-sm);
+  padding-bottom: var(--calcite-spacing-xs);
+  border-bottom: 1px solid var(--calcite-color-border-2);
+}
+
+.power-outage-stats .provider-header h5 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--calcite-color-text-1);
+  margin: 0;
+}
+
+.power-outage-stats .provider-summary {
+  font-size: 12px;
+  color: var(--calcite-color-text-2);
+}
+
+.power-outage-stats .outage-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calcite-spacing-xs);
+}
+
+.power-outage-stats .outage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--calcite-spacing-sm);
+  padding: var(--calcite-spacing-sm);
+  background: var(--calcite-color-foreground-1);
+  border: 1px solid var(--calcite-color-border-2);
+  border-radius: var(--calcite-border-radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.power-outage-stats .outage-item:hover {
+  background: var(--calcite-color-foreground-2);
+  border-color: var(--calcite-color-border-1);
+}
+
+.power-outage-stats .outage-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--calcite-spacing-xs);
+}
+
+.power-outage-stats .outage-id {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--calcite-color-text-1);
+  font-family: monospace;
+}
+
+.power-outage-stats .outage-info {
+  display: flex;
+  gap: var(--calcite-spacing-sm);
+  font-size: 11px;
+}
+
+.power-outage-stats .customers {
+  color: var(--calcite-color-status-danger);
+  font-weight: 600;
+}
+
+.power-outage-stats .cause {
+  color: var(--calcite-color-text-2);
+}
+
+.power-outage-stats .crew-status {
+  color: var(--calcite-color-status-info);
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.power-outage-stats .outage-comments {
+  font-size: 10px;
+  color: var(--calcite-color-text-2);
+  font-style: italic;
+  line-height: 1.3;
+  margin-top: var(--calcite-spacing-xs);
+}
+
+.power-outage-stats .outage-times {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--calcite-color-text-3);
+}
+
+.power-outage-stats .start-time,
+.power-outage-stats .restore-time {
+  line-height: 1.2;
+}
+
+.power-outage-stats .fly-to-outage {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.power-outage-stats .no-outages {
+  padding: var(--calcite-spacing-md);
+  text-align: center;
+  font-size: 12px;
+  color: var(--calcite-color-text-2);
+  font-style: italic;
+}
+
+.power-outage-stats .stats-error {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-xs);
+  padding: var(--calcite-spacing-sm);
+  color: var(--calcite-color-status-danger);
+  font-size: 12px;
+}
+
+.power-outage-stats .loading-state {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-xs);
+  padding: var(--calcite-spacing-sm);
+  color: var(--calcite-color-text-2);
+  font-size: 12px;
+}
+
+.power-outage-stats .loading-state calcite-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* Scrollbar styling for better UX */
+.power-outage-stats::-webkit-scrollbar {
+  width: 6px;
+}
+
+.power-outage-stats::-webkit-scrollbar-track {
+  background: var(--calcite-color-foreground-2);
+  border-radius: 3px;
+}
+
+.power-outage-stats::-webkit-scrollbar-thumb {
+  background: var(--calcite-color-border-2);
+  border-radius: 3px;
+}
+
+.power-outage-stats::-webkit-scrollbar-thumb:hover {
+  background: var(--calcite-color-border-1);
+}
+
+/* Mobile adjustments for power outage stats */
+@media (max-width: 768px) {
+  .power-outage-stats {
+    max-height: 350px; /* Generous height for mobile */
+  }
+
+  .power-outage-stats .outage-item {
+    padding: var(--calcite-spacing-xs);
+  }
+
+  .power-outage-stats .outage-info {
+    flex-direction: column;
+    gap: var(--calcite-spacing-xs);
+  }
+
+  .power-outage-stats .outage-times {
+    font-size: 9px;
+  }
+
+  /* Hide scrollbars on mobile for cleaner look */
+  .power-outage-stats::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+  }
+}
+
+/* Enhanced Power Outages Panel Styles */
+/* Dedicated panel for Power Outages with improved spacing and visual hierarchy */
+#power-outages-content {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#power-outages-content .power-outage-controls {
+  margin-bottom: var(--calcite-spacing-md);
+}
+
+#power-outages-content calcite-block[heading="Live Statistics"] {
+  margin-top: var(--calcite-spacing-sm);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#power-outages-content .stats-block {
+  height: 100%;
+  min-height: 0; /* Allow flex shrinking */
+}
+
+/* Company toggle styling with logos */
+.company-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: var(--calcite-spacing-sm);
+  padding: var(--calcite-spacing-sm);
+  border: 1px solid var(--calcite-color-border-2);
+  border-radius: var(--calcite-border-radius);
+  margin-bottom: var(--calcite-spacing-sm);
+  background: var(--calcite-color-foreground-1);
+}
+
+.company-toggle:hover {
+  background: var(--calcite-color-foreground-2);
+  border-color: var(--calcite-color-border-1);
+}
+
+.company-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.apco-toggle {
+  border-left: 3px solid #e74c3c;
+}
+
+.tombigbee-toggle {
+  border-left: 3px solid #27ae60;
+}
+
+/* Power Outages Action Icon Styling */
+#power-outages-action {
+  --calcite-color-brand: var(--calcite-color-status-warning);
+}
+
+#power-outages-action calcite-icon {
+  color: var(--calcite-color-status-warning);
+}
+
+/* Enhanced statistics layout in dedicated panel */
+#power-outages-content .power-outage-stats {
+  margin-top: 0;
+  padding: var(--calcite-spacing-lg);
+  border: 2px solid var(--calcite-color-border-1);
+  background: var(--calcite-color-background-2);
+  border-radius: var(--calcite-border-radius);
+  height: 100%;
+  max-height: none; /* Use full available height */
+  display: flex;
+  flex-direction: column;
+}
+
+#power-outages-content .stats-summary {
+  margin-bottom: var(--calcite-spacing-lg);
+  padding: var(--calcite-spacing-md);
+  background: var(--calcite-color-foreground-1);
+  border-radius: var(--calcite-border-radius);
+  border: 1px solid var(--calcite-color-border-2);
+}
+
+#power-outages-content .provider-section {
+  margin-bottom: var(--calcite-spacing-md);
+  padding: var(--calcite-spacing-md);
+  background: var(--calcite-color-foreground-1);
+  border-radius: var(--calcite-border-radius);
+  border: 1px solid var(--calcite-color-border-2);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+#power-outages-content .outage-list {
+  max-height: none; /* Use full available height */
+  flex: 1; /* Expand to fill available space */
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Enhanced visual separation between provider sections */
+#power-outages-content .provider-header {
+  background: var(--calcite-color-foreground-2);
+  padding: var(--calcite-spacing-sm);
+  border-radius: var(--calcite-border-radius) var(--calcite-border-radius) 0 0;
+  margin: calc(-1 * var(--calcite-spacing-md))
+    calc(-1 * var(--calcite-spacing-md)) var(--calcite-spacing-sm)
+    calc(-1 * var(--calcite-spacing-md));
+}
+
+/* Better spacing for outage items in dedicated panel */
+#power-outages-content .outage-item {
+  padding: var(--calcite-spacing-md);
+  margin-bottom: var(--calcite-spacing-sm);
+}
+
+#power-outages-content .outage-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Improved typography in dedicated panel */
+#power-outages-content .provider-header h5 {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+#power-outages-content .provider-summary {
+  font-size: 13px;
+}
+
+#power-outages-content .outage-id {
+  font-size: 13px;
+}
+
+#power-outages-content .outage-info {
+  font-size: 12px;
+}
+
+/* Mobile adjustments for dedicated panel */
+@media (max-width: 768px) {
+  #power-outages-content .power-outage-stats {
+    height: calc(100vh - 300px); /* Use most of viewport height */
+    padding: var(--calcite-spacing-md);
+  }
+
+  #power-outages-content .stats-summary,
+  #power-outages-content .provider-section {
+    padding: var(--calcite-spacing-sm);
+  }
+
+  #power-outages-content .outage-item {
+    padding: var(--calcite-spacing-sm);
+  }
+
+  .company-logo {
+    width: 20px;
+    height: 20px;
+  }
+
+  .company-toggle {
+    padding: var(--calcite-spacing-xs);
+    gap: var(--calcite-spacing-xs);
+  }
+}
+
+/* Visual emphasis for the dedicated Power Outages panel */
+#power-outages-content calcite-block {
+  border: 1px solid var(--calcite-color-border-2);
+  border-radius: var(--calcite-border-radius);
+  margin-bottom: var(--calcite-spacing-md);
+}
+
+#power-outages-content calcite-block:last-child {
+  margin-bottom: 0;
+}
