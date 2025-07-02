@@ -3,31 +3,63 @@ import { subscriberDataService } from '../dataService.js';
 
 // Renderer configurations
 const createOfflineRenderer = () => ({
-    type: 'simple',
-    symbol: {
+    type: 'unique-value',
+    field: 'service_type',
+    defaultSymbol: {
         type: 'simple-marker',
         style: 'circle',
-        color: [220, 38, 38, 0.8],
+        color: [220, 38, 38, 0.8], // Default red for non-business internet
         size: 8,
         outline: {
             color: [220, 38, 38, 1],
             width: 2
         }
-    }
+    },
+    uniqueValueInfos: [
+        {
+            value: 'BUSINESS INTERNET',
+            symbol: {
+                type: 'simple-marker',
+                style: 'circle',
+                color: [147, 51, 234, 0.8], // Purple center for offline business internet
+                size: 8,
+                outline: {
+                    color: [220, 38, 38, 1], // Red outline for offline business internet
+                    width: 2
+                }
+            }
+        }
+    ]
 });
 
 const createOnlineRenderer = () => ({
-    type: 'simple',
-    symbol: {
+    type: 'unique-value',
+    field: 'service_type',
+    defaultSymbol: {
         type: 'simple-marker',
         style: 'circle',
-        color: [34, 197, 94, 0.8],
+        color: [34, 197, 94, 0.8], // Default green for non-business internet
         size: 6,
         outline: {
             color: [34, 197, 94, 1],
             width: 1
         }
-    }
+    },
+    uniqueValueInfos: [
+        {
+            value: 'BUSINESS INTERNET',
+            symbol: {
+                type: 'simple-marker',
+                style: 'circle',
+                color: [147, 51, 234, 0.8], // Purple for online business internet
+                size: 6,
+                outline: {
+                    color: [147, 51, 234, 1], // Purple outline for online business internet
+                    width: 1
+                }
+            }
+        }
+    ]
 });
 
 // Clustering configuration for offline subscribers
