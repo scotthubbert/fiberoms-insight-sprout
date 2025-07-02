@@ -24,12 +24,22 @@ export default defineConfig({
     ]
   },
   plugins: [
-    // Copy CalciteUI assets for production build
+    // Copy essential assets for production build
     viteStaticCopy({
       targets: [
+        // Copy Calcite assets
         {
           src: 'node_modules/@esri/calcite-components/dist/calcite/assets/*',
           dest: 'calcite/assets'
+        },
+        // Copy ArcGIS theme CSS files for proper theming
+        {
+          src: 'node_modules/@arcgis/core/assets/esri/themes/light/main.css',
+          dest: 'assets/esri/themes/light'
+        },
+        {
+          src: 'node_modules/@arcgis/core/assets/esri/themes/dark/main.css',
+          dest: 'assets/esri/themes/dark'
         }
       ]
     }),
