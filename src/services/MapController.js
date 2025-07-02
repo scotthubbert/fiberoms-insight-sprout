@@ -42,9 +42,22 @@ export class MapController {
     configureView() {
         if (!this.view) return;
 
-        this.view.constraints = {
-            snapToZoom: false  // Smooth zoom per CLAUDE.md performance requirements
+        // Service area bounds based on configuration
+        const serviceAreaBounds = {
+            xmin: -88.3319638467807,
+            ymin: 33.440523708494564,
+            xmax: -87.35488507018964,
+            ymax: 34.73445506886154,
+            spatialReference: { wkid: 4326 }
         };
+
+        this.view.constraints = {
+            snapToZoom: false,  // Smooth zoom per CLAUDE.md performance requirements
+            geometry: serviceAreaBounds  // Constrain navigation to service area
+        };
+
+        // Set initial extent to service area
+        this.view.extent = serviceAreaBounds;
     }
 
     applyTheme() {
