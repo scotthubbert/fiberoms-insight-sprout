@@ -1,8 +1,11 @@
 // LayerManager.js - Single Responsibility: Layer operations only
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import WebTileLayer from '@arcgis/core/layers/WebTileLayer';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
 import Graphic from '@arcgis/core/Graphic';
+import Polygon from '@arcgis/core/geometry/Polygon';
+import Point from '@arcgis/core/geometry/Point';
 import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
 
 export class LayerManager {
@@ -12,17 +15,17 @@ export class LayerManager {
         this.layerConfigs = new Map();
         this.blobUrls = new Map(); // Track blob URLs for cleanup
 
-        // Layer z-order configuration (Open/Closed: extend via config)
+        // Layer z-order configuration
         this.zOrder = {
-            rainViewerRadar: -10,  // Weather radar at bottom (below all basemap layers)
+            rainViewerRadar: -10,
             onlineSubscribers: 10,
             fsaBoundaries: 20,
             mainLineFiber: 30,
             dropFiber: 40,
             mstTerminals: 50,
+            powerOutages: 51,
             splitters: 60,
             offlineSubscribers: 100,
-            powerOutages: 110,
             fiberOutages: 120,
             vehicles: 130,
             weatherRadar: 140
@@ -93,12 +96,13 @@ export class LayerManager {
         return layer;
     }
 
-    // Create power outage layer with manual dual-rendering for polygons
+    // Create power outage layer using GraphicsLayer approach for better mixed geometry support
     async createPowerOutageLayer(layerConfig, data) {
-        const originalFeatures = data.features;
-        const processedFeatures = [];
 
-        // Company configurations with enhanced polygon visibility
+        const originalFeatures = data.features;
+        const graphics = [];
+
+        // Company symbol configurations
         const companyConfigs = {
             'apco': {
                 pointSymbol: {
@@ -109,10 +113,10 @@ export class LayerManager {
                 },
                 polygonSymbol: {
                     type: 'simple-fill',
-                    color: [30, 95, 175, 0.4], // Enhanced Alabama Power blue visibility (40% opacity)
+                    color: [30, 95, 175, 0.4],
                     outline: {
-                        color: [20, 75, 145], // Darker blue outline for better definition
-                        width: 3, // Thicker outline for better visibility
+                        color: [20, 75, 145],
+                        width: 3,
                         style: 'solid'
                     }
                 }
@@ -126,10 +130,10 @@ export class LayerManager {
                 },
                 polygonSymbol: {
                     type: 'simple-fill',
-                    color: [74, 124, 89, 0.4], // Enhanced Tombigbee green visibility (40% opacity)
+                    color: [74, 124, 89, 0.4],
                     outline: {
-                        color: [54, 104, 69], // Darker green outline for better definition
-                        width: 3, // Thicker outline for better visibility
+                        color: [54, 104, 69],
+                        width: 3,
                         style: 'solid'
                     }
                 }
@@ -139,165 +143,100 @@ export class LayerManager {
         const company = layerConfig.id.includes('apco') ? 'apco' : 'tombigbee';
         const companyConfig = companyConfigs[company];
 
-        // Process each feature and create appropriate graphics
+        let pointCount = 0, polygonCount = 0;
+
+        // Process each feature and create individual graphics
         for (const feature of originalFeatures) {
+            if (!feature.geometry) continue;
+
+            let arcgisGeometry;
+            let symbol;
+            const attributes = { ...feature.properties };
+
             if (feature.geometry.type === 'Point') {
-                // For point features, add as-is (will get point symbol)
-                processedFeatures.push({
-                    ...feature,
-                    properties: {
-                        ...feature.properties,
-                        _render_type: 'point'
-                    }
+                // Create Point geometry
+                arcgisGeometry = new Point({
+                    longitude: feature.geometry.coordinates[0],
+                    latitude: feature.geometry.coordinates[1],
+                    spatialReference: { wkid: 4326 }
                 });
+                symbol = companyConfig.pointSymbol;
+                pointCount++;
+
             } else if (feature.geometry.type === 'Polygon') {
-                // 1. Polygon feature with fill (company-based styling)
-                processedFeatures.push({
-                    ...feature,
-                    properties: {
-                        ...feature.properties,
-                        _render_type: 'polygon'
-                    }
+                // Create Polygon geometry
+                arcgisGeometry = new Polygon({
+                    rings: feature.geometry.coordinates,
+                    spatialReference: { wkid: 4326 }
                 });
+                symbol = companyConfig.polygonSymbol;
+                polygonCount++;
 
-                // 2. Point feature at centroid with logo
+                // Create main polygon graphic
+                const polygonGraphic = new Graphic({
+                    geometry: arcgisGeometry,
+                    symbol: symbol,
+                    attributes: attributes,
+                    popupTemplate: layerConfig.popupTemplate
+                });
+                graphics.push(polygonGraphic);
+
+                // Add centroid logo for polygon outages
                 try {
-                    const coordinates = feature.geometry.coordinates[0]; // First ring
-                    let sumX = 0, sumY = 0;
-                    for (const coord of coordinates) {
-                        sumX += coord[0];
-                        sumY += coord[1];
+                    const centroid = arcgisGeometry.centroid;
+                    if (centroid) {
+                        const centroidGraphic = new Graphic({
+                            geometry: centroid,
+                            symbol: companyConfig.pointSymbol,
+                            attributes: {
+                                ...attributes,
+                                _is_centroid: true,
+                                _parent_polygon_id: attributes.outage_id
+                            },
+                            popupTemplate: layerConfig.popupTemplate
+                        });
+                        graphics.push(centroidGraphic);
                     }
-                    const centroidX = sumX / coordinates.length;
-                    const centroidY = sumY / coordinates.length;
-
-                    processedFeatures.push({
-                        type: 'Feature',
-                        geometry: {
-                            type: 'Point',
-                            coordinates: [centroidX, centroidY]
-                        },
-                        properties: {
-                            ...feature.properties,
-                            _render_type: 'point', // Will get the logo symbol
-                            _is_centroid: true,
-                            _parent_polygon_id: feature.properties.outage_id
-                        }
-                    });
                 } catch (error) {
-                    console.warn('Could not create centroid for polygon:', error);
+                    console.error('Failed to create polygon centroid:', error);
                 }
+                continue; // Skip the generic graphic creation below
+            }
+
+            // Create graphic for points (polygons handled above)
+            if (arcgisGeometry && symbol) {
+                const graphic = new Graphic({
+                    geometry: arcgisGeometry,
+                    symbol: symbol,
+                    attributes: attributes,
+                    popupTemplate: layerConfig.popupTemplate
+                });
+                graphics.push(graphic);
             }
         }
 
-        // Create simple dual renderer using company colors
-        const dualRenderer = {
-            type: 'unique-value',
-            field: '_render_type',
-            defaultSymbol: companyConfig.pointSymbol,
-            uniqueValueInfos: [
-                {
-                    value: 'point',
-                    symbol: companyConfig.pointSymbol
-                },
-                {
-                    value: 'polygon',
-                    symbol: companyConfig.polygonSymbol
-                }
-            ]
-        };
-
-        // Alternative simple renderer for debugging polygon visibility issues
-        // Uncomment this and comment out the dual renderer above if polygons aren't visible
-        /*
-        const debugPolygonRenderer = {
-            type: 'simple',
-            symbol: {
-                type: 'simple-fill',
-                color: [255, 0, 0, 0.7], // Bright red for maximum visibility
-                outline: {
-                    color: [255, 0, 0],
-                    width: 4,
-                    style: 'solid'
-                }
-            }
-        };
-        */
-
-        // Create GeoJSON blob with processed features
-        const geojson = {
-            type: "FeatureCollection",
-            features: processedFeatures
-        };
-
-        const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(geojson)], {
-            type: "application/json"
-        }));
-
-        const layer = new GeoJSONLayer({
+        // Create GraphicsLayer with all graphics
+        const layer = new GraphicsLayer({
             id: layerConfig.id,
-            url: blobUrl,
-            renderer: dualRenderer, // Change to debugPolygonRenderer for polygon visibility testing
-            popupTemplate: layerConfig.popupTemplate,
-            featureReduction: layerConfig.featureReduction,
-            fields: layerConfig.fields,
+            title: layerConfig.title,
+            graphics: graphics,
             listMode: layerConfig.visible ? 'show' : 'hide',
-            visible: layerConfig.visible,
-            // Ensure polygons render above basemap but below points
-            elevationInfo: {
-                mode: 'on-the-ground'
-            }
+            visible: layerConfig.visible
         });
 
-        // Simple but effective layer load handler with forced visibility reset
+        // Layer load handler
         layer.when(() => {
-            // Force visibility state reset to trigger proper rendering
-            const originalVisibility = layer.visible;
-            if (originalVisibility) {
-                // Temporarily hide then show to force proper rendering
-                layer.visible = false;
-                setTimeout(() => {
-                    layer.visible = true;
-                    layer.refresh();
-                    console.log(`🔄 Layer ${layerConfig.id} visibility reset and refreshed`);
-                }, 100);
-            }
+            console.log(`✅ ${layerConfig.title} layer loaded`);
         }).catch(error => {
-            console.warn(`Layer ${layerConfig.id} failed to load:`, error);
+            console.error(`❌ ${layerConfig.title} layer failed to load:`, error);
         });
 
         this.layers.set(layerConfig.id, layer);
         this.layerConfigs.set(layerConfig.id, layerConfig);
-        this.blobUrls.set(layerConfig.id, blobUrl);
 
-        // Enhanced debugging for polygon visibility issues
-        const polygonFeatures = processedFeatures.filter(f => f.properties._render_type === 'polygon');
-        const pointFeatures = processedFeatures.filter(f => f.properties._render_type === 'point');
+        // Log layer creation summary
+        console.log(`📍 Power outage layer created: ${layerConfig.id} (${graphics.length} graphics: ${polygonCount} polygons, ${pointCount} points)`);
 
-        console.log(`📍 Power outage layer created with manual dual-rendering: ${layerConfig.id}`, {
-            originalFeatures: originalFeatures.length,
-            processedFeatures: processedFeatures.length,
-            polygons: polygonFeatures.length,
-            points: pointFeatures.length
-        });
-
-        // Log polygon geometry details for debugging
-        if (polygonFeatures.length > 0) {
-            console.log('🔹 Polygon debugging info:', {
-                firstPolygon: polygonFeatures[0],
-                polygonGeometryType: polygonFeatures[0].geometry?.type,
-                polygonCoordinates: polygonFeatures[0].geometry?.coordinates?.[0]?.slice(0, 3), // First 3 coords
-                polygonProperties: {
-                    _render_type: polygonFeatures[0].properties._render_type,
-                    customers_affected: polygonFeatures[0].properties.customers_affected,
-                    outage_id: polygonFeatures[0].properties.outage_id
-                }
-            });
-            console.log('🎨 Polygon renderer config:', {
-                rendererType: dualRenderer.type,
-                polygonSymbol: dualRenderer.uniqueValueInfos.find(u => u.value === 'polygon')?.symbol
-            });
-        }
         return layer;
     }
 
@@ -362,8 +301,9 @@ export class LayerManager {
         return this.zOrder[layerId] || 0;
     }
 
-    // Clean up blob URLs to prevent memory leaks
+    // Clean up layers
     removeLayer(layerId) {
+        // Clean up blob URLs for GeoJSONLayers only
         const blobUrl = this.blobUrls.get(layerId);
         if (blobUrl) {
             URL.revokeObjectURL(blobUrl);

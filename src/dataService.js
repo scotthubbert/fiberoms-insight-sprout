@@ -656,7 +656,6 @@ export class SubscriberDataService {
                     estimated_restore: record.estimated_restore || null,
                     status: record.status || 'Active',
                     area_description: record.area_description || '',
-                    county: record.county || '',
                     company: company,
 
                     latitude: record.latitude || null,
@@ -723,7 +722,6 @@ export class SubscriberDataService {
                     estimated_restore: desc.etr && desc.etr !== 'ETR-EXP' ? desc.etr : null,
                     status: desc.crew_status || (desc.comments ? 'In Progress' : 'Reported'),
                     area_description: props.title || 'Area Outage',
-                    county: 'Alabama', // Default for APCo
                     comments: desc.comments || '',
                     crew_on_site: desc.crew_icon || false,
                     latitude: latitude,
@@ -741,18 +739,7 @@ export class SubscriberDataService {
                 return lng >= -88.277 && lng <= -87.263 && lat >= 33.510 && lat <= 34.632
             })
 
-            log.info(`📍 Features after processing: ${outageData.length}`)
-            log.info(`🗺️ Features after geographic filtering: ${filteredData.length}`)
-
-            // Log some sample data for debugging
-            if (filteredData.length > 0) {
-                const totalCustomers = filteredData.reduce((sum, outage) => sum + (outage.customers_affected || 0), 0);
-                log.info(`👥 Total customers affected: ${totalCustomers}`)
-                log.info(`📋 Sample outages:`, filteredData.slice(0, 3).map(o => ({
-                    id: o.outage_id,
-                    customers: o.customers_affected
-                })))
-            }
+            log.info(`📍 APCo outages after geographic filtering: ${filteredData.length}`)
 
             // Convert to the expected format, preserving original geometries
             // Use the same centroid calculation logic for filtering
@@ -837,11 +824,10 @@ export class SubscriberDataService {
             geojsonData = await response.json()
             log.info('✅ Loaded Tombigbee outages from Supabase public URL')
 
-            // Extract features and properties - handle Kubra data format for Tombigbee
+            // Extract features and properties - handle Tombigbee direct format (not Kubra)
             const features = geojsonData.features || []
             const outageData = features.map(feature => {
                 const props = feature.properties
-                const desc = props.desc || {}
 
                 // Extract coordinates based on geometry type
                 let latitude, longitude;
@@ -860,21 +846,61 @@ export class SubscriberDataService {
                     latitude = sumLat / ring.length;
                 }
 
+                // Determine crew status
+                let crewStatus = 'Reported';
+                if (props.crew_dispatched === true) {
+                    crewStatus = 'Dispatched';
+                } else if (props.verified === true) {
+                    crewStatus = 'Verified';
+                }
+
+                // Get outage cause
+                const cause = props.verified_cause || props.suspected_cause || 'Unknown';
+
+                // Calculate duration from start time
+                let duration = '';
+                if (props.outage_start) {
+                    const startTime = new Date(props.outage_start);
+                    const now = new Date();
+                    const diffMs = now - startTime;
+                    const diffMins = Math.floor(diffMs / (1000 * 60));
+                    const diffHours = Math.floor(diffMins / 60);
+                    const diffDays = Math.floor(diffHours / 24);
+
+                    if (diffDays > 0) {
+                        duration = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+                    } else if (diffHours > 0) {
+                        duration = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                    } else if (diffMins > 0) {
+                        duration = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+                    } else {
+                        duration = 'Just now';
+                    }
+                }
+
                 return {
-                    id: props.id,
-                    outage_id: desc.inc_id || props.id,
-                    customers_affected: desc.cust_a?.val || 0,
-                    cause: desc.cause || 'Unknown',
-                    start_time: desc.start_time || null,
-                    estimated_restore: desc.etr && desc.etr !== 'ETR-EXP' ? desc.etr : null,
-                    status: desc.crew_status || (desc.comments ? 'In Progress' : 'Reported'),
-                    area_description: props.title || 'Area Outage',
-                    county: 'Greene/Sumter', // Default for Tombigbee
-                    comments: desc.comments || '',
-                    crew_on_site: desc.crew_icon || false,
+                    id: props.outage_id || props.id,
+                    outage_id: props.outage_id,
+                    customers_affected: props.customers_out_now || 0,
+                    cause: cause,
+                    start_time: props.outage_start ? new Date(props.outage_start).getTime() : null,
+                    estimated_restore: props.outage_end ? new Date(props.outage_end).getTime() : null,
+                    status: crewStatus,
+                    outage_status: props.status || 'N/A',
+                    area_description: props.outage_name || 'Area Outage',
+                    comments: crewStatus,
+                    crew_on_site: props.crew_dispatched || false,
+                    substation: props.substation || 'N/A',
+                    feeder: props.feeder || 'N/A',
+                    district: props.district || 'N/A',
+                    customers_restored: props.customers_restored || 0,
+                    initially_affected: props.customers_out_initially || props.customers_out_now || 0,
+                    equipment: props.outage_name || 'N/A',
+                    description: `Outage affecting ${props.customers_out_now || 0} customers`,
+                    last_update: props.last_update ? new Date(props.last_update).getTime() : null,
+                    duration: duration,
                     latitude: latitude,
                     longitude: longitude,
-                    // Include original data for debugging
                     ...props
                 }
             })
