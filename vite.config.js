@@ -53,13 +53,18 @@ export default defineConfig({
         {
           src: 'node_modules/@arcgis/core/assets/esri/themes/dark/main.css',
           dest: 'assets/esri/themes/dark'
+        },
+        // Copy ArcGIS fonts for proper text rendering
+        {
+          src: 'node_modules/@arcgis/core/assets/esri/themes/base/fonts/**/*',
+          dest: 'assets/esri/themes/base/fonts'
         }
       ]
     }),
     // Node.js polyfills for Supabase compatibility
     nodePolyfills({
       // Only polyfill what Supabase needs
-      include: ['stream', 'util', 'buffer', 'process'],
+      include: ['stream', 'util', 'buffer', 'process', 'http'],
       globals: {
         Buffer: true,
         global: true,
