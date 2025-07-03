@@ -69,38 +69,52 @@ export default defineConfig({
     // Only use SSL in production or when explicitly requested
     ...(process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS ? [basicSsl()] : []),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'icons/*.png', 'icons/*.svg'],
-      manifest: false, // We're using our own manifest.json
+      manifest: false,
       injectRegister: 'auto',
       strategies: 'generateSW',
       devOptions: {
         enabled: true,
-        suppressWarnings: true // Suppress PWA warnings in dev without HTTPS
+        suppressWarnings: true
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
-        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15MB to handle large ArcGIS chunks
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/js\.arcgis\.com\/.*/i,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'arcgis-js-cache',
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
               }
             }
           },
           {
             urlPattern: /^https:\/\/basemaps\.arcgis\.com\/.*/i,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'arcgis-basemap-cache',
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 3 // 3 days
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 5 // 5 minutes
               }
             }
           }
@@ -114,16 +128,13 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
-    sourcemap: false, // Disable source maps in production for security and performance
+    sourcemap: false,
     commonjsOptions: {
       transformMixedEsModules: true
     },
     rollupOptions: {
       external: [],
-      // Remove manual chunking - let Vite handle optimization automatically
-      // This prevents circular dependency issues and follows best practices
     },
-    // Optimize chunk size
     chunkSizeWarningLimit: 1000
   }
 });

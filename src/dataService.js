@@ -21,18 +21,11 @@ if (isDevelopment) {
 
 if (!supabaseUrl || !supabaseKey) {
     log.error('❌ Missing Supabase environment variables! Check your .env file.')
-    console.error('🔍 DEBUG: Missing environment variables:', {
-        supabaseUrl: !!supabaseUrl,
-        supabaseKey: !!supabaseKey,
-        allEnvVars: import.meta.env
-    });
     if (isDevelopment) {
         log.info('Required variables:')
         log.info('VITE_SUPABASE_URL=https://your-project.supabase.co')
         log.info('VITE_SUPABASE_ANON_KEY=your-anon-key')
     }
-} else {
-    console.log('🔍 DEBUG: Supabase environment variables are set correctly');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
@@ -110,11 +103,11 @@ const MOCK_SUBSCRIBERS = [
 const isMockMode = !supabaseUrl || !supabaseKey;
 
 if (isMockMode) {
-    console.log('🚨 RUNNING IN MOCK MODE - No Supabase credentials found');
-    console.log('📝 Create a .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to connect to real database');
-    console.log('🔍 Mock subscribers available:', MOCK_SUBSCRIBERS.length);
+    log.warn('RUNNING IN MOCK MODE - No Supabase credentials found');
+    log.info('Create a .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to connect to real database');
+    log.info('Mock subscribers available:', MOCK_SUBSCRIBERS.length);
 } else {
-    console.log('✅ RUNNING IN SUPABASE MODE - Database connected');
+    log.info('RUNNING IN SUPABASE MODE - Database connected');
 }
 
 // Data service class for subscriber operations
@@ -123,18 +116,50 @@ export class SubscriberDataService {
         this.cache = new Map()
         this.cacheExpiry = new Map()
         this.CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+        this.APP_VERSION = this.getAppVersion()
+    }
+
+    // Get app version for cache versioning
+    getAppVersion() {
+        // Use build timestamp or version from package.json
+        return Date.now().toString().slice(-8); // Last 8 digits of timestamp
     }
 
     // Check if cached data is still valid
     isCacheValid(key) {
-        const expiry = this.cacheExpiry.get(key)
-        return expiry && Date.now() < expiry
+        const versionedKey = `${key}_${this.APP_VERSION}`;
+        const expiry = this.cacheExpiry.get(versionedKey);
+        return expiry && Date.now() < expiry;
     }
 
-    // Set cache with expiry
+    // Set cache with expiry and version
     setCache(key, data) {
-        this.cache.set(key, data)
-        this.cacheExpiry.set(key, Date.now() + this.CACHE_DURATION)
+        const versionedKey = `${key}_${this.APP_VERSION}`;
+        this.cache.set(versionedKey, data);
+        this.cacheExpiry.set(versionedKey, Date.now() + this.CACHE_DURATION);
+
+        // Clean up old versions
+        this.cleanupOldVersions(key);
+    }
+
+    // Get cached data with version check
+    getCache(key) {
+        const versionedKey = `${key}_${this.APP_VERSION}`;
+        return this.cache.get(versionedKey);
+    }
+
+    // Clean up old version caches
+    cleanupOldVersions(baseKey) {
+        const keysToDelete = [];
+        for (const [key] of this.cache) {
+            if (key.startsWith(baseKey) && !key.endsWith(this.APP_VERSION)) {
+                keysToDelete.push(key);
+            }
+        }
+        keysToDelete.forEach(key => {
+            this.cache.delete(key);
+            this.cacheExpiry.delete(key);
+        });
     }
 
     // Get offline subscribers for map display (includes geometry)
@@ -143,7 +168,7 @@ export class SubscriberDataService {
 
         // Return cached data if valid
         if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey)
+            return this.getCache(cacheKey)
         }
 
         try {
@@ -210,8 +235,8 @@ export class SubscriberDataService {
         } catch (error) {
             log.error('Failed to fetch offline subscribers:', error)
             // Return cached data if available, even if expired
-            if (this.cache.has(cacheKey)) {
-                const cachedData = this.cache.get(cacheKey)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
                 return {
                     ...cachedData,
                     error: true,
@@ -228,7 +253,7 @@ export class SubscriberDataService {
 
         // Return cached data if valid
         if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey)
+            return this.getCache(cacheKey)
         }
 
         try {
@@ -287,8 +312,8 @@ export class SubscriberDataService {
         } catch (error) {
             log.error('Failed to fetch online subscribers:', error)
             // Return cached data if available, even if expired
-            if (this.cache.has(cacheKey)) {
-                const cachedData = this.cache.get(cacheKey)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
                 return {
                     ...cachedData,
                     error: true,
@@ -305,7 +330,7 @@ export class SubscriberDataService {
 
         // Return cached data if valid
         if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey)
+            return this.getCache(cacheKey)
         }
 
         try {
@@ -341,8 +366,8 @@ export class SubscriberDataService {
         } catch (error) {
             log.error('Failed to fetch subscribers summary:', error)
             // Return cached data if available, even if expired
-            if (this.cache.has(cacheKey)) {
-                const cachedData = this.cache.get(cacheKey)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
                 return {
                     ...cachedData,
                     error: true,
@@ -357,6 +382,7 @@ export class SubscriberDataService {
     clearCache() {
         this.cache.clear()
         this.cacheExpiry.clear()
+        log.info('Application cache cleared')
     }
 
     // Search subscribers by various criteria
@@ -369,7 +395,7 @@ export class SubscriberDataService {
 
         // Return cached results if valid
         if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey)
+            return this.getCache(cacheKey)
         }
 
         // Use mock data if Supabase not configured
@@ -378,7 +404,7 @@ export class SubscriberDataService {
         }
 
         try {
-            log.info('🔍 Searching subscribers for:', searchTerm)
+            log.info('Searching subscribers for:', searchTerm)
 
             // Search across multiple fields using OR conditions
             // Use only columns that actually exist in the database schema
@@ -420,8 +446,7 @@ export class SubscriberDataService {
             }
 
             // Cache the result (shorter cache time for search results)
-            this.cache.set(cacheKey, searchResult)
-            this.cacheExpiry.set(cacheKey, Date.now() + (2 * 60 * 1000)) // 2 minutes cache
+            this.setCache(cacheKey, searchResult)
 
             log.info('🔍 Search completed:', results.length, 'results found')
             return searchResult
@@ -471,8 +496,7 @@ export class SubscriberDataService {
         log.info('🔍 Mock search found', results.length, 'results for:', searchTerm);
 
         // Cache the mock result
-        this.cache.set(`search_${searchTerm.toLowerCase()}_${limit}`, searchResult);
-        this.cacheExpiry.set(`search_${searchTerm.toLowerCase()}_${limit}`, Date.now() + (2 * 60 * 1000));
+        this.setCache(cacheKey, searchResult);
 
         return searchResult;
     }
@@ -482,7 +506,7 @@ export class SubscriberDataService {
         const cacheKey = `subscriber_${id}`
 
         if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey)
+            return this.getCache(cacheKey)
         }
 
         try {
@@ -559,18 +583,37 @@ export class SubscriberDataService {
 
     // Refresh specific data type
     async refreshData(type = 'all') {
+        const keysToDelete = [];
+
         if (type === 'offline' || type === 'all') {
-            this.cache.delete('offline_subscribers')
-            this.cacheExpiry.delete('offline_subscribers')
+            keysToDelete.push('offline_subscribers');
         }
         if (type === 'online' || type === 'all') {
-            this.cache.delete('online_subscribers')
-            this.cacheExpiry.delete('online_subscribers')
+            keysToDelete.push('online_subscribers');
         }
         if (type === 'summary' || type === 'all') {
-            this.cache.delete('subscribers_summary')
-            this.cacheExpiry.delete('subscribers_summary')
+            keysToDelete.push('subscribers_summary');
         }
+        if (type === 'outages' || type === 'all') {
+            keysToDelete.push('apco_outages', 'tombigbee_outages');
+        }
+        if (type === 'search' || type === 'all') {
+            // Clear all search cache entries
+            for (const [key] of this.cache) {
+                if (key.includes('search_')) {
+                    keysToDelete.push(key.split('_')[0] + '_' + key.split('_')[1]);
+                }
+            }
+        }
+
+        // Clear versioned cache entries
+        keysToDelete.forEach(baseKey => {
+            const versionedKey = `${baseKey}_${this.APP_VERSION}`;
+            this.cache.delete(versionedKey);
+            this.cacheExpiry.delete(versionedKey);
+        });
+
+        log.info(`Refreshed ${type} data cache`);
     }
 
     // Convert Supabase data to GeoJSON features for ArcGIS
@@ -673,7 +716,7 @@ export class SubscriberDataService {
 
         // Return cached data if valid
         if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey)
+            return this.getCache(cacheKey)
         }
 
         try {
@@ -772,8 +815,7 @@ export class SubscriberDataService {
             }
 
             // Cache the result with shorter cache time for outage data (2 minutes)
-            this.cache.set(cacheKey, result)
-            this.cacheExpiry.set(cacheKey, Date.now() + (2 * 60 * 1000))
+            this.setCache(cacheKey, result)
 
             log.info('🔌 APCo outages loaded:', result.count, 'outages')
             return result
@@ -781,8 +823,8 @@ export class SubscriberDataService {
         } catch (error) {
             log.error('Failed to fetch APCo outages:', error)
             // Return cached data if available, even if expired
-            if (this.cache.has(cacheKey)) {
-                const cachedData = this.cache.get(cacheKey)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
                 return {
                     ...cachedData,
                     error: true,
@@ -808,7 +850,7 @@ export class SubscriberDataService {
 
         // Return cached data if valid
         if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey)
+            return this.getCache(cacheKey)
         }
 
         try {
@@ -916,8 +958,7 @@ export class SubscriberDataService {
             }
 
             // Cache the result with shorter cache time for outage data (2 minutes)
-            this.cache.set(cacheKey, result)
-            this.cacheExpiry.set(cacheKey, Date.now() + (2 * 60 * 1000))
+            this.setCache(cacheKey, result)
 
             log.info('🔌 Tombigbee outages loaded:', result.count, 'outages')
             return result
@@ -925,8 +966,8 @@ export class SubscriberDataService {
         } catch (error) {
             log.error('Failed to fetch Tombigbee outages:', error)
             // Return cached data if available, even if expired
-            if (this.cache.has(cacheKey)) {
-                const cachedData = this.cache.get(cacheKey)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
                 return {
                     ...cachedData,
                     error: true,
@@ -951,7 +992,7 @@ export class SubscriberDataService {
         const cacheKey = 'node_sites'
 
         if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey)
+            return this.getCache(cacheKey)
         }
 
         try {
@@ -974,8 +1015,7 @@ export class SubscriberDataService {
             }
 
             // Cache the result (node sites don't change frequently, so longer cache)
-            this.cache.set(cacheKey, result)
-            this.cacheExpiry.set(cacheKey, Date.now() + (30 * 60 * 1000)) // 30 minutes
+            this.setCache(cacheKey, result)
 
             log.info(`✅ Fetched ${processedFeatures.length} Node Sites`)
             return result
@@ -983,8 +1023,8 @@ export class SubscriberDataService {
         } catch (error) {
             log.error('Failed to fetch Node Sites:', error)
             // Return cached data if available, even if expired
-            if (this.cache.has(cacheKey)) {
-                const cachedData = this.cache.get(cacheKey)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
                 return {
                     ...cachedData,
                     error: true,

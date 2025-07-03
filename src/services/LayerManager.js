@@ -226,7 +226,7 @@ export class LayerManager {
 
         // Layer load handler
         layer.when(() => {
-            console.log(`✅ ${layerConfig.title} layer loaded`);
+            // Layer loaded successfully
         }).catch(error => {
             console.error(`❌ ${layerConfig.title} layer failed to load:`, error);
         });
@@ -234,8 +234,6 @@ export class LayerManager {
         this.layers.set(layerConfig.id, layer);
         this.layerConfigs.set(layerConfig.id, layerConfig);
 
-        // Log layer creation summary
-        console.log(`📍 Power outage layer created: ${layerConfig.id} (${graphics.length} graphics: ${polygonCount} polygons, ${pointCount} points)`);
 
         return layer;
     }
@@ -249,7 +247,6 @@ export class LayerManager {
             this.layers.set(layerConfig.id, layer);
             this.layerConfigs.set(layerConfig.id, layerConfig);
 
-            console.log(`📍 WebTileLayer created: ${layer.id}`);
             return layer;
         } else {
             console.warn(`No layer instance provided for WebTileLayer: ${layerConfig.id}`);
@@ -268,7 +265,6 @@ export class LayerManager {
         if (visible && (layerId.includes('outages') || layerId.includes('apco') || layerId.includes('tombigbee'))) {
             setTimeout(() => {
                 layer.refresh();
-                console.log(`🔄 ${layerId} refreshed after visibility toggle`);
             }, 100);
         }
 
@@ -284,7 +280,7 @@ export class LayerManager {
     // ISP: Focused interface for layer updates
     // Note: Layer updates disabled for Phase 1 - will implement in Phase 2
     async updateLayerData(layerId) {
-        console.log(`📝 Layer update requested for ${layerId} - skipping for Phase 1`);
+        // Layer update skipping for Phase 1
         return true; // Return true to avoid error logging
     }
 

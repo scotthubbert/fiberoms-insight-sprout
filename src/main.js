@@ -1954,21 +1954,104 @@ class Application {
   }
 }
 
-// PWA Installer - Simple implementation for Phase 1
+// PWA Installer - Enhanced implementation with update handling
 class PWAInstaller {
   constructor() {
     this.deferredPrompt = null;
+    this.updateAvailable = false;
+    this.registration = null;
   }
 
   init() {
+    // Handle install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       this.deferredPrompt = e;
     });
 
+    // Handle successful installation
     window.addEventListener('appinstalled', () => {
-      // PWA installed successfully
     });
+
+    // Register service worker and handle updates
+    this.registerServiceWorker();
+  }
+
+  async registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        this.registration = registration;
+
+        // Check for updates every time the page loads
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New service worker is available
+                this.handleUpdateAvailable();
+              }
+            });
+          }
+        });
+
+        // Check for updates periodically
+        setInterval(() => {
+          registration.update();
+        }, 60000); // Check every minute
+
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+      }
+    }
+  }
+
+  handleUpdateAvailable() {
+    this.updateAvailable = true;
+    this.showUpdateNotification();
+  }
+
+  showUpdateNotification() {
+    // Create a toast notification for updates
+    const toast = document.createElement('calcite-toast');
+    toast.setAttribute('open', '');
+    toast.setAttribute('kind', 'info');
+    toast.setAttribute('placement', 'bottom');
+    toast.innerHTML = `
+      <div slot="title">Update Available</div>
+      <div slot="message">A new version of the app is available. Refresh to get the latest features.</div>
+      <calcite-button slot="action" appearance="outline" onclick="window.location.reload()">
+        Refresh Now
+      </calcite-button>
+    `;
+    document.body.appendChild(toast);
+
+    // Auto-remove toast after 10 seconds
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 10000);
+  }
+
+  // Method to force update
+  async forceUpdate() {
+    if (this.registration && this.registration.waiting) {
+      // Tell the waiting service worker to skip waiting
+      this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      window.location.reload();
+    }
+  }
+
+  // Method to clear all caches
+  async clearAllCaches() {
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map(cacheName => caches.delete(cacheName))
+      );
+    }
   }
 }
 
@@ -1977,6 +2060,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize PWA installer
   const pwaInstaller = new PWAInstaller();
   pwaInstaller.init();
+
+  // Add developer cache clear shortcut (Ctrl+Shift+R or Cmd+Shift+R)
+  document.addEventListener('keydown', async (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
+      e.preventDefault();
+
+      // Clear service worker caches
+      await pwaInstaller.clearAllCaches();
+
+      // Clear application cache
+      if (window.app && window.app.dataService) {
+        window.app.dataService.clearCache();
+      }
+
+      // Clear browser storage
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Force reload without cache
+      window.location.reload(true);
+    }
+  });
+
+  // Add cache status to console for debugging
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  }
 
   // Start the main application
   window.app = new Application();

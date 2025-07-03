@@ -258,7 +258,6 @@ export class PopupManager {
                 return true;
             }
         } catch (err) {
-            console.log('Modern clipboard API failed, using fallback');
         }
 
         // Fallback for older browsers or non-secure contexts
@@ -320,7 +319,7 @@ export class PopupManager {
     addCustomAction(layerId, actionId, actionConfig) {
         // This method can be used to add custom actions to specific layers
         // Implementation for future expansion
-        console.log(`Custom action ${actionId} added to layer ${layerId}`);
+        // Custom action implementation for future expansion
     }
 
     // Cleanup method

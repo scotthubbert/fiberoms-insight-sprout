@@ -37,7 +37,6 @@ export class RainViewerService {
     async initialize() {
         try {
             await this.fetchRadarData();
-            console.log('🌧️ RainViewer service initialized');
             return true;
         } catch (error) {
             console.error('❌ Failed to initialize RainViewer service:', error);
@@ -56,12 +55,6 @@ export class RainViewerService {
             }
 
             this.radarData = await response.json();
-            console.log('📡 RainViewer data fetched:', {
-                version: this.radarData.version,
-                generated: new Date(this.radarData.generated * 1000).toLocaleString(),
-                pastFrames: this.radarData.radar?.past?.length || 0,
-                nowcastFrames: this.radarData.radar?.nowcast?.length || 0
-            });
 
             return this.radarData;
         } catch (error) {
@@ -120,12 +113,6 @@ export class RainViewerService {
         layer.set('radarFrameTimeString', new Date(latestFrame.time * 1000).toLocaleString());
 
         this.currentLayer = layer;
-        console.log('🗺️ RainViewer radar layer created:', {
-            frameTime: new Date(latestFrame.time * 1000).toLocaleString(),
-            opacity: themeSettings.opacity,
-            blendMode: themeSettings.blendMode,
-            theme: this.getCurrentTheme()
-        });
 
         return layer;
     }
@@ -157,9 +144,6 @@ export class RainViewerService {
             this.currentLayer.set('radarFrameTime', latestFrame.time);
             this.currentLayer.set('radarFrameTimeString', new Date(latestFrame.time * 1000).toLocaleString());
 
-            console.log('🔄 RainViewer radar layer updated:', {
-                frameTime: new Date(latestFrame.time * 1000).toLocaleString()
-            });
 
             return true;
         } catch (error) {
@@ -181,7 +165,6 @@ export class RainViewerService {
             }
         }, intervalMs);
 
-        console.log(`🔄 RainViewer auto-update started (${intervalMinutes} minutes)`);
     }
 
     /**
@@ -191,7 +174,6 @@ export class RainViewerService {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
-            console.log('⏹️ RainViewer auto-update stopped');
         }
     }
 
@@ -206,11 +188,6 @@ export class RainViewerService {
         this.currentLayer.opacity = themeSettings.opacity;
         this.currentLayer.blendMode = themeSettings.blendMode;
 
-        console.log('🎨 RainViewer theme updated:', {
-            theme: this.getCurrentTheme(),
-            opacity: themeSettings.opacity,
-            blendMode: themeSettings.blendMode
-        });
     }
 
     /**
@@ -224,7 +201,6 @@ export class RainViewerService {
             const currentTheme = this.getCurrentTheme();
             this.themeSettings[currentTheme].opacity = opacity;
 
-            console.log('🎛️ RainViewer opacity set:', opacity);
         }
     }
 
@@ -245,7 +221,6 @@ export class RainViewerService {
                 this.stopAutoUpdate();
             }
 
-            console.log('👁️ RainViewer visibility:', visible);
             return true;
         }
         return false;
@@ -272,6 +247,5 @@ export class RainViewerService {
         this.stopAutoUpdate();
         this.currentLayer = null;
         this.radarData = null;
-        console.log('🧹 RainViewer service cleaned up');
     }
 } 

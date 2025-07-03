@@ -1,6 +1,7 @@
 {
   "name": "fiberoms-insight-pwa",
   "version": "1.0.0",
+  "private": true,
   "description": "FiberOMS Insight PWA - Production SaaS for ISP outage management with mobile-first design",
   "type": "module",
   "scripts": {
@@ -31,16 +32,16 @@
   },
   "packageManager": "npm@10.9.2",
   "devDependencies": {
-    "@vitejs/plugin-basic-ssl": "^2.0.0",
-    "vite": "^6.3.5",
-    "vite-plugin-node-polyfills": "^0.23.0",
-    "vite-plugin-pwa": "^1.0.0",
-    "vite-plugin-static-copy": "^3.1.0"
+    "@vitejs/plugin-basic-ssl": "^1.0.2",
+    "vite": "^5.4.2",
+    "vite-plugin-node-polyfills": "^0.22.0",
+    "vite-plugin-pwa": "^0.20.5",
+    "vite-plugin-static-copy": "^1.0.6"
   },
   "dependencies": {
-    "@arcgis/core": "^4.33.0",
-    "@arcgis/map-components": "^4.33.1",
-    "@esri/calcite-components": "^3.2.1",
-    "@supabase/supabase-js": "^2.50.2"
+    "@arcgis/core": "^4.31.2",
+    "@arcgis/map-components": "^4.31.2",
+    "@esri/calcite-components": "^2.13.2",
+    "@supabase/supabase-js": "^2.45.4"
   }
 }

@@ -1,0 +1,54 @@
+# Cache Control Headers for FiberOMS Insight PWA
+
+# HTML files - no cache to ensure updates are loaded immediately
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Service Worker - no cache to ensure updates are loaded immediately
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Workbox files - no cache to ensure updates are loaded immediately
+/workbox-*.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Manifest - short cache to allow updates
+/manifest.json
+  Cache-Control: public, max-age=300
+  
+# JavaScript and CSS files - short cache with revalidation
+/*.js
+  Cache-Control: public, max-age=3600, must-revalidate
+  
+/*.css
+  Cache-Control: public, max-age=3600, must-revalidate
+
+# Static assets - longer cache but with revalidation
+/icons/*
+  Cache-Control: public, max-age=86400, must-revalidate
+  
+/favicon.ico
+  Cache-Control: public, max-age=86400, must-revalidate
+  
+/*.png
+  Cache-Control: public, max-age=86400, must-revalidate
+  
+/*.svg
+  Cache-Control: public, max-age=86400, must-revalidate
+
+# Font files - longer cache
+/*.woff
+  Cache-Control: public, max-age=2592000
+  
+/*.woff2
+  Cache-Control: public, max-age=2592000
+
+# API routes - no cache for dynamic content
+/api/*
+  Cache-Control: no-cache, no-store, must-revalidate 
