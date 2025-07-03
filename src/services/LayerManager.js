@@ -264,7 +264,9 @@ export class LayerManager {
         // Force refresh for power outage layers to ensure proper rendering
         if (visible && (layerId.includes('outages') || layerId.includes('apco') || layerId.includes('tombigbee'))) {
             setTimeout(() => {
-                layer.refresh();
+                if (typeof layer.refresh === 'function') {
+                    layer.refresh();
+                }
             }, 100);
         }
 

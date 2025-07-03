@@ -1621,8 +1621,9 @@ class Application {
     setTimeout(() => {
       if (this.services.mapController.view) {
         // Force a complete view refresh to ensure all layers are properly rendered
+        // Only GeoJSONLayer has a refresh method, not GraphicsLayer
         this.services.mapController.view.map.layers.forEach(layer => {
-          if (layer.visible && layer.type === 'geojson') {
+          if (layer.visible && layer.type === 'geojson' && typeof layer.refresh === 'function') {
             layer.refresh();
           }
         });
@@ -1675,7 +1676,7 @@ class Application {
 
           // Force layer refresh after a brief delay to ensure proper rendering
           setTimeout(() => {
-            if (apcoLayer.visible) {
+            if (apcoLayer.visible && typeof apcoLayer.refresh === 'function') {
               apcoLayer.refresh();
               log.info('🔄 APCo layer refreshed for initial rendering');
             }
@@ -1695,7 +1696,7 @@ class Application {
 
           // Force layer refresh after a brief delay to ensure proper rendering
           setTimeout(() => {
-            if (tombigbeeLayer.visible) {
+            if (tombigbeeLayer.visible && typeof tombigbeeLayer.refresh === 'function') {
               tombigbeeLayer.refresh();
               log.info('🔄 Tombigbee layer refreshed for initial rendering');
             }
