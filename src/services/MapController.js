@@ -252,14 +252,16 @@ export class MapController {
     getLayerZOrder(layerId) {
         const zOrderMap = {
             'rainviewer-radar': -10,
+            'fsa-boundaries': 5, // Below all point layers
             'online-subscribers': 10,
-            'fsa-boundaries': 20,
+            'main-line-old': 28, // Below current main line
             'main-line-fiber': 30,
-            'drop-fiber': 40,
+            'mst-fiber': 35,
+            'closures': 40,
+            'node-sites': 40,
             'mst-terminals': 50,
-            'apco-outages': 50,
+            'apco-outages': 51,
             'tombigbee-outages': 51,
-            'power-outages': 51,
             'splitters': 60,
             'offline-subscribers': 100,
             'fiber-outages': 120,

@@ -61,6 +61,7 @@
       <calcite-shell-panel slot="panel-start" id="layers-panel" collapsed display-mode="dock" class="desktop-only">
         <calcite-action-bar slot="action-bar">
           <calcite-action id="layers-action" text="Layers" icon="layer" active></calcite-action>
+          <calcite-action id="osp-action" text="OSP (Outside Plant)" icon="utility-network"></calcite-action>
           <calcite-action id="power-outages-action" text="Power Outages" icon="flash"></calcite-action>
           <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
           <calcite-action id="network-parent-action" text="Network Infrastructure" icon="linkChart"></calcite-action>
@@ -77,28 +78,7 @@
               Offline Subscribers
             </calcite-label>
           </calcite-block>
-          <calcite-block heading="Fiber Infrastructure" collapsible>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              FSA Boundaries
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Main Line Fiber
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              MST Terminals
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Splitters
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Drop Fiber
-            </calcite-label>
-          </calcite-block>
+
           <calcite-block heading="Fiber Outages" collapsible>
             <calcite-label>
               <calcite-checkbox></calcite-checkbox>
@@ -113,6 +93,39 @@
             <calcite-label>
               <calcite-checkbox></calcite-checkbox>
               Fiber Vehicles
+            </calcite-label>
+          </calcite-block>
+        </calcite-panel>
+        <calcite-panel heading="OSP (Outside Plant)" id="osp-content" hidden>
+          <calcite-block heading="OSP (Outside Plant)" collapsible>
+            <calcite-icon slot="icon" icon="utility-network"></calcite-icon>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              FSA Boundaries
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Main Line Fiber
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Main Line Old
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              MST Terminals
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              MST Fiber
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Splitters
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Closures
             </calcite-label>
           </calcite-block>
         </calcite-panel>
@@ -290,33 +303,41 @@
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Fiber Plant" expanded>
+        <calcite-block heading="OSP (Outside Plant)" expanded>
           <calcite-list selection-mode="none">
             <calcite-list-item label="FSA Boundaries" description="Service area boundaries" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="polygon"
-                style="color: var(--calcite-color-brand);"></calcite-icon>
+              <calcite-icon slot="content-start" icon="polygon" style="color: rgb(30, 144, 255);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
 
             <calcite-list-item label="Main Line Fiber" description="Primary fiber routes" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="line" style="color: var(--calcite-color-info);"></calcite-icon>
+              <calcite-icon slot="content-start" icon="line" style="color: rgb(165, 42, 42);"></calcite-icon>
+              <calcite-switch slot="content-end"></calcite-switch>
+            </calcite-list-item>
+
+            <calcite-list-item label="Main Line Old" description="Legacy fiber infrastructure"
+              class="layer-toggle-item">
+              <calcite-icon slot="content-start" icon="line" style="color: rgb(105, 105, 105);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
 
             <calcite-list-item label="MST Terminals" description="Multi-service terminals" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="circle"
-                style="color: var(--calcite-color-warning);"></calcite-icon>
+              <calcite-icon slot="content-start" icon="circle" style="color: rgb(0, 191, 255);"></calcite-icon>
+              <calcite-switch slot="content-end"></calcite-switch>
+            </calcite-list-item>
+
+            <calcite-list-item label="MST Fiber" description="MST fiber connections" class="layer-toggle-item">
+              <calcite-icon slot="content-start" icon="line" style="color: rgb(75, 0, 130);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
 
             <calcite-list-item label="Splitters" description="Optical splitters" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="ellipsis"
-                style="color: var(--calcite-color-success);"></calcite-icon>
+              <calcite-icon slot="content-start" icon="diamond" style="color: rgb(128, 0, 128);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
 
-            <calcite-list-item label="Drop Fiber" description="Customer drop lines" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="line" style="color: var(--calcite-color-danger);"></calcite-icon>
+            <calcite-list-item label="Closures" description="Fiber splice closures" class="layer-toggle-item">
+              <calcite-icon slot="content-start" icon="square" style="color: rgb(255, 140, 0);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>

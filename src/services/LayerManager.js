@@ -18,14 +18,18 @@ export class LayerManager {
         // Layer z-order configuration
         this.zOrder = {
             rainViewerRadar: -10,
+            'fsa-boundaries': 5, // Below all point layers
             onlineSubscribers: 10,
-            fsaBoundaries: 20,
-            mainLineFiber: 30,
-            dropFiber: 40,
-            mstTerminals: 50,
-            powerOutages: 51,
-            splitters: 60,
-            offlineSubscribers: 100,
+            'main-line-old': 28, // Below current main line
+            'main-line-fiber': 30,
+            'mst-fiber': 35,
+            'closures': 40,
+            'node-sites': 40,
+            'mst-terminals': 50,
+            'apco-outages': 51,
+            'tombigbee-outages': 51,
+            'splitters': 60,
+            'offline-subscribers': 100,
             fiberOutages: 120,
             vehicles: 130,
             weatherRadar: 140
@@ -92,6 +96,16 @@ export class LayerManager {
         this.layers.set(layerConfig.id, layer);
         this.layerConfigs.set(layerConfig.id, layerConfig);
         this.blobUrls.set(layerConfig.id, blobUrl); // Track for cleanup
+
+        // Set up scale-dependent labeling for FSA boundaries
+        if (layerConfig.id === 'fsa-boundaries' && layerConfig.labelingInfo) {
+            layer.when(() => {
+                // Delay to ensure layer is added to map
+                setTimeout(() => {
+                    this.setupScaleDependentLabeling(layer, layerConfig.labelingInfo);
+                }, 1000);
+            });
+        }
 
         return layer;
     }
@@ -316,6 +330,57 @@ export class LayerManager {
 
         this.layers.delete(layerId);
         this.layerConfigs.delete(layerId);
+    }
+
+    // Set up scale-dependent labeling for FSA layer
+    setupScaleDependentLabeling(layer, labelingInfo) {
+        // Try to get the map view from various sources
+        let mapView = layer.view;
+
+        // If no view on layer, try to get from global window (fallback)
+        if (!mapView && typeof window !== 'undefined' && window.mapView) {
+            mapView = window.mapView;
+        }
+
+        if (!mapView) {
+            console.warn('🏷️ No map view available for FSA scale-dependent labeling, trying later...');
+            // Retry after a delay
+            setTimeout(() => {
+                this.setupScaleDependentLabeling(layer, labelingInfo);
+            }, 2000);
+            return;
+        }
+
+        const targetScale = 80000; // Show labels when zoomed in to around zoom level 14 (scale 1:80,000 or closer)
+
+        console.log('🏷️ Setting up FSA scale-dependent labeling');
+
+        // Watch for scale changes
+        mapView.watch('scale', (scale) => {
+            if (scale <= targetScale) {
+                // Zoomed in enough - add labels
+                if (!layer.labelingInfo || layer.labelingInfo.length === 0) {
+                    console.log('🏷️ Adding FSA labels at scale 1:' + Math.round(scale));
+                    layer.labelingInfo = labelingInfo;
+                }
+            } else {
+                // Zoomed out too far - remove labels
+                if (layer.labelingInfo && layer.labelingInfo.length > 0) {
+                    console.log(`🚫 Removing FSA labels at scale 1:${Math.round(scale)} (zoom level <14)`);
+                    layer.labelingInfo = [];
+                }
+            }
+        });
+
+        // Set initial state based on current scale
+        const currentScale = mapView.scale;
+        if (currentScale <= targetScale) {
+            console.log('🏷️ Initial scale is within threshold, applying FSA labels');
+            layer.labelingInfo = labelingInfo;
+        } else {
+            console.log('🏷️ Initial scale too far out, FSA labels will appear at zoom level 14+');
+            layer.labelingInfo = [];
+        }
     }
 
     // Clean up all blob URLs

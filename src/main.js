@@ -250,11 +250,13 @@ class LayerPanel {
   constructor() {
     this.shellPanel = document.getElementById('layers-panel');
     this.layersAction = document.getElementById('layers-action');
+    this.ospAction = document.getElementById('osp-action');
     this.powerOutagesAction = document.getElementById('power-outages-action');
     this.searchAction = document.getElementById('search-action');
     this.networkParentAction = document.getElementById('network-parent-action');
     this.toolsAction = document.getElementById('tools-action');
     this.layersContent = document.getElementById('layers-content');
+    this.ospContent = document.getElementById('osp-content');
     this.powerOutagesContent = document.getElementById('power-outages-content');
     this.searchContent = document.getElementById('search-content');
     this.networkParentContent = document.getElementById('network-parent-content');
@@ -272,6 +274,7 @@ class LayerPanel {
 
   setupActionBarNavigation() {
     this.layersAction?.addEventListener('click', () => this.handleActionClick('layers'));
+    this.ospAction?.addEventListener('click', () => this.handleActionClick('osp'));
     this.powerOutagesAction?.addEventListener('click', () => this.handleActionClick('power-outages'));
     this.searchAction?.addEventListener('click', () => this.handleActionClick('search'));
     this.networkParentAction?.addEventListener('click', () => this.handleActionClick('network-parent'));
@@ -295,6 +298,7 @@ class LayerPanel {
   getActionByPanel(panelName) {
     switch (panelName) {
       case 'layers': return this.layersAction;
+      case 'osp': return this.ospAction;
       case 'power-outages': return this.powerOutagesAction;
       case 'search': return this.searchAction;
       case 'network-parent': return this.networkParentAction;
@@ -307,6 +311,8 @@ class LayerPanel {
     // Hide all panels using both hidden attribute AND display style for reliability
     this.layersContent.hidden = true;
     this.layersContent.style.display = 'none';
+    this.ospContent.hidden = true;
+    this.ospContent.style.display = 'none';
     this.powerOutagesContent.hidden = true;
     this.powerOutagesContent.style.display = 'none';
     this.searchContent.hidden = true;
@@ -318,6 +324,7 @@ class LayerPanel {
 
     // Remove active state from all actions
     this.layersAction.active = false;
+    this.ospAction.active = false;
     this.powerOutagesAction.active = false;
     this.searchAction.active = false;
     this.networkParentAction.active = false;
@@ -329,6 +336,11 @@ class LayerPanel {
         this.layersContent.hidden = false;
         this.layersContent.style.display = 'block';
         this.layersAction.active = true;
+        break;
+      case 'osp':
+        this.ospContent.hidden = false;
+        this.ospContent.style.display = 'block';
+        this.ospAction.active = true;
         break;
       case 'power-outages':
         this.powerOutagesContent.hidden = false;
@@ -393,7 +405,7 @@ class MobileTabBar {
           window.app.services.headerSearch.updateRecentSearchesUI();
         }
       });
-      
+
     }
   }
 
@@ -879,7 +891,7 @@ class HeaderSearch {
 
   formatEnhancedDescription(result) {
     if (!result) return 'No details available';
-    
+
     const parts = [];
 
     if (result.customer_name) {
@@ -1736,9 +1748,46 @@ class Application {
         }
       }
 
+      // Initialize fiber plant layers
+      await this.initializeFiberPlantLayers();
+
     } catch (error) {
       log.error('Failed to initialize infrastructure layers:', error);
       // Continue without infrastructure layers if they fail to load
+    }
+  }
+
+  async initializeFiberPlantLayers() {
+    try {
+      log.info('🔌 Initializing fiber plant layers...');
+
+      // List of fiber plant layer configs to initialize
+      const fiberPlantLayers = [
+        'fsaBoundaries',
+        'mainLineFiber',
+        'mainLineOld',
+        'mstTerminals',
+        'mstFiber',
+        'splitters',
+        'closures'
+      ];
+
+      for (const layerKey of fiberPlantLayers) {
+        const layerConfig = getLayerConfig(layerKey);
+        if (layerConfig) {
+          const layer = await this.createLayerFromConfig(layerConfig);
+          if (layer) {
+            layer.visible = layerConfig.visible; // Use config default (false)
+            this.services.mapController.addLayer(layer, layerConfig.zOrder);
+            log.info(`✅ ${layerConfig.title} layer initialized`);
+          }
+        }
+      }
+
+      log.info('🔌 Fiber plant layers initialization complete');
+    } catch (error) {
+      log.error('Failed to initialize fiber plant layers:', error);
+      // Continue without fiber plant layers if they fail to load
     }
   }
 
@@ -1797,8 +1846,8 @@ class Application {
   }
 
   setupLayerToggleHandlers() {
-    // Desktop layer toggles (checkboxes) - layers, network-parent, and tools panels
-    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
+    // Desktop layer toggles (checkboxes) - layers, osp, network-parent, and tools panels
+    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
     checkboxes.forEach(checkbox => {
       checkbox.addEventListener('calciteCheckboxChange', (e) => {
         this.handleLayerToggle(e.target, e.target.checked);
@@ -1887,7 +1936,15 @@ class Application {
       'Node Sites': 'node-sites',
       'Weather Radar': 'rainviewer-radar',
       'APCo Power Outages': 'apco-outages',
-      'Tombigbee Power Outages': 'tombigbee-outages'
+      'Tombigbee Power Outages': 'tombigbee-outages',
+      // Fiber Plant layers
+      'FSA Boundaries': 'fsa-boundaries',
+      'Main Line Fiber': 'main-line-fiber',
+      'Main Line Old': 'main-line-old',
+      'MST Terminals': 'mst-terminals',
+      'MST Fiber': 'mst-fiber',
+      'Splitters': 'splitters',
+      'Closures': 'closures'
     };
 
     return mapping[labelText] || null;
@@ -1901,7 +1958,15 @@ class Application {
       'node-sites': 'Node Sites',
       'rainviewer-radar': 'Weather Radar',
       'apco-outages': 'APCo Power Outages',
-      'tombigbee-outages': 'Tombigbee Power Outages'
+      'tombigbee-outages': 'Tombigbee Power Outages',
+      // Fiber Plant layers
+      'fsa-boundaries': 'FSA Boundaries',
+      'main-line-fiber': 'Main Line Fiber',
+      'main-line-old': 'Main Line Old',
+      'mst-terminals': 'MST Terminals',
+      'mst-fiber': 'MST Fiber',
+      'splitters': 'Splitters',
+      'closures': 'Closures'
     };
 
     // Sync power outage switches based on layer ID and classes
@@ -1920,8 +1985,8 @@ class Application {
     const labelText = labelMapping[layerId];
     if (!labelText) return;
 
-    // Sync desktop checkboxes (layers, network-parent, and tools panels)
-    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
+    // Sync desktop checkboxes (layers, osp, network-parent, and tools panels)
+    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
     desktopCheckboxes.forEach(checkbox => {
       const label = checkbox.closest('calcite-label');
       if (label && label.textContent.trim() === labelText) {

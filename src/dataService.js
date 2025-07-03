@@ -597,6 +597,12 @@ export class SubscriberDataService {
         if (type === 'outages' || type === 'all') {
             keysToDelete.push('apco_outages', 'tombigbee_outages');
         }
+        if (type === 'infrastructure' || type === 'all') {
+            keysToDelete.push('node_sites');
+        }
+        if (type === 'fiber-plant' || type === 'all') {
+            keysToDelete.push('fsa_boundaries', 'main_line_fiber', 'main_line_old', 'mst_terminals', 'mst_fiber', 'splitters', 'closures');
+        }
         if (type === 'search' || type === 'all') {
             // Clear all search cache entries
             for (const [key] of this.cache) {
@@ -1032,6 +1038,350 @@ export class SubscriberDataService {
                 }
             }
             // Return empty result on error
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
+
+    // Get FSA Boundaries data from external GeoJSON source
+    async getFSABoundaries() {
+        const cacheKey = 'fsa_boundaries'
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.getCache(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching FSA Boundaries data...')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/fsa-overlay.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL2ZzYS1vdmVybGF5Lmdlb2pzb24iLCJpYXQiOjE3NTE1NTU0OTUsImV4cCI6MjA2NjkxNTQ5NX0.Gxht_fRDwIB2a7F5kVqZG-xHjzP87uVRN8YwtqQzAoY')
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch FSA Boundaries data: ${response.status} ${response.statusText}`)
+            }
+
+            const geojson = await response.json()
+            const processedFeatures = geojson.features || []
+
+            const result = {
+                count: processedFeatures.length,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            this.setCache(cacheKey, result)
+            log.info(`✅ Fetched ${processedFeatures.length} FSA Boundaries`)
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch FSA Boundaries:', error)
+            // Return cached data if available, even if expired
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
+
+    // Get Main Line Fiber data from external GeoJSON source
+    async getMainLineFiber() {
+        const cacheKey = 'main_line_fiber'
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.getCache(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching Main Line Fiber data...')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/access-fiber-overlay.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL2FjY2Vzcy1maWJlci1vdmVybGF5Lmdlb2pzb24iLCJpYXQiOjE3NTE1NTY4MTYsImV4cCI6MjA2NjkxNjgxNn0.XJ3CCYe-Zzt2RuCxXoZNXkn80N6WQte2akP9pT9UkDo')
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch Main Line Fiber data: ${response.status} ${response.statusText}`)
+            }
+
+            const geojson = await response.json()
+            const processedFeatures = geojson.features || []
+
+            const result = {
+                count: processedFeatures.length,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            this.setCache(cacheKey, result)
+            log.info(`✅ Fetched ${processedFeatures.length} Main Line Fiber features`)
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch Main Line Fiber:', error)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
+
+    // Get Main Line Old Fiber data from external GeoJSON source
+    async getMainLineOld() {
+        const cacheKey = 'main_line_old'
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.getCache(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching Main Line Old data...')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/fsa-data//networkOLD.geojson')
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch Main Line Old data: ${response.status} ${response.statusText}`)
+            }
+
+            const geojson = await response.json()
+            const processedFeatures = geojson.features || []
+
+            const result = {
+                count: processedFeatures.length,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            this.setCache(cacheKey, result)
+            log.info(`✅ Fetched ${processedFeatures.length} Main Line Old features`)
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch Main Line Old:', error)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
+
+    // Get MST Terminals data from external GeoJSON source
+    async getMSTTerminals() {
+        const cacheKey = 'mst_terminals'
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.getCache(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching MST Terminals data...')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/mst-overlay.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL21zdC1vdmVybGF5Lmdlb2pzb24iLCJpYXQiOjE3NTE1NTU0NzMsImV4cCI6MjA2NjkxNTQ3M30.8skgJzFWzYj6d79b64BIS91PDNGFqpNhu42eABhcy0A')
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch MST Terminals data: ${response.status} ${response.statusText}`)
+            }
+
+            const geojson = await response.json()
+            const processedFeatures = geojson.features || []
+
+            const result = {
+                count: processedFeatures.length,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            this.setCache(cacheKey, result)
+            log.info(`✅ Fetched ${processedFeatures.length} MST Terminals`)
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch MST Terminals:', error)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
+
+    // Get Splitters data from external GeoJSON source
+    async getSplitters() {
+        const cacheKey = 'splitters'
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.getCache(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching Splitters data...')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/splitter-overlay.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL3NwbGl0dGVyLW92ZXJsYXkuZ2VvanNvbiIsImlhdCI6MTc1MTU1NTQ0NSwiZXhwIjoyMDY2OTE1NDQ1fQ.AWS6MtB8vtC5iUESPrO27CmrOaqAjU_A2lQr86l5G_E')
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch Splitters data: ${response.status} ${response.statusText}`)
+            }
+
+            const geojson = await response.json()
+            const processedFeatures = geojson.features || []
+
+            const result = {
+                count: processedFeatures.length,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            this.setCache(cacheKey, result)
+            log.info(`✅ Fetched ${processedFeatures.length} Splitters`)
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch Splitters:', error)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
+
+    // Get Closures data from external GeoJSON source
+    async getClosures() {
+        const cacheKey = 'closures'
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.getCache(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching Closures data...')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/closure-overlay.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL2Nsb3N1cmUtb3ZlcmxheS5nZW9qc29uIiwiaWF0IjoxNzUxNTU1NTM5LCJleHAiOjIwNjY5MTU1Mzl9.pKptT2hsuyD55udHF12xEuQ2C6PPt537tieE3fIpzFE')
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch Drop Fiber data: ${response.status} ${response.statusText}`)
+            }
+
+            const geojson = await response.json()
+            const processedFeatures = geojson.features || []
+
+            const result = {
+                count: processedFeatures.length,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            this.setCache(cacheKey, result)
+            log.info(`✅ Fetched ${processedFeatures.length} Closures`)
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch Closures:', error)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            }
+        }
+    }
+
+    // Get MST Fiber data from external GeoJSON source
+    async getMSTFiber() {
+        const cacheKey = 'mst_fiber'
+
+        if (this.isCacheValid(cacheKey)) {
+            return this.getCache(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching MST Fiber data...')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/mst-fiber-overlay.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL21zdC1maWJlci1vdmVybGF5Lmdlb2pzb24iLCJpYXQiOjE3NTE1NTU1MTgsImV4cCI6MjA2NjkxNTUxOH0.4ZOQy_9gcKiy1nbMHnXn90ZLu078ZgG1qiTc11YGG3I')
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch MST Fiber data: ${response.status} ${response.statusText}`)
+            }
+
+            const geojson = await response.json()
+            const processedFeatures = geojson.features || []
+
+            const result = {
+                count: processedFeatures.length,
+                features: processedFeatures,
+                lastUpdated: new Date().toISOString()
+            }
+
+            this.setCache(cacheKey, result)
+            log.info(`✅ Fetched ${processedFeatures.length} MST Fiber features`)
+            return result
+
+        } catch (error) {
+            log.error('Failed to fetch MST Fiber:', error)
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message
+                }
+            }
             return {
                 count: 0,
                 features: [],

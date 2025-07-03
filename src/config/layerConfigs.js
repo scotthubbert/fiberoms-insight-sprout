@@ -344,6 +344,692 @@ const subscriberFields = [
     { name: 'service_type', type: 'string', alias: 'Service Type' }
 ];
 
+// Fiber Plant renderer configurations
+const createFSARenderer = () => ({
+    type: "unique-value",
+    // Use Arcade expression to extract prefix from NAME field
+    valueExpression: `
+        var name = $feature.NAME;
+        if (IsEmpty(name)) return "UNKNOWN";
+        
+        // Check for specific longer prefixes first (at beginning)
+        if (Find("FAY-C3", name) == 0) return "FAY-C3";
+        if (Find("FAY-C2", name) == 0) return "FAY-C2";
+        if (Find("FAY-C1", name) == 0) return "FAY-C1";
+        if (Find("FAY-H", name) == 0) return "FAY-H";
+        if (Find("FAYE", name) == 0) return "FAYE";
+        
+        // Check for 3-character prefixes at beginning
+        var prefix = Left(name, 3);
+        if (Includes(["BRC", "BCK", "WNG", "HAM", "HAV", "BRY", "SPP", "VRN", "VIN", "WAN", "BEN", "RBN", "WIN", "NAV", "DBS", "CBH", "RUS"], prefix)) {
+            return prefix;
+        }
+        
+        // Check for patterns like XX-YY-... where YY is the code we want
+        var firstHyphen = Find("-", name);
+        if (firstHyphen > -1) {
+            var secondHyphen = Find("-", name, firstHyphen + 1);
+            if (secondHyphen > -1) {
+                var middleCode = Mid(name, firstHyphen + 1, secondHyphen - firstHyphen - 1);
+                if (Includes(["BE", "WA", "RB"], middleCode)) {
+                    return middleCode;
+                }
+            }
+        }
+        
+        return "OTHER";
+    `,
+    defaultSymbol: {
+        type: "simple-fill",
+        color: [170, 170, 170, 0.4], // Default gray
+        outline: { color: [170, 170, 170, 0.8], width: 1 }
+    },
+    uniqueValueInfos: [
+        // Fayette-specific areas
+        {
+            value: "FAY-C3",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 20, 147, 0.4], // Deep pink
+                outline: { color: [255, 20, 147, 0.8], width: 1 }
+            },
+            label: "Fayette C3"
+        },
+        {
+            value: "FAY-C2",
+            symbol: {
+                type: "simple-fill",
+                color: [65, 105, 225, 0.4], // Royal blue
+                outline: { color: [65, 105, 225, 0.8], width: 1 }
+            },
+            label: "Fayette C2"
+        },
+        {
+            value: "FAY-C1",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 69, 0, 0.4], // Orange red
+                outline: { color: [255, 69, 0, 0.8], width: 1 }
+            },
+            label: "Fayette C1"
+        },
+        {
+            value: "FAY-H",
+            symbol: {
+                type: "simple-fill",
+                color: [50, 205, 50, 0.4], // Lime green
+                outline: { color: [50, 205, 50, 0.8], width: 1 }
+            },
+            label: "Fayette H"
+        },
+        {
+            value: "FAYE",
+            symbol: {
+                type: "simple-fill",
+                color: [148, 0, 211, 0.4], // Dark violet
+                outline: { color: [148, 0, 211, 0.8], width: 1 }
+            },
+            label: "Fayette E"
+        },
+        // Regional FSA areas
+        {
+            value: "BRC",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 65, 54, 0.4], // Bright red
+                outline: { color: [255, 65, 54, 0.8], width: 1 }
+            },
+            label: "BRC"
+        },
+        {
+            value: "BCK",
+            symbol: {
+                type: "simple-fill",
+                color: [0, 116, 217, 0.4], // Strong blue
+                outline: { color: [0, 116, 217, 0.8], width: 1 }
+            },
+            label: "BCK"
+        },
+        {
+            value: "WNG",
+            symbol: {
+                type: "simple-fill",
+                color: [46, 204, 64, 0.4], // Bright green
+                outline: { color: [46, 204, 64, 0.8], width: 1 }
+            },
+            label: "WNG"
+        },
+        {
+            value: "HAM",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 215, 0, 0.4], // Gold
+                outline: { color: [255, 215, 0, 0.8], width: 1 }
+            },
+            label: "HAM"
+        },
+        {
+            value: "HAV",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 133, 27, 0.4], // Bright orange
+                outline: { color: [255, 133, 27, 0.8], width: 1 }
+            },
+            label: "HAV"
+        },
+        {
+            value: "BRY",
+            symbol: {
+                type: "simple-fill",
+                color: [139, 0, 139, 0.4], // Dark magenta  
+                outline: { color: [139, 0, 139, 0.8], width: 1 }
+            },
+            label: "BRY"
+        },
+        {
+            value: "SPP",
+            symbol: {
+                type: "simple-fill",
+                color: [32, 178, 170, 0.4], // Light sea green
+                outline: { color: [32, 178, 170, 0.8], width: 1 }
+            },
+            label: "SPP"
+        },
+        {
+            value: "VRN",
+            symbol: {
+                type: "simple-fill",
+                color: [205, 133, 63, 0.4], // Peru (brownish)
+                outline: { color: [205, 133, 63, 0.8], width: 1 }
+            },
+            label: "VRN"
+        },
+        {
+            value: "VIN",
+            symbol: {
+                type: "simple-fill",
+                color: [107, 91, 149, 0.4], // Purple-gray
+                outline: { color: [107, 91, 149, 0.8], width: 1 }
+            },
+            label: "VIN"
+        },
+        {
+            value: "WAN",
+            symbol: {
+                type: "simple-fill",
+                color: [0, 107, 84, 0.4], // Deep green
+                outline: { color: [0, 107, 84, 0.8], width: 1 }
+            },
+            label: "WAN"
+        },
+        {
+            value: "BEN",
+            symbol: {
+                type: "simple-fill",
+                color: [139, 0, 0, 0.4], // Dark red
+                outline: { color: [139, 0, 0, 0.8], width: 1 }
+            },
+            label: "BEN"
+        },
+        {
+            value: "RBN",
+            symbol: {
+                type: "simple-fill",
+                color: [70, 130, 180, 0.4], // Steel blue
+                outline: { color: [70, 130, 180, 0.8], width: 1 }
+            },
+            label: "RBN"
+        },
+        {
+            value: "WIN",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 105, 180, 0.4], // Hot pink
+                outline: { color: [255, 105, 180, 0.8], width: 1 }
+            },
+            label: "WIN"
+        },
+        {
+            value: "NAV",
+            symbol: {
+                type: "simple-fill",
+                color: [0, 191, 255, 0.4], // Deep sky blue
+                outline: { color: [0, 191, 255, 0.8], width: 1 }
+            },
+            label: "NAV"
+        },
+        {
+            value: "DBS",
+            symbol: {
+                type: "simple-fill",
+                color: [153, 50, 204, 0.4], // Dark orchid
+                outline: { color: [153, 50, 204, 0.8], width: 1 }
+            },
+            label: "DBS"
+        },
+        {
+            value: "CBH",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 127, 80, 0.4], // Coral
+                outline: { color: [255, 127, 80, 0.8], width: 1 }
+            },
+            label: "CBH"
+        },
+        {
+            value: "RUS",
+            symbol: {
+                type: "simple-fill",
+                color: [178, 34, 34, 0.4], // Fire brick
+                outline: { color: [178, 34, 34, 0.8], width: 1 }
+            },
+            label: "RUS"
+        },
+        {
+            value: "BE",
+            symbol: {
+                type: "simple-fill",
+                color: [72, 61, 139, 0.4], // Dark slate blue
+                outline: { color: [72, 61, 139, 0.8], width: 1 }
+            },
+            label: "BE"
+        },
+        {
+            value: "WA",
+            symbol: {
+                type: "simple-fill",
+                color: [34, 139, 34, 0.4], // Forest green
+                outline: { color: [34, 139, 34, 0.8], width: 1 }
+            },
+            label: "WA"
+        },
+        {
+            value: "RB",
+            symbol: {
+                type: "simple-fill",
+                color: [218, 165, 32, 0.4], // Goldenrod
+                outline: { color: [218, 165, 32, 0.8], width: 1 }
+            },
+            label: "RB"
+        }
+    ]
+});
+
+const createMainLineFiberRenderer = () => ({
+    type: 'unique-value',
+    field: 'FIBERCOUNT',
+    defaultSymbol: {
+        type: 'simple-line',
+        color: [165, 42, 42, 0.8], // Brown default
+        width: 3,
+        cap: 'round',
+        join: 'round'
+    },
+    uniqueValueInfos: [
+        {
+            value: 12,
+            symbol: {
+                type: 'simple-line',
+                color: [0, 255, 0, 0.8], // Green for 12 fibers
+                width: 2,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '12 Fibers'
+        },
+        {
+            value: 24,
+            symbol: {
+                type: 'simple-line',
+                color: [255, 255, 0, 0.8], // Yellow for 24 fibers
+                width: 3,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '24 Fibers'
+        },
+        {
+            value: 48,
+            symbol: {
+                type: 'simple-line',
+                color: [255, 165, 0, 0.8], // Orange for 48 fibers
+                width: 4,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '48 Fibers'
+        },
+        {
+            value: 96,
+            symbol: {
+                type: 'simple-line',
+                color: [139, 69, 19, 0.8], // Brown for 96 fibers
+                width: 5,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '96 Fibers'
+        },
+        {
+            value: 144,
+            symbol: {
+                type: 'simple-line',
+                color: [255, 0, 0, 0.8], // Red for 144 fibers
+                width: 6,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '144 Fibers'
+        }
+    ]
+});
+
+const createMainLineOldRenderer = () => ({
+    type: 'unique-value',
+    field: 'FIBERCOUNT',
+    defaultSymbol: {
+        type: 'simple-line',
+        color: [105, 105, 105, 0.8], // Gray default for "old" infrastructure
+        width: 3,
+        cap: 'round',
+        join: 'round'
+    },
+    uniqueValueInfos: [
+        {
+            value: 12,
+            symbol: {
+                type: 'simple-line',
+                color: [0, 200, 0, 0.6], // Dimmed green for 12 fibers
+                width: 2,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '12 Fibers (Old)'
+        },
+        {
+            value: 24,
+            symbol: {
+                type: 'simple-line',
+                color: [200, 200, 0, 0.6], // Dimmed yellow for 24 fibers
+                width: 3,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '24 Fibers (Old)'
+        },
+        {
+            value: 48,
+            symbol: {
+                type: 'simple-line',
+                color: [200, 130, 0, 0.6], // Dimmed orange for 48 fibers
+                width: 4,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '48 Fibers (Old)'
+        },
+        {
+            value: 96,
+            symbol: {
+                type: 'simple-line',
+                color: [110, 55, 15, 0.6], // Dimmed brown for 96 fibers
+                width: 5,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '96 Fibers (Old)'
+        },
+        {
+            value: 144,
+            symbol: {
+                type: 'simple-line',
+                color: [200, 0, 0, 0.6], // Dimmed red for 144 fibers
+                width: 6,
+                cap: 'round',
+                join: 'round'
+            },
+            label: '144 Fibers (Old)'
+        }
+    ]
+});
+
+const createMSTTerminalRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-marker',
+        style: 'circle',
+        color: [0, 191, 255, 0.8], // Deep sky blue
+        size: 10,
+        outline: {
+            color: [0, 191, 255, 1],
+            width: 2
+        }
+    }
+});
+
+const createSplitterRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-marker',
+        style: 'diamond',
+        color: [128, 0, 128, 0.8], // Purple
+        size: 10,
+        outline: {
+            color: [128, 0, 128, 1],
+            width: 2
+        }
+    }
+});
+
+const createClosureRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-marker',
+        style: 'square',
+        color: [255, 140, 0, 0.8], // Orange
+        size: 8,
+        outline: {
+            color: [255, 140, 0, 1],
+            width: 2
+        }
+    }
+});
+
+const createMSTFiberRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-line',
+        color: [75, 0, 130, 0.8], // Indigo
+        width: 2,
+        cap: 'round',
+        join: 'round'
+    }
+});
+
+// Fiber Plant popup templates
+const createFSAPopup = () => ({
+    title: 'FSA: {NAME}',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'NAME', label: 'Service Area Name', visible: true },
+                { fieldName: 'Area', label: 'Area (sq ft)', visible: true },
+                { fieldName: 'Status', label: 'Status', visible: true }
+            ]
+        }
+    ]
+});
+
+const createMainLineFiberPopup = () => ({
+    title: 'Main Line Fiber - {FIBERCOUNT} Fibers',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'FIBERCOUNT', label: 'Fiber Count', visible: true },
+                { fieldName: 'CABLE_NAME', label: 'Cable Name', visible: true },
+                { fieldName: 'PLACEMENTT', label: 'Placement Type', visible: true },
+                { fieldName: 'CABLETYPE', label: 'Cable Type', visible: true },
+                { fieldName: 'CALCULATED', label: 'Calculated Length', visible: true, format: { places: 2 } },
+                { fieldName: 'MEASUREDLE', label: 'Measured Length', visible: true, format: { places: 2 } }
+            ]
+        }
+    ],
+    actions: [
+        {
+            id: 'copy-cable-info',
+            title: 'Copy Cable Info',
+            icon: 'duplicate',
+            type: 'button'
+        }
+    ]
+});
+
+const createMainLineOldPopup = () => ({
+    title: 'Main Line Old - {FIBERCOUNT} Fibers',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'FIBERCOUNT', label: 'Fiber Count', visible: true },
+                { fieldName: 'SUM_CALCULATEDLENGTH', label: 'Calculated Length', visible: true, format: { places: 2 } },
+                { fieldName: 'SUM_MEASUREDLENGTH', label: 'Measured Length', visible: true, format: { places: 2 } },
+                { fieldName: 'Shape_Length', label: 'Shape Length', visible: true, format: { places: 2 } },
+                { fieldName: 'OBJECTID', label: 'Object ID', visible: true }
+            ]
+        }
+    ],
+    actions: [
+        {
+            id: 'copy-cable-info',
+            title: 'Copy Cable Info',
+            icon: 'duplicate',
+            type: 'button'
+        }
+    ]
+});
+
+const createMSTTerminalPopup = () => ({
+    title: 'MST Terminal: {Name}',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'Name', label: 'Terminal Name', visible: true },
+                { fieldName: 'Type', label: 'Terminal Type', visible: true },
+                { fieldName: 'Status', label: 'Status', visible: true },
+                { fieldName: 'Capacity', label: 'Port Capacity', visible: true }
+            ]
+        }
+    ],
+    actions: [
+        {
+            id: 'directions',
+            title: 'Get Directions',
+            icon: 'pin-tear',
+            type: 'button'
+        }
+    ]
+});
+
+const createSplitterPopup = () => ({
+    title: 'Splitter: {STRUCTURE_}',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'STRUCTURE_', label: 'Structure ID', visible: true },
+                { fieldName: 'EQUIP_FRAB', label: 'Equipment FRAB', visible: true },
+                { fieldName: 'OUTPUTPORT', label: 'Output Port Count', visible: true }
+            ]
+        }
+    ],
+    actions: [
+        {
+            id: 'directions',
+            title: 'Get Directions',
+            icon: 'pin-tear',
+            type: 'button'
+        }
+    ]
+});
+
+const createClosurePopup = () => ({
+    title: 'Closure: {Name}',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'Name', label: 'Closure Name', visible: true },
+                { fieldName: 'Type', label: 'Closure Type', visible: true },
+                { fieldName: 'Status', label: 'Status', visible: true },
+                { fieldName: 'Location', label: 'Location', visible: true }
+            ]
+        }
+    ],
+    actions: [
+        {
+            id: 'directions',
+            title: 'Get Directions',
+            icon: 'pin-tear',
+            type: 'button'
+        }
+    ]
+});
+
+const createMSTFiberPopup = () => ({
+    title: 'MST Fiber Connection',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'Name', label: 'Connection Name', visible: true },
+                { fieldName: 'FIBERCOUNT', label: 'Fiber Count', visible: true },
+                { fieldName: 'Status', label: 'Status', visible: true },
+                { fieldName: 'Length', label: 'Length', visible: true, format: { places: 2 } }
+            ]
+        }
+    ]
+});
+
+// Fiber Plant field definitions
+const createFSAFields = () => [
+    { name: 'NAME', type: 'string', alias: 'Service Area Name' },
+    { name: 'Area', type: 'double', alias: 'Area (sq ft)' },
+    { name: 'Status', type: 'string', alias: 'Status' }
+];
+
+// FSA Labeling configuration for scale-dependent display
+const createFSALabeling = () => [
+    {
+        symbol: {
+            type: "text",
+            color: [255, 255, 255], // White text for good contrast
+            font: {
+                family: "Arial",
+                size: 12, // Professional size
+                weight: "bold"
+            },
+            haloColor: [0, 0, 0],
+            haloSize: 2 // Black halo for readability against any background
+        },
+        labelPlacement: "always-horizontal",
+        labelExpressionInfo: {
+            expression: "$feature.NAME"
+        },
+        deconflictionStrategy: "static", // Enable collision detection to prevent overlap
+        repeatLabel: false, // Don't repeat labels for the same feature
+        removeDuplicateLabels: true, // Remove duplicate labels
+        maxScale: 0, // No limit on zooming in
+        minScale: 80000 // Hide labels when zoomed out past zoom level 14 (scale 1:80,000)
+    }
+];
+
+const createMainLineFiberFields = () => [
+    { name: 'FIBERCOUNT', type: 'integer', alias: 'Fiber Count' },
+    { name: 'CABLE_NAME', type: 'string', alias: 'Cable Name' },
+    { name: 'PLACEMENTT', type: 'string', alias: 'Placement Type' },
+    { name: 'CABLETYPE', type: 'string', alias: 'Cable Type' },
+    { name: 'CALCULATED', type: 'double', alias: 'Calculated Length' },
+    { name: 'MEASUREDLE', type: 'double', alias: 'Measured Length' }
+];
+
+const createMainLineOldFields = () => [
+    { name: 'OBJECTID', type: 'oid', alias: 'Object ID' },
+    { name: 'FIBERCOUNT', type: 'integer', alias: 'Fiber Count' },
+    { name: 'SUM_CALCULATEDLENGTH', type: 'double', alias: 'Calculated Length' },
+    { name: 'SUM_MEASUREDLENGTH', type: 'double', alias: 'Measured Length' },
+    { name: 'Shape_Length', type: 'double', alias: 'Shape Length' }
+];
+
+const createMSTTerminalFields = () => [
+    { name: 'Name', type: 'string', alias: 'Terminal Name' },
+    { name: 'Type', type: 'string', alias: 'Terminal Type' },
+    { name: 'Status', type: 'string', alias: 'Status' },
+    { name: 'Capacity', type: 'integer', alias: 'Port Capacity' }
+];
+
+const createSplitterFields = () => [
+    { name: 'STRUCTURE_', type: 'string', alias: 'Structure ID' },
+    { name: 'EQUIP_FRAB', type: 'string', alias: 'Equipment FRAB' },
+    { name: 'OUTPUTPORT', type: 'integer', alias: 'Output Port Count' }
+];
+
+const createClosureFields = () => [
+    { name: 'Name', type: 'string', alias: 'Closure Name' },
+    { name: 'Type', type: 'string', alias: 'Closure Type' },
+    { name: 'Status', type: 'string', alias: 'Status' },
+    { name: 'Location', type: 'string', alias: 'Location' }
+];
+
+const createMSTFiberFields = () => [
+    { name: 'Name', type: 'string', alias: 'Connection Name' },
+    { name: 'FIBERCOUNT', type: 'integer', alias: 'Fiber Count' },
+    { name: 'Status', type: 'string', alias: 'Status' },
+    { name: 'Length', type: 'double', alias: 'Length' }
+];
+
 // Layer configurations
 export const layerConfigs = {
     offlineSubscribers: {
@@ -408,6 +1094,92 @@ export const layerConfigs = {
         visible: false,
         zOrder: 40,
         dataServiceMethod: () => subscriberDataService.getNodeSites()
+    },
+
+    // Fiber Plant Layers
+    fsaBoundaries: {
+        id: 'fsa-boundaries',
+        title: 'FSA Boundaries',
+        dataSource: 'fsa_boundaries',
+        renderer: createFSARenderer(),
+        popupTemplate: createFSAPopup(),
+        fields: createFSAFields(),
+        labelingInfo: createFSALabeling(),
+        visible: false,
+        zOrder: 5, // Below all point layers
+        dataServiceMethod: () => subscriberDataService.getFSABoundaries()
+    },
+
+    mainLineFiber: {
+        id: 'main-line-fiber',
+        title: 'Main Line Fiber',
+        dataSource: 'main_line_fiber',
+        renderer: createMainLineFiberRenderer(),
+        popupTemplate: createMainLineFiberPopup(),
+        fields: createMainLineFiberFields(),
+        visible: false,
+        zOrder: 30,
+        dataServiceMethod: () => subscriberDataService.getMainLineFiber()
+    },
+
+    mainLineOld: {
+        id: 'main-line-old',
+        title: 'Main Line Old',
+        dataSource: 'main_line_old',
+        renderer: createMainLineOldRenderer(),
+        popupTemplate: createMainLineOldPopup(),
+        fields: createMainLineOldFields(),
+        visible: false,
+        zOrder: 28, // Slightly below current main line
+        dataServiceMethod: () => subscriberDataService.getMainLineOld()
+    },
+
+    mstTerminals: {
+        id: 'mst-terminals',
+        title: 'MST Terminals',
+        dataSource: 'mst_terminals',
+        renderer: createMSTTerminalRenderer(),
+        popupTemplate: createMSTTerminalPopup(),
+        fields: createMSTTerminalFields(),
+        visible: false,
+        zOrder: 50,
+        dataServiceMethod: () => subscriberDataService.getMSTTerminals()
+    },
+
+    splitters: {
+        id: 'splitters',
+        title: 'Splitters',
+        dataSource: 'splitters',
+        renderer: createSplitterRenderer(),
+        popupTemplate: createSplitterPopup(),
+        fields: createSplitterFields(),
+        visible: false,
+        zOrder: 60,
+        dataServiceMethod: () => subscriberDataService.getSplitters()
+    },
+
+    closures: {
+        id: 'closures',
+        title: 'Closures',
+        dataSource: 'closures',
+        renderer: createClosureRenderer(),
+        popupTemplate: createClosurePopup(),
+        fields: createClosureFields(),
+        visible: false,
+        zOrder: 40,
+        dataServiceMethod: () => subscriberDataService.getClosures()
+    },
+
+    mstFiber: {
+        id: 'mst-fiber',
+        title: 'MST Fiber',
+        dataSource: 'mst_fiber',
+        renderer: createMSTFiberRenderer(),
+        popupTemplate: createMSTFiberPopup(),
+        fields: createMSTFiberFields(),
+        visible: false,
+        zOrder: 35,
+        dataServiceMethod: () => subscriberDataService.getMSTFiber()
     }
 
     // Additional layers can be added here as needed
