@@ -54,12 +54,21 @@ export class RainViewerService {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('❌ RainViewer API returned non-JSON response:', text.substring(0, 200));
+                throw new Error('RainViewer API returned non-JSON response');
+            }
+
             this.radarData = await response.json();
 
             return this.radarData;
         } catch (error) {
             console.error('❌ Failed to fetch RainViewer data:', error);
-            throw error;
+            // Don't throw - just return null to allow app to continue
+            return null;
         }
     }
 

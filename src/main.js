@@ -826,13 +826,15 @@ class HeaderSearch {
     // Add search result items
     this.currentResults.forEach((result, index) => {
       const item = document.createElement('calcite-autocomplete-item');
-      item.setAttribute('value', result.id);
+      item.setAttribute('value', String(result.id || index));
 
       // Use text-label for the customer name only
-      item.setAttribute('text-label', this.formatSearchResultLabel(result));
+      const label = this.formatSearchResultLabel(result);
+      item.setAttribute('text-label', label || 'Unknown');
 
       // Use description for all the details
-      item.setAttribute('description', this.formatEnhancedDescription(result));
+      const description = this.formatEnhancedDescription(result);
+      item.setAttribute('description', description || '');
 
       // Add data attribute for status-based styling
       item.setAttribute('data-status', result.status || 'unknown');
@@ -851,15 +853,18 @@ class HeaderSearch {
   }
 
   formatSearchResultLabel(result) {
-    return result.customer_name || 'Unnamed Customer';
+    // Ensure we always return a valid string
+    if (!result) return 'Unknown';
+    return String(result.customer_name || 'Unnamed Customer');
   }
 
   formatSearchResultDescription(result) {
+    if (!result) return '';
     const parts = [];
     if (result.customer_number) parts.push(`#${result.customer_number}`);
     if (result.address) parts.push(result.address);
     if (result.city) parts.push(result.city);
-    return parts.join(' • ');
+    return parts.join(' • ') || 'No details available';
   }
 
   formatFullAddress(result) {
@@ -873,22 +878,24 @@ class HeaderSearch {
   }
 
   formatEnhancedDescription(result) {
+    if (!result) return 'No details available';
+    
     const parts = [];
 
     if (result.customer_name) {
-      parts.push(result.customer_name);
+      parts.push(String(result.customer_name));
     }
 
     if (result.customer_number) {
-      parts.push(result.customer_number);
+      parts.push(String(result.customer_number));
     }
 
     const address = this.formatFullAddress(result);
-    if (address !== 'No address available') {
-      parts.push(address);
+    if (address && address !== 'No address available') {
+      parts.push(String(address));
     }
 
-    return parts.join(' • ');
+    return parts.join(' • ') || 'No details available';
   }
 
   handleSearchSelection(selectedItem) {
@@ -1211,9 +1218,9 @@ class HeaderSearch {
 
   showNoResults(searchTerm, targetInput) {
     const item = document.createElement('calcite-autocomplete-item');
-    item.setAttribute('value', '');
+    item.setAttribute('value', 'no-results');
     item.setAttribute('text-label', 'No results found');
-    item.setAttribute('description', `No subscribers found for "${searchTerm}"`);
+    item.setAttribute('description', `No subscribers found for "${searchTerm || ''}"` || 'No subscribers found');
     item.innerHTML = `<calcite-icon slot="icon" icon="information"></calcite-icon>`;
     item.disabled = true;
     targetInput.appendChild(item);
@@ -1221,7 +1228,7 @@ class HeaderSearch {
 
   showSearchError(targetInput) {
     const item = document.createElement('calcite-autocomplete-item');
-    item.setAttribute('value', '');
+    item.setAttribute('value', 'error');
     item.setAttribute('text-label', 'Search Error');
     item.setAttribute('description', 'Unable to perform search. Please try again.');
     item.innerHTML = `<calcite-icon slot="icon" icon="exclamation-mark-triangle"></calcite-icon>`;
@@ -1232,7 +1239,7 @@ class HeaderSearch {
   setSearchLoading(loading, targetInput) {
     if (loading) {
       const item = document.createElement('calcite-autocomplete-item');
-      item.setAttribute('value', '');
+      item.setAttribute('value', 'loading');
       item.setAttribute('text-label', 'Searching...');
       item.setAttribute('description', 'Please wait while we search for subscribers');
       item.innerHTML = `<calcite-icon slot="icon" icon="spinner"></calcite-icon>`;
