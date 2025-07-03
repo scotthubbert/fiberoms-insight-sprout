@@ -29,7 +29,7 @@ FiberOMS Insight PWA - A production SaaS application for ISP outage management w
 
 ## Technology Stack
 
-- **Frontend**: Vite + ArcGIS Maps SDK 4.32 + Calcite Components 3.2+
+- **Frontend**: Vite + ArcGIS Maps SDK 4.33 + Calcite Components 3.2+
 - **Database**: Supabase
 - **Maps**: ArcGIS JavaScript API (NPM bundled, NOT CDN)
 - **UI Framework**: Calcite Design System
