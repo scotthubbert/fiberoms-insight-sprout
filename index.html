@@ -63,7 +63,7 @@
           <calcite-action id="layers-action" text="Layers" icon="layer" active></calcite-action>
           <calcite-action id="power-outages-action" text="Power Outages" icon="flash"></calcite-action>
           <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
-          <calcite-action id="network-parent-action" text="Network Parent" icon="organization"></calcite-action>
+          <calcite-action id="network-parent-action" text="Network Infrastructure" icon="linkChart"></calcite-action>
           <calcite-action id="tools-action" text="Tools" icon="apps"></calcite-action>
         </calcite-action-bar>
         <calcite-panel heading="Layers" id="layers-content">
@@ -159,7 +159,7 @@
               style="margin-top: var(--calcite-spacing-sm);">Advanced Search</calcite-button>
           </calcite-block>
         </calcite-panel>
-        <calcite-panel heading="Network Parent" id="network-parent-content" hidden>
+        <calcite-panel heading="Network Infrastructure" id="network-parent-content" hidden>
           <calcite-block heading="Node Sites" collapsible>
             <calcite-label>
               <calcite-checkbox></calcite-checkbox>
@@ -281,7 +281,7 @@
           aria-label="Close"></calcite-button>
       </div>
       <div slot="content">
-        <calcite-block heading="Network Parent" expanded>
+        <calcite-block heading="Network Infrastructure" expanded>
           <calcite-list selection-mode="none">
             <calcite-list-item label="Node Sites" description="Network node locations" class="layer-toggle-item">
               <calcite-icon slot="content-start" icon="circle" style="color: var(--calcite-color-info);"></calcite-icon>
