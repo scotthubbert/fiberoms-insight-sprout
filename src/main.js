@@ -1621,10 +1621,14 @@ class Application {
     setTimeout(() => {
       if (this.services.mapController.view) {
         // Force a complete view refresh to ensure all layers are properly rendered
-        // Only GeoJSONLayer has a refresh method, not GraphicsLayer
+        // Only GeoJSONLayer has a refresh method, not GraphicsLayer or WebTileLayer
         this.services.mapController.view.map.layers.forEach(layer => {
-          if (layer.visible && layer.type === 'geojson' && typeof layer.refresh === 'function') {
-            layer.refresh();
+          if (layer.visible && typeof layer.refresh === 'function') {
+            try {
+              layer.refresh();
+            } catch (error) {
+              log.warn(`Failed to refresh layer ${layer.id}:`, error);
+            }
           }
         });
         log.info('🎯 Final map refresh completed for all visible layers');
