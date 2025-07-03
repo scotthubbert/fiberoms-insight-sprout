@@ -65,7 +65,7 @@ const createOnlineRenderer = () => ({
 // Clustering configuration for offline subscribers
 const createOfflineClusterConfig = () => ({
     type: 'cluster',
-    clusterRadius: '100px',
+    clusterRadius: '60px',
     popupTemplate: {
         title: 'Offline Subscribers Cluster',
         content: 'This cluster represents {cluster_count} offline subscribers in this area.',

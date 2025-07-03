@@ -33,7 +33,7 @@ export default defineConfig({
         ...['search', 'layer', 'apps', 'circle', 'polygon', 'line', 'ellipsis', 'rain',
           'exclamationMarkTriangle', 'flash', 'car', 'person', 'information', 'clock',
           'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x',
-          'users', 'linkChart', 'layers', 'triangle', 'organization',
+          'users', 'linkChart', 'layers', 'triangle', 'organization', 'utility-network', 'diamond', 'square',
           // Popup action icons (required for ArcGIS popup templates)
           'duplicate', 'map', 'pinTear', 'check',
           // ArcGIS popup widget icons (required by ArcGIS SDK)
@@ -133,6 +133,10 @@ export default defineConfig({
   ],
   server: {
     https: process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS,
+    host: true
+  },
+  preview: {
+    https: false,
     host: true
   },
   build: {
