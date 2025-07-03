@@ -33,7 +33,11 @@ export default defineConfig({
         ...['search', 'layer', 'apps', 'circle', 'polygon', 'line', 'ellipsis', 'rain',
           'exclamationMarkTriangle', 'flash', 'car', 'person', 'information', 'clock',
           'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x',
-          'users', 'linkChart', 'layers',
+          'users', 'linkChart', 'layers', 'triangle', 'organization',
+          // Popup action icons (required for ArcGIS popup templates)
+          'duplicate', 'map', 'pinTear', 'check',
+          // ArcGIS popup widget icons (required by ArcGIS SDK)
+          'dockRight', 'magnifyingGlassPlus', 'tables', 'minimize',
           // ArcGIS Map widget icons (essential for map functionality)
           'zoomOutFixed', 'zoomInFixed', 'compassNorthCircle', 'home', 'chevronsRight',
           'basemap', 'pause', 'moon', 'chevronUp', 'chevronDown', 'chevronLeft', 'chevronRight'
