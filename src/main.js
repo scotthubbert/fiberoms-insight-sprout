@@ -394,6 +394,7 @@ class MobileTabBar {
           window.app.services.headerSearch.updateRecentSearchesUI();
         }
       });
+      
     }
   }
 
@@ -670,6 +671,7 @@ class HeaderSearch {
     this.setupEventListeners();
   }
 
+
   setupEventListeners() {
     // Header search (autocomplete)
     if (this.searchInput) {
@@ -760,6 +762,7 @@ class HeaderSearch {
         }
       });
     }
+
   }
 
   handleSearchInput(searchTerm, source = 'header') {
