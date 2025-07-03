@@ -28,7 +28,7 @@ import '@arcgis/map-components/dist/components/arcgis-expand';
 import '@arcgis/map-components/dist/components/arcgis-track';
 import '@arcgis/map-components/dist/components/arcgis-fullscreen';
 
-// Import Calcite Components (verified against CLAUDE.md safe list)
+// Import Calcite Components
 import '@esri/calcite-components/dist/components/calcite-button';
 import '@esri/calcite-components/dist/components/calcite-shell';
 import '@esri/calcite-components/dist/components/calcite-shell-panel';
@@ -50,7 +50,6 @@ import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-dialog';
 import '@esri/calcite-components/dist/components/calcite-chip';
 import '@esri/calcite-components/dist/components/calcite-card';
-
 import '@esri/calcite-components/dist/components/calcite-autocomplete';
 import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';

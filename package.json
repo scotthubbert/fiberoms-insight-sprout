@@ -41,7 +41,7 @@
   "dependencies": {
     "@arcgis/core": "^4.31.2",
     "@arcgis/map-components": "^4.31.2",
-    "@esri/calcite-components": "^2.13.2",
+    "@esri/calcite-components": "^3.2.1",
     "@supabase/supabase-js": "^2.45.4"
   }
 }
