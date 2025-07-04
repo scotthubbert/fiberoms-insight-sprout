@@ -19,7 +19,7 @@ export class LayerManager {
         this.zOrder = {
             rainViewerRadar: -10,
             'fsa-boundaries': 5, // Below all point layers
-            onlineSubscribers: 10,
+            'online-subscribers': 10,  // Fixed: was onlineSubscribers without hyphen
             'main-line-old': 28, // Below current main line
             'main-line-fiber': 30,
             'mst-fiber': 35,
@@ -90,7 +90,7 @@ export class LayerManager {
             featureReduction: layerConfig.featureReduction,
             fields: layerConfig.fields, // Explicit field definitions to prevent inference warnings
             listMode: layerConfig.visible ? 'show' : 'hide',
-            visible: layerConfig.visible
+            visible: layerConfig.visible !== undefined ? layerConfig.visible : true
         });
 
         this.layers.set(layerConfig.id, layer);
@@ -294,10 +294,131 @@ export class LayerManager {
     }
 
     // ISP: Focused interface for layer updates
-    // Note: Layer updates disabled for Phase 1 - will implement in Phase 2
-    async updateLayerData(layerId) {
-        // Layer update skipping for Phase 1
-        return true; // Return true to avoid error logging
+    async updateLayerData(layerId, newData) {
+        const layer = this.layers.get(layerId);
+        const config = this.layerConfigs.get(layerId);
+        
+        if (!layer || !config) {
+            console.warn(`Layer ${layerId} not found for update`);
+            return false;
+        }
+
+        try {
+            console.log(`🔄 Updating layer: ${layerId}`);
+            
+            // Special handling for GraphicsLayer (power outages)
+            if (layer.type === 'graphics') {
+                return this.updateGraphicsLayer(layer, config, newData);
+            }
+            
+            // For GeoJSONLayer, we need to recreate it with new data
+            if (layer.type === 'geojson') {
+                return this.updateGeoJSONLayer(layerId, config, newData);
+            }
+            
+            return true;
+        } catch (error) {
+            console.error(`Failed to update layer ${layerId}:`, error);
+            return false;
+        }
+    }
+
+    // Update GraphicsLayer by replacing graphics
+    updateGraphicsLayer(layer, config, newData) {
+        // Clear existing graphics
+        layer.removeAll();
+        
+        // Re-create graphics with new data
+        if (config.id.includes('outages')) {
+            // Recreate power outage graphics
+            const tempConfig = {
+                ...config,
+                dataSource: newData
+            };
+            this.createPowerOutageLayer(tempConfig, newData).then(newLayer => {
+                // Copy graphics from new layer to existing layer
+                if (newLayer && newLayer.graphics) {
+                    layer.addMany(newLayer.graphics.toArray());
+                }
+            });
+        }
+        
+        console.log(`✅ Updated ${layer.graphics.length} graphics in ${config.id}`);
+        return true;
+    }
+
+    // Update GeoJSONLayer by recreating it
+    async updateGeoJSONLayer(layerId, config, newData) {
+        const map = this.getMapForLayer(layerId);
+        if (!map) {
+            console.warn(`No map found for layer ${layerId}`);
+            return false;
+        }
+
+        // Get old layer to preserve visibility state
+        const oldLayer = this.layers.get(layerId);
+        let wasVisible = false;
+        
+        if (oldLayer) {
+            // Preserve the visibility state
+            wasVisible = oldLayer.visible;
+            
+            // Remove old layer
+            map.remove(oldLayer);
+            
+            // Clean up blob URL
+            const blobUrl = this.blobUrls.get(layerId);
+            if (blobUrl) {
+                URL.revokeObjectURL(blobUrl);
+                this.blobUrls.delete(layerId);
+            }
+        }
+
+        // Create new layer with updated data and preserved visibility
+        const newConfig = {
+            ...config,
+            dataSource: newData,
+            visible: wasVisible  // Preserve visibility state
+        };
+        
+        const newLayer = await this.createGeoJSONLayer(newConfig);
+        
+        if (newLayer) {
+            // Add to map at correct position first
+            const zOrder = this.getZOrder(layerId);
+            map.add(newLayer, zOrder);
+            
+            // Set visibility after a small delay to ensure layer is properly initialized
+            setTimeout(() => {
+                newLayer.visible = wasVisible;
+                console.log(`✅ Set visibility for ${layerId} to ${wasVisible}`);
+                
+                // Force refresh if visible
+                if (wasVisible && typeof newLayer.refresh === 'function') {
+                    newLayer.refresh();
+                }
+            }, 100);
+            
+            console.log(`✅ Recreated layer ${layerId} with ${newData.features?.length || 0} features, visible: ${wasVisible}`);
+            return true;
+        }
+        
+        return false;
+    }
+
+    // Helper to get map reference for a layer
+    getMapForLayer(layerId) {
+        const layer = this.layers.get(layerId);
+        if (layer && layer.parent) {
+            return layer.parent;
+        }
+        
+        // Fallback to window.mapView if available
+        if (typeof window !== 'undefined' && window.mapView && window.mapView.map) {
+            return window.mapView.map;
+        }
+        
+        return null;
     }
 
     getLayer(layerId) {

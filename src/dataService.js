@@ -1394,4 +1394,107 @@ export class SubscriberDataService {
 }
 
 // Create singleton instance
-export const subscriberDataService = new SubscriberDataService() 
+export const subscriberDataService = new SubscriberDataService()
+
+// Polling manager for real-time updates
+export class PollingManager {
+    constructor(dataService) {
+        this.dataService = dataService
+        this.pollingIntervals = new Map()
+        this.updateCallbacks = new Map()
+        this.POLLING_INTERVAL = 5 * 60 * 1000 // 5 minutes
+    }
+
+    // Start polling for a specific data type
+    startPolling(dataType, callback, interval = this.POLLING_INTERVAL) {
+        // Stop any existing polling for this data type
+        this.stopPolling(dataType)
+
+        log.info(`🔄 Starting polling for ${dataType} every ${interval / 1000} seconds`)
+
+        // Store the callback
+        this.updateCallbacks.set(dataType, callback)
+
+        // Perform immediate update
+        this.performUpdate(dataType)
+
+        // Set up interval for periodic updates
+        const intervalId = setInterval(() => {
+            this.performUpdate(dataType)
+        }, interval)
+
+        this.pollingIntervals.set(dataType, intervalId)
+    }
+
+    // Stop polling for a specific data type
+    stopPolling(dataType) {
+        const intervalId = this.pollingIntervals.get(dataType)
+        if (intervalId) {
+            clearInterval(intervalId)
+            this.pollingIntervals.delete(dataType)
+            this.updateCallbacks.delete(dataType)
+            log.info(`⏹️ Stopped polling for ${dataType}`)
+        }
+    }
+
+    // Perform update for a specific data type
+    async performUpdate(dataType) {
+        const callback = this.updateCallbacks.get(dataType)
+        if (!callback) return
+
+        try {
+            log.info(`🔄 Fetching updated data for ${dataType}`)
+            
+            let data
+            switch (dataType) {
+                case 'offline-subscribers':
+                    data = await this.dataService.getOfflineSubscribers()
+                    break
+                case 'online-subscribers':
+                    data = await this.dataService.getOnlineSubscribers()
+                    break
+                case 'subscribers':
+                    // Fetch both online and offline
+                    const [offline, online] = await Promise.all([
+                        this.dataService.getOfflineSubscribers(),
+                        this.dataService.getOnlineSubscribers()
+                    ])
+                    data = { offline, online }
+                    break
+                default:
+                    log.warn(`Unknown data type for polling: ${dataType}`)
+                    return
+            }
+
+            // Call the update callback with the new data
+            if (data) {
+                callback(data)
+            }
+        } catch (error) {
+            log.error(`Failed to update ${dataType}:`, error)
+        }
+    }
+
+    // Stop all polling
+    stopAll() {
+        this.pollingIntervals.forEach((intervalId, dataType) => {
+            clearInterval(intervalId)
+            log.info(`⏹️ Stopped polling for ${dataType}`)
+        })
+        this.pollingIntervals.clear()
+        this.updateCallbacks.clear()
+    }
+
+    // Check if polling is active for a data type
+    isPolling(dataType) {
+        return this.pollingIntervals.has(dataType)
+    }
+
+    // Get all active polling types
+    getActivePolling() {
+        return Array.from(this.pollingIntervals.keys())
+    }
+}
+
+// Create singleton polling manager
+export const pollingManager = new PollingManager(subscriberDataService) 

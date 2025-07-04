@@ -391,6 +391,13 @@ calcite-dialog.mobile-only [slot="content"] {
   }
 }
 
+/* Block actions (refresh button, etc) */
+.block-actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--calcite-color-border-3);
+}
+
 /* Ensure mobile toolbar is always visible on mobile */
 @media (max-width: 768px) {
   #mobile-tab-bar {

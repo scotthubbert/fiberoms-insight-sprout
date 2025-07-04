@@ -11,7 +11,7 @@ import { MapController } from './services/MapController.js';
 import { LayerManager } from './services/LayerManager.js';
 import { PopupManager } from './services/PopupManager.js';
 import { RainViewerService } from './services/RainViewerService.js';
-import { subscriberDataService } from './dataService.js';
+import { subscriberDataService, pollingManager } from './dataService.js';
 import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConfigs.js';
 
 // Import components
@@ -1574,13 +1574,15 @@ class Application {
     this.services.themeManager = new ThemeManager();
     this.services.layerManager = new LayerManager(subscriberDataService);
     this.services.mapController = new MapController(this.services.layerManager, this.services.themeManager);
-    this.services.pollingService = new PollingService(this.services.layerManager);
     this.services.popupManager = new PopupManager();
     this.services.layerPanel = new LayerPanel();
     this.services.mobileTabBar = new MobileTabBar();
     this.services.dashboard = new DashboardManager();
     this.services.headerSearch = new HeaderSearch();
     this.services.rainViewerService = new RainViewerService();
+    
+    // Store polling manager reference
+    this.pollingManager = pollingManager;
 
     // Store theme manager globally for component access
     window.themeManager = this.services.themeManager;
@@ -1654,8 +1656,8 @@ class Application {
       }
     }, 1500);
 
-    // Polling disabled for Phase 1
-    // this.services.pollingService.startPolling('offlineSubscribers');
+    // Start polling for subscriber data updates
+    this.startSubscriberPolling();
   }
 
   async initializeSubscriberLayers() {
@@ -2030,6 +2032,64 @@ class Application {
 
       log.info(`🌧️ Mobile radar toggled: ${newVisibility}`);
     }
+  }
+
+  // Start polling for subscriber data updates
+  startSubscriberPolling() {
+    log.info('🔄 Starting subscriber data polling');
+    
+    // Polling callback for subscriber updates
+    const handleSubscriberUpdate = async (data) => {
+      try {
+        if (data.offline && data.online) {
+          // Handle both offline and online updates
+          const offlineLayer = this.services.layerManager.getLayer('offline-subscribers');
+          const onlineLayer = this.services.layerManager.getLayer('online-subscribers');
+          
+          if (offlineLayer && data.offline) {
+            await this.services.layerManager.updateLayerData('offline-subscribers', data.offline);
+            log.info(`📊 Updated offline subscribers: ${data.offline.count} records`);
+          }
+          
+          if (onlineLayer && data.online) {
+            await this.services.layerManager.updateLayerData('online-subscribers', data.online);
+            log.info(`📊 Updated online subscribers: ${data.online.count} records`);
+          }
+          
+          // Update dashboard counts
+          await this.services.dashboard.updateDashboard();
+        }
+      } catch (error) {
+        log.error('Failed to handle subscriber update:', error);
+      }
+    };
+    
+    // Start polling for all subscribers (offline and online)
+    // Default interval is 5 minutes (300000ms)
+    this.pollingManager.startPolling('subscribers', handleSubscriberUpdate);
+    
+    // Also set up manual refresh button if it exists
+    const refreshButton = document.getElementById('refresh-data');
+    if (refreshButton) {
+      refreshButton.addEventListener('click', async () => {
+        log.info('🔄 Manual data refresh triggered');
+        refreshButton.setAttribute('loading', '');
+        
+        try {
+          // Clear cache and perform immediate update
+          subscriberDataService.clearCache();
+          await this.pollingManager.performUpdate('subscribers');
+        } finally {
+          refreshButton.removeAttribute('loading');
+        }
+      });
+    }
+  }
+
+  // Stop polling (for cleanup)
+  stopPolling() {
+    log.info('⏹️ Stopping all polling');
+    this.pollingManager.stopAll();
   }
 }
 

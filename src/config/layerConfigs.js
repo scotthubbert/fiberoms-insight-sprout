@@ -1054,7 +1054,7 @@ export const layerConfigs = {
         fields: subscriberFields,
         // Individual points (no clustering)
         visible: false,
-        zOrder: 0,
+        zOrder: 10,  // Changed from 0 to ensure it's above basemap
         dataServiceMethod: () => subscriberDataService.getOnlineSubscribers()
     },
 
