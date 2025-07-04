@@ -29,7 +29,7 @@ export default defineConfig({
       targets: [
         // Copy only the specific icons we actually use
         ...['search', 'layer', 'apps', 'circle', 'polygon', 'line', 'ellipsis', 'rain',
-          'exclamationMarkTriangle', 'flash', 'car', 'person', 'information', 'clock',
+          'exclamationMarkTriangle', 'flash', 'camera-flash-on', 'car', 'person', 'information', 'clock',
           'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x',
           'users', 'linkChart', 'layers', 'triangle', 'organization', 'utilityNetwork', 'utility-network', 'diamond', 'square',
           // Popup action icons
@@ -98,6 +98,11 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        // Add revision info to ensure cache busting
+        dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
+        // Navigation fallback for SPA
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/(api|storage)\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/js\.arcgis\.com\/.*/i,
@@ -152,7 +157,17 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [],
+      output: {
+        // Ensure consistent hashing for better caching
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
     },
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
+    // Generate manifest for tracking file versions
+    manifest: true,
+    // Ensure CSS is extracted with hash
+    cssCodeSplit: true
   }
 });

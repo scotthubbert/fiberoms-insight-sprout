@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "VITE_APP_VERSION=$(date +%s) vite build",
     "preview": "vite preview"
   },
   "repository": {

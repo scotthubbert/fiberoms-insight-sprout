@@ -17,6 +17,7 @@ import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConf
 // Import components
 import './components/PowerOutageStats.js';
 import { setupCalciteIconFallback } from './utils/calciteIconFallback.js';
+import { initVersionCheck } from './utils/versionCheck.js';
 
 // Import ArcGIS Map Components
 import "@arcgis/map-components/dist/components/arcgis-search";
@@ -2221,24 +2222,42 @@ class PWAInstaller {
   }
 
   showUpdateNotification() {
+    // Check if toast already exists
+    if (document.querySelector('#update-toast')) {
+      return;
+    }
+    
     // Create a toast notification for updates
     const toast = document.createElement('calcite-toast');
+    toast.id = 'update-toast';
     toast.setAttribute('open', '');
     toast.setAttribute('kind', 'info');
     toast.setAttribute('placement', 'bottom');
+    
+    // Create button programmatically to handle click properly
+    const refreshButton = document.createElement('calcite-button');
+    refreshButton.slot = 'action';
+    refreshButton.appearance = 'outline';
+    refreshButton.textContent = 'Refresh Now';
+    refreshButton.onclick = () => {
+      // Remove toast immediately
+      toast.remove();
+      // Then reload
+      window.location.reload(true);
+    };
+    
     toast.innerHTML = `
       <div slot="title">Update Available</div>
       <div slot="message">A new version of the app is available. Refresh to get the latest features.</div>
-      <calcite-button slot="action" appearance="outline" onclick="window.location.reload()">
-        Refresh Now
-      </calcite-button>
     `;
+    toast.appendChild(refreshButton);
+    
     document.body.appendChild(toast);
 
     // Auto-remove toast after 10 seconds
     setTimeout(() => {
       if (document.body.contains(toast)) {
-        document.body.removeChild(toast);
+        toast.remove();
       }
     }, 10000);
   }
@@ -2268,6 +2287,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize PWA installer
   const pwaInstaller = new PWAInstaller();
   pwaInstaller.init();
+  
+  // Initialize version checking for cache busting
+  initVersionCheck();
 
   // Add developer cache clear shortcut (Ctrl+Shift+R or Cmd+Shift+R)
   document.addEventListener('keydown', async (e) => {
