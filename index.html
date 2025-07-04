@@ -219,6 +219,8 @@
           icon-start="link-chart"></calcite-segmented-control-item>
         <calcite-segmented-control-item id="tab-vehicles" value="vehicles"
           icon-start="car"></calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-power" value="power"
+          icon-start="flash"></calcite-segmented-control-item>
         <calcite-segmented-control-item id="tab-other" value="other"
           icon-start="layers"></calcite-segmented-control-item>
       </calcite-segmented-control>
@@ -385,6 +387,18 @@
       </div>
     </calcite-dialog>
 
+    <calcite-dialog id="mobile-power-sheet" class="mobile-only" width-scale="l" scale="l">
+      <div slot="header" class="dialog-header">
+        <span class="dialog-title">Power Outages</span>
+        <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
+          aria-label="Close"></calcite-button>
+      </div>
+      <div slot="content">
+        <!-- Power Outage Stats Component -->
+        <power-outage-stats id="mobile-power-stats"></power-outage-stats>
+      </div>
+    </calcite-dialog>
+
     <calcite-dialog id="mobile-other-sheet" class="mobile-only" width-scale="l" scale="l">
       <div slot="header" class="dialog-header">
         <span class="dialog-title">Other Layers</span>
@@ -402,12 +416,6 @@
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Power Outages" expanded>
-          <div style="padding: 16px; text-align: center; color: var(--calcite-color-text-2);">
-            <calcite-icon icon="flash" scale="l" style="margin-bottom: 8px;"></calcite-icon>
-            <p style="margin: 0;">Power outage controls have moved to the dedicated Power Outages panel for better management and real-time statistics.</p>
-          </div>
-        </calcite-block>
 
       </div>
     </calcite-dialog>

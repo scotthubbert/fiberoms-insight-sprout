@@ -1482,6 +1482,18 @@ calcite-autocomplete-item:focus {
   margin-bottom: 0;
 }
 
+/* Mobile Power Outages Panel Styling */
+#mobile-power-stats {
+  background: var(--calcite-color-foreground-1);
+  height: 100%;
+  overflow-y: auto;
+}
+
+#mobile-power-sheet [slot="content"] {
+  background: var(--calcite-color-foreground-1);
+  padding: 0;
+}
+
 /* Notice container styling */
 #notice-container {
   position: fixed;
