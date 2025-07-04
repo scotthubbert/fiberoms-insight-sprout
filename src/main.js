@@ -2054,10 +2054,18 @@ class Application {
   startSubscriberPolling() {
     log.info('🔄 Starting subscriber data polling');
     
+    // Store previous counts for comparison
+    let previousOfflineCount = null;
+    let previousOnlineCount = null;
+    
     // Polling callback for subscriber updates
     const handleSubscriberUpdate = async (data) => {
       try {
         if (data.offline && data.online) {
+          // Get current counts
+          const currentOfflineCount = data.offline.count || 0;
+          const currentOnlineCount = data.online.count || 0;
+          
           // Handle both offline and online updates
           const offlineLayer = this.services.layerManager.getLayer('offline-subscribers');
           const onlineLayer = this.services.layerManager.getLayer('online-subscribers');
@@ -2074,6 +2082,20 @@ class Application {
           
           // Update dashboard counts
           await this.services.dashboard.updateDashboard();
+          
+          // Show toast if counts have changed (and not first load)
+          if (previousOfflineCount !== null && previousOnlineCount !== null) {
+            const offlineChange = currentOfflineCount - previousOfflineCount;
+            const onlineChange = currentOnlineCount - previousOnlineCount;
+            
+            if (offlineChange !== 0 || onlineChange !== 0) {
+              this.showSubscriberUpdateToast(previousOfflineCount, currentOfflineCount, previousOnlineCount, currentOnlineCount);
+            }
+          }
+          
+          // Update stored counts
+          previousOfflineCount = currentOfflineCount;
+          previousOnlineCount = currentOnlineCount;
         }
       } catch (error) {
         log.error('Failed to handle subscriber update:', error);
@@ -2098,6 +2120,30 @@ class Application {
         } finally {
           refreshButton.removeAttribute('loading');
         }
+      });
+    }
+    
+    // Test button for subscriber updates in development
+    const testSubscriberButton = document.getElementById('test-subscriber-update');
+    if (testSubscriberButton && isDevelopment) {
+      // Show test button in development
+      testSubscriberButton.style.display = 'block';
+      
+      testSubscriberButton.addEventListener('click', () => {
+        log.info('🧪 Testing subscriber update toast');
+        
+        // Simulate subscriber count changes
+        const prevOffline = Math.floor(Math.random() * 300) + 200; // 200-500
+        const currOffline = prevOffline + Math.floor(Math.random() * 20) - 10; // -10 to +10 change
+        const prevOnline = Math.floor(Math.random() * 20000) + 20000; // 20000-40000
+        const currOnline = prevOnline - (currOffline - prevOffline); // Inverse relationship
+        
+        this.showSubscriberUpdateToast(
+          prevOffline, 
+          Math.max(0, currOffline), 
+          prevOnline, 
+          Math.max(0, currOnline)
+        );
       });
     }
   }
@@ -2154,8 +2200,98 @@ class Application {
         }
       });
     }
+    
+    // Test button for development mode
+    const testButton = document.getElementById('test-outage-update');
+    if (testButton && isDevelopment) {
+      // Show test button in development
+      testButton.style.display = 'block';
+      
+      testButton.addEventListener('click', () => {
+        log.info('🧪 Testing outage update toast');
+        
+        // Get the PowerOutageStats component
+        const powerOutageStats = document.querySelector('power-outage-stats');
+        if (powerOutageStats) {
+          // Simulate an update with random changes
+          const prevApco = Math.floor(Math.random() * 10);
+          const currApco = prevApco + Math.floor(Math.random() * 5) - 2; // -2 to +2 change
+          const prevTombigbee = Math.floor(Math.random() * 10);
+          const currTombigbee = prevTombigbee + Math.floor(Math.random() * 5) - 2; // -2 to +2 change
+          
+          powerOutageStats.showUpdateToast(prevApco, Math.max(0, currApco), prevTombigbee, Math.max(0, currTombigbee));
+        }
+      });
+    }
   }
 
+  // Show toast notification for subscriber updates
+  showSubscriberUpdateToast(prevOffline, currOffline, prevOnline, currOnline) {
+    // Remove any existing subscriber toast
+    const existingToast = document.querySelector('#subscriber-update-toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+    
+    // Calculate changes
+    const offlineChange = currOffline - prevOffline;
+    const onlineChange = currOnline - prevOnline;
+    const totalPrevious = prevOffline + prevOnline;
+    const totalCurrent = currOffline + currOnline;
+    const totalChange = totalCurrent - totalPrevious;
+    
+    let message = '';
+    const changes = [];
+    
+    // Build message based on changes
+    if (offlineChange !== 0) {
+      const changeText = offlineChange > 0 ? `+${offlineChange}` : `${offlineChange}`;
+      changes.push(`Offline: ${changeText}`);
+    }
+    
+    if (onlineChange !== 0) {
+      const changeText = onlineChange > 0 ? `+${onlineChange}` : `${onlineChange}`;
+      changes.push(`Online: ${changeText}`);
+    }
+    
+    if (totalChange !== 0) {
+      const totalText = totalChange > 0 ? `+${totalChange}` : `${totalChange}`;
+      changes.push(`Total: ${totalText}`);
+    }
+    
+    message = changes.join(', ');
+    
+    // Determine toast type based on changes
+    let kind = 'info';
+    if (offlineChange > 0) {
+      kind = 'warning'; // More offline is concerning
+    } else if (offlineChange < 0) {
+      kind = 'success'; // Less offline is good
+    }
+    
+    // Create toast
+    const toast = document.createElement('calcite-toast');
+    toast.id = 'subscriber-update-toast';
+    toast.setAttribute('open', '');
+    toast.setAttribute('kind', kind);
+    toast.setAttribute('placement', 'top');
+    toast.setAttribute('duration', 'medium');
+    
+    toast.innerHTML = `
+      <div slot="title">Subscriber Update</div>
+      <div slot="message">${message}</div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        toast.remove();
+      }
+    }, 5000);
+  }
+  
   // Stop polling (for cleanup)
   stopPolling() {
     log.info('⏹️ Stopping all polling');

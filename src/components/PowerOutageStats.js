@@ -43,6 +43,10 @@ export class PowerOutageStatsComponent extends HTMLElement {
 
     async updateStats() {
         try {
+            // Store previous counts for comparison
+            const previousApcoCount = this.outagesData.apco.length;
+            const previousTombigbeeCount = this.outagesData.tombigbee.length;
+            
             // Fetch current outage data
             const [apcoData, tombigbeeData] = await Promise.all([
                 subscriberDataService.getApcoOutages(),
@@ -51,6 +55,14 @@ export class PowerOutageStatsComponent extends HTMLElement {
 
             this.outagesData.apco = apcoData.data || [];
             this.outagesData.tombigbee = tombigbeeData.data || [];
+
+            // Check if counts have changed
+            const currentApcoCount = this.outagesData.apco.length;
+            const currentTombigbeeCount = this.outagesData.tombigbee.length;
+            
+            if (previousApcoCount !== currentApcoCount || previousTombigbeeCount !== currentTombigbeeCount) {
+                this.showUpdateToast(previousApcoCount, currentApcoCount, previousTombigbeeCount, currentTombigbeeCount);
+            }
 
             this.renderStats();
         } catch (error) {
@@ -380,6 +392,60 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }
     }
 
+    showUpdateToast(prevApco, currApco, prevTombigbee, currTombigbee) {
+        // Remove any existing toast
+        const existingToast = document.querySelector('#outage-update-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Determine what changed
+        const apcoChange = currApco - prevApco;
+        const tombigbeeChange = currTombigbee - prevTombigbee;
+        
+        let message = 'Power outage data updated: ';
+        const changes = [];
+        
+        if (apcoChange !== 0) {
+            const changeText = apcoChange > 0 ? `+${apcoChange}` : `${apcoChange}`;
+            changes.push(`APCo ${changeText}`);
+        }
+        
+        if (tombigbeeChange !== 0) {
+            const changeText = tombigbeeChange > 0 ? `+${tombigbeeChange}` : `${tombigbeeChange}`;
+            changes.push(`Tombigbee ${changeText}`);
+        }
+        
+        if (changes.length === 0) {
+            // No actual count changes, just data refresh
+            message = 'Power outage data refreshed';
+        } else {
+            message += changes.join(', ');
+        }
+        
+        // Create toast
+        const toast = document.createElement('calcite-toast');
+        toast.id = 'outage-update-toast';
+        toast.setAttribute('open', '');
+        toast.setAttribute('kind', apcoChange > 0 || tombigbeeChange > 0 ? 'warning' : 'success');
+        toast.setAttribute('placement', 'top');
+        toast.setAttribute('duration', 'medium');
+        
+        toast.innerHTML = `
+            <div slot="title">Outage Update</div>
+            <div slot="message">${message}</div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+    
     renderError() {
         const statsContent = this.querySelector('.stats-content');
         if (statsContent) {

@@ -29,7 +29,7 @@ export default defineConfig({
       targets: [
         // Copy only the specific icons we actually use
         ...['search', 'layer', 'apps', 'circle', 'polygon', 'line', 'ellipsis', 'rain',
-          'exclamationMarkTriangle', 'flash', 'camera-flash-on', 'car', 'person', 'information', 'clock',
+          'exclamationMarkTriangle', 'flash', 'car', 'person', 'information', 'clock',
           'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x',
           'users', 'linkChart', 'layers', 'triangle', 'organization', 'utilityNetwork', 'utility-network', 'diamond', 'square',
           // Popup action icons
@@ -49,12 +49,6 @@ export default defineConfig({
             noErrorOnMissing: true
           }));
         }),
-        // Specifically copy camera-flash-on icon files if they exist
-        {
-          src: 'node_modules/@esri/calcite-components/dist/calcite/assets/icon/camera-flash-on*.json',
-          dest: 'calcite/assets/icon',
-          noErrorOnMissing: true
-        },
         // Copy minimal t9n files
         {
           src: 'node_modules/@esri/calcite-components/dist/calcite/assets/t9n/en.json',

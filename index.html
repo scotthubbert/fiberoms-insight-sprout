@@ -62,7 +62,7 @@
         <calcite-action-bar slot="action-bar">
           <calcite-action id="layers-action" text="Layers" icon="layer" active></calcite-action>
           <calcite-action id="osp-action" text="OSP (Outside Plant)" icon="utility-network"></calcite-action>
-          <calcite-action id="power-outages-action" text="Power Outages" icon="camera-flash-on"></calcite-action>
+          <calcite-action id="power-outages-action" text="Power Outages" icon="flash"></calcite-action>
           <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
           <calcite-action id="network-parent-action" text="Network Infrastructure" icon="linkChart"></calcite-action>
           <calcite-action id="tools-action" text="Tools" icon="apps"></calcite-action>
@@ -80,6 +80,10 @@
             <div class="block-actions">
               <calcite-button id="refresh-data" icon-start="refresh" scale="s" width="full">
                 Refresh Data
+              </calcite-button>
+              <!-- Test button for development -->
+              <calcite-button id="test-subscriber-update" icon-start="information" scale="s" width="full" appearance="outline" style="margin-top: 8px; display: none;">
+                Test Subscriber Toast
               </calcite-button>
             </div>
           </calcite-block>
@@ -136,7 +140,7 @@
         </calcite-panel>
         <calcite-panel heading="Power Outages" id="power-outages-content" hidden>
           <calcite-block heading="Power Outages" collapsible expanded>
-            <calcite-icon slot="icon" icon="camera-flash-on"></calcite-icon>
+            <calcite-icon slot="icon" icon="flash"></calcite-icon>
 
             <!-- Power Outage Statistics -->
             <power-outage-stats id="power-outage-stats"></power-outage-stats>
@@ -144,6 +148,10 @@
             <div class="block-actions">
               <calcite-button id="refresh-power-outages" icon-start="refresh" scale="s" width="full">
                 Refresh Power Outages
+              </calcite-button>
+              <!-- Test button for development -->
+              <calcite-button id="test-outage-update" icon-start="information" scale="s" width="full" appearance="outline" style="margin-top: 8px; display: none;">
+                Test Update Toast
               </calcite-button>
             </div>
           </calcite-block>
@@ -359,7 +367,7 @@
       <div slot="content">
         <calcite-list selection-mode="none">
           <calcite-list-item label="Electric Vehicles" description="Track electric fleet" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="camera-flash-on" style="color: var(--calcite-color-info);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="flash" style="color: var(--calcite-color-info);"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
@@ -396,7 +404,7 @@
 
         <calcite-block heading="Power Outages" expanded>
           <div style="padding: 16px; text-align: center; color: var(--calcite-color-text-2);">
-            <calcite-icon icon="camera-flash-on" scale="l" style="margin-bottom: 8px;"></calcite-icon>
+            <calcite-icon icon="flash" scale="l" style="margin-bottom: 8px;"></calcite-icon>
             <p style="margin: 0;">Power outage controls have moved to the dedicated Power Outages panel for better management and real-time statistics.</p>
           </div>
         </calcite-block>
