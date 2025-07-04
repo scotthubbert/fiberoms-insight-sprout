@@ -27,28 +27,33 @@ export default defineConfig({
     // Copy essential assets for production build
     viteStaticCopy({
       targets: [
-        // Copy only the specific icons we actually use (much more efficient than copying 3,945 icons)
-        // Fixed: Use 'spinner' instead of 'loading' and only copy sizes that exist
-        // Added: Essential ArcGIS Map widget icons for zoom, compass, basemap picker, etc.
+        // Copy only the specific icons we actually use
         ...['search', 'layer', 'apps', 'circle', 'polygon', 'line', 'ellipsis', 'rain',
           'exclamationMarkTriangle', 'flash', 'car', 'person', 'information', 'clock',
           'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x',
-          'users', 'linkChart', 'layers', 'triangle', 'organization', 'utility-network', 'diamond', 'square',
-          // Popup action icons (required for ArcGIS popup templates)
+          'users', 'linkChart', 'layers', 'triangle', 'organization', 'utilityNetwork', 'utility-network', 'diamond', 'square',
+          // Popup action icons
           'duplicate', 'map', 'pinTear', 'check',
-          // ArcGIS popup widget icons (required by ArcGIS SDK)
+          // ArcGIS popup widget icons
           'dockRight', 'magnifyingGlassPlus', 'tables', 'minimize',
-          // ArcGIS Map widget icons (essential for map functionality)
+          // ArcGIS Map widget icons
           'zoomOutFixed', 'zoomInFixed', 'compassNorthCircle', 'home', 'chevronsRight',
-          'basemap', 'pause', 'moon', 'chevronUp', 'chevronDown', 'chevronLeft', 'chevronRight'
+          'basemap', 'pause', 'moon', 'chevronUp', 'chevronDown', 'chevronLeft', 'chevronRight',
+          // Additional icons for list items and UI elements
+          'close', 'checkCircle', 'xCircle', 'gear', 'loading', 'chevron-right',
+          'chevron-left', 'chevron-up', 'chevron-down', 'link-chart', 'link', 'warning'
         ].flatMap(iconName => {
           return [16, 24, 32].map(size => ({
             src: `node_modules/@esri/calcite-components/dist/calcite/assets/icon/${iconName}${size}.json`,
             dest: 'calcite/assets/icon',
-            // Don't fail if the icon doesn't exist in this size
             noErrorOnMissing: true
           }));
         }),
+        // Copy minimal t9n files
+        {
+          src: 'node_modules/@esri/calcite-components/dist/calcite/assets/t9n/en.json',
+          dest: 'calcite/assets/t9n'
+        },
         // Copy ArcGIS theme CSS files for proper theming
         {
           src: 'node_modules/@arcgis/core/assets/esri/themes/light/main.css',

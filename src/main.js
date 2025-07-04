@@ -16,6 +16,7 @@ import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConf
 
 // Import components
 import './components/PowerOutageStats.js';
+import { setupCalciteIconFallback } from './utils/calciteIconFallback.js';
 
 // Import ArcGIS Map Components
 import "@arcgis/map-components/dist/components/arcgis-search";
@@ -61,7 +62,12 @@ const isProduction = import.meta.env.PROD;
 const assetsPath = isProduction
   ? window.location.origin + '/calcite/assets'
   : '/node_modules/@esri/calcite-components/dist/calcite/assets';
+
+// Try local assets first, fallback to CDN if needed
 setAssetPath(assetsPath);
+
+// Setup icon fallback handling
+setupCalciteIconFallback();
 
 // Production logging utility
 const isDevelopment = import.meta.env.DEV;
