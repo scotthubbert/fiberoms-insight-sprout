@@ -1,5 +1,5 @@
 // Version Check Utility
-// Forces cache refresh when new version is deployed
+// Checks for new deployments by comparing build hashes
 
 const VERSION_KEY = 'app-version';
 const CURRENT_VERSION = import.meta.env.VITE_APP_VERSION || Date.now().toString();
@@ -26,9 +26,8 @@ async function checkVersion() {
       return;
     }
     
-    // Fetch the index.html with cache bypass
-    const response = await fetch('/', {
-      method: 'HEAD',
+    // Fetch the main JS file's actual URL to get the current hash
+    const response = await fetch('/index.html', {
       cache: 'no-cache',
       headers: {
         'pragma': 'no-cache',
@@ -36,46 +35,35 @@ async function checkVersion() {
       }
     });
     
-    // Check if we got a new deployment (Cloudflare adds deployment headers)
-    const deploymentId = response.headers.get('cf-deployment-id') || 
-                        response.headers.get('x-deployment-id') ||
-                        response.headers.get('etag');
+    if (!response.ok) return;
     
-    if (deploymentId) {
-      const lastDeploymentId = localStorage.getItem('deployment-id');
+    const html = await response.text();
+    
+    // Extract the main JS file hash from the HTML
+    // Look for pattern like: /assets/index-[hash].js
+    const scriptMatch = html.match(/\/assets\/index-([a-zA-Z0-9]+)\.js/);
+    
+    if (scriptMatch && scriptMatch[1]) {
+      const currentHash = scriptMatch[1];
+      const storedHash = localStorage.getItem('app-build-hash');
       
-      // Only show notification if:
-      // 1. We have a previous deployment ID stored
-      // 2. The deployment ID has changed
-      // 3. We haven't shown the notification this session
-      if (lastDeploymentId && lastDeploymentId !== deploymentId) {
-        console.log('New deployment detected:', deploymentId);
-        // Update stored deployment ID BEFORE showing notification
-        localStorage.setItem('deployment-id', deploymentId);
+      // First visit - just store the hash
+      if (!storedHash) {
+        localStorage.setItem('app-build-hash', currentHash);
+        return;
+      }
+      
+      // Check if hash has changed (new deployment)
+      if (storedHash !== currentHash) {
+        console.log('New version detected:', currentHash, 'was:', storedHash);
+        
+        // Update stored hash immediately
+        localStorage.setItem('app-build-hash', currentHash);
+        
+        // Show notification
         showUpdateNotification();
         sessionStorage.setItem('version-notification-shown', 'true');
-        return; // Exit early to avoid duplicate notifications
       }
-      
-      // Store deployment ID on first run
-      if (!lastDeploymentId) {
-        localStorage.setItem('deployment-id', deploymentId);
-      }
-    }
-    
-    // Also check our version constant (only if deployment check didn't trigger)
-    const storedVersion = localStorage.getItem(VERSION_KEY);
-    
-    // Only show notification if we have a stored version that's different
-    if (storedVersion && storedVersion !== CURRENT_VERSION) {
-      console.log('New version detected:', CURRENT_VERSION);
-      // Update stored version BEFORE showing notification
-      localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
-      showUpdateNotification();
-      sessionStorage.setItem('version-notification-shown', 'true');
-    } else if (!storedVersion) {
-      // First time - just store the version
-      localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
     }
     
   } catch (error) {
