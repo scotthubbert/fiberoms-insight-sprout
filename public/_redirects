@@ -1,0 +1,8 @@
+# Cloudflare Pages redirects and rewrites
+# Force fresh content on main domain
+
+# Ensure SPA routing works
+/*    /index.html   200
+
+# API proxy rules (if needed)
+# /api/*  https://your-api.com/:splat  200

@@ -1,33 +1,43 @@
 # Cache Control Headers for FiberOMS Insight PWA
-# Optimized for Cloudflare Pages
+# Optimized for Cloudflare Pages with aggressive cache busting
 
 # HTML files - NEVER cache to ensure users get updates
 /
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0, s-maxage=0
   Pragma: no-cache
   Expires: 0
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
 
 /index.html
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0, s-maxage=0
   Pragma: no-cache
   Expires: 0
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
 
 # Service Worker - CRITICAL: must not be cached
 /sw.js
-  Cache-Control: max-age=0, must-revalidate
+  Cache-Control: max-age=0, must-revalidate, s-maxage=0
   Service-Worker-Allowed: /
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
 
 /service-worker.js
-  Cache-Control: max-age=0, must-revalidate
+  Cache-Control: max-age=0, must-revalidate, s-maxage=0
   Service-Worker-Allowed: /
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
 
 # Workbox files - no cache
 /workbox-*.js
-  Cache-Control: max-age=0, must-revalidate
+  Cache-Control: max-age=0, must-revalidate, s-maxage=0
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
 
 # Manifest - short cache
 /manifest.json

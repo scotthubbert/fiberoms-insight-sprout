@@ -7,6 +7,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 export default defineConfig({
   define: {
     global: 'globalThis',
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
   resolve: {
     conditions: ['import', 'module', 'browser', 'default'],
@@ -105,6 +106,21 @@ export default defineConfig({
         // Navigation fallback for SPA
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/(api|storage)\//],
+        // Force update on navigation
+        navigationPreload: true,
+        // Add custom cache headers
+        manifestTransforms: [
+          (manifestEntries) => {
+            const manifest = manifestEntries.map(entry => {
+              // Force revision for HTML files
+              if (entry.url.endsWith('.html')) {
+                entry.revision = Date.now().toString();
+              }
+              return entry;
+            });
+            return { manifest };
+          }
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/js\.arcgis\.com\/.*/i,

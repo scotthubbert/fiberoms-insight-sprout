@@ -1,0 +1,58 @@
+# Production Cache Headers for FiberOMS Insight PWA
+# Balanced caching for stable production deployment
+
+# HTML files - Short cache with revalidation
+/
+  Cache-Control: public, max-age=300, s-maxage=3600, stale-while-revalidate=86400
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+
+/index.html
+  Cache-Control: public, max-age=300, s-maxage=3600, stale-while-revalidate=86400
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+
+# Service Worker - Must revalidate but can cache briefly
+/sw.js
+  Cache-Control: public, max-age=0, s-maxage=300, must-revalidate
+  Service-Worker-Allowed: /
+
+/service-worker.js
+  Cache-Control: public, max-age=0, s-maxage=300, must-revalidate
+  Service-Worker-Allowed: /
+
+# Workbox files - Short cache
+/workbox-*.js
+  Cache-Control: public, max-age=300, s-maxage=3600
+
+# Manifest - Medium cache
+/manifest.json
+  Cache-Control: public, max-age=3600, s-maxage=86400
+  
+# Vite generates hashed assets - cache forever (1 year)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  
+# Static assets - Medium cache with revalidation
+/icons/*
+  Cache-Control: public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400
+  
+/favicon.ico
+  Cache-Control: public, max-age=86400, s-maxage=604800
+  
+/*.png
+  Cache-Control: public, max-age=86400, s-maxage=604800
+  
+/*.svg
+  Cache-Control: public, max-age=86400, s-maxage=604800
+
+# Font files - Long cache
+/*.woff
+  Cache-Control: public, max-age=2592000, s-maxage=31536000
+  
+/*.woff2
+  Cache-Control: public, max-age=2592000, s-maxage=31536000
+
+# API routes - Never cache
+/api/*
+  Cache-Control: no-cache, no-store, must-revalidate

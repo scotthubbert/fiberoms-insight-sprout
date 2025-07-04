@@ -27,11 +27,15 @@ async function checkVersion() {
     }
     
     // Fetch the main JS file's actual URL to get the current hash
-    const response = await fetch('/index.html', {
+    // Add timestamp to URL to bypass all caches
+    const timestamp = Date.now();
+    const response = await fetch(`/index.html?_t=${timestamp}`, {
       cache: 'no-cache',
+      method: 'GET',
       headers: {
         'pragma': 'no-cache',
-        'cache-control': 'no-cache'
+        'cache-control': 'no-cache, no-store, must-revalidate',
+        'expires': '0'
       }
     });
     
