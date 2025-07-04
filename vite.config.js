@@ -49,6 +49,12 @@ export default defineConfig({
             noErrorOnMissing: true
           }));
         }),
+        // Specifically copy camera-flash-on icon files if they exist
+        {
+          src: 'node_modules/@esri/calcite-components/dist/calcite/assets/icon/camera-flash-on*.json',
+          dest: 'calcite/assets/icon',
+          noErrorOnMissing: true
+        },
         // Copy minimal t9n files
         {
           src: 'node_modules/@esri/calcite-components/dist/calcite/assets/t9n/en.json',

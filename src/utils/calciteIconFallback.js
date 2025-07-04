@@ -21,7 +21,11 @@ export function setupCalciteIconFallback() {
         'arrowRight': 'chevron-right',
         'magnifyingGlassPlus': 'zoom-in-fixed',
         'compassNorthCircle': 'compass',
-        'chevronsRight': 'chevron-right'
+        'chevronsRight': 'chevron-right',
+        'camera-flash-on': 'flash',
+        'cameraFlashOn': 'flash',
+        'flashOn': 'flash',
+        'lightning': 'flash'
       };
       
       // If there's an alternative, try to update the icon
@@ -44,10 +48,19 @@ export function setupCalciteIconFallback() {
       if (match && match[1]) {
         const iconName = match[1];
         console.warn(`Detected icon loading error for: ${iconName}`);
-        // Trigger custom event for handling
-        document.dispatchEvent(new CustomEvent('calciteIconError', {
-          detail: { icon: iconName }
-        }));
+        
+        // For camera-flash-on, provide immediate fallback
+        if (iconName === 'camera-flash-on') {
+          document.querySelectorAll('calcite-icon[icon="camera-flash-on"]').forEach(icon => {
+            icon.setAttribute('icon', 'flash');
+          });
+          console.warn('Replaced camera-flash-on with flash icon');
+        } else {
+          // Trigger custom event for other icons
+          document.dispatchEvent(new CustomEvent('calciteIconError', {
+            detail: { icon: iconName }
+          }));
+        }
       }
     }
     // Call original console.error
