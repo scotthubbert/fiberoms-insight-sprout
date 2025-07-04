@@ -54,6 +54,8 @@ import '@esri/calcite-components/dist/components/calcite-chip';
 import '@esri/calcite-components/dist/components/calcite-card';
 import '@esri/calcite-components/dist/components/calcite-autocomplete';
 import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
+import '@esri/calcite-components/dist/components/calcite-alert';
+import '@esri/calcite-components/dist/components/calcite-notice';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
 // Set Calcite assets path for both dev and production
@@ -517,10 +519,20 @@ class DashboardManager {
     }
 
     try {
+      // Set global flag to skip notifications during manual refresh
+      window._isManualRefresh = true;
+      
       // Clear cache to ensure fresh data
       subscriberDataService.clearCache();
 
       await this.updateDashboard();
+      
+      // Also refresh power outage stats without notification
+      const powerStats = document.querySelector('power-outage-stats');
+      if (powerStats && typeof powerStats.updateStats === 'function') {
+        await powerStats.updateStats(true); // Skip notification
+      }
+      
       // Simulate brief loading for user feedback
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -531,6 +543,8 @@ class DashboardManager {
       if (this.refreshButton) {
         this.refreshButton.removeAttribute('loading');
       }
+      // Clear manual refresh flag
+      window._isManualRefresh = false;
     }
   }
 }
@@ -2083,8 +2097,8 @@ class Application {
           // Update dashboard counts
           await this.services.dashboard.updateDashboard();
           
-          // Show toast if counts have changed (and not first load)
-          if (previousOfflineCount !== null && previousOnlineCount !== null) {
+          // Show toast if counts have changed (and not first load or manual refresh)
+          if (previousOfflineCount !== null && previousOnlineCount !== null && !window._isManualRefresh) {
             const offlineChange = currentOfflineCount - previousOfflineCount;
             const onlineChange = currentOnlineCount - previousOnlineCount;
             
@@ -2114,11 +2128,16 @@ class Application {
         refreshButton.setAttribute('loading', '');
         
         try {
+          // Set global flag to skip notifications during manual refresh
+          window._isManualRefresh = true;
+          
           // Clear cache and perform immediate update
           subscriberDataService.clearCache();
           await this.pollingManager.performUpdate('subscribers');
         } finally {
           refreshButton.removeAttribute('loading');
+          // Clear manual refresh flag
+          window._isManualRefresh = false;
         }
       });
     }
@@ -2130,7 +2149,7 @@ class Application {
       testSubscriberButton.style.display = 'block';
       
       testSubscriberButton.addEventListener('click', () => {
-        log.info('🧪 Testing subscriber update toast');
+        console.log('🧪 Testing subscriber update toast');
         
         // Simulate subscriber count changes
         const prevOffline = Math.floor(Math.random() * 300) + 200; // 200-500
@@ -2138,12 +2157,20 @@ class Application {
         const prevOnline = Math.floor(Math.random() * 20000) + 20000; // 20000-40000
         const currOnline = prevOnline - (currOffline - prevOffline); // Inverse relationship
         
-        this.showSubscriberUpdateToast(
-          prevOffline, 
-          Math.max(0, currOffline), 
-          prevOnline, 
-          Math.max(0, currOnline)
-        );
+        console.log('Test values:', { prevOffline, currOffline, prevOnline, currOnline });
+        
+        // Call the method on the app instance
+        if (window.app) {
+          console.log('Calling showSubscriberUpdateToast on app instance');
+          window.app.showSubscriberUpdateToast(
+            prevOffline, 
+            Math.max(0, currOffline), 
+            prevOnline, 
+            Math.max(0, currOnline)
+          );
+        } else {
+          console.error('window.app not available');
+        }
       });
     }
   }
@@ -2173,7 +2200,8 @@ class Application {
           // Update power outage stats component if it exists
           const powerStats = document.querySelector('power-outage-stats');
           if (powerStats && typeof powerStats.updateStats === 'function') {
-            powerStats.updateStats();
+            // Skip notifications if it's a manual refresh
+            powerStats.updateStats(window._isManualRefresh === true);
           }
         }
       } catch (error) {
@@ -2192,11 +2220,23 @@ class Application {
         refreshPowerButton.setAttribute('loading', '');
         
         try {
+          // Set global flag to skip notifications during manual refresh
+          window._isManualRefresh = true;
+          
           // Clear cache for power outage data
           subscriberDataService.refreshData('outages');
+          
+          // Update power outage stats without notification
+          const powerStats = document.querySelector('power-outage-stats');
+          if (powerStats && typeof powerStats.updateStats === 'function') {
+            await powerStats.updateStats(true); // Skip notification
+          }
+          
           await this.pollingManager.performUpdate('power-outages');
         } finally {
           refreshPowerButton.removeAttribute('loading');
+          // Clear manual refresh flag
+          window._isManualRefresh = false;
         }
       });
     }
@@ -2227,10 +2267,12 @@ class Application {
 
   // Show toast notification for subscriber updates
   showSubscriberUpdateToast(prevOffline, currOffline, prevOnline, currOnline) {
-    // Remove any existing subscriber toast
-    const existingToast = document.querySelector('#subscriber-update-toast');
-    if (existingToast) {
-      existingToast.remove();
+    console.log('showSubscriberUpdateToast called with:', { prevOffline, currOffline, prevOnline, currOnline });
+    
+    // Remove any existing subscriber notice
+    const existingNotice = document.querySelector('#subscriber-update-notice');
+    if (existingNotice) {
+      existingNotice.remove();
     }
     
     // Calculate changes
@@ -2261,7 +2303,7 @@ class Application {
     
     message = changes.join(', ');
     
-    // Determine toast type based on changes
+    // Determine notice type based on changes
     let kind = 'info';
     if (offlineChange > 0) {
       kind = 'warning'; // More offline is concerning
@@ -2269,25 +2311,60 @@ class Application {
       kind = 'success'; // Less offline is good
     }
     
-    // Create toast
-    const toast = document.createElement('calcite-toast');
-    toast.id = 'subscriber-update-toast';
-    toast.setAttribute('open', '');
-    toast.setAttribute('kind', kind);
-    toast.setAttribute('placement', 'top');
-    toast.setAttribute('duration', 'medium');
+    console.log('Creating notice with message:', message, 'kind:', kind);
     
-    toast.innerHTML = `
-      <div slot="title">Subscriber Update</div>
-      <div slot="message">${message}</div>
-    `;
+    // Create notice container if it doesn't exist
+    let noticeContainer = document.querySelector('#notice-container');
+    if (!noticeContainer) {
+      noticeContainer = document.createElement('div');
+      noticeContainer.id = 'notice-container';
+      noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
+      document.body.appendChild(noticeContainer);
+    }
     
-    document.body.appendChild(toast);
+    // Create notice
+    const notice = document.createElement('calcite-notice');
+    notice.id = 'subscriber-update-notice';
+    notice.setAttribute('open', '');
+    notice.setAttribute('kind', kind);
+    notice.setAttribute('closable', '');
+    notice.setAttribute('icon', 'users');
+    notice.setAttribute('width', 'auto');
+    
+    const titleDiv = document.createElement('div');
+    titleDiv.slot = 'title';
+    titleDiv.textContent = 'Subscriber Update';
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.slot = 'message';
+    messageDiv.textContent = message;
+    
+    notice.appendChild(titleDiv);
+    notice.appendChild(messageDiv);
+    
+    noticeContainer.appendChild(notice);
+    console.log('Notice appended to container:', notice);
+    
+    // Listen for close event
+    notice.addEventListener('calciteNoticeClose', () => {
+      notice.remove();
+      // Remove container if empty
+      if (noticeContainer.children.length === 0) {
+        noticeContainer.remove();
+      }
+    });
     
     // Auto-remove after 5 seconds
     setTimeout(() => {
-      if (document.body.contains(toast)) {
-        toast.remove();
+      if (document.body.contains(notice)) {
+        console.log('Removing notice after 5 seconds');
+        notice.setAttribute('open', 'false');
+        setTimeout(() => {
+          notice.remove();
+          if (noticeContainer.children.length === 0) {
+            noticeContainer.remove();
+          }
+        }, 300); // Allow animation to complete
       }
     }, 5000);
   }

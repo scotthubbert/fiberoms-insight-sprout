@@ -17,6 +17,11 @@ export class PowerOutageStatsComponent extends HTMLElement {
             tombigbee: []
         };
         this.isVisible = false;
+        this.isInitialLoad = true; // Track if this is the first load
+        this.lastKnownCounts = {
+            apco: null,
+            tombigbee: null
+        };
     }
 
     connectedCallback() {
@@ -41,12 +46,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
         });
     }
 
-    async updateStats() {
+    async updateStats(skipNotification = false) {
         try {
-            // Store previous counts for comparison
-            const previousApcoCount = this.outagesData.apco.length;
-            const previousTombigbeeCount = this.outagesData.tombigbee.length;
-            
             // Fetch current outage data
             const [apcoData, tombigbeeData] = await Promise.all([
                 subscriberDataService.getApcoOutages(),
@@ -56,13 +57,34 @@ export class PowerOutageStatsComponent extends HTMLElement {
             this.outagesData.apco = apcoData.data || [];
             this.outagesData.tombigbee = tombigbeeData.data || [];
 
-            // Check if counts have changed
+            // Get current counts
             const currentApcoCount = this.outagesData.apco.length;
             const currentTombigbeeCount = this.outagesData.tombigbee.length;
             
-            if (previousApcoCount !== currentApcoCount || previousTombigbeeCount !== currentTombigbeeCount) {
-                this.showUpdateToast(previousApcoCount, currentApcoCount, previousTombigbeeCount, currentTombigbeeCount);
+            // Only show notification if:
+            // 1. Not skipping notifications
+            // 2. Not the initial load
+            // 3. We have previous counts to compare
+            // 4. The counts have actually changed
+            if (!skipNotification && 
+                !this.isInitialLoad && 
+                this.lastKnownCounts.apco !== null && 
+                this.lastKnownCounts.tombigbee !== null &&
+                (this.lastKnownCounts.apco !== currentApcoCount || 
+                 this.lastKnownCounts.tombigbee !== currentTombigbeeCount)) {
+                
+                this.showUpdateToast(
+                    this.lastKnownCounts.apco, 
+                    currentApcoCount, 
+                    this.lastKnownCounts.tombigbee, 
+                    currentTombigbeeCount
+                );
             }
+            
+            // Update stored counts
+            this.lastKnownCounts.apco = currentApcoCount;
+            this.lastKnownCounts.tombigbee = currentTombigbeeCount;
+            this.isInitialLoad = false;
 
             this.renderStats();
         } catch (error) {
@@ -393,10 +415,10 @@ export class PowerOutageStatsComponent extends HTMLElement {
     }
 
     showUpdateToast(prevApco, currApco, prevTombigbee, currTombigbee) {
-        // Remove any existing toast
-        const existingToast = document.querySelector('#outage-update-toast');
-        if (existingToast) {
-            existingToast.remove();
+        // Remove any existing notice
+        const existingNotice = document.querySelector('#outage-update-notice');
+        if (existingNotice) {
+            existingNotice.remove();
         }
         
         // Determine what changed
@@ -423,25 +445,56 @@ export class PowerOutageStatsComponent extends HTMLElement {
             message += changes.join(', ');
         }
         
-        // Create toast
-        const toast = document.createElement('calcite-toast');
-        toast.id = 'outage-update-toast';
-        toast.setAttribute('open', '');
-        toast.setAttribute('kind', apcoChange > 0 || tombigbeeChange > 0 ? 'warning' : 'success');
-        toast.setAttribute('placement', 'top');
-        toast.setAttribute('duration', 'medium');
+        // Create notice container if it doesn't exist
+        let noticeContainer = document.querySelector('#notice-container');
+        if (!noticeContainer) {
+            noticeContainer = document.createElement('div');
+            noticeContainer.id = 'notice-container';
+            noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
+            document.body.appendChild(noticeContainer);
+        }
         
-        toast.innerHTML = `
-            <div slot="title">Outage Update</div>
-            <div slot="message">${message}</div>
-        `;
+        // Create notice
+        const notice = document.createElement('calcite-notice');
+        notice.id = 'outage-update-notice';
+        notice.setAttribute('open', '');
+        notice.setAttribute('kind', apcoChange > 0 || tombigbeeChange > 0 ? 'warning' : 'success');
+        notice.setAttribute('closable', '');
+        notice.setAttribute('icon', 'flash');
+        notice.setAttribute('width', 'auto');
         
-        document.body.appendChild(toast);
+        const titleDiv = document.createElement('div');
+        titleDiv.slot = 'title';
+        titleDiv.textContent = 'Outage Update';
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.slot = 'message';
+        messageDiv.textContent = message;
+        
+        notice.appendChild(titleDiv);
+        notice.appendChild(messageDiv);
+        
+        noticeContainer.appendChild(notice);
+        
+        // Listen for close event
+        notice.addEventListener('calciteNoticeClose', () => {
+            notice.remove();
+            // Remove container if empty
+            if (noticeContainer.children.length === 0) {
+                noticeContainer.remove();
+            }
+        });
         
         // Auto-remove after 5 seconds
         setTimeout(() => {
-            if (document.body.contains(toast)) {
-                toast.remove();
+            if (document.body.contains(notice)) {
+                notice.setAttribute('open', 'false');
+                setTimeout(() => {
+                    notice.remove();
+                    if (noticeContainer.children.length === 0) {
+                        noticeContainer.remove();
+                    }
+                }, 300); // Allow animation to complete
             }
         }, 5000);
     }

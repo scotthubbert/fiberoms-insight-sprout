@@ -41,7 +41,9 @@ export default defineConfig({
           'basemap', 'pause', 'moon', 'chevronUp', 'chevronDown', 'chevronLeft', 'chevronRight',
           // Additional icons for list items and UI elements
           'close', 'checkCircle', 'xCircle', 'gear', 'loading', 'chevron-right',
-          'chevron-left', 'chevron-up', 'chevron-down', 'link-chart', 'link', 'warning'
+          'chevron-left', 'chevron-up', 'chevron-down', 'link-chart', 'link', 'warning',
+          // Notice component icons
+          'exclamationMarkCircle', 'checkCircleF', 'exclamationMarkTriangleF', 'informationF'
         ].flatMap(iconName => {
           return [16, 24, 32].map(size => ({
             src: `node_modules/@esri/calcite-components/dist/calcite/assets/icon/${iconName}${size}.json`,

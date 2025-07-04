@@ -1481,3 +1481,31 @@ calcite-autocomplete-item:focus {
 #power-outages-content calcite-block:last-child {
   margin-bottom: 0;
 }
+
+/* Notice container styling */
+#notice-container {
+  position: fixed;
+  top: 80px; /* Below header */
+  right: 20px;
+  z-index: 1000;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Stack notices properly */
+#notice-container calcite-notice {
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile adjustments for notices */
+@media (max-width: 768px) {
+  #notice-container {
+    top: 70px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+}
