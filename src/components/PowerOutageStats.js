@@ -24,6 +24,12 @@ export class PowerOutageStatsComponent extends HTMLElement {
         this.setupEventListeners();
         // Update statistics when component is connected
         this.updateStats();
+        
+        // Ensure component is ready for layer interaction
+        setTimeout(() => {
+            // Re-setup listeners in case DOM wasn't ready
+            this.setupOutageListeners();
+        }, 500);
     }
 
     setupEventListeners() {
@@ -33,12 +39,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 this.updateStats();
             }
         });
-
-        // Refresh icon
-        const refreshIcon = this.querySelector('.refresh-outages');
-        if (refreshIcon) {
-            refreshIcon.addEventListener('click', () => this.refreshOutages());
-        }
     }
 
     async updateStats() {
@@ -60,39 +60,10 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }
     }
 
-    async refreshOutages() {
-        const refreshIcon = this.querySelector('.refresh-outages');
-        if (refreshIcon) {
-            refreshIcon.style.opacity = '0.5';
-            refreshIcon.style.pointerEvents = 'none';
-        }
-
-        try {
-            // Clear cache to get fresh data
-            subscriberDataService.clearCache();
-            await this.updateStats();
-        } catch (error) {
-            log.error('Failed to refresh outages:', error);
-        } finally {
-            if (refreshIcon) {
-                refreshIcon.style.opacity = '1';
-                refreshIcon.style.pointerEvents = 'auto';
-            }
-        }
-    }
 
     render() {
         this.innerHTML = `
             <div style="padding: 4px 0;">
-                <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 8px;">
-                    <calcite-icon 
-                        icon="refresh" 
-                        scale="s" 
-                        class="refresh-outages"
-                        style="color: var(--calcite-color-text-3); cursor: pointer; padding: 4px;"
-                        title="Refresh outage data">
-                    </calcite-icon>
-                </div>
                 <div class="stats-content">
                     <div style="display: flex; align-items: center; justify-content: center; padding: 20px; color: var(--calcite-color-text-2);">
                         <calcite-icon icon="loading" scale="s" style="margin-right: 8px;"></calcite-icon>
@@ -116,16 +87,100 @@ export class PowerOutageStatsComponent extends HTMLElement {
         const currentTime = new Date().toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
-            second: '2-digit',
             hour12: true
         });
 
+        // Combine all outages and sort by customer count (highest first)
+        const allOutages = [
+            ...this.outagesData.apco.map(o => ({...o, company: 'APCo'})),
+            ...this.outagesData.tombigbee.map(o => ({...o, company: 'Tombigbee'}))
+        ].sort((a, b) => (b.customers_affected || 0) - (a.customers_affected || 0));
+
         statsContent.innerHTML = `
-            ${this.renderCompanySection('APCo', 'Alabama Power (APCo)', '/apco-logo.png', apcoCount, apcoCustomers, this.outagesData.apco, currentTime)}
-            ${this.renderCompanySection('Tombigbee', 'Tombigbee Electric Cooperative', '/tombigbee-logo.png', tombigbeeCount, tombigbeeCustomers, this.outagesData.tombigbee, 'Loading...')}
+            <!-- Static Summary Section -->
+            <div style="margin-bottom: 16px;">
+                ${this.renderCompanySummary('APCo', apcoCount, apcoCustomers)}
+                ${this.renderCompanySummary('Tombigbee', tombigbeeCount, tombigbeeCustomers)}
+                <div style="text-align: center; font-size: 11px; color: var(--calcite-color-text-3); margin-top: 8px;">
+                    Last updated: ${currentTime}
+                </div>
+            </div>
+
+            <!-- Scrollable Outages List -->
+            <div style="border-top: 1px solid var(--calcite-color-border-2); padding-top: 12px;">
+                <div style="font-size: 12px; font-weight: 600; color: var(--calcite-color-text-2); margin-bottom: 8px; text-transform: uppercase;">
+                    Active Outages (${allOutages.length})
+                </div>
+                <div class="outages-list" style="max-height: 250px; overflow-y: auto; overflow-x: hidden;">
+                    ${allOutages.length > 0 ?
+                        allOutages.map(outage => this.renderSimpleOutageItem(outage)).join('') :
+                        `<div style="text-align: center; color: var(--calcite-color-text-3); font-size: 14px; padding: 20px;">No active outages</div>`
+                    }
+                </div>
+            </div>
         `;
 
         this.setupOutageListeners();
+    }
+
+    renderCompanySummary(company, outageCount, customerCount) {
+        const bgColor = company === 'APCo' ? 'rgba(30, 95, 175, 0.1)' : 'rgba(74, 124, 89, 0.1)';
+        const layerId = company === 'APCo' ? 'apco-outages' : 'tombigbee-outages';
+        const logoPath = company === 'APCo' ? '/apco-logo.png' : '/tombigbee-logo.png';
+        const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Tombigbee Electric';
+        
+        // Get the current visibility state of the layer
+        let isChecked = true; // Default to checked
+        try {
+            const layer = window.app?.services?.layerManager?.getLayer(layerId);
+            if (layer) {
+                isChecked = layer.visible;
+            }
+        } catch (error) {
+            // Layer might not be loaded yet, use default
+        }
+        
+        return `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: ${bgColor}; border-radius: 4px; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; flex: 1;">
+                    <img src="${logoPath}" alt="${company} Logo" style="width: 24px; height: 24px; object-fit: contain; margin-right: 8px;">
+                    <div style="flex: 1;">
+                        <span style="font-weight: 600; font-size: 14px;">${companyFullName}</span>
+                        <div style="font-size: 11px; color: var(--calcite-color-text-3);">${customerCount.toLocaleString()} affected</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="text-align: center;">
+                        <span style="font-size: 20px; font-weight: 700; color: var(--calcite-color-text-1);">${outageCount}</span>
+                        <div style="font-size: 11px; color: var(--calcite-color-text-2);">outages</div>
+                    </div>
+                    <calcite-switch scale="s" ${isChecked ? 'checked' : ''} 
+                        class="power-company-toggle" 
+                        data-layer-id="${layerId}"
+                        data-company="${company}"
+                        id="toggle-${layerId}">
+                    </calcite-switch>
+                </div>
+            </div>
+        `;
+    }
+
+    renderSimpleOutageItem(outage) {
+        const companyColor = outage.company === 'APCo' ? '#1e5faf' : '#4a7c59';
+        
+        return `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--calcite-color-border-3);" 
+                 class="outage-item" data-outage-id="${outage.outage_id}" data-lat="${outage.latitude}" data-lng="${outage.longitude}">
+                <div style="flex: 1;">
+                    <span style="font-size: 18px; font-weight: 600; color: #dc2626;">${(outage.customers_affected || 0).toLocaleString()}</span>
+                    <span style="font-size: 12px; color: var(--calcite-color-text-2); margin-left: 8px;">customers</span>
+                    <div style="font-size: 11px; color: ${companyColor}; margin-top: 2px;">${outage.company}</div>
+                </div>
+                <calcite-button scale="s" appearance="transparent" icon-start="pin-tear" class="locate-outage" title="View on map">
+                    Locate
+                </calcite-button>
+            </div>
+        `;
     }
 
     renderCompanySection(companyKey, companyName, logoPath, outageCount, customerCount, outages, lastUpdated) {
@@ -198,12 +253,12 @@ export class PowerOutageStatsComponent extends HTMLElement {
     }
 
     setupOutageListeners() {
-        // Fly to outage location links
-        const flyToLinks = this.querySelectorAll('.fly-to-outage');
-        flyToLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
+        // Locate outage buttons
+        const locateButtons = this.querySelectorAll('.locate-outage');
+        locateButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const outageItem = link.closest('.outage-item');
+                const outageItem = button.closest('.outage-item');
                 if (outageItem) {
                     const lat = parseFloat(outageItem.dataset.lat);
                     const lng = parseFloat(outageItem.dataset.lng);
@@ -215,6 +270,41 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 }
             });
         });
+
+        // Power company toggle switches - wait for them to be ready
+        setTimeout(() => {
+            const toggleSwitches = this.querySelectorAll('.power-company-toggle');
+            log.info(`Found ${toggleSwitches.length} power company toggles in PowerOutageStats`);
+            toggleSwitches.forEach(toggle => {
+                // Remove any existing listeners first
+                const newToggle = toggle.cloneNode(true);
+                toggle.parentNode.replaceChild(newToggle, toggle);
+                
+                // Add the listener to the new element
+                newToggle.addEventListener('calciteSwitchChange', async (e) => {
+                    const layerId = newToggle.dataset.layerId;
+                    const isChecked = e.target.checked;
+                    
+                    log.info(`⚡ Toggle clicked: ${newToggle.dataset.company} (${layerId}) - ${isChecked}`);
+                    
+                    // Try direct LayerManager access first
+                    if (window.app?.services?.layerManager) {
+                        const result = await window.app.services.layerManager.toggleLayerVisibility(layerId, isChecked);
+                        if (result) {
+                            log.info(`✅ Successfully toggled ${newToggle.dataset.company} layer visibility`);
+                        } else {
+                            log.error(`❌ Failed to toggle ${newToggle.dataset.company} layer visibility`);
+                        }
+                    } else {
+                        // Fallback: dispatch custom event
+                        log.info('Using custom event fallback for power outage toggle');
+                        document.dispatchEvent(new CustomEvent('powerOutageToggle', {
+                            detail: { layerId, visible: isChecked }
+                        }));
+                    }
+                });
+            });
+        }, 100); // Small delay to ensure DOM is ready
     }
 
     async flyToOutage(lat, lng, outageId) {

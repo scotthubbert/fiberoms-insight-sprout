@@ -135,36 +135,17 @@
           </calcite-block>
         </calcite-panel>
         <calcite-panel heading="Power Outages" id="power-outages-content" hidden>
-          <calcite-block heading="Power Outages" summary="0/2" collapsible expanded>
-            <calcite-icon slot="icon" icon="exclamation-mark-triangle"></calcite-icon>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <img src="/apco-logo.png" alt="APCo Logo" style="width: 16px; height: 16px; object-fit: contain;">
-                <div>
-                  <div style="font-weight: 500;">APCo</div>
-                  <div style="font-size: 12px; color: var(--calcite-color-text-2);">Alabama Power Company outage data
-                  </div>
-                </div>
-              </div>
-              <calcite-switch checked class="apco-toggle"></calcite-switch>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <img src="/tombigbee-logo.png" alt="Tombigbee Logo"
-                  style="width: 16px; height: 16px; object-fit: contain;">
-                <div>
-                  <div style="font-weight: 500;">Tombigbee</div>
-                  <div style="font-size: 12px; color: var(--calcite-color-text-2);">Tombigbee Electric Cooperative
-                    outage data</div>
-                </div>
-              </div>
-              <calcite-switch checked class="tombigbee-toggle"></calcite-switch>
-            </div>
+          <calcite-block heading="Power Outages" collapsible expanded>
+            <calcite-icon slot="icon" icon="flash"></calcite-icon>
 
             <!-- Power Outage Statistics -->
             <power-outage-stats id="power-outage-stats"></power-outage-stats>
+            
+            <div class="block-actions">
+              <calcite-button id="refresh-power-outages" icon-start="refresh" scale="s" width="full">
+                Refresh Power Outages
+              </calcite-button>
+            </div>
           </calcite-block>
         </calcite-panel>
         <calcite-panel heading="Search" id="search-content" hidden>
@@ -410,23 +391,15 @@
               <calcite-icon slot="content-start" icon="rain" style="color: var(--calcite-color-info);"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
-
-            <calcite-list-item label="APCo Power Outages" description="Alabama Power Company outage data"
-              class="layer-toggle-item">
-              <img slot="content-start" src="/apco-logo.png" alt="APCo Logo"
-                style="width: 20px; height: 20px; object-fit: contain;">
-              <calcite-switch slot="content-end" checked class="apco-toggle"></calcite-switch>
-            </calcite-list-item>
-
-            <calcite-list-item label="Tombigbee Power Outages" description="Tombigbee Electric Cooperative outage data"
-              class="layer-toggle-item">
-              <img slot="content-start" src="/tombigbee-logo.png" alt="Tombigbee Logo"
-                style="width: 20px; height: 20px; object-fit: contain;">
-              <calcite-switch slot="content-end" checked class="tombigbee-toggle"></calcite-switch>
-            </calcite-list-item>
           </calcite-list>
         </calcite-block>
 
+        <calcite-block heading="Power Outages" expanded>
+          <div style="padding: 16px; text-align: center; color: var(--calcite-color-text-2);">
+            <calcite-icon icon="flash" scale="l" style="margin-bottom: 8px;"></calcite-icon>
+            <p style="margin: 0;">Power outage controls have moved to the dedicated Power Outages panel for better management and real-time statistics.</p>
+          </div>
+        </calcite-block>
 
       </div>
     </calcite-dialog>

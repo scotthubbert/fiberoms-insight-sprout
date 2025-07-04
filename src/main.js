@@ -1658,6 +1658,9 @@ class Application {
 
     // Start polling for subscriber data updates
     this.startSubscriberPolling();
+    
+    // Start polling for power outage updates (1 minute interval)
+    this.startPowerOutagePolling();
   }
 
   async initializeSubscriberLayers() {
@@ -1832,14 +1835,18 @@ class Application {
   async createLayerFromConfig(config) {
     try {
       const data = await config.dataServiceMethod();
-      if (!data?.features?.length) {
-        log.warn(`No data available for layer: ${config.id}`);
+      
+      if (!data) {
+        log.warn(`No data returned for layer: ${config.id}`);
         return null;
       }
+      
+      // For power outages and subscribers, data comes wrapped with features property
+      const dataSource = data.features ? { features: data.features } : data;
 
       return await this.services.layerManager.createLayer({
         ...config,
-        dataSource: data
+        dataSource: dataSource
       });
     } catch (error) {
       log.error(`Failed to create layer ${config.id}:`, error);
@@ -1856,13 +1863,15 @@ class Application {
       });
     });
 
-    // Power outage desktop toggles (switches in new design)
-    const powerOutageSwitches = document.querySelectorAll('#power-outages-content calcite-switch');
-    powerOutageSwitches.forEach(switchElement => {
-      switchElement.addEventListener('calciteSwitchChange', (e) => {
-        this.handleLayerToggle(e.target, e.target.checked);
-      });
-    });
+    // Power outage toggles are now handled inside the PowerOutageStats component
+    // Listen for custom events from the power outage component
+    document.addEventListener('powerOutageToggle', async (e) => {
+      const { layerId, visible } = e.detail;
+      if (layerId && this.services.layerManager) {
+        await this.services.layerManager.toggleLayerVisibility(layerId, visible);
+        log.info(`⚡ Power outage layer toggled: ${layerId} = ${visible}`);
+      }
+    })
 
     // Mobile layer toggles (switches)
     const switches = document.querySelectorAll('.layer-toggle-item calcite-switch');
@@ -1973,12 +1982,12 @@ class Application {
 
     // Sync power outage switches based on layer ID and classes
     if (layerId === 'apco-outages') {
-      const apcoSwitches = document.querySelectorAll('.apco-toggle');
+      const apcoSwitches = document.querySelectorAll('.apco-toggle, #toggle-apco-outages');
       apcoSwitches.forEach(switchElement => {
         switchElement.checked = checked;
       });
     } else if (layerId === 'tombigbee-outages') {
-      const tombigbeeSwitches = document.querySelectorAll('.tombigbee-toggle');
+      const tombigbeeSwitches = document.querySelectorAll('.tombigbee-toggle, #toggle-tombigbee-outages');
       tombigbeeSwitches.forEach(switchElement => {
         switchElement.checked = checked;
       });
@@ -2081,6 +2090,60 @@ class Application {
           await this.pollingManager.performUpdate('subscribers');
         } finally {
           refreshButton.removeAttribute('loading');
+        }
+      });
+    }
+  }
+
+  // Start polling for power outage updates
+  startPowerOutagePolling() {
+    log.info('⚡ Starting power outage data polling (1 minute interval)');
+    
+    // Polling callback for power outage updates
+    const handlePowerOutageUpdate = async (data) => {
+      try {
+        if (data.apco && data.tombigbee) {
+          // Handle both APCo and Tombigbee updates
+          const apcoLayer = this.services.layerManager.getLayer('apco-outages');
+          const tombigbeeLayer = this.services.layerManager.getLayer('tombigbee-outages');
+          
+          if (apcoLayer && data.apco) {
+            await this.services.layerManager.updateLayerData('apco-outages', data.apco);
+            log.info(`⚡ Updated APCo outages: ${data.apco.count} outages`);
+          }
+          
+          if (tombigbeeLayer && data.tombigbee) {
+            await this.services.layerManager.updateLayerData('tombigbee-outages', data.tombigbee);
+            log.info(`⚡ Updated Tombigbee outages: ${data.tombigbee.count} outages`);
+          }
+          
+          // Update power outage stats component if it exists
+          const powerStats = document.querySelector('power-outage-stats');
+          if (powerStats && typeof powerStats.updateStats === 'function') {
+            powerStats.updateStats();
+          }
+        }
+      } catch (error) {
+        log.error('Failed to handle power outage update:', error);
+      }
+    };
+    
+    // Start polling for power outages with 1 minute interval (60000ms)
+    this.pollingManager.startPolling('power-outages', handlePowerOutageUpdate, 60000);
+    
+    // Also set up manual refresh button for power outages if it exists
+    const refreshPowerButton = document.getElementById('refresh-power-outages');
+    if (refreshPowerButton) {
+      refreshPowerButton.addEventListener('click', async () => {
+        log.info('⚡ Manual power outage refresh triggered');
+        refreshPowerButton.setAttribute('loading', '');
+        
+        try {
+          // Clear cache for power outage data
+          subscriberDataService.refreshData('outages');
+          await this.pollingManager.performUpdate('power-outages');
+        } finally {
+          refreshPowerButton.removeAttribute('loading');
         }
       });
     }
@@ -2222,9 +2285,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Add cache status to console for debugging
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-  }
 
   // Start the main application
   window.app = new Application();

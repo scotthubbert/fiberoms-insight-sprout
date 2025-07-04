@@ -398,6 +398,45 @@ calcite-dialog.mobile-only [slot="content"] {
   border-top: 1px solid var(--calcite-color-border-3);
 }
 
+/* Power outage stats scrollbar styling */
+.stats-content,
+.outages-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--calcite-color-border-1) var(--calcite-color-foreground-2);
+}
+
+.stats-content::-webkit-scrollbar,
+.outages-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.stats-content::-webkit-scrollbar-track,
+.outages-list::-webkit-scrollbar-track {
+  background: var(--calcite-color-foreground-2);
+  border-radius: 4px;
+}
+
+.stats-content::-webkit-scrollbar-thumb,
+.outages-list::-webkit-scrollbar-thumb {
+  background: var(--calcite-color-border-1);
+  border-radius: 4px;
+}
+
+.stats-content::-webkit-scrollbar-thumb:hover,
+.outages-list::-webkit-scrollbar-thumb:hover {
+  background: var(--calcite-color-border-2);
+}
+
+/* Outage item hover effect */
+.outage-item:hover {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+/* Remove last border on last outage item */
+.outage-item:last-child {
+  border-bottom: none;
+}
+
 /* Ensure mobile toolbar is always visible on mobile */
 @media (max-width: 768px) {
   #mobile-tab-bar {

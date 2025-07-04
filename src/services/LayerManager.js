@@ -271,17 +271,30 @@ export class LayerManager {
     // ISP: Focused interface for layer visibility
     async toggleLayerVisibility(layerId, visible) {
         const layer = this.layers.get(layerId);
-        if (!layer) return false;
+        if (!layer) {
+            console.error(`Layer not found: ${layerId}`);
+            return false;
+        }
 
+        // Set visibility on our stored layer reference
         layer.visible = visible;
-
-        // Force refresh for power outage layers to ensure proper rendering
-        if (visible && (layerId.includes('outages') || layerId.includes('apco') || layerId.includes('tombigbee'))) {
-            setTimeout(() => {
-                if (typeof layer.refresh === 'function') {
-                    layer.refresh();
+        layer.listMode = visible ? 'show' : 'hide';
+        
+        // For GraphicsLayer, also use opacity as a fallback
+        if (layer.type === 'graphics') {
+            layer.opacity = visible ? 1 : 0;
+        }
+        
+        // IMPORTANT: Also update the layer instance on the map
+        // The layer in LayerManager might not be the same instance as on the map
+        if (window.mapView && window.mapView.map) {
+            const mapLayer = window.mapView.map.findLayerById(layerId);
+            if (mapLayer) {
+                mapLayer.visible = visible;
+                if (mapLayer.type === 'graphics') {
+                    mapLayer.opacity = visible ? 1 : 0;
                 }
-            }, 100);
+            }
         }
 
         // For special layers like RainViewer, trigger additional behavior
@@ -289,6 +302,11 @@ export class LayerManager {
         if (config?.onVisibilityChange) {
             config.onVisibilityChange(visible);
         }
+
+        // Dispatch event for other components to listen to
+        document.dispatchEvent(new CustomEvent('layerVisibilityChanged', {
+            detail: { layerId, visible }
+        }));
 
         return true;
     }
@@ -324,7 +342,10 @@ export class LayerManager {
     }
 
     // Update GraphicsLayer by replacing graphics
-    updateGraphicsLayer(layer, config, newData) {
+    async updateGraphicsLayer(layer, config, newData) {
+        // Preserve current visibility state
+        const wasVisible = layer.visible;
+        
         // Clear existing graphics
         layer.removeAll();
         
@@ -335,12 +356,21 @@ export class LayerManager {
                 ...config,
                 dataSource: newData
             };
-            this.createPowerOutageLayer(tempConfig, newData).then(newLayer => {
-                // Copy graphics from new layer to existing layer
-                if (newLayer && newLayer.graphics) {
-                    layer.addMany(newLayer.graphics.toArray());
+            const newLayer = await this.createPowerOutageLayer(tempConfig, newData);
+            
+            // Copy graphics from new layer to existing layer
+            if (newLayer && newLayer.graphics) {
+                layer.addMany(newLayer.graphics.toArray());
+                
+                // Force the layer to refresh its display if it was visible
+                if (wasVisible) {
+                    layer.visible = false;
+                    setTimeout(() => {
+                        layer.visible = true;
+                        console.log(`🔄 Forced refresh of ${config.id} layer`);
+                    }, 100);
                 }
-            });
+            }
         }
         
         console.log(`✅ Updated ${layer.graphics.length} graphics in ${config.id}`);

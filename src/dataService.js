@@ -820,8 +820,11 @@ export class SubscriberDataService {
                 lastUpdated: new Date().toISOString()
             }
 
-            // Cache the result with shorter cache time for outage data (2 minutes)
+            // Cache the result with shorter cache time for outage data (1 minute)
+            const originalCacheDuration = this.CACHE_DURATION
+            this.CACHE_DURATION = 60 * 1000 // 1 minute for power outages
             this.setCache(cacheKey, result)
+            this.CACHE_DURATION = originalCacheDuration // Restore original
 
             log.info('🔌 APCo outages loaded:', result.count, 'outages')
             return result
@@ -963,8 +966,11 @@ export class SubscriberDataService {
                 lastUpdated: new Date().toISOString()
             }
 
-            // Cache the result with shorter cache time for outage data (2 minutes)
+            // Cache the result with shorter cache time for outage data (1 minute)
+            const originalCacheDuration = this.CACHE_DURATION
+            this.CACHE_DURATION = 60 * 1000 // 1 minute for power outages
             this.setCache(cacheKey, result)
+            this.CACHE_DURATION = originalCacheDuration // Restore original
 
             log.info('🔌 Tombigbee outages loaded:', result.count, 'outages')
             return result
@@ -1460,6 +1466,20 @@ export class PollingManager {
                         this.dataService.getOnlineSubscribers()
                     ])
                     data = { offline, online }
+                    break
+                case 'apco-outages':
+                    data = await this.dataService.getApcoOutages()
+                    break
+                case 'tombigbee-outages':
+                    data = await this.dataService.getTombigbeeOutages()
+                    break
+                case 'power-outages':
+                    // Fetch both power company outages
+                    const [apco, tombigbee] = await Promise.all([
+                        this.dataService.getApcoOutages(),
+                        this.dataService.getTombigbeeOutages()
+                    ])
+                    data = { apco, tombigbee }
                     break
                 default:
                     log.warn(`Unknown data type for polling: ${dataType}`)
