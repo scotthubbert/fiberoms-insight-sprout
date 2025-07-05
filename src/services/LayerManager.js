@@ -235,12 +235,21 @@ export class LayerManager {
             title: layerConfig.title,
             graphics: graphics,
             listMode: layerConfig.visible ? 'show' : 'hide',
-            visible: layerConfig.visible
+            visible: false // Start with layer hidden to force proper rendering
         });
 
         // Layer load handler
         layer.when(() => {
             // Layer loaded successfully
+            console.log(`✅ ${layerConfig.title} layer loaded with ${graphics.length} graphics`);
+            
+            // Force proper rendering by toggling visibility if layer should be visible
+            if (layerConfig.visible) {
+                setTimeout(() => {
+                    layer.visible = true;
+                    console.log(`🔄 Forced initial rendering of ${layerConfig.id} layer`);
+                }, 500);
+            }
         }).catch(error => {
             console.error(`❌ ${layerConfig.title} layer failed to load:`, error);
         });

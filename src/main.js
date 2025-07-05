@@ -80,6 +80,18 @@ const log = {
   error: (...args) => console.error(...args)
 };
 
+// Global error handler for cache errors to prevent app crashes
+window.addEventListener('unhandledrejection', event => {
+  if (event.reason && event.reason.message && 
+      (event.reason.message.includes('Cache.put()') || 
+       event.reason.message.includes('Failed to fetch') ||
+       event.reason.message.includes('NetworkError') ||
+       event.reason.message.includes('Failed to execute'))) {
+    console.warn('Caught cache/network error:', event.reason.message);
+    event.preventDefault(); // Prevent the error from bubbling up and crashing the app
+  }
+});
+
 // Basemap configuration for theme management
 const BASEMAP_CONFIG = {
   light: {
@@ -1723,13 +1735,7 @@ class Application {
           apcoLayer.visible = apcoConfig.visible; // Use config default (true)
           this.services.mapController.addLayer(apcoLayer, apcoConfig.zOrder);
 
-          // Force layer refresh after a brief delay to ensure proper rendering
-          setTimeout(() => {
-            if (apcoLayer.visible && typeof apcoLayer.refresh === 'function') {
-              apcoLayer.refresh();
-              log.info('🔄 APCo layer refreshed for initial rendering');
-            }
-          }, 1000);
+          // GraphicsLayer doesn't have refresh() method, visibility toggle is handled in LayerManager
 
           log.info('✅ APCo power outages layer initialized');
         }
@@ -1743,13 +1749,7 @@ class Application {
           tombigbeeLayer.visible = tombigbeeConfig.visible; // Use config default (true)
           this.services.mapController.addLayer(tombigbeeLayer, tombigbeeConfig.zOrder);
 
-          // Force layer refresh after a brief delay to ensure proper rendering
-          setTimeout(() => {
-            if (tombigbeeLayer.visible && typeof tombigbeeLayer.refresh === 'function') {
-              tombigbeeLayer.refresh();
-              log.info('🔄 Tombigbee layer refreshed for initial rendering');
-            }
-          }, 1000);
+          // GraphicsLayer doesn't have refresh() method, visibility toggle is handled in LayerManager
 
           log.info('✅ Tombigbee power outages layer initialized');
         }
@@ -2402,6 +2402,19 @@ class PWAInstaller {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator && import.meta.env.PROD) {
       try {
+        // Add error handler for service worker errors
+        navigator.serviceWorker.addEventListener('error', (event) => {
+          console.warn('Service worker error:', event);
+        });
+
+        // Add handler for cache errors from service worker
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'CACHE_ERROR') {
+            console.warn('Service worker cache error:', event.data.error);
+            // Don't throw - just log the error
+          }
+        });
+
         const registration = await navigator.serviceWorker.register('/sw.js');
         this.registration = registration;
 
@@ -2420,7 +2433,9 @@ class PWAInstaller {
 
         // Check for updates periodically
         setInterval(() => {
-          registration.update();
+          registration.update().catch(err => {
+            console.warn('Service worker update check failed:', err);
+          });
         }, 60000); // Check every minute
 
       } catch (error) {

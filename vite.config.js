@@ -107,7 +107,10 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/(api|storage)\//],
         // Force update on navigation
-        navigationPreload: true,
+        navigationPreload: false, // Disable to prevent cache errors
+        // Add custom service worker code
+        additionalManifestEntries: [],
+        mode: 'production',
         // Add custom cache headers
         manifestTransforms: [
           (manifestEntries) => {
@@ -130,6 +133,16 @@ export default defineConfig({
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              },
+              fetchOptions: {
+                mode: 'cors',
+                credentials: 'omit'
+              },
+              matchOptions: {
+                ignoreVary: true
               }
             }
           },
@@ -141,6 +154,16 @@ export default defineConfig({
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24 * 3 // 3 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              },
+              fetchOptions: {
+                mode: 'cors',
+                credentials: 'omit'
+              },
+              matchOptions: {
+                ignoreVary: true
               }
             }
           },
@@ -152,6 +175,16 @@ export default defineConfig({
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 5 // 5 minutes
+              },
+              cacheableResponse: {
+                statuses: [0, 200, 204]
+              },
+              networkTimeoutSeconds: 10,
+              fetchOptions: {
+                mode: 'cors'
+              },
+              matchOptions: {
+                ignoreVary: true
               }
             }
           }
