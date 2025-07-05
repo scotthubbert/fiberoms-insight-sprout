@@ -3,11 +3,47 @@ import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import { execSync } from 'child_process';
+import fs from 'fs';
+
+// Get build information
+function getBuildInfo() {
+  const date = new Date();
+  let gitHash = 'dev';
+  let gitBranch = 'local';
+  
+  try {
+    gitHash = execSync('git rev-parse --short HEAD').toString().trim();
+    gitBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+  } catch (e) {
+    console.warn('Git information not available, using defaults');
+  }
+  
+  // Read package.json version
+  const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
+  
+  return {
+    version: packageJson.version || '1.0.0',
+    buildTime: date.toISOString(),
+    buildDate: date.toLocaleDateString(),
+    gitHash,
+    gitBranch,
+    buildId: `${packageJson.version}-${gitHash}`,
+    environment: process.env.NODE_ENV || 'development'
+  };
+}
+
+const buildInfo = getBuildInfo();
 
 export default defineConfig({
   define: {
     global: 'globalThis',
-    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __BUILD_TIME__: JSON.stringify(buildInfo.buildTime),
+    __BUILD_VERSION__: JSON.stringify(buildInfo.version),
+    __BUILD_HASH__: JSON.stringify(buildInfo.gitHash),
+    __BUILD_BRANCH__: JSON.stringify(buildInfo.gitBranch),
+    __BUILD_ID__: JSON.stringify(buildInfo.buildId),
+    __BUILD_DATE__: JSON.stringify(buildInfo.buildDate),
   },
   resolve: {
     conditions: ['import', 'module', 'browser', 'default'],

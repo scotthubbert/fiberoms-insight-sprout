@@ -66,6 +66,7 @@
           <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
           <calcite-action id="network-parent-action" text="Network Infrastructure" icon="linkChart"></calcite-action>
           <calcite-action id="tools-action" text="Tools" icon="apps"></calcite-action>
+          <calcite-action id="info-action" text="Info" icon="information" slot="actions-end"></calcite-action>
         </calcite-action-bar>
         <calcite-panel heading="Layers" id="layers-content">
           <calcite-block heading="Subscriber Status" collapsible>
@@ -184,6 +185,41 @@
           <calcite-block heading="Sketch Tools" collapsible>
             <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
             <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
+          </calcite-block>
+        </calcite-panel>
+        
+        <!-- Info Panel -->
+        <calcite-panel heading="Information" id="info-content" hidden>
+          <calcite-block heading="App Details" expanded>
+            <div id="app-info" style="padding: 12px;">
+              <calcite-list selection-mode="none">
+                <calcite-list-item label="Build Version" id="build-version-item">
+                  <calcite-icon slot="content-start" icon="code-branch"></calcite-icon>
+                  <span slot="content-end" id="build-version-text" style="font-family: monospace; color: var(--calcite-color-text-2);">Loading...</span>
+                </calcite-list-item>
+                <calcite-list-item label="Last Updated" id="build-date-item">
+                  <calcite-icon slot="content-start" icon="clock"></calcite-icon>
+                  <span slot="content-end" id="build-date-text" style="color: var(--calcite-color-text-2);">Loading...</span>
+                </calcite-list-item>
+                <calcite-list-item label="Environment" id="environment-item">
+                  <calcite-icon slot="content-start" icon="globe"></calcite-icon>
+                  <span slot="content-end" id="environment-text" style="color: var(--calcite-color-text-2);">Loading...</span>
+                </calcite-list-item>
+              </calcite-list>
+            </div>
+          </calcite-block>
+          
+          <calcite-block heading="Resources" collapsible>
+            <calcite-list selection-mode="none">
+              <calcite-list-item label="Documentation" description="View application documentation">
+                <calcite-icon slot="content-start" icon="file-text"></calcite-icon>
+                <calcite-action slot="actions-end" icon="launch" id="docs-link"></calcite-action>
+              </calcite-list-item>
+              <calcite-list-item label="Report Issue" description="Submit bug reports or feedback">
+                <calcite-icon slot="content-start" icon="exclamation-mark-triangle"></calcite-icon>
+                <calcite-action slot="actions-end" icon="launch" id="issue-link"></calcite-action>
+              </calcite-list-item>
+            </calcite-list>
           </calcite-block>
         </calcite-panel>
       </calcite-shell-panel>

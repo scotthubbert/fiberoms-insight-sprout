@@ -276,12 +276,14 @@ class LayerPanel {
     this.searchAction = document.getElementById('search-action');
     this.networkParentAction = document.getElementById('network-parent-action');
     this.toolsAction = document.getElementById('tools-action');
+    this.infoAction = document.getElementById('info-action');
     this.layersContent = document.getElementById('layers-content');
     this.ospContent = document.getElementById('osp-content');
     this.powerOutagesContent = document.getElementById('power-outages-content');
     this.searchContent = document.getElementById('search-content');
     this.networkParentContent = document.getElementById('network-parent-content');
     this.toolsContent = document.getElementById('tools-content');
+    this.infoContent = document.getElementById('info-content');
 
     this.init();
   }
@@ -300,6 +302,7 @@ class LayerPanel {
     this.searchAction?.addEventListener('click', () => this.handleActionClick('search'));
     this.networkParentAction?.addEventListener('click', () => this.handleActionClick('network-parent'));
     this.toolsAction?.addEventListener('click', () => this.handleActionClick('tools'));
+    this.infoAction?.addEventListener('click', () => this.handleActionClick('info'));
   }
 
   handleActionClick(panelName) {
@@ -324,6 +327,7 @@ class LayerPanel {
       case 'search': return this.searchAction;
       case 'network-parent': return this.networkParentAction;
       case 'tools': return this.toolsAction;
+      case 'info': return this.infoAction;
       default: return null;
     }
   }
@@ -342,6 +346,8 @@ class LayerPanel {
     this.networkParentContent.style.display = 'none';
     this.toolsContent.hidden = true;
     this.toolsContent.style.display = 'none';
+    this.infoContent.hidden = true;
+    this.infoContent.style.display = 'none';
 
     // Remove active state from all actions
     this.layersAction.active = false;
@@ -350,6 +356,7 @@ class LayerPanel {
     this.searchAction.active = false;
     this.networkParentAction.active = false;
     this.toolsAction.active = false;
+    this.infoAction.active = false;
 
     // Show selected panel and set active action
     switch (panelName) {
@@ -383,6 +390,51 @@ class LayerPanel {
         this.toolsContent.style.display = 'block';
         this.toolsAction.active = true;
         break;
+      case 'info':
+        this.infoContent.hidden = false;
+        this.infoContent.style.display = 'block';
+        this.infoAction.active = true;
+        this.updateBuildInfo();
+        break;
+    }
+  }
+
+  updateBuildInfo() {
+    // Import build info dynamically to avoid circular dependencies
+    import('./utils/buildInfo.js').then(({ getFormattedBuildInfo }) => {
+      const info = getFormattedBuildInfo();
+      
+      const buildVersionElement = document.getElementById('build-version-text');
+      const buildDateElement = document.getElementById('build-date-text');
+      const environmentElement = document.getElementById('environment-text');
+      
+      if (buildVersionElement) {
+        buildVersionElement.textContent = info.displayVersion;
+      }
+      
+      if (buildDateElement) {
+        buildDateElement.textContent = info.buildDate;
+      }
+      
+      if (environmentElement) {
+        environmentElement.textContent = info.environment.charAt(0).toUpperCase() + info.environment.slice(1);
+      }
+    });
+    
+    // Set up resource links
+    const docsLink = document.getElementById('docs-link');
+    const issueLink = document.getElementById('issue-link');
+    
+    if (docsLink) {
+      docsLink.addEventListener('click', () => {
+        window.open('https://github.com/your-org/fiberoms-insight-pwa/wiki', '_blank');
+      });
+    }
+    
+    if (issueLink) {
+      issueLink.addEventListener('click', () => {
+        window.open('https://github.com/your-org/fiberoms-insight-pwa/issues', '_blank');
+      });
     }
   }
 }

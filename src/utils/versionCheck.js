@@ -1,10 +1,17 @@
 // Version Check Utility
 // Checks for new deployments by comparing build hashes
 
-const VERSION_KEY = 'app-version';
-const CURRENT_VERSION = import.meta.env.VITE_APP_VERSION || Date.now().toString();
+import { buildInfo, storeBuildInfo, getStoredBuildInfo } from './buildInfo.js';
 
 export function initVersionCheck() {
+  // Store current build info on load
+  storeBuildInfo();
+  
+  // Log build info in development
+  if (import.meta.env.DEV) {
+    console.log('Build Info:', buildInfo);
+  }
+  
   // Check version on load
   checkVersion();
   
@@ -158,8 +165,10 @@ export function forceHardReload() {
   }
   
   // Clear local storage version
-  localStorage.removeItem(VERSION_KEY);
-  localStorage.removeItem('deployment-id');
+  localStorage.removeItem('app-build-hash');
+  localStorage.removeItem('app-build-version');
+  localStorage.removeItem('app-build-id');
+  localStorage.removeItem('app-build-time');
   
   // Force reload with cache bypass
   window.location.reload(true);
