@@ -164,7 +164,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
         const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Tombigbee Electric';
         
         // Get the current visibility state of the layer
-        let isChecked = true; // Default to checked
+        let isChecked = true; // Default to checked to match layer config
         try {
             const layer = window.app?.services?.layerManager?.getLayer(layerId);
             if (layer) {

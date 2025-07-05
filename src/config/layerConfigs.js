@@ -111,34 +111,17 @@ const createOfflineClusterConfig = () => ({
 
 // Online subscribers use individual points (no clustering) for service disruption analysis
 
-// Power outage renderers with company logos
+// Power outage renderers - not used when using GraphicsLayer
 const createPowerOutageRenderer = (company) => {
-    const symbols = {
-        apco: {
-            type: 'picture-marker',
-            url: '/apco-logo.png',
-            width: '24px',
-            height: '24px'
-        },
-        tombigbee: {
-            type: 'picture-marker',
-            url: '/tombigbee-logo.png',
-            width: '24px',
-            height: '24px'
-        }
-    };
-
+    // This renderer is not used since GraphicsLayer handles symbols individually
+    // Kept for compatibility with layer config structure
     return {
         type: 'simple',
-        symbol: symbols[company] || {
+        symbol: {
             type: 'simple-marker',
             style: 'circle',
-            color: [255, 165, 0, 0.8], // Orange for generic outages
-            size: 12,
-            outline: {
-                color: [255, 165, 0, 1],
-                width: 2
-            }
+            color: [255, 0, 0],
+            size: 8
         }
     };
 };
@@ -1067,7 +1050,7 @@ export const layerConfigs = {
         popupTemplate: createPowerOutagePopup('apco'),
         fields: createPowerOutageFields(),
         visible: true,
-        zOrder: 50,
+        zOrder: 8, // Below subscriber points and clusters
         dataServiceMethod: () => subscriberDataService.getApcoOutages()
     },
 
@@ -1079,7 +1062,7 @@ export const layerConfigs = {
         popupTemplate: createPowerOutagePopup('tombigbee'),
         fields: createPowerOutageFields(),
         visible: true,
-        zOrder: 51,
+        zOrder: 8, // Below subscriber points and clusters
         dataServiceMethod: () => subscriberDataService.getTombigbeeOutages()
     },
 

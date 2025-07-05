@@ -2187,13 +2187,23 @@ class Application {
           const apcoLayer = this.services.layerManager.getLayer('apco-outages');
           const tombigbeeLayer = this.services.layerManager.getLayer('tombigbee-outages');
           
-          if (apcoLayer && data.apco) {
-            await this.services.layerManager.updateLayerData('apco-outages', data.apco);
+          if (apcoLayer && data.apco && data.apco.features) {
+            // Pass GeoJSON format to updateLayerData
+            const apcoGeoJSON = {
+              type: 'FeatureCollection',
+              features: data.apco.features
+            };
+            await this.services.layerManager.updateLayerData('apco-outages', apcoGeoJSON);
             log.info(`⚡ Updated APCo outages: ${data.apco.count} outages`);
           }
           
-          if (tombigbeeLayer && data.tombigbee) {
-            await this.services.layerManager.updateLayerData('tombigbee-outages', data.tombigbee);
+          if (tombigbeeLayer && data.tombigbee && data.tombigbee.features) {
+            // Pass GeoJSON format to updateLayerData
+            const tombigbeeGeoJSON = {
+              type: 'FeatureCollection',
+              features: data.tombigbee.features
+            };
+            await this.services.layerManager.updateLayerData('tombigbee-outages', tombigbeeGeoJSON);
             log.info(`⚡ Updated Tombigbee outages: ${data.tombigbee.count} outages`);
           }
           
