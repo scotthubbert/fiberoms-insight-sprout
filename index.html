@@ -318,21 +318,18 @@
       </div>
       <div slot="content">
         <calcite-block heading="Subscriber Status" expanded>
-          <calcite-list selection-mode="none">
-            <calcite-list-item label="Online Subscribers" description="Show active subscribers"
-              class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="circle"
-                style="color: var(--calcite-color-status-success);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
+          <calcite-list-item label="Online Subscribers" description="Show active subscribers" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="circle"
+              style="color: var(--calcite-color-status-success);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
 
-            <calcite-list-item label="Offline Subscribers" description="Show disconnected subscribers"
-              class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="circle"
-                style="color: var(--calcite-color-status-danger);"></calcite-icon>
-              <calcite-switch slot="content-end" checked></calcite-switch>
-            </calcite-list-item>
-          </calcite-list>
+          <calcite-list-item label="Offline Subscribers" description="Show disconnected subscribers"
+            class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="circle"
+              style="color: var(--calcite-color-status-danger);"></calcite-icon>
+            <calcite-switch slot="content-end" checked></calcite-switch>
+          </calcite-list-item>
         </calcite-block>
 
         <calcite-block heading="Tools" expanded>
