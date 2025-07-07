@@ -186,6 +186,21 @@
             <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
             <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
           </calcite-block>
+          <calcite-block heading="Offline Data Cache" collapsible>
+            <div id="cache-status" style="padding: 12px;">
+              <calcite-list selection-mode="none">
+                <calcite-list-item label="Cache Status" description="Loading cache information...">
+                  <calcite-icon slot="content-start" icon="database"></calcite-icon>
+                  <span slot="content-end" id="cache-size-text" style="color: var(--calcite-color-text-2);">--</span>
+                </calcite-list-item>
+              </calcite-list>
+              <div id="cache-details" style="margin-top: 12px;"></div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s" id="refresh-cache-btn">Refresh Cache Info</calcite-button>
+                <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s" id="clear-cache-btn">Clear All Cache</calcite-button>
+              </div>
+            </div>
+          </calcite-block>
         </calcite-panel>
         
         <!-- Info Panel -->

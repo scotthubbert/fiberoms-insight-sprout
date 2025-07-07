@@ -18,6 +18,7 @@ import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConf
 import './components/PowerOutageStats.js';
 import { setupCalciteIconFallback } from './utils/calciteIconFallback.js';
 import { initVersionCheck } from './utils/versionCheck.js';
+import { loadingIndicator } from './utils/loadingIndicator.js';
 
 // Import ArcGIS Map Components
 import "@arcgis/map-components/dist/components/arcgis-search";
@@ -293,6 +294,7 @@ class LayerPanel {
     await customElements.whenDefined('calcite-action');
     await customElements.whenDefined('calcite-panel');
     this.setupActionBarNavigation();
+    this.setupCacheManagement();
   }
 
   setupActionBarNavigation() {
@@ -389,6 +391,7 @@ class LayerPanel {
         this.toolsContent.hidden = false;
         this.toolsContent.style.display = 'block';
         this.toolsAction.active = true;
+        this.updateCacheStatus();
         break;
       case 'info':
         this.infoContent.hidden = false;
@@ -435,6 +438,104 @@ class LayerPanel {
       issueLink.addEventListener('click', () => {
         window.open('https://github.com/your-org/fiberoms-insight-pwa/issues', '_blank');
       });
+    }
+  }
+
+  setupCacheManagement() {
+    const refreshBtn = document.getElementById('refresh-cache-btn');
+    const clearBtn = document.getElementById('clear-cache-btn');
+    
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => this.updateCacheStatus());
+    }
+    
+    if (clearBtn) {
+      clearBtn.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to clear all cached OSP data? This will require re-downloading all data on next use.')) {
+          await this.clearCache();
+        }
+      });
+    }
+  }
+
+  async updateCacheStatus() {
+    try {
+      const { cacheService } = await import('./services/CacheService.js');
+      const stats = await cacheService.getCacheStats();
+      
+      const cacheDetailsDiv = document.getElementById('cache-details');
+      const cacheSizeText = document.getElementById('cache-size-text');
+      
+      if (stats.length === 0) {
+        cacheSizeText.textContent = 'Empty';
+        cacheDetailsDiv.innerHTML = '<p style="color: var(--calcite-color-text-3); font-size: 13px;">No cached data</p>';
+        return;
+      }
+      
+      // Calculate total size
+      const totalFeatures = stats.reduce((sum, stat) => sum + stat.size, 0);
+      cacheSizeText.textContent = `${totalFeatures} features`;
+      
+      // Build details HTML
+      const detailsHTML = stats.map(stat => `
+        <div style="margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-2); border-radius: 4px;">
+          <div style="font-weight: 500; font-size: 13px;">${this.formatDataType(stat.dataType)}</div>
+          <div style="font-size: 12px; color: var(--calcite-color-text-2);">
+            ${stat.size} features • Cached ${stat.age} ago • ${stat.expires}
+          </div>
+        </div>
+      `).join('');
+      
+      cacheDetailsDiv.innerHTML = detailsHTML;
+    } catch (error) {
+      console.error('Failed to get cache status:', error);
+    }
+  }
+
+  formatDataType(dataType) {
+    const names = {
+      'fsa': 'FSA Boundaries',
+      'mainFiber': 'Main Line Fiber',
+      'mainOld': 'Main Line (Old)',
+      'mstFiber': 'MST Fiber',
+      'mstTerminals': 'MST Terminals',
+      'closures': 'Closures',
+      'splitters': 'Splitters',
+      'nodeSites': 'Node Sites'
+    };
+    return names[dataType] || dataType;
+  }
+
+  async clearCache() {
+    try {
+      const { cacheService } = await import('./services/CacheService.js');
+      await cacheService.clearAllCache();
+      await this.updateCacheStatus();
+      
+      // Show success notification
+      const noticeContainer = document.querySelector('#notice-container') || document.body;
+      const notice = document.createElement('calcite-notice');
+      notice.setAttribute('open', '');
+      notice.setAttribute('kind', 'success');
+      notice.setAttribute('closable', '');
+      notice.setAttribute('icon', 'check-circle');
+      
+      const titleDiv = document.createElement('div');
+      titleDiv.slot = 'title';
+      titleDiv.textContent = 'Cache Cleared';
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.slot = 'message';
+      messageDiv.textContent = 'All OSP data cache has been cleared successfully.';
+      
+      notice.appendChild(titleDiv);
+      notice.appendChild(messageDiv);
+      noticeContainer.appendChild(notice);
+      
+      // Auto-remove after 3 seconds
+      setTimeout(() => notice.remove(), 3000);
+    } catch (error) {
+      console.error('Failed to clear cache:', error);
     }
   }
 }
@@ -585,6 +686,9 @@ class DashboardManager {
     try {
       // Set global flag to skip notifications during manual refresh
       window._isManualRefresh = true;
+      
+      // Clear any existing loading notifications
+      loadingIndicator.clearConsolidated();
       
       // Clear cache to ensure fresh data
       subscriberDataService.clearCache();
@@ -1648,9 +1752,21 @@ class HeaderSearch {
 }
 
 // Application Orchestrator - Dependency Injection Pattern (DIP)
+/**
+ * Main Application class for FiberOMS Insight PWA
+ * Follows SOLID principles and manages application lifecycle
+ */
 class Application {
   constructor() {
     this.services = {};
+    this.onlineLayerLoaded = false; // Track if online layer has been loaded
+    this._onlineLayerLoading = false; // Prevent concurrent loads
+    this._onlineLayerLoadingPromise = null;
+    this._cleanupHandlers = [];
+    
+    // Handle cleanup on page unload
+    window.addEventListener('beforeunload', () => this.cleanup());
+    
     this.init();
   }
 
@@ -1703,6 +1819,12 @@ class Application {
   }
 
   async onMapReady() {
+    // Clear any previous loading state
+    loadingIndicator.clearConsolidated();
+    
+    // Show initial map loading indicator
+    loadingIndicator.showLoading('map-init', 'Map');
+    
     // Initialize subscriber layers first
     await this.initializeSubscriberLayers();
 
@@ -1714,9 +1836,15 @@ class Application {
 
     // Update dashboard after layers are loaded
     await this.services.dashboard.updateDashboard();
+    
+    // Map initialization complete
+    loadingIndicator.showNetwork('map-init', 'Map');
 
-    // Set up layer toggle handlers
-    this.setupLayerToggleHandlers();
+    // Set up layer toggle handlers after a small delay to ensure UI is fully initialized
+    // This prevents any initial checkbox state changes from triggering layer loads
+    setTimeout(() => {
+      this.setupLayerToggleHandlers();
+    }, 500);
 
     // Initialize popup action handlers after layers are ready
     if (this.services.mapController.view) {
@@ -1750,44 +1878,50 @@ class Application {
 
   async initializeSubscriberLayers() {
     try {
+      // Show loading indicator for offline subscriber data only
+      loadingIndicator.showLoading('offline-subscribers', 'Offline Subscribers');
+      
       // Create offline subscribers layer (visible by default - Phase 1 focus)
       const offlineConfig = getLayerConfig('offlineSubscribers');
       if (offlineConfig) {
-        const offlineLayer = await this.createLayerFromConfig(offlineConfig);
-        if (offlineLayer) {
-          this.services.mapController.addLayer(offlineLayer, offlineConfig.zOrder);
+        const result = await this.createLayerFromConfig(offlineConfig);
+        if (result && result.layer) {
+          this.services.mapController.addLayer(result.layer, offlineConfig.zOrder);
+          // Subscriber data is always real-time from network
+          loadingIndicator.showNetwork('offline-subscribers', 'Offline Subscribers');
         }
       }
 
-      // Create online subscribers layer (hidden by default)
-      const onlineConfig = getLayerConfig('onlineSubscribers');
-      if (onlineConfig) {
-        const onlineLayer = await this.createLayerFromConfig(onlineConfig);
-        if (onlineLayer) {
-          onlineLayer.visible = false; // Hidden by default per Phase 1 requirements
-          this.services.mapController.addLayer(onlineLayer, onlineConfig.zOrder);
-        }
-      }
+      // Online subscribers will be loaded on-demand when toggled on
+      // This saves ~2.7MB on initial load
+      log.info('📊 Online subscribers configured for on-demand loading (saves ~2.7MB)');
 
       // Create power outage layers
       await this.initializePowerOutageLayers();
 
     } catch (error) {
       log.error('Failed to initialize subscriber layers:', error);
+      loadingIndicator.showError('offline-subscribers', 'Offline Subscribers', 'Failed to load');
+      loadingIndicator.showError('online-subscribers', 'Online Subscribers', 'Failed to load');
     }
   }
 
   async initializePowerOutageLayers() {
     try {
+      // Show loading indicators for power outages
+      loadingIndicator.showLoading('apco-outages', 'APCo Power Outages');
+      loadingIndicator.showLoading('tombigbee-outages', 'Tombigbee Power Outages');
+      
       // Create APCo power outages layer
       const apcoConfig = getLayerConfig('apcoOutages');
       if (apcoConfig) {
-        const apcoLayer = await this.createLayerFromConfig(apcoConfig);
-        if (apcoLayer) {
-          apcoLayer.visible = apcoConfig.visible; // Use config default (true)
-          this.services.mapController.addLayer(apcoLayer, apcoConfig.zOrder);
+        const result = await this.createLayerFromConfig(apcoConfig);
+        if (result && result.layer) {
+          result.layer.visible = apcoConfig.visible; // Use config default (true)
+          this.services.mapController.addLayer(result.layer, apcoConfig.zOrder);
 
-          // GraphicsLayer doesn't have refresh() method, visibility toggle is handled in LayerManager
+          // Power outage data is always real-time from network
+          loadingIndicator.showNetwork('apco-outages', 'APCo Power Outages');
 
           log.info('✅ APCo power outages layer initialized');
         }
@@ -1796,12 +1930,13 @@ class Application {
       // Create Tombigbee power outages layer
       const tombigbeeConfig = getLayerConfig('tombigbeeOutages');
       if (tombigbeeConfig) {
-        const tombigbeeLayer = await this.createLayerFromConfig(tombigbeeConfig);
-        if (tombigbeeLayer) {
-          tombigbeeLayer.visible = tombigbeeConfig.visible; // Use config default (true)
-          this.services.mapController.addLayer(tombigbeeLayer, tombigbeeConfig.zOrder);
+        const result = await this.createLayerFromConfig(tombigbeeConfig);
+        if (result && result.layer) {
+          result.layer.visible = tombigbeeConfig.visible; // Use config default (true)
+          this.services.mapController.addLayer(result.layer, tombigbeeConfig.zOrder);
 
-          // GraphicsLayer doesn't have refresh() method, visibility toggle is handled in LayerManager
+          // Power outage data is always real-time from network
+          loadingIndicator.showNetwork('tombigbee-outages', 'Tombigbee Power Outages');
 
           log.info('✅ Tombigbee power outages layer initialized');
         }
@@ -1809,6 +1944,8 @@ class Application {
 
     } catch (error) {
       log.error('Failed to initialize power outage layers:', error);
+      loadingIndicator.showError('apco-outages', 'APCo Power Outages', 'Failed to load');
+      loadingIndicator.showError('tombigbee-outages', 'Tombigbee Power Outages', 'Failed to load');
       // Continue without power outage layers if they fail to load
     }
   }
@@ -1818,10 +1955,19 @@ class Application {
       // Create Node Sites layer
       const nodeSitesConfig = getLayerConfig('nodeSites');
       if (nodeSitesConfig) {
-        const nodeSitesLayer = await this.createLayerFromConfig(nodeSitesConfig);
-        if (nodeSitesLayer) {
-          nodeSitesLayer.visible = nodeSitesConfig.visible; // Use config default (false)
-          this.services.mapController.addLayer(nodeSitesLayer, nodeSitesConfig.zOrder);
+        loadingIndicator.showLoading('node-sites', 'Node Sites');
+        const result = await this.createLayerFromConfig(nodeSitesConfig);
+        if (result && result.layer) {
+          result.layer.visible = nodeSitesConfig.visible; // Use config default (false)
+          this.services.mapController.addLayer(result.layer, nodeSitesConfig.zOrder);
+          
+          // Show loading status based on cache
+          if (result.fromCache) {
+            loadingIndicator.showCached('node-sites', 'Node Sites');
+          } else {
+            loadingIndicator.showNetwork('node-sites', 'Node Sites');
+          }
+          
           log.info('✅ Node Sites layer initialized');
         }
       }
@@ -1841,23 +1987,41 @@ class Application {
 
       // List of fiber plant layer configs to initialize
       const fiberPlantLayers = [
-        'fsaBoundaries',
-        'mainLineFiber',
-        'mainLineOld',
-        'mstTerminals',
-        'mstFiber',
-        'splitters',
-        'closures'
+        { key: 'fsaBoundaries', name: 'FSA Boundaries' },
+        { key: 'mainLineFiber', name: 'Main Line Fiber' },
+        { key: 'mainLineOld', name: 'Main Line Old' },
+        { key: 'mstTerminals', name: 'MST Terminals' },
+        { key: 'mstFiber', name: 'MST Fiber' },
+        { key: 'splitters', name: 'Splitters' },
+        { key: 'closures', name: 'Closures' }
       ];
 
-      for (const layerKey of fiberPlantLayers) {
-        const layerConfig = getLayerConfig(layerKey);
+      // Show loading indicators for all OSP layers
+      for (const layerInfo of fiberPlantLayers) {
+        loadingIndicator.showLoading(`osp-${layerInfo.key}`, layerInfo.name);
+      }
+
+      for (const layerInfo of fiberPlantLayers) {
+        const layerConfig = getLayerConfig(layerInfo.key);
         if (layerConfig) {
-          const layer = await this.createLayerFromConfig(layerConfig);
-          if (layer) {
-            layer.visible = layerConfig.visible; // Use config default (false)
-            this.services.mapController.addLayer(layer, layerConfig.zOrder);
-            log.info(`✅ ${layerConfig.title} layer initialized`);
+          try {
+            const result = await this.createLayerFromConfig(layerConfig);
+            if (result && result.layer) {
+              result.layer.visible = layerConfig.visible; // Use config default (false)
+              this.services.mapController.addLayer(result.layer, layerConfig.zOrder);
+              
+              // Use the actual cache status from the data fetch
+              if (result.fromCache) {
+                loadingIndicator.showCached(`osp-${layerInfo.key}`, layerInfo.name);
+              } else {
+                loadingIndicator.showNetwork(`osp-${layerInfo.key}`, layerInfo.name);
+              }
+              
+              log.info(`✅ ${layerConfig.title} layer initialized`);
+            }
+          } catch (error) {
+            log.error(`Failed to initialize ${layerInfo.name}:`, error);
+            loadingIndicator.showError(`osp-${layerInfo.key}`, layerInfo.name, 'Failed to load');
           }
         }
       }
@@ -1917,19 +2081,97 @@ class Application {
       // For power outages and subscribers, data comes wrapped with features property
       const dataSource = data.features ? { features: data.features } : data;
 
-      return await this.services.layerManager.createLayer({
+      const layer = await this.services.layerManager.createLayer({
         ...config,
         dataSource: dataSource
       });
+
+      // Return both layer and cache status
+      return {
+        layer: layer,
+        fromCache: data.fromCache || false
+      };
     } catch (error) {
       log.error(`Failed to create layer ${config.id}:`, error);
       return null;
     }
   }
 
+  /**
+   * Loads online subscribers layer on demand to save bandwidth
+   * @returns {Promise<boolean>} True if layer loaded successfully
+   * @throws {Error} If layer configuration is missing
+   */
+  async loadOnlineSubscribersLayer() {
+    // Check if already loaded via LayerManager
+    if (this.services.layerManager.getLayer('online-subscribers')) {
+      log.info('📊 Online subscribers layer already loaded');
+      return true;
+    }
+
+    // Prevent concurrent loads
+    if (this._onlineLayerLoading) {
+      log.info('📊 Online subscribers layer already loading...');
+      return this._onlineLayerLoadingPromise;
+    }
+
+    try {
+      this._onlineLayerLoading = true;
+      this._onlineLayerLoadingPromise = this._performOnlineLayerLoad();
+      
+      const result = await this._onlineLayerLoadingPromise;
+      this.onlineLayerLoaded = result;
+      return result;
+    } finally {
+      this._onlineLayerLoading = false;
+      this._onlineLayerLoadingPromise = null;
+    }
+  }
+
+  /**
+   * Internal method to perform the actual layer loading
+   * @private
+   * @returns {Promise<boolean>} Success status
+   */
+  async _performOnlineLayerLoad() {
+    try {
+      loadingIndicator.showLoading('online-subscribers', 'Online Subscribers');
+      
+      const onlineConfig = getLayerConfig('onlineSubscribers');
+      if (!onlineConfig) {
+        throw new Error('Online subscribers layer configuration not found');
+      }
+
+      const result = await this.createLayerFromConfig(onlineConfig);
+      if (result && result.layer) {
+        result.layer.visible = true; // Make visible since user toggled it on
+        this.services.mapController.addLayer(result.layer, onlineConfig.zOrder);
+        loadingIndicator.showNetwork('online-subscribers', 'Online Subscribers');
+        
+        log.info('✅ Online subscribers layer loaded on demand');
+        return true;
+      }
+      
+      throw new Error('Failed to create online subscribers layer');
+    } catch (error) {
+      log.error('Failed to load online subscribers layer:', error);
+      loadingIndicator.showError('online-subscribers', 'Online Subscribers', error.message || 'Failed to load');
+      return false;
+    }
+  }
+
   setupLayerToggleHandlers() {
     // Desktop layer toggles (checkboxes) - layers, osp, network-parent, and tools panels
     const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
+    
+    // Log initial checkbox states for debugging
+    checkboxes.forEach(checkbox => {
+      const label = checkbox.closest('calcite-label');
+      if (label && label.textContent.trim() === 'Online Subscribers') {
+        log.info(`📊 Online Subscribers checkbox initial state: ${checkbox.checked}`);
+      }
+    });
+    
     checkboxes.forEach(checkbox => {
       checkbox.addEventListener('calciteCheckboxChange', (e) => {
         this.handleLayerToggle(e.target, e.target.checked);
@@ -1976,11 +2218,42 @@ class Application {
   }
 
   async handleLayerToggle(element, checked) {
+    // Validate inputs
+    if (!element || typeof checked !== 'boolean') {
+      log.warn('Invalid layer toggle parameters');
+      return;
+    }
+
     // Map UI labels to layer IDs
     const layerId = this.getLayerIdFromElement(element);
 
+    // Validate layer ID
+    const VALID_LAYER_IDS = new Set([
+      'offline-subscribers', 'online-subscribers', 'node-sites', 
+      'rainviewer-radar', 'apco-outages', 'tombigbee-outages',
+      'fsa-boundaries', 'main-line-fiber', 'main-line-old',
+      'mst-terminals', 'mst-fiber', 'splitters', 'closures'
+    ]);
+
+    if (!layerId || !VALID_LAYER_IDS.has(layerId)) {
+      log.warn(`Invalid or unsupported layer ID: ${layerId}`);
+      return;
+    }
+
     if (layerId) {
-      await this.services.layerManager.toggleLayerVisibility(layerId, checked);
+      // Special handling for online-subscribers layer - load on demand
+      if (layerId === 'online-subscribers' && checked && !this.onlineLayerLoaded) {
+        const loaded = await this.loadOnlineSubscribersLayer();
+        if (!loaded) {
+          // If loading failed, uncheck the toggle
+          element.checked = false;
+          return;
+        }
+      } else {
+        // Normal layer toggle
+        await this.services.layerManager.toggleLayerVisibility(layerId, checked);
+      }
+      
       this.syncToggleStates(layerId, checked);
 
       // Start/stop polling based on visibility (disabled for Phase 1)
@@ -2117,6 +2390,10 @@ class Application {
   }
 
   // Start polling for subscriber data updates
+  /**
+   * Starts polling for subscriber data updates
+   * Implements intelligent polling that only fetches data for loaded layers
+   */
   startSubscriberPolling() {
     log.info('🔄 Starting subscriber data polling');
     
@@ -2127,10 +2404,19 @@ class Application {
     // Polling callback for subscriber updates
     const handleSubscriberUpdate = async (data) => {
       try {
-        if (data.offline && data.online) {
+        if (data.offline || data.online) {
+          // Show loading indicators for updates
+          if (!window._isManualRefresh) {
+            loadingIndicator.showLoading('offline-subscribers-update', 'Offline Subscribers');
+            // Only show online loading indicator if layer is actually loaded
+            if (this.onlineLayerLoaded) {
+              loadingIndicator.showLoading('online-subscribers-update', 'Online Subscribers');
+            }
+          }
+          
           // Get current counts
-          const currentOfflineCount = data.offline.count || 0;
-          const currentOnlineCount = data.online.count || 0;
+          const currentOfflineCount = data.offline?.count || 0;
+          const currentOnlineCount = data.online?.count || 0;
           
           // Handle both offline and online updates
           const offlineLayer = this.services.layerManager.getLayer('offline-subscribers');
@@ -2139,11 +2425,18 @@ class Application {
           if (offlineLayer && data.offline) {
             await this.services.layerManager.updateLayerData('offline-subscribers', data.offline);
             log.info(`📊 Updated offline subscribers: ${data.offline.count} records`);
+            if (!window._isManualRefresh) {
+              loadingIndicator.showNetwork('offline-subscribers-update', 'Offline Subscribers');
+            }
           }
           
-          if (onlineLayer && data.online) {
+          // Only update online layer if it's actually loaded
+          if (onlineLayer && data.online && this.onlineLayerLoaded) {
             await this.services.layerManager.updateLayerData('online-subscribers', data.online);
             log.info(`📊 Updated online subscribers: ${data.online.count} records`);
+            if (!window._isManualRefresh) {
+              loadingIndicator.showNetwork('online-subscribers-update', 'Online Subscribers');
+            }
           }
           
           // Update dashboard counts
@@ -2165,6 +2458,10 @@ class Application {
         }
       } catch (error) {
         log.error('Failed to handle subscriber update:', error);
+        if (!window._isManualRefresh) {
+          loadingIndicator.showError('offline-subscribers-update', 'Offline Subscribers', 'Update failed');
+          loadingIndicator.showError('online-subscribers-update', 'Online Subscribers', 'Update failed');
+        }
       }
     };
     
@@ -2235,6 +2532,12 @@ class Application {
     const handlePowerOutageUpdate = async (data) => {
       try {
         if (data.apco && data.tombigbee) {
+          // Show loading indicators for updates
+          if (!window._isManualRefresh) {
+            loadingIndicator.showLoading('apco-outages-update', 'APCo Power Outages');
+            loadingIndicator.showLoading('tombigbee-outages-update', 'Tombigbee Power Outages');
+          }
+          
           // Handle both APCo and Tombigbee updates
           const apcoLayer = this.services.layerManager.getLayer('apco-outages');
           const tombigbeeLayer = this.services.layerManager.getLayer('tombigbee-outages');
@@ -2247,6 +2550,9 @@ class Application {
             };
             await this.services.layerManager.updateLayerData('apco-outages', apcoGeoJSON);
             log.info(`⚡ Updated APCo outages: ${data.apco.count} outages`);
+            if (!window._isManualRefresh) {
+              loadingIndicator.showNetwork('apco-outages-update', 'APCo Power Outages');
+            }
           }
           
           if (tombigbeeLayer && data.tombigbee && data.tombigbee.features) {
@@ -2257,6 +2563,9 @@ class Application {
             };
             await this.services.layerManager.updateLayerData('tombigbee-outages', tombigbeeGeoJSON);
             log.info(`⚡ Updated Tombigbee outages: ${data.tombigbee.count} outages`);
+            if (!window._isManualRefresh) {
+              loadingIndicator.showNetwork('tombigbee-outages-update', 'Tombigbee Power Outages');
+            }
           }
           
           // Update power outage stats component if it exists
@@ -2268,6 +2577,10 @@ class Application {
         }
       } catch (error) {
         log.error('Failed to handle power outage update:', error);
+        if (!window._isManualRefresh) {
+          loadingIndicator.showError('apco-outages-update', 'APCo Power Outages', 'Update failed');
+          loadingIndicator.showError('tombigbee-outages-update', 'Tombigbee Power Outages', 'Update failed');
+        }
       }
     };
     
@@ -2435,6 +2748,46 @@ class Application {
   stopPolling() {
     log.info('⏹️ Stopping all polling');
     this.pollingManager.stopAll();
+  }
+
+  /**
+   * Cleanup method to prevent memory leaks
+   * Called on page unload or application destruction
+   */
+  cleanup() {
+    log.info('🧹 Cleaning up application resources...');
+    
+    // Stop all polling
+    if (this.pollingManager) {
+      this.pollingManager.stopAll();
+    }
+    
+    // Clean up services
+    if (this.services.layerManager && typeof this.services.layerManager.cleanup === 'function') {
+      this.services.layerManager.cleanup();
+    }
+    
+    if (this.services.rainViewerService && typeof this.services.rainViewerService.cleanup === 'function') {
+      this.services.rainViewerService.cleanup();
+    }
+    
+    // Clear loading indicators
+    if (loadingIndicator) {
+      loadingIndicator.destroy();
+    }
+    
+    // Execute any registered cleanup handlers
+    this._cleanupHandlers.forEach(handler => {
+      try {
+        handler();
+      } catch (error) {
+        log.error('Cleanup handler error:', error);
+      }
+    });
+    
+    // Clear references
+    this.services = {};
+    this._cleanupHandlers = [];
   }
 }
 

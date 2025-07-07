@@ -46,6 +46,7 @@
     "@arcgis/core": "^4.33.0",
     "@arcgis/map-components": "^4.33.0",
     "@esri/calcite-components": "^3.2.1",
-    "@supabase/supabase-js": "^2.45.4"
+    "@supabase/supabase-js": "^2.45.4",
+    "dexie": "^4.0.10"
   }
 }

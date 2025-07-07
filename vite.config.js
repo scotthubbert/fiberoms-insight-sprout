@@ -142,8 +142,8 @@ export default defineConfig({
         // Navigation fallback for SPA
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/(api|storage)\//],
-        // Force update on navigation
-        navigationPreload: false, // Disable to prevent cache errors
+        // Disable navigation preload completely
+        navigationPreload: false,
         // Add custom service worker code
         additionalManifestEntries: [],
         mode: 'production',
@@ -161,6 +161,18 @@ export default defineConfig({
           }
         ],
         runtimeCaching: [
+          // Skip service worker caching for OSP GeoJSON data - handled by IndexedDB
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/(public|sign)\/(fsa-data|esri-files)\/.*\.geojson/i,
+            handler: 'NetworkOnly',
+            options: {
+              // Let our IndexedDB cache handle these files
+              cacheName: 'osp-geojson-skip',
+              fetchOptions: {
+                mode: 'cors'
+              }
+            }
+          },
           {
             urlPattern: /^https:\/\/js\.arcgis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
