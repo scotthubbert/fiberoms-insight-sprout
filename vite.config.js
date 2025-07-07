@@ -70,6 +70,12 @@ export default defineConfig({
           'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x', 'trash',
           'users', 'linkChart', 'layers', 'triangle', 'organization', 'utilityNetwork', 'utility-network', 'diamond', 'square',
           'data', 'code', 'globe', 'fileText', 'launch', 'exclamation-mark-triangle',
+          // Essential CalciteUI component icons (prevents rendering failures)
+          'loading', 'check', 'minus', 'plus', 'question', 'asterisk', 'calendar',
+          'chevron-left', 'chevron-right', 'chevron-up', 'chevron-down', 'chevronLeft', 'chevronRight', 'chevronUp', 'chevronDown',
+          'handle-horizontal', 'handle-vertical', 'grip', 'menu', 'caret-down', 'caret-up',
+          // Mobile UI specific icons
+          'home', 'locate', 'navigation', 'drag', 'resize', 'grid', 'view-visible', 'view-hide',
           // Popup action icons
           'duplicate', 'map', 'pinTear', 'check',
           // ArcGIS popup widget icons
