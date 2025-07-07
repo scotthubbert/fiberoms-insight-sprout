@@ -273,21 +273,23 @@ const createPowerOutageFields = () => [
 
 // Enhanced popup templates for field workers (updated for actual database schema)
 const createSubscriberPopup = (status) => ({
-    title: '{customer_name}',
+    title: '{name}',
     content: [
         {
             type: 'fields',
             fieldInfos: [
-                { fieldName: 'customer_number', label: 'Account #', visible: true },
-                { fieldName: 'address', label: 'Service Address', visible: true },
-                { fieldName: 'city', label: 'City', visible: true },
-                { fieldName: 'state', label: 'State', visible: true },
-                { fieldName: 'zip', label: 'ZIP', visible: true },
-                { fieldName: 'status', label: 'Connection Status', visible: true },
-                { fieldName: 'county', label: 'County', visible: true },
-                { fieldName: 'account_status', label: 'Account Status', visible: true },
-                { fieldName: 'plan_name', label: 'Service Plan', visible: true },
-                { fieldName: 'service_type', label: 'Service Type', visible: true }
+                { fieldName: 'account', label: 'Account', visible: true },
+                { fieldName: 'status', label: 'Status', visible: true },
+                { fieldName: 'service_address', label: 'Full Address', visible: true },
+                { fieldName: 'service_type', label: 'Service Type', visible: true },
+                { fieldName: 'plan_name', label: 'Plan', visible: true },
+                { fieldName: 'ta5k', label: 'TA5K', visible: true },
+                { fieldName: 'remote_id', label: 'Remote ID', visible: true },
+                { fieldName: 'ont', label: 'ONT', visible: true },
+                { fieldName: 'has_electric', label: 'Electric Available', visible: true },
+                { fieldName: 'fiber_distance', label: 'Fiber Distance', visible: true },
+                { fieldName: 'light', label: 'Light Level', visible: true },
+                { fieldName: 'last_update', label: 'Last Update', visible: true }
             ]
         }
     ],
@@ -310,21 +312,36 @@ const createSubscriberPopup = (status) => ({
 // Field definitions to prevent GeoJSONLayer field type inference warnings
 // Updated to match actual database schema
 const subscriberFields = [
-    { name: 'customer_name', type: 'string', alias: 'Customer Name' },
-    { name: 'customer_number', type: 'string', alias: 'Account Number' },
-    { name: 'address', type: 'string', alias: 'Service Address' },
+    { name: 'name', type: 'string', alias: 'Customer Name' },
+    { name: 'account', type: 'string', alias: 'Account Number' },
+    { name: 'service_address', type: 'string', alias: 'Service Address' },
     { name: 'city', type: 'string', alias: 'City' },
     { name: 'state', type: 'string', alias: 'State' },
-    { name: 'zip', type: 'string', alias: 'ZIP Code' },
+    { name: 'zip_code', type: 'integer', alias: 'ZIP Code' },
     { name: 'status', type: 'string', alias: 'Connection Status' },
     { name: 'county', type: 'string', alias: 'County' },
     { name: 'latitude', type: 'double', alias: 'Latitude' },
     { name: 'longitude', type: 'double', alias: 'Longitude' },
-    // Additional fields from actual schema
     { name: 'account_status', type: 'string', alias: 'Account Status' },
     { name: 'ont', type: 'string', alias: 'ONT' },
     { name: 'plan_name', type: 'string', alias: 'Service Plan' },
-    { name: 'service_type', type: 'string', alias: 'Service Type' }
+    { name: 'service_type', type: 'string', alias: 'Service Type' },
+    { name: 'ta5k', type: 'string', alias: 'TA5K' },
+    { name: 'remote_id', type: 'string', alias: 'Remote ID' },
+    { name: 'has_electric', type: 'string', alias: 'Electric Available' },
+    { name: 'fiber_distance', type: 'string', alias: 'Fiber Distance' },
+    { name: 'light', type: 'string', alias: 'Light Level' },
+    { name: 'bip', type: 'string', alias: 'BIP' },
+    { name: 'last_update', type: 'date', alias: 'Last Update' },
+    { name: 'created_at', type: 'date', alias: 'Created At' },
+    { name: 'updated_at', type: 'date', alias: 'Updated At' },
+    { name: 'last_sync', type: 'date', alias: 'Last Sync' },
+    { name: 'last_modified', type: 'date', alias: 'Last Modified' },
+    { name: 'last_updated', type: 'date', alias: 'Last Updated' },
+    { name: 'id', type: 'integer', alias: 'ID' },
+    { name: 'index_column', type: 'string', alias: 'Index Column' },
+    { name: 'number_of_records', type: 'integer', alias: 'Number of Records' },
+    { name: 'geom', type: 'string', alias: 'Geometry' }
 ];
 
 // Fiber Plant renderer configurations
