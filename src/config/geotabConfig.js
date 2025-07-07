@@ -21,7 +21,10 @@ export function getGeotabConfig() {
         fallbackToSupabase: import.meta.env.VITE_GEOTAB_FALLBACK_TO_SUPABASE === 'true' || true, // Default to true
         timeout: parseInt(import.meta.env.VITE_GEOTAB_TIMEOUT) || 30000, // 30 seconds
         rememberMe: import.meta.env.VITE_GEOTAB_REMEMBER_ME === 'true' || false,
-        mockMode: import.meta.env.VITE_GEOTAB_MOCK_MODE === 'true' || false
+        mockMode: import.meta.env.VITE_GEOTAB_MOCK_MODE === 'true' || false,
+        // Add retry settings from TRUCK_LAYER_DEFAULTS
+        maxRetries: TRUCK_LAYER_DEFAULTS.maxRetries,
+        retryDelay: TRUCK_LAYER_DEFAULTS.retryDelay
     };
 
     // Only log configuration status in development
@@ -33,6 +36,8 @@ export function getGeotabConfig() {
         log.info('Enabled:', config.enabled ? 'Yes ✅' : 'No ❌');
         log.info('Refresh Interval:', config.refreshInterval + 'ms');
         log.info('Timeout:', config.timeout + 'ms');
+        log.info('Max Retries:', config.maxRetries);
+        log.info('Retry Delay:', config.retryDelay + 'ms');
         log.info('Mock Mode:', config.mockMode ? 'Yes ⚠️' : 'No ✅');
     }
 

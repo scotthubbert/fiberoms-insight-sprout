@@ -7,6 +7,15 @@ import PopupTemplate from '@arcgis/core/PopupTemplate';
 import Graphic from '@arcgis/core/Graphic';
 import Polygon from '@arcgis/core/geometry/Polygon';
 import Point from '@arcgis/core/geometry/Point';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
+
+// Production logging utility
+const isDevelopment = import.meta.env.DEV;
+const log = {
+    info: (...args) => isDevelopment && console.log(...args),
+    warn: (...args) => console.warn(...args),
+    error: (...args) => console.error(...args)
+};
 
 export class LayerManager {
     constructor(dataService) {
@@ -46,7 +55,7 @@ export class LayerManager {
                 return this.createGeoJSONLayer(layerConfig);
             }
         } catch (error) {
-            console.error(`Failed to create layer ${layerConfig.id}:`, error);
+            log.error(`Failed to create layer ${layerConfig.id}:`, error);
             return null;
         }
     }
@@ -58,12 +67,12 @@ export class LayerManager {
         if (layerConfig.dataSource?.features) {
             data = layerConfig.dataSource;
         } else {
-            console.warn(`No data provided for layer: ${layerConfig.id}`);
+            log.warn(`No data provided for layer: ${layerConfig.id}`);
             return null;
         }
 
         if (!data?.features?.length) {
-            console.warn(`No features available for layer: ${layerConfig.id}`);
+            log.warn(`No features available for layer: ${layerConfig.id}`);
             return null;
         }
 
@@ -213,7 +222,7 @@ export class LayerManager {
                         graphics.push(centroidGraphic);
                     }
                 } catch (error) {
-                    console.error('Failed to create centroid:', error);
+                    log.error('Failed to create centroid:', error);
                 }
                 continue;
             }
@@ -239,7 +248,7 @@ export class LayerManager {
             visible: layerConfig.visible !== undefined ? layerConfig.visible : true
         });
 
-        console.log(`✅ Created ${layerConfig.title} with ${graphics.length} graphics (${pointCount} points, ${polygonCount} polygons)`);
+        log.info(`✅ Created ${layerConfig.title} with ${graphics.length} graphics (${pointCount} points, ${polygonCount} polygons)`);
 
         this.layers.set(layerConfig.id, layer);
         this.layerConfigs.set(layerConfig.id, layerConfig);
@@ -290,7 +299,7 @@ export class LayerManager {
             visible: layerConfig.visible !== undefined ? layerConfig.visible : true
         });
 
-        console.log(`✅ Created ${layerConfig.title} FeatureLayer with ${graphics.length} truck features`);
+        log.info(`✅ Created ${layerConfig.title} FeatureLayer with ${graphics.length} truck features`);
 
         this.layers.set(layerConfig.id, layer);
         this.layerConfigs.set(layerConfig.id, layerConfig);
@@ -309,7 +318,7 @@ export class LayerManager {
 
             return layer;
         } else {
-            console.warn(`No layer instance provided for WebTileLayer: ${layerConfig.id}`);
+            log.warn(`No layer instance provided for WebTileLayer: ${layerConfig.id}`);
             return null;
         }
     }
@@ -318,7 +327,7 @@ export class LayerManager {
     async toggleLayerVisibility(layerId, visible) {
         const layer = this.layers.get(layerId);
         if (!layer) {
-            console.error(`Layer not found: ${layerId}`);
+            log.error(`Layer not found: ${layerId}`);
             return false;
         }
 
@@ -363,12 +372,12 @@ export class LayerManager {
         const config = this.layerConfigs.get(layerId);
 
         if (!layer || !config) {
-            console.warn(`Layer ${layerId} not found for update`);
+            log.warn(`Layer ${layerId} not found for update`);
             return false;
         }
 
         try {
-            console.log(`🔄 Updating layer: ${layerId}`);
+            log.info(`🔄 Updating layer: ${layerId}`);
 
             // Truck FeatureLayers use smooth updates with applyEdits
             if (layerId.includes('trucks') && layer.type === 'feature') {
@@ -389,7 +398,7 @@ export class LayerManager {
 
             return true;
         } catch (error) {
-            console.error(`Failed to update layer ${layerId}:`, error);
+            log.error(`Failed to update layer ${layerId}:`, error);
             return false;
         }
     }
@@ -398,7 +407,7 @@ export class LayerManager {
     async updateGraphicsLayer(layerId, config, newData) {
         const map = this.getMapForLayer(layerId);
         if (!map) {
-            console.warn(`No map found for layer ${layerId}`);
+            log.warn(`No map found for layer ${layerId}`);
             return false;
         }
 
@@ -412,7 +421,7 @@ export class LayerManager {
 
             // Remove old layer from map
             map.remove(oldLayer);
-            console.log(`🗑️ Removed old ${layerId} layer from map`);
+            log.info(`🗑️ Removed old ${layerId} layer from map`);
         }
 
         // Create new layer with updated data and preserved visibility
@@ -429,7 +438,7 @@ export class LayerManager {
             const zOrder = this.getZOrder(layerId);
             map.add(newLayer, zOrder);
 
-            console.log(`✅ Re-added ${layerId} layer with ${newLayer.graphics.length} graphics, visible: ${wasVisible}`);
+            log.info(`✅ Re-added ${layerId} layer with ${newLayer.graphics.length} graphics, visible: ${wasVisible}`);
             return true;
         }
 
@@ -440,7 +449,7 @@ export class LayerManager {
     async updateGeoJSONLayer(layerId, config, newData) {
         const map = this.getMapForLayer(layerId);
         if (!map) {
-            console.warn(`No map found for layer ${layerId}`);
+            log.warn(`No map found for layer ${layerId}`);
             return false;
         }
 
@@ -480,7 +489,7 @@ export class LayerManager {
             // Set visibility after a small delay to ensure layer is properly initialized
             setTimeout(() => {
                 newLayer.visible = wasVisible;
-                console.log(`✅ Set visibility for ${layerId} to ${wasVisible}`);
+                log.info(`✅ Set visibility for ${layerId} to ${wasVisible}`);
 
                 // Force refresh if visible
                 if (wasVisible && typeof newLayer.refresh === 'function') {
@@ -488,7 +497,7 @@ export class LayerManager {
                 }
             }, 100);
 
-            console.log(`✅ Recreated layer ${layerId} with ${newData.features?.length || 0} features, visible: ${wasVisible}`);
+            log.info(`✅ Recreated layer ${layerId} with ${newData.features?.length || 0} features, visible: ${wasVisible}`);
             return true;
         }
 
@@ -605,12 +614,12 @@ export class LayerManager {
 
             if (Object.keys(edits).length > 0) {
                 await layer.applyEdits(edits);
-                console.log(`✅ Smooth truck update applied: +${newFeatures.length} ~${updatedFeatures.length} -${deletedFeatures.length} trucks`);
+                log.info(`✅ Smooth truck update applied: +${newFeatures.length} ~${updatedFeatures.length} -${deletedFeatures.length} trucks`);
             }
 
             return true;
         } catch (error) {
-            console.error(`❌ Failed to smooth update truck layer ${layerId}:`, error);
+            log.error(`❌ Failed to smooth update truck layer ${layerId}:`, error);
             return false;
         }
     }
@@ -673,7 +682,7 @@ export class LayerManager {
         }
 
         if (!mapView) {
-            console.warn('🏷️ No map view available for FSA scale-dependent labeling, trying later...');
+            log.warn('🏷️ No map view available for FSA scale-dependent labeling, trying later...');
             // Retry after a delay
             setTimeout(() => {
                 this.setupScaleDependentLabeling(layer, labelingInfo);
@@ -683,20 +692,20 @@ export class LayerManager {
 
         const targetScale = 80000; // Show labels when zoomed in to around zoom level 14 (scale 1:80,000 or closer)
 
-        console.log('🏷️ Setting up FSA scale-dependent labeling');
+        log.info('🏷️ Setting up FSA scale-dependent labeling');
 
-        // Watch for scale changes
-        mapView.watch('scale', (scale) => {
+        // Watch for scale changes using reactiveUtils (ArcGIS 4.33+)
+        reactiveUtils.watch(() => mapView.scale, (scale) => {
             if (scale <= targetScale) {
                 // Zoomed in enough - add labels
                 if (!layer.labelingInfo || layer.labelingInfo.length === 0) {
-                    console.log('🏷️ Adding FSA labels at scale 1:' + Math.round(scale));
+                    log.info('🏷️ Adding FSA labels at scale 1:' + Math.round(scale));
                     layer.labelingInfo = labelingInfo;
                 }
             } else {
                 // Zoomed out too far - remove labels
                 if (layer.labelingInfo && layer.labelingInfo.length > 0) {
-                    console.log(`🚫 Removing FSA labels at scale 1:${Math.round(scale)} (zoom level <14)`);
+                    log.info(`🚫 Removing FSA labels at scale 1:${Math.round(scale)} (zoom level <14)`);
                     layer.labelingInfo = [];
                 }
             }
@@ -705,10 +714,10 @@ export class LayerManager {
         // Set initial state based on current scale
         const currentScale = mapView.scale;
         if (currentScale <= targetScale) {
-            console.log('🏷️ Initial scale is within threshold, applying FSA labels');
+            log.info('🏷️ Initial scale is within threshold, applying FSA labels');
             layer.labelingInfo = labelingInfo;
         } else {
-            console.log('🏷️ Initial scale too far out, FSA labels will appear at zoom level 14+');
+            log.info('🏷️ Initial scale too far out, FSA labels will appear at zoom level 14+');
             layer.labelingInfo = [];
         }
     }
