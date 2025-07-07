@@ -11,17 +11,17 @@ function getBuildInfo() {
   const date = new Date();
   let gitHash = 'dev';
   let gitBranch = 'local';
-  
+
   try {
     gitHash = execSync('git rev-parse --short HEAD').toString().trim();
     gitBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
   } catch (e) {
     console.warn('Git information not available, using defaults');
   }
-  
+
   // Read package.json version
   const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
-  
+
   return {
     version: packageJson.version || '1.0.0',
     buildTime: date.toISOString(),
@@ -67,8 +67,9 @@ export default defineConfig({
         // Copy only the specific icons we actually use
         ...['search', 'layer', 'apps', 'circle', 'polygon', 'line', 'ellipsis', 'rain',
           'exclamationMarkTriangle', 'flash', 'car', 'person', 'information', 'clock',
-          'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x',
+          'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x', 'trash',
           'users', 'linkChart', 'layers', 'triangle', 'organization', 'utilityNetwork', 'utility-network', 'diamond', 'square',
+          'data', 'code', 'globe', 'fileText', 'launch', 'exclamation-mark-triangle',
           // Popup action icons
           'duplicate', 'map', 'pinTear', 'check',
           // ArcGIS popup widget icons
