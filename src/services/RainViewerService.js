@@ -36,11 +36,19 @@ export class RainViewerService {
      */
     async initialize() {
         try {
-            await this.fetchRadarData();
-            return true;
+            console.log('🌧️ Initializing RainViewer service...');
+            const data = await this.fetchRadarData();
+
+            if (data) {
+                console.log('✅ RainViewer service initialized successfully');
+                return true;
+            } else {
+                console.warn('⚠️ RainViewer service initialized with limited functionality (API unavailable)');
+                return true; // Still return true to allow app to continue
+            }
         } catch (error) {
-            console.error('❌ Failed to initialize RainViewer service:', error);
-            return false;
+            console.warn('⚠️ RainViewer service initialization failed (non-critical):', error.message);
+            return true; // Don't block app startup
         }
     }
 
@@ -49,25 +57,52 @@ export class RainViewerService {
      */
     async fetchRadarData() {
         try {
-            const response = await fetch(this.apiUrl);
+            // Add timeout and better error handling
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+            const response = await fetch(this.apiUrl, {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                console.warn(`⚠️ RainViewer API returned ${response.status}: ${response.statusText}`);
+                return null;
             }
 
             // Check if response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
-                console.error('❌ RainViewer API returned non-JSON response:', text.substring(0, 200));
-                throw new Error('RainViewer API returned non-JSON response');
+                console.warn('⚠️ RainViewer API returned non-JSON response:', text.substring(0, 100));
+                return null;
             }
 
-            this.radarData = await response.json();
+            const data = await response.json();
 
+            // Validate the response structure
+            if (!data || !data.radar || !data.radar.past || !Array.isArray(data.radar.past)) {
+                console.warn('⚠️ RainViewer API returned invalid data structure');
+                return null;
+            }
+
+            this.radarData = data;
+            console.log('✅ RainViewer data loaded successfully');
             return this.radarData;
+
         } catch (error) {
-            console.error('❌ Failed to fetch RainViewer data:', error);
-            // Don't throw - just return null to allow app to continue
+            if (error.name === 'AbortError') {
+                console.warn('⚠️ RainViewer API request timeout');
+            } else {
+                console.warn('⚠️ RainViewer API request failed (non-critical):', error.message);
+            }
+            // Always return null instead of throwing to prevent app crashes
             return null;
         }
     }

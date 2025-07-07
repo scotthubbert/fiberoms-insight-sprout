@@ -83,13 +83,32 @@ const log = {
 
 // Global error handler for cache errors to prevent app crashes
 window.addEventListener('unhandledrejection', event => {
-  if (event.reason && event.reason.message &&
-    (event.reason.message.includes('Cache.put()') ||
-      event.reason.message.includes('Failed to fetch') ||
-      event.reason.message.includes('NetworkError') ||
-      event.reason.message.includes('Failed to execute'))) {
-    console.warn('Caught cache/network error:', event.reason.message);
-    event.preventDefault(); // Prevent the error from bubbling up and crashing the app
+  if (event.reason && event.reason.message) {
+    const errorMessage = event.reason.message;
+
+    // Suppress non-critical errors that shouldn't break the app
+    if (errorMessage.includes('Cache.put()') ||
+      errorMessage.includes('Failed to fetch') ||
+      errorMessage.includes('NetworkError') ||
+      errorMessage.includes('Failed to execute') ||
+      errorMessage.includes('Unexpected token') ||
+      errorMessage.includes('<!DOCTYPE') ||
+      errorMessage.includes('is not valid JSON') ||
+      errorMessage.includes('AbortError') ||
+      errorMessage.includes('RainViewer') ||
+      errorMessage.includes('timeout')) {
+      console.warn('🔇 Suppressed non-critical error:', errorMessage);
+      event.preventDefault(); // Prevent the error from bubbling up and crashing the app
+    }
+  }
+});
+
+// Additional error handler for SyntaxError JSON parsing issues
+window.addEventListener('error', event => {
+  if (event.error && event.error.name === 'SyntaxError' &&
+    event.error.message.includes('Unexpected token')) {
+    console.warn('🔇 Suppressed JSON parsing error (likely from external API):', event.error.message);
+    event.preventDefault();
   }
 });
 
@@ -601,20 +620,35 @@ class MobileTabBar {
     }
   }
 
-  handleTabSelection(tabValue) {
+  async handleTabSelection(tabValue) {
     this.closeCurrentPanel();
 
     const dialogId = `mobile-${tabValue}-sheet`;
     const dialog = document.getElementById(dialogId);
 
     if (dialog) {
-      dialog.open = true;
-      this.currentDialog = dialog;
-      this.closeButton.classList.add('show');
+      // Ensure CalciteUI components are properly initialized before opening
+      try {
+        await customElements.whenDefined('calcite-dialog');
+        await customElements.whenDefined('calcite-switch');
+        await customElements.whenDefined('calcite-list-item');
 
-      // Initialize functionality for specific tabs
-      if (tabValue === 'other') {
-        this.initializeMobileOtherTab();
+        dialog.open = true;
+        this.currentDialog = dialog;
+        this.closeButton.classList.add('show');
+
+        // Initialize functionality for specific tabs
+        if (tabValue === 'other') {
+          this.initializeMobileOtherTab();
+        } else if (tabValue === 'subscribers') {
+          this.initializeMobileSubscribersTab();
+        }
+      } catch (error) {
+        console.warn('⚠️ CalciteUI components not ready, but proceeding with dialog open:', error);
+        // Still try to open the dialog
+        dialog.open = true;
+        this.currentDialog = dialog;
+        this.closeButton.classList.add('show');
       }
     }
   }
@@ -624,6 +658,29 @@ class MobileTabBar {
     this.updateMobileCacheStatus();
     this.updateMobileBuildInfo();
     this.setupMobileResourceLinks();
+  }
+
+  initializeMobileSubscribersTab() {
+    // Ensure subscriber switches are properly initialized
+    const subscriberDialog = document.getElementById('mobile-subscribers-sheet');
+    if (subscriberDialog) {
+      // Force a small delay to ensure all components are rendered
+      setTimeout(() => {
+        const switches = subscriberDialog.querySelectorAll('calcite-switch');
+        switches.forEach(switchEl => {
+          // Ensure switch is visible and functional
+          switchEl.style.display = 'block';
+          switchEl.style.visibility = 'visible';
+        });
+
+        const listItems = subscriberDialog.querySelectorAll('calcite-list-item');
+        listItems.forEach(item => {
+          // Ensure list items are visible
+          item.style.display = 'block';
+          item.style.visibility = 'visible';
+        });
+      }, 100);
+    }
   }
 
   async updateMobileCacheStatus() {
