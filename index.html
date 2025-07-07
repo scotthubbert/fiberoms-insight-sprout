@@ -301,9 +301,7 @@
         </calcite-block>
 
         <calcite-block heading="Recent Searches" expanded>
-          <calcite-list selection-mode="none" class="recent-searches-list">
-            <!-- Recent searches will be populated dynamically -->
-          </calcite-list>
+          <!-- Recent searches will be populated dynamically -->
         </calcite-block>
 
 
@@ -348,65 +346,58 @@
       </div>
       <div slot="content">
         <calcite-block heading="Network Infrastructure" expanded>
-          <calcite-list selection-mode="none">
-            <calcite-list-item label="Node Sites" description="Network node locations" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="circle" style="color: var(--calcite-color-info);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
-          </calcite-list>
+          <calcite-list-item label="Node Sites" description="Network node locations" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="circle" style="color: var(--calcite-color-info);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
         </calcite-block>
 
         <calcite-block heading="OSP (Outside Plant)" expanded>
-          <calcite-list selection-mode="none">
-            <calcite-list-item label="FSA Boundaries" description="Service area boundaries" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="polygon" style="color: rgb(30, 144, 255);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
+          <calcite-list-item label="FSA Boundaries" description="Service area boundaries" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="polygon" style="color: rgb(30, 144, 255);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
 
-            <calcite-list-item label="Main Line Fiber" description="Primary fiber routes" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="line" style="color: rgb(165, 42, 42);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
+          <calcite-list-item label="Main Line Fiber" description="Primary fiber routes" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="line" style="color: rgb(165, 42, 42);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
 
-            <calcite-list-item label="Main Line Old" description="Legacy fiber infrastructure"
-              class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="line" style="color: rgb(105, 105, 105);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
+          <calcite-list-item label="Main Line Old" description="Legacy fiber infrastructure" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="line" style="color: rgb(105, 105, 105);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
 
-            <calcite-list-item label="MST Terminals" description="Multi-service terminals" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="circle" style="color: rgb(0, 191, 255);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
+          <calcite-list-item label="MST Terminals" description="Multi-service terminals" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="circle" style="color: rgb(0, 191, 255);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
 
-            <calcite-list-item label="MST Fiber" description="MST fiber connections" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="line" style="color: rgb(75, 0, 130);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
+          <calcite-list-item label="MST Fiber" description="MST fiber connections" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="line" style="color: rgb(75, 0, 130);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
 
-            <calcite-list-item label="Splitters" description="Optical splitters" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="diamond" style="color: rgb(128, 0, 128);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
+          <calcite-list-item label="Splitters" description="Optical splitters" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="diamond" style="color: rgb(128, 0, 128);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
 
-            <calcite-list-item label="Closures" description="Fiber splice closures" class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="square" style="color: rgb(255, 140, 0);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
-          </calcite-list>
+          <calcite-list-item label="Closures" description="Fiber splice closures" class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="square" style="color: rgb(255, 140, 0);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
         </calcite-block>
 
 
 
         <calcite-block heading="Fiber Outages" expanded>
-          <calcite-list selection-mode="none">
-            <calcite-list-item label="Fiber Network Outages" description="Current fiber outages"
-              class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="exclamationMarkTriangle"
-                style="color: var(--calcite-color-status-danger);"></calcite-icon>
-              <calcite-switch slot="content-end"></calcite-switch>
-            </calcite-list-item>
-          </calcite-list>
+          <calcite-list-item label="Fiber Network Outages" description="Current fiber outages"
+            class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="exclamationMarkTriangle"
+              style="color: var(--calcite-color-status-danger);"></calcite-icon>
+            <calcite-switch slot="content-end"></calcite-switch>
+          </calcite-list-item>
         </calcite-block>
 
         <calcite-block heading="Tools" expanded>
@@ -424,7 +415,7 @@
           aria-label="Close"></calcite-button>
       </div>
       <div slot="content">
-        <calcite-list selection-mode="none">
+        <calcite-block heading="Vehicle Tracking" expanded>
           <calcite-list-item label="Electric Vehicles" description="Track electric fleet" class="layer-toggle-item">
             <calcite-icon slot="content-start" icon="flash" style="color: var(--calcite-color-info);"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
@@ -434,7 +425,7 @@
             <calcite-icon slot="content-start" icon="car" style="color: var(--calcite-color-success);"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
-        </calcite-list>
+        </calcite-block>
 
         <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="refresh" appearance="outline">Refresh Vehicle
