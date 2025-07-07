@@ -83,7 +83,8 @@
                 Refresh Data
               </calcite-button>
               <!-- Test button for development -->
-              <calcite-button id="test-subscriber-update" icon-start="information" scale="s" width="full" appearance="outline" style="margin-top: 8px; display: none;">
+              <calcite-button id="test-subscriber-update" icon-start="information" scale="s" width="full"
+                appearance="outline" style="margin-top: 8px; display: none;">
                 Test Subscriber Toast
               </calcite-button>
             </div>
@@ -145,13 +146,14 @@
 
             <!-- Power Outage Statistics -->
             <power-outage-stats id="power-outage-stats"></power-outage-stats>
-            
+
             <div class="block-actions">
               <calcite-button id="refresh-power-outages" icon-start="refresh" scale="s" width="full">
                 Refresh Power Outages
               </calcite-button>
               <!-- Test button for development -->
-              <calcite-button id="test-outage-update" icon-start="information" scale="s" width="full" appearance="outline" style="margin-top: 8px; display: none;">
+              <calcite-button id="test-outage-update" icon-start="information" scale="s" width="full"
+                appearance="outline" style="margin-top: 8px; display: none;">
                 Test Update Toast
               </calcite-button>
             </div>
@@ -196,13 +198,15 @@
               </calcite-list>
               <div id="cache-details" style="margin-top: 12px;"></div>
               <div style="margin-top: 12px; display: flex; gap: 8px;">
-                <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s" id="refresh-cache-btn">Refresh Cache Info</calcite-button>
-                <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s" id="clear-cache-btn">Clear All Cache</calcite-button>
+                <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s"
+                  id="refresh-cache-btn">Refresh Cache Info</calcite-button>
+                <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s"
+                  id="clear-cache-btn">Clear All Cache</calcite-button>
               </div>
             </div>
           </calcite-block>
         </calcite-panel>
-        
+
         <!-- Info Panel -->
         <calcite-panel heading="Information" id="info-content" hidden>
           <calcite-block heading="App Details" expanded>
@@ -210,20 +214,23 @@
               <calcite-list selection-mode="none">
                 <calcite-list-item label="Build Version" id="build-version-item">
                   <calcite-icon slot="content-start" icon="code-branch"></calcite-icon>
-                  <span slot="content-end" id="build-version-text" style="font-family: monospace; color: var(--calcite-color-text-2);">Loading...</span>
+                  <span slot="content-end" id="build-version-text"
+                    style="font-family: monospace; color: var(--calcite-color-text-2);">Loading...</span>
                 </calcite-list-item>
                 <calcite-list-item label="Last Updated" id="build-date-item">
                   <calcite-icon slot="content-start" icon="clock"></calcite-icon>
-                  <span slot="content-end" id="build-date-text" style="color: var(--calcite-color-text-2);">Loading...</span>
+                  <span slot="content-end" id="build-date-text"
+                    style="color: var(--calcite-color-text-2);">Loading...</span>
                 </calcite-list-item>
                 <calcite-list-item label="Environment" id="environment-item">
                   <calcite-icon slot="content-start" icon="globe"></calcite-icon>
-                  <span slot="content-end" id="environment-text" style="color: var(--calcite-color-text-2);">Loading...</span>
+                  <span slot="content-end" id="environment-text"
+                    style="color: var(--calcite-color-text-2);">Loading...</span>
                 </calcite-list-item>
               </calcite-list>
             </div>
           </calcite-block>
-          
+
           <calcite-block heading="Resources" collapsible>
             <calcite-list selection-mode="none">
               <calcite-list-item label="Documentation" description="View application documentation">
@@ -272,8 +279,7 @@
           icon-start="car"></calcite-segmented-control-item>
         <calcite-segmented-control-item id="tab-power" value="power"
           icon-start="flash"></calcite-segmented-control-item>
-        <calcite-segmented-control-item id="tab-other" value="other"
-          icon-start="layers"></calcite-segmented-control-item>
+        <calcite-segmented-control-item id="tab-other" value="other" icon-start="apps"></calcite-segmented-control-item>
       </calcite-segmented-control>
     </calcite-shell>
 
@@ -452,7 +458,7 @@
 
     <calcite-dialog id="mobile-other-sheet" class="mobile-only" width-scale="l" scale="l">
       <div slot="header" class="dialog-header">
-        <span class="dialog-title">Other Layers</span>
+        <span class="dialog-title">Tools & Info</span>
         <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
           aria-label="Close"></calcite-button>
       </div>
@@ -467,6 +473,64 @@
           </calcite-list>
         </calcite-block>
 
+        <calcite-block heading="Sketch Tools" expanded>
+          <calcite-button width="full" icon-start="polygon" appearance="outline">Draw Outage Area</calcite-button>
+          <calcite-button width="full" icon-start="download" appearance="outline">Export CSV</calcite-button>
+        </calcite-block>
+
+        <calcite-block heading="Offline Data Cache" expanded>
+          <div id="mobile-cache-status" style="padding: 12px;">
+            <calcite-list selection-mode="none">
+              <calcite-list-item label="Cache Status" description="Loading cache information...">
+                <calcite-icon slot="content-start" icon="database"></calcite-icon>
+                <span slot="content-end" id="mobile-cache-size-text"
+                  style="color: var(--calcite-color-text-2);">--</span>
+              </calcite-list-item>
+            </calcite-list>
+            <div id="mobile-cache-details" style="margin-top: 12px;"></div>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+              <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s"
+                id="mobile-refresh-cache-btn">Refresh Cache</calcite-button>
+              <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s"
+                id="mobile-clear-cache-btn">Clear Cache</calcite-button>
+            </div>
+          </div>
+        </calcite-block>
+
+        <calcite-block heading="App Details" expanded>
+          <div id="mobile-app-info" style="padding: 12px;">
+            <calcite-list selection-mode="none">
+              <calcite-list-item label="Build Version" id="mobile-build-version-item">
+                <calcite-icon slot="content-start" icon="code-branch"></calcite-icon>
+                <span slot="content-end" id="mobile-build-version-text"
+                  style="font-family: monospace; color: var(--calcite-color-text-2);">Loading...</span>
+              </calcite-list-item>
+              <calcite-list-item label="Last Updated" id="mobile-build-date-item">
+                <calcite-icon slot="content-start" icon="clock"></calcite-icon>
+                <span slot="content-end" id="mobile-build-date-text"
+                  style="color: var(--calcite-color-text-2);">Loading...</span>
+              </calcite-list-item>
+              <calcite-list-item label="Environment" id="mobile-environment-item">
+                <calcite-icon slot="content-start" icon="globe"></calcite-icon>
+                <span slot="content-end" id="mobile-environment-text"
+                  style="color: var(--calcite-color-text-2);">Loading...</span>
+              </calcite-list-item>
+            </calcite-list>
+          </div>
+        </calcite-block>
+
+        <calcite-block heading="Resources" expanded>
+          <calcite-list selection-mode="none">
+            <calcite-list-item label="Documentation" description="View application documentation">
+              <calcite-icon slot="content-start" icon="file-text"></calcite-icon>
+              <calcite-action slot="actions-end" icon="launch" id="mobile-docs-link"></calcite-action>
+            </calcite-list-item>
+            <calcite-list-item label="Report Issue" description="Submit bug reports or feedback">
+              <calcite-icon slot="content-start" icon="exclamation-mark-triangle"></calcite-icon>
+              <calcite-action slot="actions-end" icon="launch" id="mobile-issue-link"></calcite-action>
+            </calcite-list-item>
+          </calcite-list>
+        </calcite-block>
 
       </div>
     </calcite-dialog>

@@ -83,11 +83,11 @@ const log = {
 
 // Global error handler for cache errors to prevent app crashes
 window.addEventListener('unhandledrejection', event => {
-  if (event.reason && event.reason.message && 
-      (event.reason.message.includes('Cache.put()') || 
-       event.reason.message.includes('Failed to fetch') ||
-       event.reason.message.includes('NetworkError') ||
-       event.reason.message.includes('Failed to execute'))) {
+  if (event.reason && event.reason.message &&
+    (event.reason.message.includes('Cache.put()') ||
+      event.reason.message.includes('Failed to fetch') ||
+      event.reason.message.includes('NetworkError') ||
+      event.reason.message.includes('Failed to execute'))) {
     console.warn('Caught cache/network error:', event.reason.message);
     event.preventDefault(); // Prevent the error from bubbling up and crashing the app
   }
@@ -406,34 +406,34 @@ class LayerPanel {
     // Import build info dynamically to avoid circular dependencies
     import('./utils/buildInfo.js').then(({ getFormattedBuildInfo }) => {
       const info = getFormattedBuildInfo();
-      
+
       const buildVersionElement = document.getElementById('build-version-text');
       const buildDateElement = document.getElementById('build-date-text');
       const environmentElement = document.getElementById('environment-text');
-      
+
       if (buildVersionElement) {
         buildVersionElement.textContent = info.displayVersion;
       }
-      
+
       if (buildDateElement) {
         buildDateElement.textContent = info.buildDate;
       }
-      
+
       if (environmentElement) {
         environmentElement.textContent = info.environment.charAt(0).toUpperCase() + info.environment.slice(1);
       }
     });
-    
+
     // Set up resource links
     const docsLink = document.getElementById('docs-link');
     const issueLink = document.getElementById('issue-link');
-    
+
     if (docsLink) {
       docsLink.addEventListener('click', () => {
         window.open('https://github.com/your-org/fiberoms-insight-pwa/wiki', '_blank');
       });
     }
-    
+
     if (issueLink) {
       issueLink.addEventListener('click', () => {
         window.open('https://github.com/your-org/fiberoms-insight-pwa/issues', '_blank');
@@ -444,11 +444,11 @@ class LayerPanel {
   setupCacheManagement() {
     const refreshBtn = document.getElementById('refresh-cache-btn');
     const clearBtn = document.getElementById('clear-cache-btn');
-    
+
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => this.updateCacheStatus());
     }
-    
+
     if (clearBtn) {
       clearBtn.addEventListener('click', async () => {
         if (confirm('Are you sure you want to clear all cached OSP data? This will require re-downloading all data on next use.')) {
@@ -462,20 +462,20 @@ class LayerPanel {
     try {
       const { cacheService } = await import('./services/CacheService.js');
       const stats = await cacheService.getCacheStats();
-      
+
       const cacheDetailsDiv = document.getElementById('cache-details');
       const cacheSizeText = document.getElementById('cache-size-text');
-      
+
       if (stats.length === 0) {
         cacheSizeText.textContent = 'Empty';
         cacheDetailsDiv.innerHTML = '<p style="color: var(--calcite-color-text-3); font-size: 13px;">No cached data</p>';
         return;
       }
-      
+
       // Calculate total size
       const totalFeatures = stats.reduce((sum, stat) => sum + stat.size, 0);
       cacheSizeText.textContent = `${totalFeatures} features`;
-      
+
       // Build details HTML
       const detailsHTML = stats.map(stat => `
         <div style="margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-2); border-radius: 4px;">
@@ -485,7 +485,7 @@ class LayerPanel {
           </div>
         </div>
       `).join('');
-      
+
       cacheDetailsDiv.innerHTML = detailsHTML;
     } catch (error) {
       console.error('Failed to get cache status:', error);
@@ -511,7 +511,7 @@ class LayerPanel {
       const { cacheService } = await import('./services/CacheService.js');
       await cacheService.clearAllCache();
       await this.updateCacheStatus();
-      
+
       // Show success notification
       const noticeContainer = document.querySelector('#notice-container') || document.body;
       const notice = document.createElement('calcite-notice');
@@ -519,19 +519,19 @@ class LayerPanel {
       notice.setAttribute('kind', 'success');
       notice.setAttribute('closable', '');
       notice.setAttribute('icon', 'check-circle');
-      
+
       const titleDiv = document.createElement('div');
       titleDiv.slot = 'title';
       titleDiv.textContent = 'Cache Cleared';
-      
+
       const messageDiv = document.createElement('div');
       messageDiv.slot = 'message';
       messageDiv.textContent = 'All OSP data cache has been cleared successfully.';
-      
+
       notice.appendChild(titleDiv);
       notice.appendChild(messageDiv);
       noticeContainer.appendChild(notice);
-      
+
       // Auto-remove after 3 seconds
       setTimeout(() => notice.remove(), 3000);
     } catch (error) {
@@ -568,6 +568,7 @@ class MobileTabBar {
 
     this.setupCloseButtons();
     this.setupMobileSearchDialogListeners();
+    this.setupMobileCacheManagement();
   }
 
   setupMobileSearchDialogListeners() {
@@ -583,6 +584,23 @@ class MobileTabBar {
     }
   }
 
+  setupMobileCacheManagement() {
+    const refreshBtn = document.getElementById('mobile-refresh-cache-btn');
+    const clearBtn = document.getElementById('mobile-clear-cache-btn');
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => this.updateMobileCacheStatus());
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to clear all cached OSP data? This will require re-downloading all data on next use.')) {
+          await this.clearMobileCache();
+        }
+      });
+    }
+  }
+
   handleTabSelection(tabValue) {
     this.closeCurrentPanel();
 
@@ -593,7 +611,141 @@ class MobileTabBar {
       dialog.open = true;
       this.currentDialog = dialog;
       this.closeButton.classList.add('show');
+
+      // Initialize functionality for specific tabs
+      if (tabValue === 'other') {
+        this.initializeMobileOtherTab();
+      }
     }
+  }
+
+  initializeMobileOtherTab() {
+    // Update cache status and build info when other tab is opened
+    this.updateMobileCacheStatus();
+    this.updateMobileBuildInfo();
+    this.setupMobileResourceLinks();
+  }
+
+  async updateMobileCacheStatus() {
+    try {
+      const { cacheService } = await import('./services/CacheService.js');
+      const stats = await cacheService.getCacheStats();
+
+      const cacheDetailsDiv = document.getElementById('mobile-cache-details');
+      const cacheSizeText = document.getElementById('mobile-cache-size-text');
+
+      if (stats.length === 0) {
+        cacheSizeText.textContent = 'Empty';
+        cacheDetailsDiv.innerHTML = '<p style="color: var(--calcite-color-text-3); font-size: 13px;">No cached data</p>';
+        return;
+      }
+
+      // Calculate total size
+      const totalFeatures = stats.reduce((sum, stat) => sum + stat.size, 0);
+      cacheSizeText.textContent = `${totalFeatures} features`;
+
+      // Build details HTML
+      const detailsHTML = stats.map(stat => `
+        <div style="margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-2); border-radius: 4px;">
+          <div style="font-weight: 500; font-size: 13px;">${this.formatDataType(stat.dataType)}</div>
+          <div style="font-size: 12px; color: var(--calcite-color-text-2);">
+            ${stat.size} features • Cached ${stat.age} ago • ${stat.expires}
+          </div>
+        </div>
+      `).join('');
+
+      cacheDetailsDiv.innerHTML = detailsHTML;
+    } catch (error) {
+      console.error('Failed to get mobile cache status:', error);
+    }
+  }
+
+  async clearMobileCache() {
+    try {
+      const { cacheService } = await import('./services/CacheService.js');
+      await cacheService.clearAllCache();
+      await this.updateMobileCacheStatus();
+
+      // Show success notification
+      const noticeContainer = document.querySelector('#notice-container') || document.body;
+      const notice = document.createElement('calcite-notice');
+      notice.setAttribute('open', '');
+      notice.setAttribute('kind', 'success');
+      notice.setAttribute('closable', '');
+      notice.setAttribute('icon', 'check-circle');
+
+      const titleDiv = document.createElement('div');
+      titleDiv.slot = 'title';
+      titleDiv.textContent = 'Cache Cleared';
+
+      const messageDiv = document.createElement('div');
+      messageDiv.slot = 'message';
+      messageDiv.textContent = 'All OSP data cache has been cleared successfully.';
+
+      notice.appendChild(titleDiv);
+      notice.appendChild(messageDiv);
+      noticeContainer.appendChild(notice);
+
+      // Auto-remove after 3 seconds
+      setTimeout(() => notice.remove(), 3000);
+    } catch (error) {
+      console.error('Failed to clear mobile cache:', error);
+    }
+  }
+
+  updateMobileBuildInfo() {
+    // Import build info dynamically to avoid circular dependencies
+    import('./utils/buildInfo.js').then(({ getFormattedBuildInfo }) => {
+      const info = getFormattedBuildInfo();
+
+      const buildVersionElement = document.getElementById('mobile-build-version-text');
+      const buildDateElement = document.getElementById('mobile-build-date-text');
+      const environmentElement = document.getElementById('mobile-environment-text');
+
+      if (buildVersionElement) {
+        buildVersionElement.textContent = info.displayVersion;
+      }
+
+      if (buildDateElement) {
+        buildDateElement.textContent = info.buildDate;
+      }
+
+      if (environmentElement) {
+        environmentElement.textContent = info.environment.charAt(0).toUpperCase() + info.environment.slice(1);
+      }
+    });
+  }
+
+  setupMobileResourceLinks() {
+    const docsLink = document.getElementById('mobile-docs-link');
+    const issueLink = document.getElementById('mobile-issue-link');
+
+    if (docsLink) {
+      docsLink.addEventListener('click', () => {
+        window.open('https://github.com/your-org/fiberoms-insight-pwa/wiki', '_blank');
+      });
+    }
+
+    if (issueLink) {
+      issueLink.addEventListener('click', () => {
+        window.open('https://github.com/your-org/fiberoms-insight-pwa/issues', '_blank');
+      });
+    }
+  }
+
+  formatDataType(dataType) {
+    const mapping = {
+      'fsa': 'FSA Boundaries',
+      'mainFiber': 'Main Line Fiber',
+      'mainOld': 'Main Line Old',
+      'mstFiber': 'MST Fiber',
+      'mstTerminals': 'MST Terminals',
+      'closures': 'Closures',
+      'splitters': 'Splitters',
+      'nodeSites': 'Node Sites'
+    };
+
+    return mapping[dataType] || dataType;
   }
 
   closeCurrentPanel() {
@@ -686,21 +838,21 @@ class DashboardManager {
     try {
       // Set global flag to skip notifications during manual refresh
       window._isManualRefresh = true;
-      
+
       // Clear any existing loading notifications
       loadingIndicator.clearConsolidated();
-      
+
       // Clear cache to ensure fresh data
       subscriberDataService.clearCache();
 
       await this.updateDashboard();
-      
+
       // Also refresh power outage stats without notification
       const powerStats = document.querySelector('power-outage-stats');
       if (powerStats && typeof powerStats.updateStats === 'function') {
         await powerStats.updateStats(true); // Skip notification
       }
-      
+
       // Simulate brief loading for user feedback
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -1763,10 +1915,10 @@ class Application {
     this._onlineLayerLoading = false; // Prevent concurrent loads
     this._onlineLayerLoadingPromise = null;
     this._cleanupHandlers = [];
-    
+
     // Handle cleanup on page unload
     window.addEventListener('beforeunload', () => this.cleanup());
-    
+
     this.init();
   }
 
@@ -1781,7 +1933,7 @@ class Application {
     this.services.dashboard = new DashboardManager();
     this.services.headerSearch = new HeaderSearch();
     this.services.rainViewerService = new RainViewerService();
-    
+
     // Store polling manager reference
     this.pollingManager = pollingManager;
 
@@ -1821,10 +1973,10 @@ class Application {
   async onMapReady() {
     // Clear any previous loading state
     loadingIndicator.clearConsolidated();
-    
+
     // Show initial map loading indicator
     loadingIndicator.showLoading('map-init', 'Map');
-    
+
     // Initialize subscriber layers first
     await this.initializeSubscriberLayers();
 
@@ -1836,7 +1988,7 @@ class Application {
 
     // Update dashboard after layers are loaded
     await this.services.dashboard.updateDashboard();
-    
+
     // Map initialization complete
     loadingIndicator.showNetwork('map-init', 'Map');
 
@@ -1871,7 +2023,7 @@ class Application {
 
     // Start polling for subscriber data updates
     this.startSubscriberPolling();
-    
+
     // Start polling for power outage updates (1 minute interval)
     this.startPowerOutagePolling();
   }
@@ -1880,7 +2032,7 @@ class Application {
     try {
       // Show loading indicator for offline subscriber data only
       loadingIndicator.showLoading('offline-subscribers', 'Offline Subscribers');
-      
+
       // Create offline subscribers layer (visible by default - Phase 1 focus)
       const offlineConfig = getLayerConfig('offlineSubscribers');
       if (offlineConfig) {
@@ -1911,7 +2063,7 @@ class Application {
       // Show loading indicators for power outages
       loadingIndicator.showLoading('apco-outages', 'APCo Power Outages');
       loadingIndicator.showLoading('tombigbee-outages', 'Tombigbee Power Outages');
-      
+
       // Create APCo power outages layer
       const apcoConfig = getLayerConfig('apcoOutages');
       if (apcoConfig) {
@@ -1960,14 +2112,14 @@ class Application {
         if (result && result.layer) {
           result.layer.visible = nodeSitesConfig.visible; // Use config default (false)
           this.services.mapController.addLayer(result.layer, nodeSitesConfig.zOrder);
-          
+
           // Show loading status based on cache
           if (result.fromCache) {
             loadingIndicator.showCached('node-sites', 'Node Sites');
           } else {
             loadingIndicator.showNetwork('node-sites', 'Node Sites');
           }
-          
+
           log.info('✅ Node Sites layer initialized');
         }
       }
@@ -2009,14 +2161,14 @@ class Application {
             if (result && result.layer) {
               result.layer.visible = layerConfig.visible; // Use config default (false)
               this.services.mapController.addLayer(result.layer, layerConfig.zOrder);
-              
+
               // Use the actual cache status from the data fetch
               if (result.fromCache) {
                 loadingIndicator.showCached(`osp-${layerInfo.key}`, layerInfo.name);
               } else {
                 loadingIndicator.showNetwork(`osp-${layerInfo.key}`, layerInfo.name);
               }
-              
+
               log.info(`✅ ${layerConfig.title} layer initialized`);
             }
           } catch (error) {
@@ -2072,12 +2224,12 @@ class Application {
   async createLayerFromConfig(config) {
     try {
       const data = await config.dataServiceMethod();
-      
+
       if (!data) {
         log.warn(`No data returned for layer: ${config.id}`);
         return null;
       }
-      
+
       // For power outages and subscribers, data comes wrapped with features property
       const dataSource = data.features ? { features: data.features } : data;
 
@@ -2118,7 +2270,7 @@ class Application {
     try {
       this._onlineLayerLoading = true;
       this._onlineLayerLoadingPromise = this._performOnlineLayerLoad();
-      
+
       const result = await this._onlineLayerLoadingPromise;
       this.onlineLayerLoaded = result;
       return result;
@@ -2136,7 +2288,7 @@ class Application {
   async _performOnlineLayerLoad() {
     try {
       loadingIndicator.showLoading('online-subscribers', 'Online Subscribers');
-      
+
       const onlineConfig = getLayerConfig('onlineSubscribers');
       if (!onlineConfig) {
         throw new Error('Online subscribers layer configuration not found');
@@ -2147,11 +2299,11 @@ class Application {
         result.layer.visible = true; // Make visible since user toggled it on
         this.services.mapController.addLayer(result.layer, onlineConfig.zOrder);
         loadingIndicator.showNetwork('online-subscribers', 'Online Subscribers');
-        
+
         log.info('✅ Online subscribers layer loaded on demand');
         return true;
       }
-      
+
       throw new Error('Failed to create online subscribers layer');
     } catch (error) {
       log.error('Failed to load online subscribers layer:', error);
@@ -2163,7 +2315,7 @@ class Application {
   setupLayerToggleHandlers() {
     // Desktop layer toggles (checkboxes) - layers, osp, network-parent, and tools panels
     const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
-    
+
     // Log initial checkbox states for debugging
     checkboxes.forEach(checkbox => {
       const label = checkbox.closest('calcite-label');
@@ -2171,7 +2323,7 @@ class Application {
         log.info(`📊 Online Subscribers checkbox initial state: ${checkbox.checked}`);
       }
     });
-    
+
     checkboxes.forEach(checkbox => {
       checkbox.addEventListener('calciteCheckboxChange', (e) => {
         this.handleLayerToggle(e.target, e.target.checked);
@@ -2229,7 +2381,7 @@ class Application {
 
     // Validate layer ID
     const VALID_LAYER_IDS = new Set([
-      'offline-subscribers', 'online-subscribers', 'node-sites', 
+      'offline-subscribers', 'online-subscribers', 'node-sites',
       'rainviewer-radar', 'apco-outages', 'tombigbee-outages',
       'fsa-boundaries', 'main-line-fiber', 'main-line-old',
       'mst-terminals', 'mst-fiber', 'splitters', 'closures'
@@ -2253,7 +2405,7 @@ class Application {
         // Normal layer toggle
         await this.services.layerManager.toggleLayerVisibility(layerId, checked);
       }
-      
+
       this.syncToggleStates(layerId, checked);
 
       // Start/stop polling based on visibility (disabled for Phase 1)
@@ -2396,11 +2548,11 @@ class Application {
    */
   startSubscriberPolling() {
     log.info('🔄 Starting subscriber data polling');
-    
+
     // Store previous counts for comparison
     let previousOfflineCount = null;
     let previousOnlineCount = null;
-    
+
     // Polling callback for subscriber updates
     const handleSubscriberUpdate = async (data) => {
       try {
@@ -2413,15 +2565,15 @@ class Application {
               loadingIndicator.showLoading('online-subscribers-update', 'Online Subscribers');
             }
           }
-          
+
           // Get current counts
           const currentOfflineCount = data.offline?.count || 0;
           const currentOnlineCount = data.online?.count || 0;
-          
+
           // Handle both offline and online updates
           const offlineLayer = this.services.layerManager.getLayer('offline-subscribers');
           const onlineLayer = this.services.layerManager.getLayer('online-subscribers');
-          
+
           if (offlineLayer && data.offline) {
             await this.services.layerManager.updateLayerData('offline-subscribers', data.offline);
             log.info(`📊 Updated offline subscribers: ${data.offline.count} records`);
@@ -2429,7 +2581,7 @@ class Application {
               loadingIndicator.showNetwork('offline-subscribers-update', 'Offline Subscribers');
             }
           }
-          
+
           // Only update online layer if it's actually loaded
           if (onlineLayer && data.online && this.onlineLayerLoaded) {
             await this.services.layerManager.updateLayerData('online-subscribers', data.online);
@@ -2438,20 +2590,20 @@ class Application {
               loadingIndicator.showNetwork('online-subscribers-update', 'Online Subscribers');
             }
           }
-          
+
           // Update dashboard counts
           await this.services.dashboard.updateDashboard();
-          
+
           // Show toast if counts have changed (and not first load or manual refresh)
           if (previousOfflineCount !== null && previousOnlineCount !== null && !window._isManualRefresh) {
             const offlineChange = currentOfflineCount - previousOfflineCount;
             const onlineChange = currentOnlineCount - previousOnlineCount;
-            
+
             if (offlineChange !== 0 || onlineChange !== 0) {
               this.showSubscriberUpdateToast(previousOfflineCount, currentOfflineCount, previousOnlineCount, currentOnlineCount);
             }
           }
-          
+
           // Update stored counts
           previousOfflineCount = currentOfflineCount;
           previousOnlineCount = currentOnlineCount;
@@ -2464,22 +2616,22 @@ class Application {
         }
       }
     };
-    
+
     // Start polling for all subscribers (offline and online)
     // Default interval is 5 minutes (300000ms)
     this.pollingManager.startPolling('subscribers', handleSubscriberUpdate);
-    
+
     // Also set up manual refresh button if it exists
     const refreshButton = document.getElementById('refresh-data');
     if (refreshButton) {
       refreshButton.addEventListener('click', async () => {
         log.info('🔄 Manual data refresh triggered');
         refreshButton.setAttribute('loading', '');
-        
+
         try {
           // Set global flag to skip notifications during manual refresh
           window._isManualRefresh = true;
-          
+
           // Clear cache and perform immediate update
           subscriberDataService.clearCache();
           await this.pollingManager.performUpdate('subscribers');
@@ -2490,31 +2642,31 @@ class Application {
         }
       });
     }
-    
+
     // Test button for subscriber updates in development
     const testSubscriberButton = document.getElementById('test-subscriber-update');
     if (testSubscriberButton && isDevelopment) {
       // Show test button in development
       testSubscriberButton.style.display = 'block';
-      
+
       testSubscriberButton.addEventListener('click', () => {
         console.log('🧪 Testing subscriber update toast');
-        
+
         // Simulate subscriber count changes
         const prevOffline = Math.floor(Math.random() * 300) + 200; // 200-500
         const currOffline = prevOffline + Math.floor(Math.random() * 20) - 10; // -10 to +10 change
         const prevOnline = Math.floor(Math.random() * 20000) + 20000; // 20000-40000
         const currOnline = prevOnline - (currOffline - prevOffline); // Inverse relationship
-        
+
         console.log('Test values:', { prevOffline, currOffline, prevOnline, currOnline });
-        
+
         // Call the method on the app instance
         if (window.app) {
           console.log('Calling showSubscriberUpdateToast on app instance');
           window.app.showSubscriberUpdateToast(
-            prevOffline, 
-            Math.max(0, currOffline), 
-            prevOnline, 
+            prevOffline,
+            Math.max(0, currOffline),
+            prevOnline,
             Math.max(0, currOnline)
           );
         } else {
@@ -2527,7 +2679,7 @@ class Application {
   // Start polling for power outage updates
   startPowerOutagePolling() {
     log.info('⚡ Starting power outage data polling (1 minute interval)');
-    
+
     // Polling callback for power outage updates
     const handlePowerOutageUpdate = async (data) => {
       try {
@@ -2537,11 +2689,11 @@ class Application {
             loadingIndicator.showLoading('apco-outages-update', 'APCo Power Outages');
             loadingIndicator.showLoading('tombigbee-outages-update', 'Tombigbee Power Outages');
           }
-          
+
           // Handle both APCo and Tombigbee updates
           const apcoLayer = this.services.layerManager.getLayer('apco-outages');
           const tombigbeeLayer = this.services.layerManager.getLayer('tombigbee-outages');
-          
+
           if (apcoLayer && data.apco && data.apco.features) {
             // Pass GeoJSON format to updateLayerData
             const apcoGeoJSON = {
@@ -2554,7 +2706,7 @@ class Application {
               loadingIndicator.showNetwork('apco-outages-update', 'APCo Power Outages');
             }
           }
-          
+
           if (tombigbeeLayer && data.tombigbee && data.tombigbee.features) {
             // Pass GeoJSON format to updateLayerData
             const tombigbeeGeoJSON = {
@@ -2567,7 +2719,7 @@ class Application {
               loadingIndicator.showNetwork('tombigbee-outages-update', 'Tombigbee Power Outages');
             }
           }
-          
+
           // Update power outage stats component if it exists
           const powerStats = document.querySelector('power-outage-stats');
           if (powerStats && typeof powerStats.updateStats === 'function') {
@@ -2583,30 +2735,30 @@ class Application {
         }
       }
     };
-    
+
     // Start polling for power outages with 1 minute interval (60000ms)
     this.pollingManager.startPolling('power-outages', handlePowerOutageUpdate, 60000);
-    
+
     // Also set up manual refresh button for power outages if it exists
     const refreshPowerButton = document.getElementById('refresh-power-outages');
     if (refreshPowerButton) {
       refreshPowerButton.addEventListener('click', async () => {
         log.info('⚡ Manual power outage refresh triggered');
         refreshPowerButton.setAttribute('loading', '');
-        
+
         try {
           // Set global flag to skip notifications during manual refresh
           window._isManualRefresh = true;
-          
+
           // Clear cache for power outage data
           subscriberDataService.refreshData('outages');
-          
+
           // Update power outage stats without notification
           const powerStats = document.querySelector('power-outage-stats');
           if (powerStats && typeof powerStats.updateStats === 'function') {
             await powerStats.updateStats(true); // Skip notification
           }
-          
+
           await this.pollingManager.performUpdate('power-outages');
         } finally {
           refreshPowerButton.removeAttribute('loading');
@@ -2615,16 +2767,16 @@ class Application {
         }
       });
     }
-    
+
     // Test button for development mode
     const testButton = document.getElementById('test-outage-update');
     if (testButton && isDevelopment) {
       // Show test button in development
       testButton.style.display = 'block';
-      
+
       testButton.addEventListener('click', () => {
         log.info('🧪 Testing outage update toast');
-        
+
         // Get the PowerOutageStats component
         const powerOutageStats = document.querySelector('power-outage-stats');
         if (powerOutageStats) {
@@ -2633,7 +2785,7 @@ class Application {
           const currApco = prevApco + Math.floor(Math.random() * 5) - 2; // -2 to +2 change
           const prevTombigbee = Math.floor(Math.random() * 10);
           const currTombigbee = prevTombigbee + Math.floor(Math.random() * 5) - 2; // -2 to +2 change
-          
+
           powerOutageStats.showUpdateToast(prevApco, Math.max(0, currApco), prevTombigbee, Math.max(0, currTombigbee));
         }
       });
@@ -2643,41 +2795,41 @@ class Application {
   // Show toast notification for subscriber updates
   showSubscriberUpdateToast(prevOffline, currOffline, prevOnline, currOnline) {
     console.log('showSubscriberUpdateToast called with:', { prevOffline, currOffline, prevOnline, currOnline });
-    
+
     // Remove any existing subscriber notice
     const existingNotice = document.querySelector('#subscriber-update-notice');
     if (existingNotice) {
       existingNotice.remove();
     }
-    
+
     // Calculate changes
     const offlineChange = currOffline - prevOffline;
     const onlineChange = currOnline - prevOnline;
     const totalPrevious = prevOffline + prevOnline;
     const totalCurrent = currOffline + currOnline;
     const totalChange = totalCurrent - totalPrevious;
-    
+
     let message = '';
     const changes = [];
-    
+
     // Build message based on changes
     if (offlineChange !== 0) {
       const changeText = offlineChange > 0 ? `+${offlineChange}` : `${offlineChange}`;
       changes.push(`Offline: ${changeText}`);
     }
-    
+
     if (onlineChange !== 0) {
       const changeText = onlineChange > 0 ? `+${onlineChange}` : `${onlineChange}`;
       changes.push(`Online: ${changeText}`);
     }
-    
+
     if (totalChange !== 0) {
       const totalText = totalChange > 0 ? `+${totalChange}` : `${totalChange}`;
       changes.push(`Total: ${totalText}`);
     }
-    
+
     message = changes.join(', ');
-    
+
     // Determine notice type based on changes
     let kind = 'info';
     if (offlineChange > 0) {
@@ -2685,9 +2837,9 @@ class Application {
     } else if (offlineChange < 0) {
       kind = 'success'; // Less offline is good
     }
-    
+
     console.log('Creating notice with message:', message, 'kind:', kind);
-    
+
     // Create notice container if it doesn't exist
     let noticeContainer = document.querySelector('#notice-container');
     if (!noticeContainer) {
@@ -2696,7 +2848,7 @@ class Application {
       noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
       document.body.appendChild(noticeContainer);
     }
-    
+
     // Create notice
     const notice = document.createElement('calcite-notice');
     notice.id = 'subscriber-update-notice';
@@ -2705,21 +2857,21 @@ class Application {
     notice.setAttribute('closable', '');
     notice.setAttribute('icon', 'users');
     notice.setAttribute('width', 'auto');
-    
+
     const titleDiv = document.createElement('div');
     titleDiv.slot = 'title';
     titleDiv.textContent = 'Subscriber Update';
-    
+
     const messageDiv = document.createElement('div');
     messageDiv.slot = 'message';
     messageDiv.textContent = message;
-    
+
     notice.appendChild(titleDiv);
     notice.appendChild(messageDiv);
-    
+
     noticeContainer.appendChild(notice);
     console.log('Notice appended to container:', notice);
-    
+
     // Listen for close event
     notice.addEventListener('calciteNoticeClose', () => {
       notice.remove();
@@ -2728,7 +2880,7 @@ class Application {
         noticeContainer.remove();
       }
     });
-    
+
     // Auto-remove after 5 seconds
     setTimeout(() => {
       if (document.body.contains(notice)) {
@@ -2743,7 +2895,7 @@ class Application {
       }
     }, 5000);
   }
-  
+
   // Stop polling (for cleanup)
   stopPolling() {
     log.info('⏹️ Stopping all polling');
@@ -2756,26 +2908,26 @@ class Application {
    */
   cleanup() {
     log.info('🧹 Cleaning up application resources...');
-    
+
     // Stop all polling
     if (this.pollingManager) {
       this.pollingManager.stopAll();
     }
-    
+
     // Clean up services
     if (this.services.layerManager && typeof this.services.layerManager.cleanup === 'function') {
       this.services.layerManager.cleanup();
     }
-    
+
     if (this.services.rainViewerService && typeof this.services.rainViewerService.cleanup === 'function') {
       this.services.rainViewerService.cleanup();
     }
-    
+
     // Clear loading indicators
     if (loadingIndicator) {
       loadingIndicator.destroy();
     }
-    
+
     // Execute any registered cleanup handlers
     this._cleanupHandlers.forEach(handler => {
       try {
@@ -2784,7 +2936,7 @@ class Application {
         log.error('Cleanup handler error:', error);
       }
     });
-    
+
     // Clear references
     this.services = {};
     this._cleanupHandlers = [];
@@ -2869,14 +3021,14 @@ class PWAInstaller {
     if (document.querySelector('#update-toast')) {
       return;
     }
-    
+
     // Create a toast notification for updates
     const toast = document.createElement('calcite-toast');
     toast.id = 'update-toast';
     toast.setAttribute('open', '');
     toast.setAttribute('kind', 'info');
     toast.setAttribute('placement', 'bottom');
-    
+
     // Create button programmatically to handle click properly
     const refreshButton = document.createElement('calcite-button');
     refreshButton.slot = 'action';
@@ -2888,13 +3040,13 @@ class PWAInstaller {
       // Then reload
       window.location.reload(true);
     };
-    
+
     toast.innerHTML = `
       <div slot="title">Update Available</div>
       <div slot="message">A new version of the app is available. Refresh to get the latest features.</div>
     `;
     toast.appendChild(refreshButton);
-    
+
     document.body.appendChild(toast);
 
     // Auto-remove toast after 10 seconds
@@ -2930,7 +3082,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize PWA installer
   const pwaInstaller = new PWAInstaller();
   pwaInstaller.init();
-  
+
   // Initialize version checking for cache busting
   initVersionCheck();
 
