@@ -61,11 +61,14 @@ export class RainViewerService {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-            const response = await fetch(this.apiUrl, {
+            // Add cache-busting parameter to ensure fresh data
+            const url = new URL(this.apiUrl);
+            url.searchParams.set('_t', Date.now());
+
+            const response = await fetch(url.toString(), {
                 signal: controller.signal,
                 headers: {
-                    'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
+                    'Accept': 'application/json'
                 }
             });
 

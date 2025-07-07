@@ -99,11 +99,11 @@
           <calcite-block heading="Vehicle Tracking" collapsible>
             <calcite-label>
               <calcite-checkbox></calcite-checkbox>
-              Electric Vehicles
+              Electric Trucks
             </calcite-label>
             <calcite-label>
               <calcite-checkbox></calcite-checkbox>
-              Fiber Vehicles
+              Fiber Trucks
             </calcite-label>
           </calcite-block>
         </calcite-panel>
@@ -416,13 +416,15 @@
       </div>
       <div slot="content">
         <calcite-block heading="Vehicle Tracking" expanded>
-          <calcite-list-item label="Electric Vehicles" description="Track electric fleet" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="flash" style="color: var(--calcite-color-info);"></calcite-icon>
+          <calcite-list-item label="Electric Trucks" description="Track electric maintenance fleet"
+            class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="flash" style="color: rgb(74, 124, 89);"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
-          <calcite-list-item label="Fiber Vehicles" description="Track fiber fleet" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="car" style="color: var(--calcite-color-success);"></calcite-icon>
+          <calcite-list-item label="Fiber Trucks" description="Track fiber installation fleet"
+            class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="car" style="color: rgb(30, 95, 175);"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
         </calcite-block>

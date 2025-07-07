@@ -13,6 +13,7 @@ import { PopupManager } from './services/PopupManager.js';
 import { RainViewerService } from './services/RainViewerService.js';
 import { subscriberDataService, pollingManager } from './dataService.js';
 import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConfigs.js';
+import { geotabService } from './services/GeotabService.js';
 
 // Import components
 import './components/PowerOutageStats.js';
@@ -1053,6 +1054,10 @@ class DashboardManager {
     } catch (error) {
       log.error('Error refreshing dashboard:', error);
     } finally {
+      // Force clear all loading indicators regardless of completion state
+      loadingIndicator.clearConsolidated();
+      loadingIndicator.clear(); // Clear any individual notices too
+
       // Remove loading state
       if (this.refreshButton) {
         this.refreshButton.removeAttribute('loading');
@@ -2131,6 +2136,11 @@ class Application {
     // Store polling manager reference
     this.pollingManager = pollingManager;
 
+    // Initialize truck tracking state
+    this.activeTruckLayers = new Set();
+    this.geotabFeed = null;
+    this.geotabReady = false;
+
     // Store theme manager globally for component access
     window.themeManager = this.services.themeManager;
 
@@ -2220,6 +2230,9 @@ class Application {
 
     // Start polling for power outage updates (1 minute interval)
     this.startPowerOutagePolling();
+
+    // Initialize GeotabService but don't start polling yet (only when truck layers are enabled)
+    this.initializeGeotabService();
   }
 
   async initializeSubscriberLayers() {
@@ -2235,6 +2248,9 @@ class Application {
           this.services.mapController.addLayer(result.layer, offlineConfig.zOrder);
           // Subscriber data is always real-time from network
           loadingIndicator.showNetwork('offline-subscribers', 'Offline Subscribers');
+        } else {
+          // Layer creation failed
+          loadingIndicator.showError('offline-subscribers', 'Offline Subscribers', 'Failed to create layer');
         }
       }
 
@@ -2262,14 +2278,21 @@ class Application {
       const apcoConfig = getLayerConfig('apcoOutages');
       if (apcoConfig) {
         const result = await this.createLayerFromConfig(apcoConfig);
-        if (result && result.layer) {
-          result.layer.visible = apcoConfig.visible; // Use config default (true)
-          this.services.mapController.addLayer(result.layer, apcoConfig.zOrder);
-
-          // Power outage data is always real-time from network
-          loadingIndicator.showNetwork('apco-outages', 'APCo Power Outages');
-
-          log.info('✅ APCo power outages layer initialized');
+        if (result && result.success) {
+          if (result.layer) {
+            // Layer created successfully with data
+            result.layer.visible = apcoConfig.visible; // Use config default (true)
+            this.services.mapController.addLayer(result.layer, apcoConfig.zOrder);
+            loadingIndicator.showNetwork('apco-outages', 'APCo Power Outages');
+            log.info('✅ APCo power outages layer initialized');
+          } else if (result.isEmpty) {
+            // Successful completion with no data - no layer created
+            loadingIndicator.showEmpty('apco-outages', 'APCo Power Outages');
+            log.info('📭 APCo power outages initialized (no outages available)');
+          }
+        } else {
+          // Actual failure (network error, etc.)
+          loadingIndicator.showError('apco-outages', 'APCo Power Outages', 'Failed to load data');
         }
       }
 
@@ -2277,14 +2300,21 @@ class Application {
       const tombigbeeConfig = getLayerConfig('tombigbeeOutages');
       if (tombigbeeConfig) {
         const result = await this.createLayerFromConfig(tombigbeeConfig);
-        if (result && result.layer) {
-          result.layer.visible = tombigbeeConfig.visible; // Use config default (true)
-          this.services.mapController.addLayer(result.layer, tombigbeeConfig.zOrder);
-
-          // Power outage data is always real-time from network
-          loadingIndicator.showNetwork('tombigbee-outages', 'Tombigbee Power Outages');
-
-          log.info('✅ Tombigbee power outages layer initialized');
+        if (result && result.success) {
+          if (result.layer) {
+            // Layer created successfully with data
+            result.layer.visible = tombigbeeConfig.visible; // Use config default (true)
+            this.services.mapController.addLayer(result.layer, tombigbeeConfig.zOrder);
+            loadingIndicator.showNetwork('tombigbee-outages', 'Tombigbee Power Outages');
+            log.info('✅ Tombigbee power outages layer initialized');
+          } else if (result.isEmpty) {
+            // Successful completion with no data - no layer created
+            loadingIndicator.showEmpty('tombigbee-outages', 'Tombigbee Power Outages');
+            log.info('📭 Tombigbee power outages initialized (no outages available)');
+          }
+        } else {
+          // Actual failure (network error, etc.)
+          loadingIndicator.showError('tombigbee-outages', 'Tombigbee Power Outages', 'Failed to load data');
         }
       }
 
@@ -2314,12 +2344,22 @@ class Application {
             loadingIndicator.showNetwork('node-sites', 'Node Sites');
           }
 
-          log.info('✅ Node Sites layer initialized');
+          if (result.isEmpty) {
+            log.info('✅ Node Sites layer initialized (no data)');
+          } else {
+            log.info('✅ Node Sites layer initialized');
+          }
+        } else {
+          // Layer creation failed
+          loadingIndicator.showError('node-sites', 'Node Sites', 'Failed to create layer');
         }
       }
 
       // Initialize fiber plant layers
       await this.initializeFiberPlantLayers();
+
+      // Initialize vehicle tracking layers
+      await this.initializeVehicleLayers();
 
     } catch (error) {
       log.error('Failed to initialize infrastructure layers:', error);
@@ -2363,7 +2403,14 @@ class Application {
                 loadingIndicator.showNetwork(`osp-${layerInfo.key}`, layerInfo.name);
               }
 
-              log.info(`✅ ${layerConfig.title} layer initialized`);
+              if (result.isEmpty) {
+                log.info(`✅ ${layerConfig.title} layer initialized (no data)`);
+              } else {
+                log.info(`✅ ${layerConfig.title} layer initialized`);
+              }
+            } else {
+              // Layer creation failed
+              loadingIndicator.showError(`osp-${layerInfo.key}`, layerInfo.name, 'Failed to create layer');
             }
           } catch (error) {
             log.error(`Failed to initialize ${layerInfo.name}:`, error);
@@ -2376,6 +2423,45 @@ class Application {
     } catch (error) {
       log.error('Failed to initialize fiber plant layers:', error);
       // Continue without fiber plant layers if they fail to load
+    }
+  }
+
+  async initializeVehicleLayers() {
+    try {
+      log.info('🚛 Initializing vehicle tracking layers...');
+
+      // List of vehicle layer configs to initialize
+      const vehicleLayers = [
+        { key: 'fiberTrucks', name: 'Fiber Trucks' },
+        { key: 'electricTrucks', name: 'Electric Trucks' }
+      ];
+
+      // No loading indicators for vehicle layers - they update silently in background
+
+      for (const layerInfo of vehicleLayers) {
+        const layerConfig = getLayerConfig(layerInfo.key);
+        if (layerConfig) {
+          try {
+            const result = await this.createLayerFromConfig(layerConfig);
+            if (result && result.layer) {
+              result.layer.visible = layerConfig.visible; // Use config default (false)
+              this.services.mapController.addLayer(result.layer, layerConfig.zOrder);
+
+              // Vehicle layers update silently - no connection status indicators
+
+              log.info(`✅ ${layerConfig.title} layer initialized`);
+            }
+          } catch (error) {
+            log.error(`Failed to initialize ${layerInfo.name}:`, error);
+            // Vehicle layers fail silently - no error indicators in UI
+          }
+        }
+      }
+
+      log.info('🚛 Vehicle tracking layers initialization complete');
+    } catch (error) {
+      log.error('Failed to initialize vehicle tracking layers:', error);
+      // Continue without vehicle layers if they fail to load
     }
   }
 
@@ -2415,18 +2501,32 @@ class Application {
     }
   }
 
+  /**
+   * Creates a map layer from configuration using the specified data service method
+   * @param {Object} config - Layer configuration object
+   * @param {string} config.id - Unique layer identifier
+   * @param {Function} config.dataServiceMethod - Method to fetch layer data
+   * @returns {Promise<Object|null>} Layer creation result with status flags or null on error
+   */
   async createLayerFromConfig(config) {
     try {
       const data = await config.dataServiceMethod();
+      // Handle empty data as successful completion, not failure
 
-      if (!data) {
-        log.warn(`No data returned for layer: ${config.id}`);
-        return null;
+      if (!data || (data.features && data.features.length === 0)) {
+        log.info(`📭 No data available for layer: ${config.id} (empty dataset - no layer created)`);
+
+        // Don't create a layer for empty datasets - return success with no layer
+        return {
+          layer: null,
+          fromCache: data?.fromCache || false,
+          isEmpty: true,
+          success: true // Flag to indicate this was successful (not a failure)
+        };
       }
 
       // For power outages and subscribers, data comes wrapped with features property
       const dataSource = data.features ? { features: data.features } : data;
-
       const layer = await this.services.layerManager.createLayer({
         ...config,
         dataSource: dataSource
@@ -2435,7 +2535,9 @@ class Application {
       // Return both layer and cache status
       return {
         layer: layer,
-        fromCache: data.fromCache || false
+        fromCache: data.fromCache || false,
+        isEmpty: false,
+        success: true
       };
     } catch (error) {
       log.error(`Failed to create layer ${config.id}:`, error);
@@ -2578,7 +2680,8 @@ class Application {
       'offline-subscribers', 'online-subscribers', 'node-sites',
       'rainviewer-radar', 'apco-outages', 'tombigbee-outages',
       'fsa-boundaries', 'main-line-fiber', 'main-line-old',
-      'mst-terminals', 'mst-fiber', 'splitters', 'closures'
+      'mst-terminals', 'mst-fiber', 'splitters', 'closures',
+      'fiber-trucks', 'electric-trucks'
     ]);
 
     if (!layerId || !VALID_LAYER_IDS.has(layerId)) {
@@ -2602,14 +2705,11 @@ class Application {
 
       this.syncToggleStates(layerId, checked);
 
-      // Start/stop polling based on visibility (disabled for Phase 1)
-      // if (checked && (layerId === 'offline-subscribers' || layerId === 'online-subscribers')) {
-      //   const configKey = layerId.replace('-', '');
-      //   this.services.pollingService.startPolling(configKey);
-      // } else if (!checked) {
-      //   const configKey = layerId.replace('-', '');
-      //   this.services.pollingService.stopPolling(configKey);
-      // }
+      // Handle truck layer state management
+      const layerDisplayName = this.getLayerDisplayName(layerId);
+      if (layerDisplayName) {
+        await this.manageTruckLayerState(layerDisplayName, checked);
+      }
     }
   }
 
@@ -2647,10 +2747,23 @@ class Application {
       'MST Terminals': 'mst-terminals',
       'MST Fiber': 'mst-fiber',
       'Splitters': 'splitters',
-      'Closures': 'closures'
+      'Closures': 'closures',
+      // Vehicle tracking layers
+      'Electric Trucks': 'electric-trucks',
+      'Fiber Trucks': 'fiber-trucks'
     };
 
     return mapping[labelText] || null;
+  }
+
+  getLayerDisplayName(layerId) {
+    // Map layer IDs back to display names for truck layer management
+    const reverseMapping = {
+      'fiber-trucks': 'Fiber Trucks',
+      'electric-trucks': 'Electric Trucks'
+    };
+
+    return reverseMapping[layerId] || null;
   }
 
   syncToggleStates(layerId, checked) {
@@ -2669,7 +2782,10 @@ class Application {
       'mst-terminals': 'MST Terminals',
       'mst-fiber': 'MST Fiber',
       'splitters': 'Splitters',
-      'closures': 'Closures'
+      'closures': 'Closures',
+      // Vehicle tracking layers
+      'electric-trucks': 'Electric Trucks',
+      'fiber-trucks': 'Fiber Trucks'
     };
 
     // Sync power outage switches based on layer ID and classes
@@ -2888,30 +3004,34 @@ class Application {
           const apcoLayer = this.services.layerManager.getLayer('apco-outages');
           const tombigbeeLayer = this.services.layerManager.getLayer('tombigbee-outages');
 
-          if (apcoLayer && data.apco && data.apco.features) {
-            // Pass GeoJSON format to updateLayerData
+          // Update APCo outages
+          if (apcoLayer && data.apco) {
+            // Pass GeoJSON format to updateLayerData (handle empty features)
             const apcoGeoJSON = {
               type: 'FeatureCollection',
-              features: data.apco.features
+              features: data.apco.features || []
             };
             await this.services.layerManager.updateLayerData('apco-outages', apcoGeoJSON);
-            log.info(`⚡ Updated APCo outages: ${data.apco.count} outages`);
-            if (!window._isManualRefresh) {
-              loadingIndicator.showNetwork('apco-outages-update', 'APCo Power Outages');
-            }
+            log.info(`⚡ Updated APCo outages: ${data.apco.count || 0} outages`);
+          }
+          // Always clear APCo loading indicator if data was received
+          if (data.apco && !window._isManualRefresh) {
+            loadingIndicator.showNetwork('apco-outages-update', 'APCo Power Outages');
           }
 
-          if (tombigbeeLayer && data.tombigbee && data.tombigbee.features) {
-            // Pass GeoJSON format to updateLayerData
+          // Update Tombigbee outages  
+          if (tombigbeeLayer && data.tombigbee) {
+            // Pass GeoJSON format to updateLayerData (handle empty features)
             const tombigbeeGeoJSON = {
               type: 'FeatureCollection',
-              features: data.tombigbee.features
+              features: data.tombigbee.features || []
             };
             await this.services.layerManager.updateLayerData('tombigbee-outages', tombigbeeGeoJSON);
-            log.info(`⚡ Updated Tombigbee outages: ${data.tombigbee.count} outages`);
-            if (!window._isManualRefresh) {
-              loadingIndicator.showNetwork('tombigbee-outages-update', 'Tombigbee Power Outages');
-            }
+            log.info(`⚡ Updated Tombigbee outages: ${data.tombigbee.count || 0} outages`);
+          }
+          // Always clear Tombigbee loading indicator if data was received
+          if (data.tombigbee && !window._isManualRefresh) {
+            loadingIndicator.showNetwork('tombigbee-outages-update', 'Tombigbee Power Outages');
           }
 
           // Update power outage stats component if it exists
@@ -2983,6 +3103,110 @@ class Application {
           powerOutageStats.showUpdateToast(prevApco, Math.max(0, currApco), prevTombigbee, Math.max(0, currTombigbee));
         }
       });
+    }
+  }
+
+  // Initialize GeotabService (but don't start polling yet)
+  async initializeGeotabService() {
+    try {
+      log.info('🚛 Initializing GeotabService...');
+      await geotabService.initialize();
+      this.geotabReady = true;
+      log.info('✅ GeotabService ready');
+    } catch (error) {
+      log.error('❌ Failed to initialize GeotabService:', error);
+      this.geotabReady = false;
+    }
+  }
+
+  // Smart truck layer state management
+  async manageTruckLayerState(layerName, isEnabled) {
+    const isTruckLayer = ['Electric Trucks', 'Fiber Trucks'].includes(layerName);
+    if (!isTruckLayer) {
+      return;
+    }
+
+    // Update active truck layers set
+    if (isEnabled) {
+      this.activeTruckLayers.add(layerName);
+
+      // Start feed if this is the first truck layer
+      if (this.activeTruckLayers.size === 1) {
+        await this.startGeotabFeed();
+      }
+    } else {
+      this.activeTruckLayers.delete(layerName);
+
+      // Stop feed if no truck layers are active
+      if (this.activeTruckLayers.size === 0) {
+        this.stopGeotabFeed();
+      }
+    }
+  }
+
+  // Start GeotabFeed only when needed
+  async startGeotabFeed() {
+    if (!this.geotabReady || this.geotabFeed) {
+      return; // Either not ready or already running
+    }
+
+    try {
+      log.info('🚛 Starting GeotabFeed for active truck layers');
+
+      // Set up real-time data feed for truck updates
+      this.geotabFeed = await geotabService.setupRealtimeDataFeed((feedData) => {
+        this.handleGeotabFeedUpdate(feedData);
+      });
+
+      log.info('✅ GeotabFeed started');
+    } catch (error) {
+      log.error('❌ Failed to start GeotabFeed:', error);
+    }
+  }
+
+  // Stop GeotabFeed when no truck layers are active
+  stopGeotabFeed() {
+    if (this.geotabFeed && typeof this.geotabFeed.stop === 'function') {
+      this.geotabFeed.stop();
+      this.geotabFeed = null;
+      log.info('🛑 GeotabFeed stopped');
+    }
+  }
+
+  // Handle feed updates by refreshing visible truck layers
+  handleGeotabFeedUpdate(feedData) {
+    try {
+      // Count total updates
+      let totalUpdates = 0;
+      feedData.forEach(feed => {
+        if (feed.data && feed.type === 'truck_data') {
+          const fiberTrucks = feed.data.fiber || [];
+          const electricTrucks = feed.data.electric || [];
+          totalUpdates += fiberTrucks.length + electricTrucks.length;
+        }
+      });
+
+      if (totalUpdates > 0) {
+        // Refresh visible truck layers using smooth updates
+        const fiberLayer = this.services.layerManager.getLayer('fiber-trucks');
+        const electricLayer = this.services.layerManager.getLayer('electric-trucks');
+
+        feedData.forEach(feed => {
+          if (feed.data && feed.type === 'truck_data') {
+            // Update fiber trucks if layer is visible
+            if (fiberLayer && fiberLayer.visible && feed.data.fiber) {
+              this.services.layerManager.smoothTruckUpdate('fiber-trucks', feed.data.fiber);
+            }
+
+            // Update electric trucks if layer is visible
+            if (electricLayer && electricLayer.visible && feed.data.electric) {
+              this.services.layerManager.smoothTruckUpdate('electric-trucks', feed.data.electric);
+            }
+          }
+        });
+      }
+    } catch (error) {
+      log.error('🚛 Failed to handle GeotabFeed update:', error);
     }
   }
 
@@ -3108,6 +3332,16 @@ class Application {
       this.pollingManager.stopAll();
     }
 
+    // Stop truck data feed
+    if (this.geotabFeed && typeof this.geotabFeed.stop === 'function') {
+      this.geotabFeed.stop();
+    }
+
+    // Clean up GeotabService
+    if (geotabService && typeof geotabService.cleanup === 'function') {
+      geotabService.cleanup();
+    }
+
     // Clean up services
     if (this.services.layerManager && typeof this.services.layerManager.cleanup === 'function') {
       this.services.layerManager.cleanup();
@@ -3134,6 +3368,9 @@ class Application {
     // Clear references
     this.services = {};
     this._cleanupHandlers = [];
+    this.geotabFeed = null;
+    this.activeTruckLayers.clear();
+    this.geotabReady = false;
   }
 }
 

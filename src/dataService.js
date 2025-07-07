@@ -164,9 +164,11 @@ export class SubscriberDataService {
             'mstTerminals': 'mstTerminals',
             'mstFiber': 'mstFiber',
             'splitters': 'splitters',
-            'closures': 'closures'
+            'closures': 'closures',
+            'fiberTrucks': 'fiber_trucks',
+            'electricTrucks': 'electric_trucks'
         };
-        
+
         const cacheKey = cacheKeyMap[dataType] || dataType;
         return this.isCacheValid(cacheKey);
     }
@@ -225,7 +227,7 @@ export class SubscriberDataService {
             // Store in both caches
             this.setCache(memoryKey, result) // Memory cache for immediate reuse
             await cacheService.setCachedData(cacheKey, result) // IndexedDB for persistence
-            
+
             log.info(`✅ Fetched ${processedFeatures.length} ${description}`)
             return result
 
@@ -1168,6 +1170,168 @@ export class SubscriberDataService {
             'MST Fiber'
         )
     }
+
+    // Get fiber trucks data from GeotabService
+    async getFiberTrucks() {
+        const cacheKey = 'fiber_trucks';
+
+        // Return cached data if valid
+        if (this.isCacheValid(cacheKey)) {
+            const cachedData = this.getCache(cacheKey);
+            cachedData.fromCache = true;
+            return cachedData;
+        }
+
+        try {
+            log.info('🚛 Fetching fiber trucks from GeotabService...');
+
+            // Import GeotabService dynamically to avoid circular imports
+            const { geotabService } = await import('./services/GeotabService.js');
+
+            // Get truck data from GeotabService
+            const allTruckData = await geotabService.getTruckData();
+            const fiberTrucks = allTruckData.fiber || [];
+
+            // Convert to GeoJSON features for ArcGIS layer
+            const features = this.convertTruckDataToGeoJSONFeatures(fiberTrucks);
+
+            const result = {
+                count: fiberTrucks.length,
+                data: fiberTrucks,
+                features: features,
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
+            };
+
+            // Cache the result with shorter cache time (30 seconds for real-time data)
+            const originalCacheDuration = this.CACHE_DURATION;
+            this.CACHE_DURATION = 30 * 1000; // 30 seconds for truck data
+            this.setCache(cacheKey, result);
+            this.CACHE_DURATION = originalCacheDuration; // Restore original
+
+            log.info(`✅ Fetched ${fiberTrucks.length} fiber trucks`);
+            return result;
+        } catch (error) {
+            log.error('❌ Failed to fetch fiber trucks:', error);
+
+            // Return cached data if available, even if expired
+            const cachedData = this.getCache(cacheKey);
+            if (cachedData) {
+                log.warn('⚠️ Using cached fiber truck data due to fetch error');
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message,
+                    fromCache: true
+                };
+            }
+
+            // Return empty result as fallback
+            return {
+                count: 0,
+                data: [],
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message,
+                fromCache: false
+            };
+        }
+    }
+
+    // Get electric trucks data from GeotabService
+    async getElectricTrucks() {
+        const cacheKey = 'electric_trucks';
+
+        // Return cached data if valid
+        if (this.isCacheValid(cacheKey)) {
+            const cachedData = this.getCache(cacheKey);
+            cachedData.fromCache = true;
+            return cachedData;
+        }
+
+        try {
+            log.info('🚛 Fetching electric trucks from GeotabService...');
+
+            // Import GeotabService dynamically to avoid circular imports
+            const { geotabService } = await import('./services/GeotabService.js');
+
+            // Get truck data from GeotabService
+            const allTruckData = await geotabService.getTruckData();
+            const electricTrucks = allTruckData.electric || [];
+
+            // Convert to GeoJSON features for ArcGIS layer
+            const features = this.convertTruckDataToGeoJSONFeatures(electricTrucks);
+
+            const result = {
+                count: electricTrucks.length,
+                data: electricTrucks,
+                features: features,
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
+            };
+
+            // Cache the result with shorter cache time (30 seconds for real-time data)
+            const originalCacheDuration = this.CACHE_DURATION;
+            this.CACHE_DURATION = 30 * 1000; // 30 seconds for truck data
+            this.setCache(cacheKey, result);
+            this.CACHE_DURATION = originalCacheDuration; // Restore original
+
+            log.info(`✅ Fetched ${electricTrucks.length} electric trucks`);
+            return result;
+        } catch (error) {
+            log.error('❌ Failed to fetch electric trucks:', error);
+
+            // Return cached data if available, even if expired
+            const cachedData = this.getCache(cacheKey);
+            if (cachedData) {
+                log.warn('⚠️ Using cached electric truck data due to fetch error');
+                return {
+                    ...cachedData,
+                    error: true,
+                    errorMessage: error.message,
+                    fromCache: true
+                };
+            }
+
+            // Return empty result as fallback
+            return {
+                count: 0,
+                data: [],
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message,
+                fromCache: false
+            };
+        }
+    }
+
+    // Convert truck data to GeoJSON features for ArcGIS layer
+    convertTruckDataToGeoJSONFeatures(trucks) {
+        return trucks.map(truck => ({
+            type: 'Feature',
+            geometry: {
+                type: 'Point',
+                coordinates: [parseFloat(truck.longitude), parseFloat(truck.latitude)]
+            },
+            properties: {
+                id: truck.id,
+                name: truck.name,
+                installer: truck.installer,
+                speed: truck.speed,
+                is_driving: truck.is_driving,
+                bearing: truck.bearing,
+                communication_status: truck.communication_status,
+                last_updated: truck.last_updated,
+                vehicle_type: truck.vehicle_type,
+                // Additional properties for popup display
+                status_display: truck.is_driving ? `Moving (${truck.speed} mph)` : 'Stopped',
+                last_update_display: new Date(truck.last_updated).toLocaleString(),
+                connection_status: truck.communication_status
+            }
+        }));
+    }
 }
 
 // Create singleton instance
@@ -1235,7 +1399,7 @@ export class PollingManager {
 
         try {
             log.info(`🔄 Fetching updated data for ${dataType}`)
-            
+
             let data
             switch (dataType) {
                 case 'offline-subscribers':
@@ -1253,13 +1417,13 @@ export class PollingManager {
                     const onlineExists = onlineLayer !== null && onlineLayer !== undefined;
                     const onlineLayerLoaded = window.app?.onlineLayerLoaded || false;
                     const isFirst = this.isFirstUpdate.get(dataType);
-                    
+
                     log.info(`📊 Polling update ${isFirst ? '(INITIAL)' : '(PERIODIC)'} - Offline layer exists: ${offlineExists}, Online layer exists: ${onlineExists}, onlineLayerLoaded: ${onlineLayerLoaded}`);
-                    
+
                     // For the first update, only fetch offline data to save bandwidth
                     let offline = null;
                     let online = null;
-                    
+
                     if (isFirst && !onlineLayerLoaded) {
                         // First update and online layer not manually loaded - only fetch offline
                         log.info('📊 Initial load - fetching only offline subscriber data to save bandwidth');
@@ -1285,7 +1449,7 @@ export class PollingManager {
                     } else {
                         log.warn('📊 No subscriber layers exist or are loaded, skipping data fetch');
                     }
-                    
+
                     data = { offline, online }
                     break
                 case 'apco-outages':

@@ -1030,6 +1030,119 @@ const createMSTFiberFields = () => [
     { name: 'Length', type: 'double', alias: 'Length' }
 ];
 
+// Truck renderer configurations (with proper visual variables for smooth updates)
+const createTruckRenderer = (truckType) => {
+    const colors = {
+        fiber: [30, 95, 175, 0.9],     // Alabama Power blue
+        electric: [74, 124, 89, 0.9]   // Tombigbee green
+    };
+
+    const color = colors[truckType] || [128, 128, 128, 0.9]; // Default gray
+
+    return {
+        type: 'simple',
+        symbol: {
+            type: "simple-marker",
+            style: "triangle",
+            color: color,
+            size: 24,
+            outline: {
+                color: [255, 255, 255],
+                width: 2
+            }
+        },
+        visualVariables: [
+            {
+                type: "rotation",
+                field: "bearing",
+                rotationType: "geographic"  // Trucks rotate based on GPS bearing
+            },
+            {
+                type: "color",
+                field: "is_driving",
+                stops: [
+                    { value: false, color: [...color.slice(0, 3), 0.6] }, // Stopped - more transparent
+                    { value: true, color: color } // Moving - full opacity
+                ]
+            },
+            {
+                type: "size",
+                field: "is_driving",
+                stops: [
+                    { value: false, size: 22 }, // Stopped - smaller
+                    { value: true, size: 28 }   // Moving - larger
+                ]
+            }
+        ]
+    };
+};
+
+// Truck popup templates
+const createTruckPopup = (truckType) => {
+    const vehicleTypeDisplay = truckType === 'fiber' ? 'Fiber Installation' : 'Electric Maintenance';
+
+    return {
+        title: '{name}',
+        content: [
+            {
+                type: 'fields',
+                fieldInfos: [
+                    { fieldName: 'name', label: 'Vehicle Name', visible: true },
+                    { fieldName: 'installer', label: 'Installer/Driver', visible: true },
+                    { fieldName: 'vehicle_type', label: 'Vehicle Type', visible: true },
+                    { fieldName: 'speed', label: 'Speed (mph)', visible: true },
+                    { fieldName: 'bearing', label: 'Bearing', visible: true },
+                    { fieldName: 'communication_status', label: 'Connection Status', visible: true },
+                    { fieldName: 'last_updated', label: 'Last Update', visible: true }
+                ]
+            },
+            {
+                type: 'text',
+                text: `<div style="margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px;">
+                    <strong>Vehicle Type:</strong> ${vehicleTypeDisplay}<br/>
+                    <strong>Real-time tracking:</strong> Updates every 3 seconds
+                </div>`
+            }
+        ],
+        actions: [
+            {
+                id: 'copy-truck-info',
+                title: 'Copy Truck Info',
+                icon: 'duplicate',
+                type: 'button'
+            },
+            {
+                id: 'get-directions',
+                title: 'Get Directions',
+                icon: 'pin-tear',
+                type: 'button'
+            },
+            {
+                id: 'track-vehicle',
+                title: 'Track Vehicle',
+                icon: 'locate',
+                type: 'button'
+            }
+        ]
+    };
+};
+
+// Truck field definitions (matching actual GeotabService data structure)
+const createTruckFields = () => [
+    { name: 'OBJECTID', type: 'oid', alias: 'Object ID' },
+    { name: 'id', type: 'string', alias: 'Vehicle ID' },
+    { name: 'name', type: 'string', alias: 'Vehicle Name' },
+    { name: 'latitude', type: 'double', alias: 'Latitude' },
+    { name: 'longitude', type: 'double', alias: 'Longitude' },
+    { name: 'installer', type: 'string', alias: 'Installer/Driver' },
+    { name: 'speed', type: 'integer', alias: 'Speed (mph)' },
+    { name: 'is_driving', type: 'integer', alias: 'Is Driving' }, // boolean converted to 0/1
+    { name: 'bearing', type: 'double', alias: 'Bearing' },
+    { name: 'communication_status', type: 'string', alias: 'Communication Status' },
+    { name: 'last_updated', type: 'string', alias: 'Last Updated' }, // ISO string, not date
+    { name: 'vehicle_type', type: 'string', alias: 'Vehicle Type' }
+];
+
 // Layer configurations
 export const layerConfigs = {
     offlineSubscribers: {
@@ -1180,6 +1293,31 @@ export const layerConfigs = {
         visible: false,
         zOrder: 35,
         dataServiceMethod: () => subscriberDataService.getMSTFiber()
+    },
+
+    // Truck layers
+    fiberTrucks: {
+        id: 'fiber-trucks',
+        title: 'Fiber Trucks',
+        dataSource: 'fiber_trucks',
+        renderer: createTruckRenderer('fiber'),
+        popupTemplate: createTruckPopup('fiber'),
+        fields: createTruckFields(),
+        visible: false,
+        zOrder: 130,
+        dataServiceMethod: () => subscriberDataService.getFiberTrucks()
+    },
+
+    electricTrucks: {
+        id: 'electric-trucks',
+        title: 'Electric Trucks',
+        dataSource: 'electric_trucks',
+        renderer: createTruckRenderer('electric'),
+        popupTemplate: createTruckPopup('electric'),
+        fields: createTruckFields(),
+        visible: false,
+        zOrder: 130,
+        dataServiceMethod: () => subscriberDataService.getElectricTrucks()
     }
 
     // Additional layers can be added here as needed

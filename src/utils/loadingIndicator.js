@@ -19,7 +19,7 @@ export class LoadingIndicator {
     this.notices = new Map(); // Track active notices by ID
     this.noticeOrder = []; // Maintain order for stacking
     this.initialized = false;
-    
+
     // Consolidated loading state
     this.consolidatedNoticeId = 'consolidated-loading';
     this.loadingQueue = new Map(); // Track what's currently loading
@@ -37,10 +37,10 @@ export class LoadingIndicator {
     this.container.className = 'loading-indicator-container';
     this.container.setAttribute('role', 'status');
     this.container.setAttribute('aria-live', 'polite');
-    
+
     // Apply mobile-first responsive positioning
     this.applyContainerStyles();
-    
+
     document.body.appendChild(this.container);
     this.initialized = true;
 
@@ -146,7 +146,7 @@ export class LoadingIndicator {
     }
 
     const { id, message, type = 'loading', dataType } = config;
-    
+
     // Remove existing notice with same ID if present
     if (this.notices.has(id)) {
       this.remove(id);
@@ -156,12 +156,12 @@ export class LoadingIndicator {
     const notice = document.createElement('calcite-notice');
     notice.setAttribute('open', '');
     notice.setAttribute('closable', '');
-    
+
     // Configure based on type
     const noticeConfig = this.getNoticeConfig(type);
     notice.setAttribute('kind', noticeConfig.kind);
     notice.setAttribute('icon', noticeConfig.icon);
-    
+
     // Set message with data type context
     const fullMessage = dataType ? `${dataType}: ${message}` : message;
     notice.innerHTML = `
@@ -205,6 +205,10 @@ export class LoadingIndicator {
         kind: 'info',
         icon: 'download'
       },
+      empty: {
+        kind: 'success', // Empty is successful completion
+        icon: 'circle' // Simple circle for empty datasets
+      },
       error: {
         kind: 'danger',
         icon: 'exclamation-mark-triangle'
@@ -226,8 +230,8 @@ export class LoadingIndicator {
     if (updates.message) {
       const messageDiv = notice.querySelector('[slot="message"]');
       if (messageDiv) {
-        const fullMessage = updates.dataType ? 
-          `${updates.dataType}: ${updates.message}` : 
+        const fullMessage = updates.dataType ?
+          `${updates.dataType}: ${updates.message}` :
           updates.message;
         messageDiv.textContent = fullMessage;
       }
@@ -255,7 +259,7 @@ export class LoadingIndicator {
 
     // Animate out
     notice.style.animation = 'slideOut 0.3s ease-out';
-    
+
     setTimeout(() => {
       if (notice.parentNode) {
         notice.parentNode.removeChild(notice);
@@ -279,7 +283,7 @@ export class LoadingIndicator {
     if (!this.useConsolidated) return;
 
     const loadingItems = Array.from(this.loadingQueue.entries());
-    
+
     if (loadingItems.length === 0) {
       // Remove the consolidated notice if nothing is loading
       this.remove(this.consolidatedNoticeId);
@@ -289,30 +293,43 @@ export class LoadingIndicator {
     // Build message showing what's loading and what's completed
     const loading = loadingItems.filter(([_, status]) => status.type === 'loading');
     const completed = loadingItems.filter(([_, status]) => status.type !== 'loading');
-    
+
     let message = '';
-    
+
     if (loading.length > 0) {
-      // Show simplified loading message
+      // Show specific loading message with layer names
       if (loading.length === 1) {
         message = `Loading ${loading[0][1].dataType}...`;
       } else {
-        message = `Loading ${loading.length} layers...`;
+        // Show specific layer names instead of just count
+        const layerNames = loading.map(([_, status]) => status.dataType).join(', ');
+        message = `Loading: ${layerNames}`;
       }
     } else if (completed.length > 0) {
       // All loading complete - show summary
       const cached = completed.filter(([_, status]) => status.type === 'cached').length;
       const network = completed.filter(([_, status]) => status.type === 'network').length;
-      const error = completed.filter(([_, status]) => status.type === 'error').length;
-      
+      const empty = completed.filter(([_, status]) => status.type === 'empty').length;
+      const errors = completed.filter(([_, status]) => status.type === 'error');
+
       const parts = [];
       if (cached > 0) parts.push(`${cached} from cache`);
       if (network > 0) parts.push(`${network} from network`);
-      if (error > 0) parts.push(`${error} failed`);
-      
+      if (empty > 0) parts.push(`${empty} empty`);
+
+      // Show specific failed layer names instead of just count
+      if (errors.length > 0) {
+        if (errors.length === 1) {
+          parts.push(`${errors[0][1].dataType} failed`);
+        } else {
+          const failedLayers = errors.map(([_, status]) => status.dataType).join(', ');
+          parts.push(`${errors.length} failed (${failedLayers})`);
+        }
+      }
+
       message = `Loaded: ${parts.join(', ')}`;
     }
-    
+
     // Determine overall type (loading takes precedence, then error, then mixed)
     let type = 'loading';
     if (loading.length === 0) {
@@ -329,11 +346,31 @@ export class LoadingIndicator {
     if (this.notices.has(this.consolidatedNoticeId)) {
       this.update(this.consolidatedNoticeId, { message, type });
     } else {
-      this.show({
+      const noticeId = this.show({
         id: this.consolidatedNoticeId,
         message,
         type
       });
+    }
+
+    // Add click handler for error notices to show details (outside the else block)
+    if (type === 'error' && completed.length > 0) {
+      const errors = completed.filter(([_, status]) => status.type === 'error');
+      if (errors.length > 0) {
+        const notice = this.notices.get(this.consolidatedNoticeId);
+        if (notice) {
+          notice.style.cursor = 'pointer';
+          notice.title = 'Click to see error details';
+
+          // Remove any existing click handlers
+          notice.onclick = null;
+
+          // Add new click handler
+          notice.addEventListener('click', () => {
+            this.showErrorDetails(errors);
+          });
+        }
+      }
     }
 
     // Auto-remove completed items after a delay
@@ -357,7 +394,7 @@ export class LoadingIndicator {
       this.updateConsolidatedNotice();
       return this.consolidatedNoticeId;
     }
-    
+
     return this.show({
       id: `loading-${operation}`,
       message: 'Loading...',
@@ -378,7 +415,7 @@ export class LoadingIndicator {
       this.updateConsolidatedNotice();
       return this.consolidatedNoticeId;
     }
-    
+
     const id = `loading-${operation}`;
     this.update(id, {
       message: 'Loaded from cache',
@@ -400,11 +437,33 @@ export class LoadingIndicator {
       this.updateConsolidatedNotice();
       return this.consolidatedNoticeId;
     }
-    
+
     const id = `loading-${operation}`;
     this.update(id, {
       message: 'Loaded from network',
       type: 'network',
+      dataType
+    });
+    return id;
+  }
+
+  /**
+ * Show success state for network data with zero results
+ * @param {string} operation - Operation identifier
+ * @param {string} dataType - Type of data loaded
+ * @returns {string} - Notice ID
+ */
+  showEmpty(operation, dataType) {
+    if (this.useConsolidated) {
+      this.loadingQueue.set(operation, { type: 'empty', dataType });
+      this.updateConsolidatedNotice();
+      return this.consolidatedNoticeId;
+    }
+
+    const id = `loading-${operation}`;
+    this.update(id, {
+      message: 'Loaded (no data)',
+      type: 'network', // Treat as successful network load
       dataType
     });
     return id;
@@ -418,12 +477,15 @@ export class LoadingIndicator {
    * @returns {string} - Notice ID
    */
   showError(operation, dataType, errorMessage = 'Failed to load') {
+    // Log error to console for immediate debugging visibility
+    console.error(`🚨 Loading Error: ${dataType} (${operation}) - ${errorMessage}`);
+
     if (this.useConsolidated) {
       this.loadingQueue.set(operation, { type: 'error', dataType, errorMessage });
       this.updateConsolidatedNotice();
       return this.consolidatedNoticeId;
     }
-    
+
     const id = `loading-${operation}`;
     this.update(id, {
       message: errorMessage,
@@ -463,6 +525,49 @@ export class LoadingIndicator {
   clearConsolidated() {
     this.loadingQueue.clear();
     this.remove(this.consolidatedNoticeId);
+  }
+
+  /**
+   * Show detailed error information in a separate notice
+   * @param {Array} errors - Array of error entries from loading queue
+   */
+  showErrorDetails(errors) {
+    // Remove any existing error details notice
+    this.remove('error-details');
+
+    // Build detailed error message
+    const errorList = errors.map(([operation, status]) => {
+      const errorMsg = status.errorMessage || 'Failed to load';
+      return `• ${status.dataType}: ${errorMsg}`;
+    }).join('\n');
+
+    const detailMessage = `Loading errors:\n${errorList}`;
+
+    // Create detailed error notice
+    const notice = document.createElement('calcite-notice');
+    notice.setAttribute('open', '');
+    notice.setAttribute('closable', '');
+    notice.setAttribute('kind', 'danger');
+    notice.setAttribute('icon', 'exclamation-mark-triangle');
+    notice.setAttribute('width', 'auto');
+
+    notice.innerHTML = `
+      <div slot="title">Loading Error Details</div>
+      <div slot="message" style="white-space: pre-line; font-family: monospace; font-size: 12px;">${this.escapeHtml(detailMessage)}</div>
+    `;
+
+    // Handle close event
+    notice.addEventListener('calciteNoticeClose', () => {
+      this.remove('error-details');
+    });
+
+    // Add to container and track
+    this.container.appendChild(notice);
+    this.notices.set('error-details', notice);
+    this.noticeOrder.push('error-details');
+
+    // Auto-dismiss after 10 seconds
+    setTimeout(() => this.remove('error-details'), 10000);
   }
 
   /**

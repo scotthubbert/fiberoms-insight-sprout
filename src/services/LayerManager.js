@@ -1,5 +1,6 @@
 // LayerManager.js - Single Responsibility: Layer operations only
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
+import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import WebTileLayer from '@arcgis/core/layers/WebTileLayer';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
@@ -69,6 +70,11 @@ export class LayerManager {
         // Special handling for power outage layers with polygon support
         if (layerConfig.id.includes('outages')) {
             return this.createPowerOutageLayer(layerConfig, data);
+        }
+
+        // Special handling for truck layers - use FeatureLayer for smooth updates
+        if (layerConfig.id.includes('trucks')) {
+            return this.createTruckFeatureLayer(layerConfig, data);
         }
 
         // Create GeoJSON blob for the layer source
@@ -241,6 +247,56 @@ export class LayerManager {
         return layer;
     }
 
+    // Create truck FeatureLayer for smooth real-time updates
+    async createTruckFeatureLayer(layerConfig, data) {
+        const originalFeatures = data.features;
+        const graphics = [];
+
+        // Convert GeoJSON features to ArcGIS Graphics
+        originalFeatures.forEach((feature, index) => {
+            if (!feature.geometry || feature.geometry.type !== 'Point') return;
+
+            const arcgisGeometry = new Point({
+                longitude: feature.geometry.coordinates[0],
+                latitude: feature.geometry.coordinates[1],
+                spatialReference: { wkid: 4326 }
+            });
+
+            const attributes = {
+                OBJECTID: index + 1,  // Required for FeatureLayer
+                ...feature.properties,
+                is_driving: feature.properties.is_driving ? 1 : 0  // Convert boolean to integer
+            };
+
+            // Create graphic
+            const graphic = new Graphic({
+                geometry: arcgisGeometry,
+                attributes: attributes
+            });
+
+            graphics.push(graphic);
+        });
+
+        // Create FeatureLayer from graphics (supports applyEdits)
+        const layer = new FeatureLayer({
+            id: layerConfig.id,
+            title: layerConfig.title,
+            source: graphics,
+            fields: layerConfig.fields,
+            objectIdField: 'OBJECTID',
+            renderer: layerConfig.renderer,
+            popupTemplate: layerConfig.popupTemplate,
+            listMode: layerConfig.visible ? 'show' : 'hide',
+            visible: layerConfig.visible !== undefined ? layerConfig.visible : true
+        });
+
+        console.log(`✅ Created ${layerConfig.title} FeatureLayer with ${graphics.length} truck features`);
+
+        this.layers.set(layerConfig.id, layer);
+        this.layerConfigs.set(layerConfig.id, layerConfig);
+
+        return layer;
+    }
 
     // Create WebTile layer (for RainViewer and similar services)
     async createWebTileLayer(layerConfig) {
@@ -269,12 +325,12 @@ export class LayerManager {
         // Set visibility on our stored layer reference
         layer.visible = visible;
         layer.listMode = visible ? 'show' : 'hide';
-        
+
         // For GraphicsLayer, also use opacity as a fallback
         if (layer.type === 'graphics') {
             layer.opacity = visible ? 1 : 0;
         }
-        
+
         // IMPORTANT: Also update the layer instance on the map
         // The layer in LayerManager might not be the same instance as on the map
         if (window.mapView && window.mapView.map) {
@@ -305,7 +361,7 @@ export class LayerManager {
     async updateLayerData(layerId, newData) {
         const layer = this.layers.get(layerId);
         const config = this.layerConfigs.get(layerId);
-        
+
         if (!layer || !config) {
             console.warn(`Layer ${layerId} not found for update`);
             return false;
@@ -313,17 +369,24 @@ export class LayerManager {
 
         try {
             console.log(`🔄 Updating layer: ${layerId}`);
-            
+
+            // Truck FeatureLayers use smooth updates with applyEdits
+            if (layerId.includes('trucks') && layer.type === 'feature') {
+                // Convert GeoJSON data to truck array for smooth updates
+                const truckData = newData.features ? newData.features.map(f => f.properties) : newData;
+                return this.smoothTruckUpdate(layerId, truckData);
+            }
+
             // Power outages use GraphicsLayer with remove/re-add pattern
             if (layer.type === 'graphics') {
                 return this.updateGraphicsLayer(layerId, config, newData);
             }
-            
+
             // GeoJSONLayer uses remove/re-add pattern
             if (layer.type === 'geojson') {
                 return this.updateGeoJSONLayer(layerId, config, newData);
             }
-            
+
             return true;
         } catch (error) {
             console.error(`Failed to update layer ${layerId}:`, error);
@@ -342,11 +405,11 @@ export class LayerManager {
         // Get old layer to preserve visibility state
         const oldLayer = this.layers.get(layerId);
         let wasVisible = false;
-        
+
         if (oldLayer) {
             // Preserve the visibility state
             wasVisible = oldLayer.visible;
-            
+
             // Remove old layer from map
             map.remove(oldLayer);
             console.log(`🗑️ Removed old ${layerId} layer from map`);
@@ -358,18 +421,18 @@ export class LayerManager {
             dataSource: newData,
             visible: wasVisible  // Preserve visibility state
         };
-        
+
         const newLayer = await this.createPowerOutageLayer(newConfig, newData);
-        
+
         if (newLayer) {
             // Add to map at correct position
             const zOrder = this.getZOrder(layerId);
             map.add(newLayer, zOrder);
-            
+
             console.log(`✅ Re-added ${layerId} layer with ${newLayer.graphics.length} graphics, visible: ${wasVisible}`);
             return true;
         }
-        
+
         return false;
     }
 
@@ -384,14 +447,14 @@ export class LayerManager {
         // Get old layer to preserve visibility state
         const oldLayer = this.layers.get(layerId);
         let wasVisible = false;
-        
+
         if (oldLayer) {
             // Preserve the visibility state
             wasVisible = oldLayer.visible;
-            
+
             // Remove old layer
             map.remove(oldLayer);
-            
+
             // Clean up blob URL
             const blobUrl = this.blobUrls.get(layerId);
             if (blobUrl) {
@@ -406,30 +469,150 @@ export class LayerManager {
             dataSource: newData,
             visible: wasVisible  // Preserve visibility state
         };
-        
+
         const newLayer = await this.createGeoJSONLayer(newConfig);
-        
+
         if (newLayer) {
             // Add to map at correct position first
             const zOrder = this.getZOrder(layerId);
             map.add(newLayer, zOrder);
-            
+
             // Set visibility after a small delay to ensure layer is properly initialized
             setTimeout(() => {
                 newLayer.visible = wasVisible;
                 console.log(`✅ Set visibility for ${layerId} to ${wasVisible}`);
-                
+
                 // Force refresh if visible
                 if (wasVisible && typeof newLayer.refresh === 'function') {
                     newLayer.refresh();
                 }
             }, 100);
-            
+
             console.log(`✅ Recreated layer ${layerId} with ${newData.features?.length || 0} features, visible: ${wasVisible}`);
             return true;
         }
-        
+
         return false;
+    }
+
+    // Smooth truck update using applyEdits for real-time performance (like working implementation)
+    async smoothTruckUpdate(layerId, truckData) {
+        const layer = this.layers.get(layerId);
+        if (!layer || !layer.visible) {
+            return false;
+        }
+
+        try {
+            // 1. Get current features on the map
+            const currentFeaturesResult = await layer.queryFeatures({
+                where: '1=1',
+                outFields: ['*'],
+                returnGeometry: true
+            });
+            const currentFeatures = currentFeaturesResult.features;
+
+            // 2. Index current trucks by ID for O(1) lookup
+            const currentTrucks = new Map();
+            currentFeatures.forEach(feature => {
+                const truckId = feature.attributes.id;
+                if (truckId) {
+                    currentTrucks.set(truckId, feature);
+                }
+            });
+
+            // 3. Process fresh truck data - categorize changes
+            const updatedFeatures = [];
+            const newFeatures = [];
+            const deletedFeatures = [];
+
+            // 4. Find trucks to add or update
+            truckData.forEach(truck => {
+                const truckId = truck.id;
+                const existingFeature = currentTrucks.get(truckId);
+
+                if (existingFeature) {
+                    // Update existing truck position
+                    const newGeometry = new Point({
+                        longitude: parseFloat(truck.longitude),
+                        latitude: parseFloat(truck.latitude),
+                        spatialReference: { wkid: 4326 }
+                    });
+
+                    // Clone and update feature (preserves ArcGIS internal state)
+                    const updatedFeature = existingFeature.clone();
+                    updatedFeature.geometry = newGeometry;
+
+                    // Update all attributes
+                    Object.assign(updatedFeature.attributes, {
+                        id: truck.id,
+                        name: truck.name,
+                        latitude: truck.latitude,
+                        longitude: truck.longitude,
+                        installer: truck.installer,
+                        speed: truck.speed,
+                        is_driving: truck.is_driving ? 1 : 0,  // Convert boolean to integer
+                        last_updated: truck.last_updated,
+                        bearing: truck.bearing,
+                        communication_status: truck.communication_status,
+                        vehicle_type: truck.vehicle_type
+                    });
+
+                    updatedFeatures.push(updatedFeature);
+                } else {
+                    // New truck appeared - create new feature
+                    const maxObjectId = Math.max(...currentFeatures.map(f => f.attributes.OBJECTID || 0), 0);
+
+                    const newFeature = new Graphic({
+                        geometry: new Point({
+                            longitude: parseFloat(truck.longitude),
+                            latitude: parseFloat(truck.latitude),
+                            spatialReference: { wkid: 4326 }
+                        }),
+                        attributes: {
+                            OBJECTID: maxObjectId + newFeatures.length + 1,  // Unique OBJECTID
+                            id: truck.id,
+                            name: truck.name,
+                            latitude: truck.latitude,
+                            longitude: truck.longitude,
+                            installer: truck.installer,
+                            speed: truck.speed,
+                            is_driving: truck.is_driving ? 1 : 0,  // Convert boolean to integer
+                            last_updated: truck.last_updated,
+                            bearing: truck.bearing,
+                            communication_status: truck.communication_status,
+                            vehicle_type: truck.vehicle_type
+                        }
+                    });
+
+                    newFeatures.push(newFeature);
+                }
+            });
+
+            // 5. Find trucks to delete (trucks that exist on map but not in fresh data)
+            const freshTruckIds = new Set(truckData.map(truck => truck.id));
+            currentFeatures.forEach(existingFeature => {
+                const truckId = existingFeature.attributes.id;
+                if (!freshTruckIds.has(truckId)) {
+                    deletedFeatures.push(existingFeature);
+                }
+            });
+
+            // 6. Apply all changes in ONE batch operation
+            const edits = {};
+            if (updatedFeatures.length > 0) edits.updateFeatures = updatedFeatures;
+            if (newFeatures.length > 0) edits.addFeatures = newFeatures;
+            if (deletedFeatures.length > 0) edits.deleteFeatures = deletedFeatures;
+
+            if (Object.keys(edits).length > 0) {
+                await layer.applyEdits(edits);
+                console.log(`✅ Smooth truck update applied: +${newFeatures.length} ~${updatedFeatures.length} -${deletedFeatures.length} trucks`);
+            }
+
+            return true;
+        } catch (error) {
+            console.error(`❌ Failed to smooth update truck layer ${layerId}:`, error);
+            return false;
+        }
     }
 
     // Helper to get map reference for a layer
@@ -438,12 +621,12 @@ export class LayerManager {
         if (layer && layer.parent) {
             return layer.parent;
         }
-        
+
         // Fallback to window.mapView if available
         if (typeof window !== 'undefined' && window.mapView && window.mapView.map) {
             return window.mapView.map;
         }
-        
+
         return null;
     }
 
