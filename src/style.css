@@ -268,6 +268,36 @@ calcite-modal.mobile-only calcite-button + calcite-button {
   calcite-dialog.mobile-only[open] [slot="primary"] {
     display: block !important;
   }
+
+  /* Fix dialog internal layout to ensure proper sizing */
+  calcite-dialog.mobile-only::part(dialog) {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  calcite-dialog.mobile-only::part(container) {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  /* Header positioning defined below */
+
+  /* Fix content area sizing and scrolling */
+  calcite-dialog.mobile-only [slot="content"] {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    background: var(--calcite-color-foreground-1) !important;
+    padding: var(--calcite-spacing-md) !important;
+    /* Remove conflicting height constraints */
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+  }
 }
 
 /* Mobile close button */
@@ -293,60 +323,18 @@ calcite-modal.mobile-only calcite-button + calcite-button {
   }
 }
 
-/* Ensure proper dialog internal layout for fullscreen mode */
-calcite-dialog.mobile-only[fullscreen]::part(dialog) {
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100% !important;
-}
+/* Remove duplicate styles - now handled above */
 
-/* Ensure the container properly displays all slots */
-calcite-dialog.mobile-only[fullscreen]::part(container) {
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100% !important;
-}
-
-/* Panel content styling */
-calcite-dialog.mobile-only[fullscreen] [slot="content"] {
-  flex: 1 1 auto !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  background: var(
-    --calcite-color-foreground-1
-  ) !important; /* Ensure content is opaque */
-  padding-bottom: 10px !important;
-  max-height: calc(
-    100vh - 160px
-  ) !important; /* Account for header and mobile nav */
-}
-
-/* Ensure header is visible */
-calcite-dialog.mobile-only[fullscreen] [slot="header"] {
-  flex: 0 0 auto !important;
-}
-
-/* Ensure primary slot (close button) is visible */
-calcite-dialog.mobile-only[fullscreen] [slot="primary"] {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Ensure panel is completely opaque - no map showing through */
-calcite-dialog.mobile-only[fullscreen],
-calcite-dialog.mobile-only[fullscreen] .calcite-dialog,
-calcite-dialog.mobile-only[fullscreen] .calcite-dialog-content {
-  background: var(--calcite-color-foreground-1) !important;
-  opacity: 1 !important;
-}
-
-/* Dialog header styling with close button */
+/* Enhanced dialog header styling with close button */
 calcite-dialog.mobile-only [slot="header"] {
   padding: var(--calcite-spacing-md) !important;
   background: var(--calcite-color-foreground-2) !important;
   border-bottom: 1px solid var(--calcite-color-border-2) !important;
   min-height: 48px !important;
+  flex: 0 0 auto !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
 }
 
 .dialog-header {
@@ -402,7 +390,8 @@ calcite-dialog.mobile-only [slot="content"] {
 .stats-content,
 .outages-list {
   scrollbar-width: thin;
-  scrollbar-color: var(--calcite-color-border-1) var(--calcite-color-foreground-2);
+  scrollbar-color: var(--calcite-color-border-1)
+    var(--calcite-color-foreground-2);
 }
 
 .stats-content::-webkit-scrollbar,
@@ -1520,4 +1509,26 @@ calcite-autocomplete-item:focus {
     left: 10px;
     max-width: none;
   }
+}
+
+/* Mobile subscriber dialog specific styling */
+#mobile-subscribers-sheet [slot="content"] {
+  padding-top: var(--calcite-spacing-lg) !important;
+}
+
+#mobile-subscribers-sheet calcite-list {
+  margin-bottom: var(--calcite-spacing-lg) !important;
+}
+
+#mobile-subscribers-sheet calcite-list-item {
+  min-height: 56px !important;
+  padding: var(--calcite-spacing-md) !important;
+}
+
+/* Ensure all mobile dialog content is visible */
+calcite-dialog.mobile-only calcite-list,
+calcite-dialog.mobile-only calcite-block {
+  width: 100% !important;
+  display: block !important;
+  visibility: visible !important;
 }
