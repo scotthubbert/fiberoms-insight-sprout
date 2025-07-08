@@ -1,5 +1,5 @@
 // GeotabService.js - MyGeotab API integration service
-import { getGeotabConfig, getMockTruckData, TRUCK_LAYER_DEFAULTS } from '../config/geotabConfig.js';
+import { getGeotabConfig, TRUCK_LAYER_DEFAULTS } from '../config/geotabConfig.js';
 
 // Try to import GeotabApi, but handle errors gracefully
 let GeotabApi = null;
@@ -30,6 +30,10 @@ export class GeotabService {
         this.connectionRetries = 0;
         this.lastTruckData = null;
         this.lastUpdateTime = null;
+        this.lastApiCallTime = 0;
+        this.isRateLimited = false;
+        this.rateLimitResetTime = 0;
+        this.authRetryCount = 0;
 
         // Initialize GeotabApi if needed
         this.initializeApi();
@@ -39,8 +43,8 @@ export class GeotabService {
  * Initialize the GeotabApi instance
  */
     async initializeApi() {
-        if (this.config.mockMode || !this.config.enabled) {
-            log.info('🚛 GeotabService running in mock mode');
+        if (!this.config.enabled) {
+            log.info('🚛 GeotabService is disabled');
             return;
         }
 
@@ -64,23 +68,52 @@ export class GeotabService {
             log.info('🚛 GeotabApi initialized');
         } catch (error) {
             log.error('❌ Failed to initialize GeotabApi:', error);
-            log.warn('🚛 Falling back to mock mode');
-            this.config.mockMode = true;
+            log.error('🚛 GeotabService initialization failed - API not available');
         }
+    }
+
+    /**
+     * Check if we're currently rate limited
+     */
+    isCurrentlyRateLimited() {
+        if (!this.isRateLimited) return false;
+
+        const now = Date.now();
+        if (now > this.rateLimitResetTime) {
+            this.isRateLimited = false;
+            this.rateLimitResetTime = 0;
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Handle rate limiting error
+     */
+    handleRateLimitError(error) {
+        if (error.message && error.message.includes('OverLimitException')) {
+            this.isRateLimited = true;
+            // Rate limit resets after 1 minute, add buffer
+            this.rateLimitResetTime = Date.now() + (70 * 1000); // 70 seconds
+            log.warn('⚠️ MyGeotab API rate limit exceeded. Waiting 70 seconds before retry...');
+            return true;
+        }
+        return false;
     }
 
     /**
      * Initialize and authenticate with MyGeotab
      */
     async initialize() {
-        if (this.config.mockMode) {
-            this.isAuthenticated = true;
-            log.info('🚛 GeotabService initialized in mock mode');
-            return true;
-        }
-
         if (!this.config.enabled) {
             log.info('🚛 GeotabService is disabled');
+            return false;
+        }
+
+        // Check if we're rate limited
+        if (this.isCurrentlyRateLimited()) {
+            log.warn('⚠️ Currently rate limited, skipping authentication attempt');
             return false;
         }
 
@@ -94,21 +127,32 @@ export class GeotabService {
                 await this.api.authenticate();
                 this.isAuthenticated = true;
                 this.connectionRetries = 0;
+                this.authRetryCount = 0;
                 log.info('✅ GeotabService authenticated successfully');
                 return true;
             }
         } catch (error) {
             log.error('❌ GeotabService authentication failed:', error);
             this.isAuthenticated = false;
+
+            // Handle rate limiting specifically
+            if (this.handleRateLimitError(error)) {
+                // Don't count rate limit errors as connection retries
+                setTimeout(() => this.initialize(), 70000); // Wait 70 seconds
+                return false;
+            }
+
             this.connectionRetries++;
+            this.authRetryCount++;
 
             if (this.connectionRetries < this.config.maxRetries) {
-                log.info(`🔄 Retrying authentication (${this.connectionRetries}/${this.config.maxRetries})...`);
-                setTimeout(() => this.initialize(), this.config.retryDelay);
+                // Use exponential backoff for retries
+                const backoffDelay = this.config.retryDelay * Math.pow(2, this.authRetryCount - 1);
+                log.info(`🔄 Retrying authentication (${this.connectionRetries}/${this.config.maxRetries}) in ${backoffDelay / 1000}s...`);
+                setTimeout(() => this.initialize(), backoffDelay);
             } else {
-                log.warn('🚛 Max retries reached, falling back to mock mode');
-                this.config.mockMode = true;
-                this.isAuthenticated = true;
+                log.error('🚛 Max retries reached, GeotabService authentication failed permanently');
+                this.isAuthenticated = false;
             }
         }
 
@@ -119,16 +163,6 @@ export class GeotabService {
      * Get all devices from MyGeotab
      */
     async getDevices() {
-        if (this.config.mockMode) {
-            // Return mock devices
-            return [
-                { id: 'fiber-001', name: 'Fiber Truck 1', comment: 'John Smith' },
-                { id: 'fiber-002', name: 'Fiber Truck 2', comment: 'Sarah Johnson' },
-                { id: 'electric-001', name: 'Electric Truck 1', comment: 'Mike Wilson' },
-                { id: 'electric-002', name: 'Electric Truck 2', comment: 'Lisa Davis' }
-            ];
-        }
-
         if (!this.isAuthenticated || !this.api) {
             throw new Error('GeotabService not authenticated');
         }
@@ -147,22 +181,6 @@ export class GeotabService {
      * Get device status information
      */
     async getDeviceStatus(deviceIds = null) {
-        if (this.config.mockMode) {
-            // Return mock device status
-            const mockData = getMockTruckData();
-            const allTrucks = [...mockData.fiber, ...mockData.electric];
-
-            return allTrucks.map(truck => ({
-                device: { id: truck.id },
-                latitude: truck.latitude,
-                longitude: truck.longitude,
-                speed: truck.speed / 0.621371, // Convert from mph to m/s
-                bearing: truck.bearing,
-                dateTime: truck.last_updated,
-                isDeviceCommunicating: truck.communication_status === 'Online'
-            }));
-        }
-
         if (!this.isAuthenticated || !this.api) {
             throw new Error('GeotabService not authenticated');
         }
@@ -189,15 +207,30 @@ export class GeotabService {
      * Get processed truck data categorized by type
      */
     async getTruckData() {
-        if (this.config.mockMode) {
-            const mockData = getMockTruckData();
-            this.lastTruckData = mockData;
-            this.lastUpdateTime = new Date();
-            return mockData;
+        // Check if we're rate limited
+        if (this.isCurrentlyRateLimited()) {
+            log.warn('⚠️ Currently rate limited, returning cached data if available');
+            if (this.lastTruckData) {
+                return this.lastTruckData;
+            }
+            // If no cached data available during rate limit, return empty data
+            log.warn('⚠️ No cached data available during rate limit, returning empty data');
+            return { fiber: [], electric: [] };
         }
 
         if (!this.isAuthenticated) {
             await this.initialize();
+        }
+
+        // Double-check authentication after potential rate limit during initialize
+        if (!this.isAuthenticated) {
+            log.warn('⚠️ GeotabService not authenticated, returning cached data if available');
+            if (this.lastTruckData) {
+                return this.lastTruckData;
+            }
+            // No authentication and no cached data - return empty
+            log.warn('⚠️ No authentication and no cached data available, returning empty data');
+            return { fiber: [], electric: [] };
         }
 
         try {
@@ -258,12 +291,26 @@ export class GeotabService {
         } catch (error) {
             log.error('❌ Failed to get truck data:', error);
 
-            // Return cached data if available
+            // Handle rate limiting errors
+            if (this.handleRateLimitError(error)) {
+                // Return cached data if available during rate limit
+                if (this.lastTruckData) {
+                    log.warn('⚠️ Using cached truck data due to rate limit');
+                    return this.lastTruckData;
+                }
+                // If no cached data, return empty data during rate limit
+                log.warn('⚠️ No cached data available during rate limit, returning empty data');
+                return { fiber: [], electric: [] };
+            }
+
+            // Return cached data if available for other errors
             if (this.lastTruckData) {
                 log.warn('⚠️ Using cached truck data due to fetch error');
                 return this.lastTruckData;
             }
 
+            // No cached data available and error occurred
+            log.error('❌ No cached data available and API error occurred');
             throw error;
         }
     }
@@ -343,14 +390,6 @@ export class GeotabService {
      * Test connection to MyGeotab
      */
     async testConnection() {
-        if (this.config.mockMode) {
-            return {
-                success: true,
-                message: 'Mock mode - connection test passed',
-                mockMode: true
-            };
-        }
-
         if (!this.config.enabled) {
             return {
                 success: false,
@@ -391,14 +430,17 @@ export class GeotabService {
         return {
             enabled: this.config.enabled,
             authenticated: this.isAuthenticated,
-            mockMode: this.config.mockMode,
             lastUpdate: this.lastUpdateTime,
             activeFeedCount: this.feedIntervals.size,
             connectionRetries: this.connectionRetries,
+            rateLimited: this.isRateLimited,
+            rateLimitResetTime: this.rateLimitResetTime,
             config: {
                 refreshInterval: this.config.refreshInterval,
                 timeout: this.config.timeout,
-                fallbackToSupabase: this.config.fallbackToSupabase
+                fallbackToSupabase: this.config.fallbackToSupabase,
+                maxRetries: this.config.maxRetries,
+                retryDelay: this.config.retryDelay
             }
         };
     }

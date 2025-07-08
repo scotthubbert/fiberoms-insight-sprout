@@ -17,11 +17,10 @@ export function getGeotabConfig() {
         password: import.meta.env.VITE_GEOTAB_PASSWORD,
         database: import.meta.env.VITE_GEOTAB_DATABASE,
         enabled: import.meta.env.VITE_GEOTAB_ENABLED === 'true',
-        refreshInterval: parseInt(import.meta.env.VITE_GEOTAB_REFRESH_INTERVAL) || 30000, // 30 seconds default
+        refreshInterval: parseInt(import.meta.env.VITE_GEOTAB_REFRESH_INTERVAL) || TRUCK_LAYER_DEFAULTS.refreshInterval, // Use truck layer default (2 minutes)
         fallbackToSupabase: import.meta.env.VITE_GEOTAB_FALLBACK_TO_SUPABASE === 'true' || true, // Default to true
         timeout: parseInt(import.meta.env.VITE_GEOTAB_TIMEOUT) || 30000, // 30 seconds
         rememberMe: import.meta.env.VITE_GEOTAB_REMEMBER_ME === 'true' || false,
-        mockMode: import.meta.env.VITE_GEOTAB_MOCK_MODE === 'true' || false,
         // Add retry settings from TRUCK_LAYER_DEFAULTS
         maxRetries: TRUCK_LAYER_DEFAULTS.maxRetries,
         retryDelay: TRUCK_LAYER_DEFAULTS.retryDelay
@@ -38,20 +37,20 @@ export function getGeotabConfig() {
         log.info('Timeout:', config.timeout + 'ms');
         log.info('Max Retries:', config.maxRetries);
         log.info('Retry Delay:', config.retryDelay + 'ms');
-        log.info('Mock Mode:', config.mockMode ? 'Yes ⚠️' : 'No ✅');
+
     }
 
     // Validate configuration
-    if (config.enabled && !config.mockMode) {
+    if (config.enabled) {
         if (!config.username || !config.password || !config.database) {
-            log.warn('⚠️ Missing MyGeotab credentials, falling back to mock mode');
-            log.info('To use real MyGeotab data, set these environment variables:');
+            log.warn('⚠️ Missing MyGeotab credentials, disabling GeotabService');
+            log.info('To use MyGeotab data, set these environment variables:');
             log.info('VITE_GEOTAB_USERNAME=your-username');
             log.info('VITE_GEOTAB_PASSWORD=your-password');
             log.info('VITE_GEOTAB_DATABASE=your-database');
 
-            // Fall back to mock mode if credentials are missing
-            config.mockMode = true;
+            // Disable service if credentials are missing
+            config.enabled = false;
         }
     }
 
@@ -64,84 +63,21 @@ export function getGeotabConfig() {
  */
 export function isGeotabConfigured() {
     const config = getGeotabConfig();
-    return config.enabled && (config.mockMode || (config.username && config.password && config.database));
+    return config.enabled && config.username && config.password && config.database;
 }
 
-/**
- * Get mock truck data for testing
- * @returns {Object} Mock truck data with fiber and electric trucks
- */
-export function getMockTruckData() {
-    return {
-        fiber: [
-            {
-                id: 'fiber-001',
-                name: 'Fiber Truck 1',
-                latitude: 33.5186,
-                longitude: -86.8104,
-                installer: 'John Smith',
-                speed: 35,
-                is_driving: true,
-                last_updated: new Date().toISOString(),
-                bearing: 45,
-                communication_status: 'Online',
-                vehicle_type: 'fiber'
-            },
-            {
-                id: 'fiber-002',
-                name: 'Fiber Truck 2',
-                latitude: 32.3668,
-                longitude: -86.3000,
-                installer: 'Sarah Johnson',
-                speed: 0,
-                is_driving: false,
-                last_updated: new Date().toISOString(),
-                bearing: 180,
-                communication_status: 'Online',
-                vehicle_type: 'fiber'
-            }
-        ],
-        electric: [
-            {
-                id: 'electric-001',
-                name: 'Electric Truck 1',
-                latitude: 34.7304,
-                longitude: -86.5861,
-                installer: 'Mike Wilson',
-                speed: 25,
-                is_driving: true,
-                last_updated: new Date().toISOString(),
-                bearing: 90,
-                communication_status: 'Online',
-                vehicle_type: 'electric'
-            },
-            {
-                id: 'electric-002',
-                name: 'Electric Truck 2',
-                latitude: 30.6954,
-                longitude: -88.0399,
-                installer: 'Lisa Davis',
-                speed: 0,
-                is_driving: false,
-                last_updated: new Date().toISOString(),
-                bearing: 270,
-                communication_status: 'Offline',
-                vehicle_type: 'electric'
-            }
-        ]
-    };
-}
+
 
 /**
  * Default configuration for truck layers
  */
 export const TRUCK_LAYER_DEFAULTS = {
-    refreshInterval: 30000, // 30 seconds
+    refreshInterval: 10000, // 10 seconds - real-time updates for users
     maxSpeed: 100, // mph
     speedThreshold: 5, // mph - below this is considered stopped
     onlineTimeout: 300000, // 5 minutes - consider offline after this
-    maxRetries: 3,
-    retryDelay: 5000, // 5 seconds
+    maxRetries: 2, // Conservative retry count
+    retryDelay: 15000, // 15 seconds - conservative retry timing
 
     // Visual settings
     colors: {
