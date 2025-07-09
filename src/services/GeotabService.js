@@ -34,6 +34,8 @@ export class GeotabService {
         this.isRateLimited = false;
         this.rateLimitResetTime = 0;
         this.authRetryCount = 0;
+        this.isCurrentlyFetching = false;
+        this.pendingPromise = null;
 
         // Initialize GeotabApi if needed
         this.initializeApi();
@@ -82,6 +84,14 @@ export class GeotabService {
         if (now > this.rateLimitResetTime) {
             this.isRateLimited = false;
             this.rateLimitResetTime = 0;
+            console.log('✅ Rate limit expired, ready for new API calls');
+            // Try to re-authenticate after rate limit expires
+            if (!this.isAuthenticated) {
+                setTimeout(() => {
+                    console.log('🔄 Attempting re-authentication after rate limit expiry');
+                    this.initialize();
+                }, 1000); // Small delay to avoid immediate retry
+            }
             return false;
         }
 
@@ -94,9 +104,10 @@ export class GeotabService {
     handleRateLimitError(error) {
         if (error.message && error.message.includes('OverLimitException')) {
             this.isRateLimited = true;
-            // Rate limit resets after 1 minute, add buffer
-            this.rateLimitResetTime = Date.now() + (70 * 1000); // 70 seconds
-            log.warn('⚠️ MyGeotab API rate limit exceeded. Waiting 70 seconds before retry...');
+            // Rate limit resets after 1 minute, add significant buffer
+            this.rateLimitResetTime = Date.now() + (120 * 1000); // 2 minutes buffer
+            console.warn('⚠️ MyGeotab API rate limit exceeded. Waiting 2 minutes before retry...');
+            console.warn('⚠️ Rate limit will reset at:', new Date(this.rateLimitResetTime).toLocaleTimeString());
             return true;
         }
         return false;
@@ -106,30 +117,41 @@ export class GeotabService {
      * Initialize and authenticate with MyGeotab
      */
     async initialize() {
+        console.log('🚛 initialize() called');
+        console.log('🚛 config.enabled:', this.config.enabled);
+
         if (!this.config.enabled) {
-            log.info('🚛 GeotabService is disabled');
+            console.log('🚛 GeotabService is disabled in config');
             return false;
         }
 
         // Check if we're rate limited
         if (this.isCurrentlyRateLimited()) {
-            log.warn('⚠️ Currently rate limited, skipping authentication attempt');
+            const timeRemaining = Math.ceil((this.rateLimitResetTime - Date.now()) / 1000);
+            console.warn(`⚠️ Currently rate limited, skipping authentication attempt. ${timeRemaining}s remaining.`);
             return false;
         }
 
         try {
+            console.log('🚛 Starting authentication process...');
+            console.log('🚛 API exists:', !!this.api);
+
             if (!this.api) {
+                console.log('🚛 No API found, initializing...');
                 await this.initializeApi();
+                console.log('🚛 API after init:', !!this.api);
             }
 
             if (this.api) {
-                log.info('🚛 Authenticating with MyGeotab...');
+                console.log('🚛 Authenticating with MyGeotab...');
                 await this.api.authenticate();
                 this.isAuthenticated = true;
                 this.connectionRetries = 0;
                 this.authRetryCount = 0;
-                log.info('✅ GeotabService authenticated successfully');
+                console.log('✅ GeotabService authenticated successfully');
                 return true;
+            } else {
+                console.error('❌ No API available after initialization');
             }
         } catch (error) {
             log.error('❌ GeotabService authentication failed:', error);
@@ -138,7 +160,8 @@ export class GeotabService {
             // Handle rate limiting specifically
             if (this.handleRateLimitError(error)) {
                 // Don't count rate limit errors as connection retries
-                setTimeout(() => this.initialize(), 70000); // Wait 70 seconds
+                console.warn('⚠️ Authentication failed due to rate limiting, will retry when rate limit expires');
+                // Don't retry immediately - wait for rate limit to expire
                 return false;
             }
 
@@ -207,38 +230,95 @@ export class GeotabService {
      * Get processed truck data categorized by type
      */
     async getTruckData() {
+        console.log('🚛 getTruckData called at', new Date().toLocaleTimeString());
+
+        // If already fetching, return the pending promise to avoid duplicate calls
+        if (this.isCurrentlyFetching && this.pendingPromise) {
+            console.log('🔄 getTruckData already in progress, returning pending promise');
+            return this.pendingPromise;
+        }
+
+        // Check if we have fresh cached data (less than 60 seconds old)
+        const cacheMaxAge = 60000; // 60 seconds - longer cache to reduce API calls
+        if (this.lastTruckData && this.lastUpdateTime) {
+            const age = Date.now() - this.lastUpdateTime.getTime();
+            if (age < cacheMaxAge) {
+                console.log(`🚛 Using fresh cached truck data (${Math.round(age / 1000)}s old)`);
+                console.log('🚛 Cached data:', this.lastTruckData);
+                return this.lastTruckData;
+            } else {
+                console.log(`🚛 Cached data too old (${Math.round(age / 1000)}s), fetching fresh`);
+            }
+        } else {
+            console.log('🚛 No cached data available, fetching fresh');
+        }
+
         // Check if we're rate limited
         if (this.isCurrentlyRateLimited()) {
-            log.warn('⚠️ Currently rate limited, returning cached data if available');
+            const timeRemaining = Math.ceil((this.rateLimitResetTime - Date.now()) / 1000);
+            console.warn(`⚠️ Currently rate limited, ${timeRemaining}s remaining. Returning cached data if available.`);
             if (this.lastTruckData) {
+                console.warn('⚠️ Returning cached truck data during rate limit');
                 return this.lastTruckData;
             }
             // If no cached data available during rate limit, return empty data
-            log.warn('⚠️ No cached data available during rate limit, returning empty data');
+            console.warn('⚠️ No cached data available during rate limit, returning empty data');
             return { fiber: [], electric: [] };
         }
 
+        // Set fetching flag and create the promise
+        this.isCurrentlyFetching = true;
+        this.pendingPromise = this._fetchTruckDataInternal();
+
+        try {
+            const result = await this.pendingPromise;
+            return result;
+        } finally {
+            // Clear fetching state
+            this.isCurrentlyFetching = false;
+            this.pendingPromise = null;
+        }
+    }
+
+    /**
+     * Internal method to actually fetch truck data from MyGeotab
+     * @private
+     */
+    async _fetchTruckDataInternal() {
+        console.log('🚛 _fetchTruckDataInternal called');
+        console.log('🚛 isAuthenticated:', this.isAuthenticated);
+
         if (!this.isAuthenticated) {
+            console.log('🚛 Not authenticated, trying to initialize...');
             await this.initialize();
         }
 
         // Double-check authentication after potential rate limit during initialize
+        console.log('🚛 After initialize - isAuthenticated:', this.isAuthenticated);
         if (!this.isAuthenticated) {
-            log.warn('⚠️ GeotabService not authenticated, returning cached data if available');
+            console.warn('⚠️ GeotabService not authenticated, returning cached data if available');
             if (this.lastTruckData) {
+                console.log('🚛 Returning cached data due to no auth');
                 return this.lastTruckData;
             }
             // No authentication and no cached data - return empty
-            log.warn('⚠️ No authentication and no cached data available, returning empty data');
+            console.warn('⚠️ No authentication and no cached data available, returning empty data');
             return { fiber: [], electric: [] };
         }
 
         try {
+            console.log('🚛 Fetching fresh truck data from MyGeotab API...');
+
             // Get devices and status in parallel
+            console.log('🚛 Making API calls for devices and status...');
             const [devices, statusData] = await Promise.all([
                 this.getDevices(),
                 this.getDeviceStatus()
             ]);
+
+            console.log('🚛 API calls completed');
+            console.log('🚛 Devices received:', devices?.length || 0);
+            console.log('🚛 Status data received:', statusData?.length || 0);
 
             // Create lookup map for status data
             const statusMap = new Map();
@@ -248,14 +328,29 @@ export class GeotabService {
                 }
             });
 
+            console.log('🚛 Status map created with', statusMap.size, 'entries');
+
             const fiberTrucks = [];
             const electricTrucks = [];
 
-            devices.forEach(device => {
-                if (!device.name) return;
+            console.log('🚛 Processing devices...');
+            devices.forEach((device, index) => {
+                console.log(`🚛 Processing device ${index + 1}/${devices.length}:`, device.name);
+
+                if (!device.name) {
+                    console.log(`🚛 Skipping device ${index + 1} - no name`);
+                    return;
+                }
 
                 const status = statusMap.get(device.id);
-                if (!status?.latitude || !status?.longitude) return;
+                if (!status?.latitude || !status?.longitude) {
+                    console.log(`🚛 Skipping device ${device.name} - no location data`, {
+                        hasStatus: !!status,
+                        lat: status?.latitude,
+                        lng: status?.longitude
+                    });
+                    return;
+                }
 
                 // Convert speed from m/s to mph
                 const speedMph = Math.round((status.speed || 0) * 0.621371);
@@ -465,6 +560,8 @@ export class GeotabService {
         this.api = null;
         this.lastTruckData = null;
         this.lastUpdateTime = null;
+        this.isCurrentlyFetching = false;
+        this.pendingPromise = null;
         log.info('🧹 GeotabService cleanup completed');
     }
 }

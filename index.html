@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -62,6 +62,7 @@
         <calcite-action-bar slot="action-bar">
           <calcite-action id="layers-action" text="Layers" icon="layer" active></calcite-action>
           <calcite-action id="osp-action" text="OSP (Outside Plant)" icon="utility-network"></calcite-action>
+          <calcite-action id="vehicles-action" text="Vehicles" icon="car"></calcite-action>
           <calcite-action id="power-outages-action" text="Power Outages" icon="flash"></calcite-action>
           <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
           <calcite-action id="network-parent-action" text="Network Infrastructure" icon="linkChart"></calcite-action>
@@ -94,16 +95,6 @@
             <calcite-label>
               <calcite-checkbox></calcite-checkbox>
               Fiber Network Outages
-            </calcite-label>
-          </calcite-block>
-          <calcite-block heading="Vehicle Tracking" collapsible>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Electric Trucks
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Fiber Trucks
             </calcite-label>
           </calcite-block>
         </calcite-panel>
@@ -139,6 +130,94 @@
               Closures
             </calcite-label>
           </calcite-block>
+        </calcite-panel>
+        <calcite-panel heading="Vehicles" id="vehicles-content" hidden>
+          <calcite-block heading="Vehicle Tracking" collapsible expanded>
+            <calcite-icon slot="icon" icon="car"></calcite-icon>
+
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Electric Trucks
+            </calcite-label>
+            <calcite-label>
+              <calcite-checkbox></calcite-checkbox>
+              Fiber Trucks
+            </calcite-label>
+          </calcite-block>
+
+          <!-- Vehicle List - moved to second position -->
+          <calcite-block heading="Vehicle List" collapsible collapsed id="vehicle-list-block">
+            <calcite-icon slot="icon" icon="list"></calcite-icon>
+
+            <div id="vehicle-list-content" style="background: var(--calcite-color-foreground-2); border: 1px solid var(--calcite-color-border-2); border-radius: var(--calcite-border-radius); padding: 12px; margin: 12px 0;">
+              <div id="vehicle-search-container" style="margin-bottom: 12px;">
+                <calcite-input id="vehicle-search" type="search" placeholder="Search vehicles..." icon="search"
+                  scale="s" clearable>
+                </calcite-input>
+              </div>
+
+              <div style="background: var(--calcite-color-background); border: 1px solid var(--calcite-color-border-3); border-radius: var(--calcite-border-radius); height: 350px; overflow: hidden; display: flex; flex-direction: column;">
+                <div id="vehicle-list-loading" class="vehicle-list-state" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <calcite-loader scale="s"></calcite-loader>
+                  <p style="margin: 8px 0; text-align: center; color: var(--calcite-color-text-2);">Loading vehicles...</p>
+                </div>
+
+                <div id="vehicle-list-empty" class="vehicle-list-state" hidden style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                  <div style="text-align: center; padding: 16px;">
+                    <calcite-icon icon="car" scale="m" style="color: var(--calcite-color-text-3);"></calcite-icon>
+                    <p style="margin: 8px 0; color: var(--calcite-color-text-2);">No vehicles found</p>
+                  </div>
+                </div>
+
+                <calcite-list id="vehicle-list" selection-mode="none" hidden style="flex: 1; overflow-y: auto; overflow-x: hidden; margin: 0;">
+                  <!-- Vehicle items will be populated here -->
+                </calcite-list>
+              </div>
+
+              <div id="vehicle-list-footer" class="vehicle-list-footer" hidden
+                style="margin-top: 12px; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--calcite-color-text-3);">
+                <small id="vehicle-count" style="flex-shrink: 0;">0 vehicles</small>
+                <small id="vehicle-last-updated" style="flex-shrink: 0; text-align: right;">Last updated: --</small>
+              </div>
+            </div>
+          </calcite-block>
+
+          <!-- Fleet Management - Commented out for now -->
+          <!--
+          <calcite-block heading="Fleet Management" collapsible>
+            <calcite-icon slot="icon" icon="flash"></calcite-icon>
+
+            <div style="padding: 8px 0;">
+              <calcite-list selection-mode="none">
+                <calcite-list-item label="MyGeotab Status" description="Real-time tracking connection">
+                  <calcite-icon slot="content-start" icon="globe"></calcite-icon>
+                  <calcite-chip slot="content-end" appearance="outline" scale="s" id="geotab-status-chip">
+                    Connecting...
+                  </calcite-chip>
+                </calcite-list-item>
+                <calcite-list-item label="Update Interval" description="Vehicle location refresh rate">
+                  <calcite-icon slot="content-start" icon="clock"></calcite-icon>
+                  <span slot="content-end" style="color: var(--calcite-color-text-2); font-size: 12px;">
+                    Every 90 seconds
+                  </span>
+                </calcite-list-item>
+              </calcite-list>
+            </div>
+          </calcite-block>
+          -->
+
+          <!-- Vehicle Actions - Commented out for now -->
+          <!--
+          <calcite-block heading="Vehicle Actions" collapsible>
+            <calcite-icon slot="icon" icon="apps"></calcite-icon>
+
+            <div class="block-actions">
+              <calcite-button id="refresh-vehicles" icon-start="refresh" scale="s" width="full">
+                Refresh Vehicle Locations
+              </calcite-button>
+            </div>
+          </calcite-block>
+          -->
         </calcite-panel>
         <calcite-panel heading="Power Outages" id="power-outages-content" hidden>
           <calcite-block heading="Power Outages" collapsible expanded>
@@ -283,6 +362,75 @@
       </calcite-segmented-control>
     </calcite-shell>
 
+
+    <!-- Desktop Modals -->
+
+    <!-- Truck Table Dialog -->
+    <calcite-dialog id="truck-table-modal" width-scale="l" scale="l">
+      <div slot="header" class="dialog-header">
+        <span class="dialog-title">Truck Table - Vehicle Tracking and Status</span>
+        <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
+          aria-label="Close" onclick="document.getElementById('truck-table-modal').open = false"></calcite-button>
+      </div>
+      <div slot="content" class="truck-table-content">
+        <!-- Search and Controls -->
+        <div class="truck-table-controls">
+          <calcite-input id="truck-search" type="search" placeholder="Search trucks or installers..." icon="search"
+            scale="m" clearable>
+          </calcite-input>
+
+          <div class="truck-table-sort-controls">
+            <label>Sort by:</label>
+            <calcite-select id="truck-sort-select" scale="m">
+              <calcite-option value="name">Truck Name</calcite-option>
+              <calcite-option value="installer">Installer</calcite-option>
+              <calcite-option value="type">Type</calcite-option>
+              <calcite-option value="status">Status</calcite-option>
+            </calcite-select>
+            <calcite-button id="truck-refresh-btn" appearance="outline" scale="m" icon-start="refresh"
+              title="Refresh truck data">
+            </calcite-button>
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="truck-table-container">
+          <table class="truck-table">
+            <thead>
+              <tr>
+                <th class="zoom-column">ZOOM</th>
+                <th class="truck-name-column">TRUCK NAME</th>
+                <th class="installer-column">INSTALLER</th>
+                <th class="status-column">STATUS</th>
+                <th class="location-column">LOCATION</th>
+              </tr>
+            </thead>
+            <tbody id="truck-table-body">
+              <!-- Truck rows will be populated here -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Loading State -->
+        <div id="truck-table-loading" class="truck-table-loading" hidden>
+          <calcite-loader scale="m"></calcite-loader>
+          <p>Loading truck data...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="truck-table-empty" class="truck-table-empty" hidden>
+          <calcite-icon icon="car" scale="l"></calcite-icon>
+          <h4>No trucks found</h4>
+          <p>No vehicle data is currently available.</p>
+        </div>
+
+        <!-- Footer with stats -->
+        <div class="truck-table-footer">
+          <span id="truck-count">0 trucks</span>
+          <span id="truck-last-updated">Last updated: --</span>
+        </div>
+      </div>
+    </calcite-dialog>
 
     <!-- Mobile Bottom Modals -->
 

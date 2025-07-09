@@ -1532,4 +1532,435 @@ calcite-dialog.mobile-only calcite-block {
   display: block !important;
   visibility: visible !important;
 }
-/* Force cache refresh 1751865386 */
+
+/* Truck Table Modal Styles */
+.truck-table-content {
+  padding: 0;
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--calcite-color-background);
+  z-index: 1;
+}
+
+.truck-table-controls {
+  padding: 16px;
+  border-bottom: 1px solid var(--calcite-color-border-3);
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.truck-table-controls calcite-input {
+  flex: 1;
+  min-width: 250px;
+}
+
+.truck-table-sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.truck-table-sort-controls label {
+  font-size: 14px;
+  color: var(--calcite-color-text-2);
+  font-weight: 500;
+}
+
+.truck-table-container {
+  flex: 1;
+  overflow: auto;
+  max-height: calc(70vh - 120px);
+  background: var(--calcite-color-background);
+  position: relative;
+  z-index: 1;
+}
+
+.truck-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: var(--calcite-color-background);
+  opacity: 1;
+  z-index: 2;
+  position: relative;
+}
+
+.truck-table th {
+  background: var(--calcite-color-foreground-2);
+  color: var(--calcite-color-text-1);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 2px solid var(--calcite-color-border-2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.truck-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--calcite-color-border-3);
+  vertical-align: middle;
+  background: var(--calcite-color-background);
+  color: var(--calcite-color-text-1);
+}
+
+.truck-table tbody tr:hover {
+  background: var(--calcite-color-foreground-2);
+}
+
+.zoom-column {
+  width: 80px;
+  text-align: center;
+}
+
+.truck-name-column {
+  width: 200px;
+}
+
+.installer-column {
+  width: 150px;
+}
+
+.status-column {
+  width: 120px;
+}
+
+.location-column {
+  min-width: 200px;
+}
+
+.truck-zoom-btn {
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.truck-zoom-btn:hover {
+  background: var(--calcite-color-brand);
+  color: white;
+}
+
+.truck-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.truck-type-icon {
+  color: var(--calcite-color-brand);
+}
+
+.truck-status-online {
+  color: var(--calcite-color-status-success);
+  font-weight: 500;
+}
+
+.truck-status-offline {
+  color: var(--calcite-color-status-danger);
+  font-weight: 500;
+}
+
+.truck-status-idle {
+  color: var(--calcite-color-status-warning);
+  font-weight: 500;
+}
+
+.truck-table-footer {
+  padding: 12px 16px;
+  background: var(--calcite-color-foreground-2);
+  border-top: 1px solid var(--calcite-color-border-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--calcite-color-text-2);
+}
+
+.truck-table-loading,
+.truck-table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  text-align: center;
+  color: var(--calcite-color-text-2);
+}
+
+.truck-table-loading calcite-loader {
+  margin-bottom: 16px;
+}
+
+.truck-table-empty calcite-icon {
+  margin-bottom: 16px;
+  color: var(--calcite-color-text-3);
+}
+
+.truck-table-empty h4 {
+  margin: 0 0 8px 0;
+  color: var(--calcite-color-text-1);
+}
+
+.truck-table-empty p {
+  margin: 0;
+}
+
+/* Mobile truck table adjustments */
+@media (max-width: 768px) {
+  .truck-table-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .truck-table-sort-controls {
+    justify-content: space-between;
+  }
+
+  .truck-table {
+    font-size: 12px;
+  }
+
+  .truck-table th,
+  .truck-table td {
+    padding: 8px 12px;
+  }
+
+  .location-column {
+    display: none; /* Hide location on mobile to save space */
+  }
+}
+
+/* Truck Table Dialog Fixes */
+#truck-table-modal {
+  z-index: 1000;
+}
+
+#truck-table-modal::part(panel) {
+  background: var(--calcite-color-background) !important;
+  opacity: 1 !important;
+}
+
+#truck-table-modal::part(content) {
+  background: var(--calcite-color-background) !important;
+  opacity: 1 !important;
+}
+
+/* Vehicle List Widget Styles */
+.vehicle-list-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+
+.vehicle-list-state calcite-loader {
+  margin-bottom: 8px;
+}
+
+/* Ensure loading states can be properly hidden */
+.vehicle-list-state[hidden] {
+  display: none !important;
+}
+
+#vehicle-list-loading[hidden] {
+  display: none !important;
+}
+
+#vehicle-list-empty[hidden] {
+  display: none !important;
+}
+
+#vehicle-list {
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  /* Custom scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--calcite-color-border-1)
+    var(--calcite-color-foreground-2);
+}
+
+/* Webkit scrollbar styling for Chromium browsers */
+#vehicle-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+#vehicle-list::-webkit-scrollbar-track {
+  background: var(--calcite-color-foreground-2);
+  border-radius: 4px;
+}
+
+#vehicle-list::-webkit-scrollbar-thumb {
+  background: var(--calcite-color-border-1);
+  border-radius: 4px;
+}
+
+#vehicle-list::-webkit-scrollbar-thumb:hover {
+  background: var(--calcite-color-border-2);
+}
+
+#vehicle-list calcite-list-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#vehicle-list calcite-list-item:hover {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+.vehicle-status-online {
+  color: var(--calcite-color-status-success);
+}
+
+.vehicle-status-offline {
+  color: var(--calcite-color-status-danger);
+}
+
+.vehicle-status-idle {
+  color: var(--calcite-color-status-warning);
+}
+
+.vehicle-type-icon {
+  color: var(--calcite-color-brand);
+}
+
+/* Vehicle list search styling */
+#vehicle-search-container {
+  /* Search container is now part of the vehicle list content box */
+}
+
+/* Mobile adjustments for vehicle list */
+@media (max-width: 768px) {
+  /* Vehicle list container height adjustment for mobile */
+  #vehicle-list-content > div:nth-child(2) {
+    height: 280px !important; /* Slightly smaller on mobile */
+  }
+
+  .vehicle-list-footer {
+    font-size: 11px !important;
+  }
+}
+
+/* Shell Panel Height Management */
+calcite-shell-panel {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+calcite-shell-panel calcite-action-bar {
+  flex-shrink: 0; /* Action bar should not shrink */
+}
+
+calcite-shell-panel calcite-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0; /* Important for flexbox scrolling */
+}
+
+/* Vehicles Panel Scrolling */
+#vehicles-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  scroll-behavior: smooth;
+  /* Custom scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--calcite-color-border-1)
+    var(--calcite-color-foreground-2);
+  /* Ensure proper bottom padding */
+  padding-bottom: var(--calcite-spacing-xl);
+  /* Ensure it fills the available space */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Critical for flexbox scrolling */
+}
+
+/* Webkit scrollbar styling for vehicles panel */
+#vehicles-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+#vehicles-content::-webkit-scrollbar-track {
+  background: var(--calcite-color-foreground-2);
+  border-radius: 4px;
+}
+
+#vehicles-content::-webkit-scrollbar-thumb {
+  background: var(--calcite-color-border-1);
+  border-radius: 4px;
+}
+
+#vehicles-content::-webkit-scrollbar-thumb:hover {
+  background: var(--calcite-color-border-2);
+}
+
+/* Ensure each block has proper spacing */
+#vehicles-content calcite-block {
+  margin-bottom: var(--calcite-spacing-sm);
+}
+
+#vehicles-content calcite-block:last-child {
+  margin-bottom: var(
+    --calcite-spacing-md
+  ); /* Extra space at bottom for comfortable scrolling */
+}
+
+/* Apply the same flexible height to all panel contents */
+#subscribers-content,
+#power-outages-content,
+#search-content,
+#network-parent-content,
+#tools-content,
+#info-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  scroll-behavior: smooth;
+  /* Custom scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--calcite-color-border-1)
+    var(--calcite-color-foreground-2);
+  /* Ensure proper bottom padding */
+  padding-bottom: var(--calcite-spacing-xl);
+  min-height: 0; /* Critical for flexbox scrolling */
+}
+
+/* Mobile adjustments for all panels */
+@media (max-width: 768px) {
+  calcite-shell-panel {
+    height: calc(100vh - 120px); /* Account for mobile header and tab bar */
+  }
+}
+
+/* Ensure mobile dialogs are hidden on desktop */
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+
+  calcite-dialog.mobile-only {
+    display: none !important;
+  }
+}
+
+/* Force cache refresh 1751865388 */

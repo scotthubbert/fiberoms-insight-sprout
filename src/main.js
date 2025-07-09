@@ -52,6 +52,11 @@ import '@esri/calcite-components/dist/components/calcite-list';
 import '@esri/calcite-components/dist/components/calcite-list-item';
 import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-dialog';
+import '@esri/calcite-components/dist/components/calcite-list';
+import '@esri/calcite-components/dist/components/calcite-list-item';
+import '@esri/calcite-components/dist/components/calcite-select';
+import '@esri/calcite-components/dist/components/calcite-option';
+import '@esri/calcite-components/dist/components/calcite-loader';
 import '@esri/calcite-components/dist/components/calcite-chip';
 import '@esri/calcite-components/dist/components/calcite-card';
 import '@esri/calcite-components/dist/components/calcite-autocomplete';
@@ -323,6 +328,7 @@ class LayerPanel {
     this.shellPanel = document.getElementById('layers-panel');
     this.layersAction = document.getElementById('layers-action');
     this.ospAction = document.getElementById('osp-action');
+    this.vehiclesAction = document.getElementById('vehicles-action');
     this.powerOutagesAction = document.getElementById('power-outages-action');
     this.searchAction = document.getElementById('search-action');
     this.networkParentAction = document.getElementById('network-parent-action');
@@ -330,11 +336,15 @@ class LayerPanel {
     this.infoAction = document.getElementById('info-action');
     this.layersContent = document.getElementById('layers-content');
     this.ospContent = document.getElementById('osp-content');
+    this.vehiclesContent = document.getElementById('vehicles-content');
     this.powerOutagesContent = document.getElementById('power-outages-content');
     this.searchContent = document.getElementById('search-content');
     this.networkParentContent = document.getElementById('network-parent-content');
     this.toolsContent = document.getElementById('tools-content');
     this.infoContent = document.getElementById('info-content');
+
+    // Initialize loading flags
+    this.isLoadingVehicleList = false;
 
     this.init();
   }
@@ -350,6 +360,7 @@ class LayerPanel {
   setupActionBarNavigation() {
     this.layersAction?.addEventListener('click', () => this.handleActionClick('layers'));
     this.ospAction?.addEventListener('click', () => this.handleActionClick('osp'));
+    this.vehiclesAction?.addEventListener('click', () => this.handleActionClick('vehicles'));
     this.powerOutagesAction?.addEventListener('click', () => this.handleActionClick('power-outages'));
     this.searchAction?.addEventListener('click', () => this.handleActionClick('search'));
     this.networkParentAction?.addEventListener('click', () => this.handleActionClick('network-parent'));
@@ -375,6 +386,7 @@ class LayerPanel {
     switch (panelName) {
       case 'layers': return this.layersAction;
       case 'osp': return this.ospAction;
+      case 'vehicles': return this.vehiclesAction;
       case 'power-outages': return this.powerOutagesAction;
       case 'search': return this.searchAction;
       case 'network-parent': return this.networkParentAction;
@@ -390,6 +402,8 @@ class LayerPanel {
     this.layersContent.style.display = 'none';
     this.ospContent.hidden = true;
     this.ospContent.style.display = 'none';
+    this.vehiclesContent.hidden = true;
+    this.vehiclesContent.style.display = 'none';
     this.powerOutagesContent.hidden = true;
     this.powerOutagesContent.style.display = 'none';
     this.searchContent.hidden = true;
@@ -404,6 +418,7 @@ class LayerPanel {
     // Remove active state from all actions
     this.layersAction.active = false;
     this.ospAction.active = false;
+    this.vehiclesAction.active = false;
     this.powerOutagesAction.active = false;
     this.searchAction.active = false;
     this.networkParentAction.active = false;
@@ -421,6 +436,12 @@ class LayerPanel {
         this.ospContent.hidden = false;
         this.ospContent.style.display = 'block';
         this.ospAction.active = true;
+        break;
+      case 'vehicles':
+        this.vehiclesContent.hidden = false;
+        this.vehiclesContent.style.display = 'block';
+        this.vehiclesAction.active = true;
+        this.updateVehicleStatus();
         break;
       case 'power-outages':
         this.powerOutagesContent.hidden = false;
@@ -450,6 +471,1033 @@ class LayerPanel {
         this.updateBuildInfo();
         break;
     }
+  }
+
+  updateVehicleStatus() {
+    // Update the GeotabService status in the vehicles panel
+    this.updateGeotabStatus();
+    this.setupVehicleButtons();
+  }
+
+  async updateGeotabStatus() {
+    try {
+      const { geotabService } = await import('./services/GeotabService.js');
+      const status = geotabService.getStatus();
+
+      const statusChip = document.getElementById('geotab-status-chip');
+      if (statusChip) {
+        if (status.enabled && status.authenticated) {
+          statusChip.textContent = 'Connected';
+          statusChip.kind = 'success';
+        } else if (status.enabled && !status.authenticated) {
+          statusChip.textContent = 'Connecting...';
+          statusChip.kind = 'info';
+        } else {
+          statusChip.textContent = 'Disabled';
+          statusChip.kind = 'neutral';
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update GeotabService status:', error);
+      const statusChip = document.getElementById('geotab-status-chip');
+      if (statusChip) {
+        statusChip.textContent = 'Error';
+        statusChip.kind = 'danger';
+      }
+    }
+  }
+
+  setupVehicleButtons() {
+    // Set up refresh vehicles button
+    const refreshBtn = document.getElementById('refresh-vehicles');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
+        await this.refreshVehicles();
+        // Also refresh the vehicle list if it's open
+        const vehicleListBlock = document.getElementById('vehicle-list-block');
+        if (vehicleListBlock && vehicleListBlock.open) {
+          await this.loadVehicleList();
+        }
+      });
+    }
+
+    // Set up vehicle list event listeners
+    this.setupVehicleListEventListeners();
+  }
+
+  async refreshVehicles() {
+    try {
+      const { geotabService } = await import('./services/GeotabService.js');
+
+      // Show loading indicator
+      const refreshBtn = document.getElementById('refresh-vehicles');
+      if (refreshBtn) {
+        refreshBtn.loading = true;
+        refreshBtn.disabled = true;
+      }
+
+      // Refresh vehicle data and get the actual truck data
+      const truckData = await geotabService.getTruckData();
+
+      // Update status
+      this.updateGeotabStatus();
+
+      // Update layer data with the actual truck data if available
+      if (window.app?.services?.layerManager && truckData) {
+        // Convert truck data to GeoJSON format for layer updates
+        if (truckData.electric && truckData.electric.length > 0) {
+          const electricGeoJSON = {
+            type: "FeatureCollection",
+            features: truckData.electric.map(truck => ({
+              type: "Feature",
+              properties: truck,
+              geometry: {
+                type: "Point",
+                coordinates: [truck.longitude, truck.latitude]
+              }
+            }))
+          };
+          await window.app.services.layerManager.updateLayerData('electric-trucks', electricGeoJSON);
+        }
+
+        if (truckData.fiber && truckData.fiber.length > 0) {
+          const fiberGeoJSON = {
+            type: "FeatureCollection",
+            features: truckData.fiber.map(truck => ({
+              type: "Feature",
+              properties: truck,
+              geometry: {
+                type: "Point",
+                coordinates: [truck.longitude, truck.latitude]
+              }
+            }))
+          };
+          await window.app.services.layerManager.updateLayerData('fiber-trucks', fiberGeoJSON);
+        }
+      }
+
+      // Show success notification
+      this.showVehicleNotification('Vehicle locations refreshed successfully', 'success');
+
+    } catch (error) {
+      console.error('Failed to refresh vehicles:', error);
+      this.showVehicleNotification('Failed to refresh vehicle locations', 'danger');
+    } finally {
+      // Reset button state
+      const refreshBtn = document.getElementById('refresh-vehicles');
+      if (refreshBtn) {
+        refreshBtn.loading = false;
+        refreshBtn.disabled = false;
+      }
+    }
+  }
+
+  async loadVehicleList() {
+    console.log('🚛 ========== loadVehicleList called at', new Date().toLocaleTimeString(), '==========');
+
+    // Prevent multiple concurrent calls
+    if (this.isLoadingVehicleList) {
+      console.log('🚛 Vehicle list already loading, skipping...');
+      return;
+    }
+
+    this.isLoadingVehicleList = true;
+    console.log('🚛 Starting vehicle list load process...');
+
+    const vehicleListBlock = document.getElementById('vehicle-list-block');
+    const loadingDiv = document.getElementById('vehicle-list-loading');
+    const emptyDiv = document.getElementById('vehicle-list-empty');
+    const vehicleList = document.getElementById('vehicle-list');
+    const vehicleCount = document.getElementById('vehicle-count');
+    const lastUpdated = document.getElementById('vehicle-last-updated');
+    const footer = document.getElementById('vehicle-list-footer');
+
+    // Show loading state briefly
+    if (loadingDiv) loadingDiv.hidden = false;
+    if (emptyDiv) emptyDiv.hidden = true;
+    if (vehicleList) vehicleList.hidden = true;
+    if (footer) footer.hidden = true;
+
+    try {
+      console.log('🚛 Trying to get vehicle data from existing layers...');
+
+      // Debug layer access
+      console.log('🚛 Debug: window.app exists:', !!window.app);
+      console.log('🚛 Debug: window.app.layerManager exists:', !!window.app?.layerManager);
+
+      if (window.app?.layerManager) {
+        // List all available layers
+        console.log('🚛 Debug: Available layers:', Object.keys(window.app.layerManager.layers || {}));
+      }
+
+      // First, try to get data from existing vehicle layers (much faster!)
+      const allVehicles = [];
+
+      // Get data from fiber trucks layer
+      const fiberLayer = window.app?.layerManager?.getLayer('fiber-trucks');
+      console.log('🚛 Debug: fiberLayer found:', !!fiberLayer);
+      if (fiberLayer) {
+        console.log('🚛 Debug: fiberLayer.source exists:', !!fiberLayer.source);
+        console.log('🚛 Debug: fiberLayer.source.items exists:', !!fiberLayer.source?.items);
+        console.log('🚛 Debug: fiberLayer.source.items.length:', fiberLayer.source?.items?.length);
+        console.log('🚛 Debug: fiberLayer structure:', {
+          type: typeof fiberLayer,
+          keys: Object.keys(fiberLayer),
+          source: fiberLayer.source ? Object.keys(fiberLayer.source) : 'no source'
+        });
+      }
+
+      if (fiberLayer && fiberLayer.source && fiberLayer.source.items.length > 0) {
+        console.log('🚛 Found fiber trucks layer with', fiberLayer.source.items.length, 'trucks');
+        fiberLayer.source.items.forEach(graphic => {
+          const attrs = graphic.attributes;
+          allVehicles.push({
+            id: attrs.id,
+            name: attrs.name,
+            latitude: graphic.geometry.latitude,
+            longitude: graphic.geometry.longitude,
+            installer: attrs.installer,
+            speed: attrs.speed,
+            is_driving: attrs.is_driving,
+            last_updated: attrs.last_updated,
+            communication_status: attrs.communication_status,
+            type: 'Fiber',
+            typeIcon: 'car'
+          });
+        });
+      } else {
+        console.log('🚛 No fiber trucks layer data found');
+      }
+
+      // Get data from electric trucks layer
+      const electricLayer = window.app?.layerManager?.getLayer('electric-trucks');
+      console.log('🚛 Debug: electricLayer found:', !!electricLayer);
+      if (electricLayer) {
+        console.log('🚛 Debug: electricLayer.source exists:', !!electricLayer.source);
+        console.log('🚛 Debug: electricLayer.source.items exists:', !!electricLayer.source?.items);
+        console.log('🚛 Debug: electricLayer.source.items.length:', electricLayer.source?.items?.length);
+      }
+
+      if (electricLayer && electricLayer.source && electricLayer.source.items.length > 0) {
+        console.log('🚛 Found electric trucks layer with', electricLayer.source.items.length, 'trucks');
+        electricLayer.source.items.forEach(graphic => {
+          const attrs = graphic.attributes;
+          allVehicles.push({
+            id: attrs.id,
+            name: attrs.name,
+            latitude: graphic.geometry.latitude,
+            longitude: graphic.geometry.longitude,
+            installer: attrs.installer,
+            speed: attrs.speed,
+            is_driving: attrs.is_driving,
+            last_updated: attrs.last_updated,
+            communication_status: attrs.communication_status,
+            type: 'Electric',
+            typeIcon: 'flash'
+          });
+        });
+      } else {
+        console.log('🚛 No electric trucks layer data found');
+      }
+
+      console.log('🚛 Total vehicles from layers:', allVehicles.length);
+
+      // If we got data from layers, use it!
+      if (allVehicles.length > 0) {
+        console.log('✅ Using vehicle data from existing layers');
+        this.displayVehicleList(allVehicles);
+        return;
+      }
+
+      // Try alternative access: get cached data directly from GeotabService
+      console.log('🚛 Trying to access cached data from GeotabService...');
+
+      const geotabModule = await import('./services/GeotabService.js');
+      const cachedData = geotabModule.geotabService.lastTruckData;
+      console.log('🚛 GeotabService cached data:', cachedData);
+
+      if (cachedData && (cachedData.fiber?.length > 0 || cachedData.electric?.length > 0)) {
+        console.log('✅ Using cached data from GeotabService');
+
+        // Process cached data
+        if (cachedData.fiber?.length > 0) {
+          cachedData.fiber.forEach(truck => {
+            allVehicles.push({
+              ...truck,
+              type: 'Fiber',
+              typeIcon: 'car',
+              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+            });
+          });
+        }
+
+        if (cachedData.electric?.length > 0) {
+          cachedData.electric.forEach(truck => {
+            allVehicles.push({
+              ...truck,
+              type: 'Electric',
+              typeIcon: 'flash',
+              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+            });
+          });
+        }
+
+        console.log('🚛 Total vehicles from cached data:', allVehicles.length);
+        this.displayVehicleList(allVehicles);
+        return;
+      }
+
+      // Fallback: try to get fresh data from GeotabService (but this might hit rate limits)
+      console.log('🚛 No cached data found, trying GeotabService as fallback...');
+
+      const truckData = await geotabModule.geotabService.getTruckData();
+      console.log('🚛 Fallback: Vehicle data received:', truckData);
+
+      // Process GeotabService data
+      if (truckData.fiber?.length > 0) {
+        truckData.fiber.forEach(truck => {
+          allVehicles.push({
+            ...truck,
+            type: 'Fiber',
+            typeIcon: 'car',
+            installer: truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+          });
+        });
+      }
+
+      if (truckData.electric?.length > 0) {
+        truckData.electric.forEach(truck => {
+          allVehicles.push({
+            ...truck,
+            type: 'Electric',
+            typeIcon: 'flash',
+            installer: truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+          });
+        });
+      }
+
+      console.log('🚛 Total vehicles from GeotabService fallback:', allVehicles.length);
+      this.displayVehicleList(allVehicles);
+
+    } catch (error) {
+      console.error('🚛 Error loading vehicle list:', error);
+
+      // Hide loading and show empty state with error
+      if (loadingDiv) loadingDiv.hidden = true;
+      if (emptyDiv) {
+        emptyDiv.hidden = false;
+        const emptyTitle = emptyDiv.querySelector('h4');
+        const emptyText = emptyDiv.querySelector('p');
+        if (emptyTitle) emptyTitle.textContent = 'Error Loading Vehicles';
+        if (emptyText) emptyText.textContent = `Failed to load vehicle data: ${error.message}`;
+      }
+      if (vehicleList) vehicleList.hidden = true;
+      if (footer) footer.hidden = true;
+    } finally {
+      this.isLoadingVehicleList = false;
+    }
+  }
+
+  displayVehicleList(allVehicles) {
+    console.log('🚛 displayVehicleList called with', allVehicles.length, 'vehicles');
+
+    const vehicleListBlock = document.getElementById('vehicle-list-block');
+    const loadingDiv = document.getElementById('vehicle-list-loading');
+    const emptyDiv = document.getElementById('vehicle-list-empty');
+    const vehicleList = document.getElementById('vehicle-list');
+    const vehicleCount = document.getElementById('vehicle-count');
+    const lastUpdated = document.getElementById('vehicle-last-updated');
+    const footer = document.getElementById('vehicle-list-footer');
+
+    console.log('🚛 DOM elements found:', {
+      vehicleListBlock: !!vehicleListBlock,
+      loadingDiv: !!loadingDiv,
+      emptyDiv: !!emptyDiv,
+      vehicleList: !!vehicleList,
+      vehicleCount: !!vehicleCount,
+      lastUpdated: !!lastUpdated,
+      footer: !!footer
+    });
+
+    // Store for filtering
+    this.currentVehicleData = allVehicles;
+
+    // Always hide loading when we have data or empty result
+    if (loadingDiv) {
+      loadingDiv.hidden = true;
+      loadingDiv.style.display = 'none'; // Force hide
+      console.log('🚛 Loading div hidden');
+    }
+
+    if (allVehicles.length === 0) {
+      console.log('🚛 No vehicles found, showing empty state');
+      if (emptyDiv) emptyDiv.hidden = false;
+      if (vehicleList) vehicleList.hidden = true;
+      if (footer) footer.hidden = true;
+    } else {
+      console.log('🚛 Showing vehicle list with vehicles:', allVehicles.length);
+      if (emptyDiv) emptyDiv.hidden = true;
+      if (vehicleList) {
+        vehicleList.hidden = false;
+        vehicleList.style.display = 'block'; // Force show
+      }
+      if (footer) {
+        footer.hidden = false;
+        footer.style.display = 'flex'; // Force show
+      }
+
+      // Populate vehicle list
+      this.populateVehicleList(allVehicles);
+
+      // Update footer
+      if (vehicleCount) vehicleCount.textContent = `${allVehicles.length} vehicles`;
+      if (lastUpdated) {
+        const now = new Date();
+        lastUpdated.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+      }
+
+      // Auto-expand the block if there are vehicles
+      if (vehicleListBlock) {
+        vehicleListBlock.open = true;
+      }
+    }
+  }
+
+  // DEBUG: Force test the vehicle list with real cached data
+  async testVehicleList() {
+    console.log('🚛 DEBUG: Testing vehicle list with real cached data...');
+
+    try {
+      const geotabModule = await import('./services/GeotabService.js');
+      const cachedData = geotabModule.geotabService.lastTruckData;
+      console.log('🚛 DEBUG: Raw cached data:', cachedData);
+
+      if (cachedData && (cachedData.fiber?.length > 0 || cachedData.electric?.length > 0)) {
+        const testVehicles = [];
+
+        if (cachedData.fiber?.length > 0) {
+          cachedData.fiber.forEach(truck => {
+            testVehicles.push({
+              ...truck,
+              type: 'Fiber',
+              typeIcon: 'car',
+              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+            });
+          });
+        }
+
+        if (cachedData.electric?.length > 0) {
+          cachedData.electric.forEach(truck => {
+            testVehicles.push({
+              ...truck,
+              type: 'Electric',
+              typeIcon: 'flash',
+              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+            });
+          });
+        }
+
+        console.log('🚛 DEBUG: Processed vehicles for display:', testVehicles.length);
+        this.displayVehicleList(testVehicles);
+      } else {
+        console.log('🚛 DEBUG: No cached data available, using simple mock data');
+        const mockVehicles = [
+          {
+            id: 'test-1',
+            name: 'Test Vehicle 1',
+            latitude: 32.3617,
+            longitude: -86.2792,
+            installer: 'TestUser',
+            speed: 0,
+            is_driving: false,
+            last_updated: new Date().toISOString(),
+            communication_status: 'online',
+            type: 'Fiber',
+            typeIcon: 'car'
+          }
+        ];
+        this.displayVehicleList(mockVehicles);
+      }
+    } catch (error) {
+      console.error('🚛 DEBUG: Error in testVehicleList:', error);
+    }
+  }
+
+  populateVehicleList(vehicles) {
+    console.log('🚛 populateVehicleList called with vehicles:', vehicles.length);
+    const vehicleList = document.getElementById('vehicle-list');
+    if (!vehicleList) {
+      console.error('🚛 Vehicle list element not found!');
+      return;
+    }
+
+    // Clear existing items
+    vehicleList.innerHTML = '';
+
+    vehicles.forEach((vehicle, index) => {
+      const listItem = document.createElement('calcite-list-item');
+
+      // Format vehicle name
+      const vehicleName = vehicle.name || `${vehicle.type} Truck`;
+      const installer = vehicle.installer || 'Unknown';
+      const status = this.getVehicleStatus(vehicle);
+
+      listItem.setAttribute('label', vehicleName);
+      listItem.setAttribute('description', `${installer} • ${status}`);
+
+      // Add vehicle type icon
+      const typeIcon = document.createElement('calcite-icon');
+      typeIcon.slot = 'content-start';
+      typeIcon.icon = vehicle.typeIcon;
+      typeIcon.className = 'vehicle-type-icon';
+      listItem.appendChild(typeIcon);
+
+      // Add status indicator
+      const statusIcon = document.createElement('calcite-icon');
+      statusIcon.slot = 'content-end';
+      statusIcon.scale = 's';
+      statusIcon.className = `vehicle-status-${status.toLowerCase()}`;
+
+      if (status === 'Online') {
+        statusIcon.icon = 'circle-filled';
+      } else if (status === 'Idle') {
+        statusIcon.icon = 'circle-filled';
+      } else {
+        statusIcon.icon = 'circle';
+      }
+
+      listItem.appendChild(statusIcon);
+
+      // Add click handler to zoom to vehicle
+      listItem.addEventListener('click', () => {
+        this.zoomToVehicle(vehicle);
+      });
+
+      vehicleList.appendChild(listItem);
+    });
+
+    console.log('🚛 populateVehicleList completed, total items added:', vehicles.length);
+  }
+
+  getVehicleStatus(vehicle) {
+    if (!vehicle.communication_status || vehicle.communication_status === 'offline') {
+      return 'Offline';
+    }
+
+    if (vehicle.is_driving || (vehicle.speed && vehicle.speed > 5)) {
+      return 'Online';
+    }
+
+    return 'Idle';
+  }
+
+  zoomToVehicle(vehicle) {
+    if (!vehicle.latitude || !vehicle.longitude) {
+      this.showVehicleNotification('Location not available for this vehicle', 'warning');
+      return;
+    }
+
+    // Get the map view
+    const mapView = window.mapView;
+    if (!mapView) {
+      this.showVehicleNotification('Map not available', 'danger');
+      return;
+    }
+
+    // Create point and zoom to it
+    import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
+      const point = new Point({
+        longitude: vehicle.longitude,
+        latitude: vehicle.latitude,
+        spatialReference: { wkid: 4326 }
+      });
+
+      // Zoom to the vehicle location
+      mapView.goTo({
+        target: point,
+        zoom: 16
+      }).then(() => {
+        // Show success notification
+        const vehicleName = vehicle.name || `${vehicle.type} Truck`;
+        this.showVehicleNotification(`Zoomed to ${vehicleName}`, 'success');
+      }).catch(error => {
+        console.error('Failed to zoom to vehicle:', error);
+        this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
+      });
+    });
+  }
+
+  setupVehicleListEventListeners() {
+    // Prevent duplicate event listeners
+    if (this.vehicleListListenersSetup) return;
+    this.vehicleListListenersSetup = true;
+
+    console.log('🚛 Setting up vehicle list event listeners...');
+
+    // Search functionality
+    const searchInput = document.getElementById('vehicle-search');
+    if (searchInput) {
+      searchInput.addEventListener('calciteInputInput', (e) => {
+        console.log('🚛 Search input changed:', e.target.value);
+        this.filterVehicleList(e.target.value);
+      });
+      console.log('🚛 Search input listener added');
+    } else {
+      console.log('🚛 Search input not found');
+    }
+
+    // Load vehicle list when block is expanded
+    const vehicleListBlock = document.getElementById('vehicle-list-block');
+    if (vehicleListBlock) {
+      vehicleListBlock.addEventListener('calciteBlockToggle', (e) => {
+        console.log('🚛 Vehicle list block toggled!');
+        console.log('🚛 Toggle event detail:', e.detail);
+        console.log('🚛 Block is open:', e.detail?.open);
+
+        // Check the actual element state instead of relying on event detail
+        const isOpen = vehicleListBlock.hasAttribute('open') || vehicleListBlock.open === true;
+        console.log('🚛 Block actual state (open):', isOpen);
+        console.log('🚛 Block attributes:', {
+          hasOpenAttribute: vehicleListBlock.hasAttribute('open'),
+          openProperty: vehicleListBlock.open,
+          expanded: vehicleListBlock.expanded,
+          collapsed: vehicleListBlock.collapsed
+        });
+
+        if (isOpen) {
+          console.log('🚛 Block opened - calling loadVehicleList()');
+          this.loadVehicleList();
+        } else {
+          console.log('🚛 Block closed');
+        }
+      });
+      console.log('🚛 Vehicle list block listener added');
+    } else {
+      console.log('🚛 Vehicle list block not found');
+    }
+  }
+
+  filterVehicleList(searchTerm) {
+    if (!this.currentVehicleData) return;
+
+    const filtered = this.currentVehicleData.filter(vehicle => {
+      const name = (vehicle.name || '').toLowerCase();
+      const installer = (vehicle.installer || '').toLowerCase();
+      const type = (vehicle.type || '').toLowerCase();
+      const search = searchTerm.toLowerCase();
+
+      return name.includes(search) ||
+        installer.includes(search) ||
+        type.includes(search);
+    });
+
+    this.populateVehicleList(filtered);
+
+    // Update count
+    const vehicleCount = document.getElementById('vehicle-count');
+    if (vehicleCount) {
+      vehicleCount.textContent = `${filtered.length} vehicles ${searchTerm ? '(filtered)' : ''}`;
+    }
+  }
+
+  async loadTruckTableData() {
+    console.log('🚛 loadTruckTableData called');
+
+    const loadingDiv = document.getElementById('truck-table-loading');
+    const emptyDiv = document.getElementById('truck-table-empty');
+    const tableContainer = document.querySelector('.truck-table-container');
+    const truckCountSpan = document.getElementById('truck-count');
+    const lastUpdatedSpan = document.getElementById('truck-last-updated');
+
+    console.log('🚛 UI elements found:', {
+      loadingDiv: !!loadingDiv,
+      emptyDiv: !!emptyDiv,
+      tableContainer: !!tableContainer,
+      truckCountSpan: !!truckCountSpan,
+      lastUpdatedSpan: !!lastUpdatedSpan
+    });
+
+    // Show loading state
+    console.log('🚛 Setting loading state, elements found:', {
+      loadingDiv: !!loadingDiv,
+      emptyDiv: !!emptyDiv,
+      tableContainer: !!tableContainer
+    });
+    console.log('🚛 Element IDs being searched:', {
+      loadingId: 'truck-table-loading',
+      emptyId: 'truck-table-empty',
+      containerClass: '.truck-table-container'
+    });
+
+    // Debug: Check what's actually in the modal DOM
+    const modal = document.getElementById('truck-table-modal');
+    if (modal) {
+      const allDivs = modal.querySelectorAll('div');
+      console.log('🚛 All divs in modal:', Array.from(allDivs).map(div => ({
+        id: div.id,
+        className: div.className,
+        hidden: div.hidden,
+        style: div.style.cssText
+      })));
+    }
+
+    if (loadingDiv) {
+      loadingDiv.hidden = false;
+      console.log('🚛 Showing loading - loadingDiv.hidden:', loadingDiv.hidden);
+    } else {
+      console.error('🚛 Loading div not found!');
+    }
+
+    if (emptyDiv) {
+      emptyDiv.hidden = true;
+      console.log('🚛 Hiding empty state initially - emptyDiv.hidden:', emptyDiv.hidden);
+    } else {
+      console.error('🚛 Empty div not found!');
+    }
+
+    if (tableContainer) {
+      tableContainer.style.display = 'none';
+      console.log('🚛 Hiding table container initially - display:', tableContainer.style.display);
+    } else {
+      console.error('🚛 Table container not found!');
+    }
+
+    try {
+      console.log('🚛 Importing GeotabService');
+      const { geotabService } = await import('./services/GeotabService.js');
+      console.log('🚛 Getting truck data');
+      const truckData = await geotabService.getTruckData();
+      console.log('🚛 Truck data received:', truckData);
+
+      // Combine all trucks into a single array
+      const allTrucks = [];
+
+      if (truckData.fiber && truckData.fiber.length > 0) {
+        allTrucks.push(...truckData.fiber.map(truck => ({
+          ...truck,
+          type: 'fiber',
+          typeIcon: 'car'
+        })));
+      }
+
+      if (truckData.electric && truckData.electric.length > 0) {
+        allTrucks.push(...truckData.electric.map(truck => ({
+          ...truck,
+          type: 'electric',
+          typeIcon: 'flash'
+        })));
+      }
+
+      // Store for filtering/sorting
+      this.currentTruckData = allTrucks;
+      console.log('🚛 Total trucks combined:', allTrucks.length);
+
+      // Hide loading
+      console.log('🚛 Before hiding loading - loadingDiv.hidden:', loadingDiv?.hidden);
+      if (loadingDiv) {
+        loadingDiv.hidden = true;
+        console.log('🚛 After hiding loading - loadingDiv.hidden:', loadingDiv.hidden);
+      }
+
+      console.log('🚛 About to check truck count. allTrucks.length:', allTrucks.length);
+      console.log('🚛 allTrucks sample:', allTrucks.slice(0, 2));
+
+      if (allTrucks.length === 0) {
+        console.log('🚛 No trucks found, showing empty state');
+        // Show empty state
+        if (emptyDiv) {
+          emptyDiv.hidden = false;
+          console.log('🚛 Showing empty state - emptyDiv.hidden:', emptyDiv.hidden);
+        }
+        if (tableContainer) {
+          tableContainer.style.display = 'none';
+          console.log('🚛 Hiding table container');
+        }
+      } else {
+        console.log('🚛 Showing table with trucks:', allTrucks.length);
+        // Show table
+        if (emptyDiv) {
+          emptyDiv.hidden = true;
+          console.log('🚛 Hiding empty state - emptyDiv.hidden:', emptyDiv.hidden);
+        }
+        if (tableContainer) {
+          tableContainer.style.display = 'block';
+          console.log('🚛 Showing table container - display:', tableContainer.style.display);
+
+          // Debug table container
+          console.log('🚛 Table container styles after display block:', {
+            display: window.getComputedStyle(tableContainer).display,
+            height: window.getComputedStyle(tableContainer).height,
+            maxHeight: window.getComputedStyle(tableContainer).maxHeight,
+            overflow: window.getComputedStyle(tableContainer).overflow,
+            overflowY: window.getComputedStyle(tableContainer).overflowY,
+            scrollHeight: tableContainer.scrollHeight,
+            clientHeight: tableContainer.clientHeight
+          });
+        }
+
+        // Populate table
+        console.log('🚛 Calling populateTruckTable');
+        this.populateTruckTable(allTrucks);
+      }
+
+      // Update footer
+      if (truckCountSpan) {
+        truckCountSpan.textContent = `${allTrucks.length} truck${allTrucks.length !== 1 ? 's' : ''}`;
+      }
+      if (lastUpdatedSpan) {
+        lastUpdatedSpan.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+      }
+
+    } catch (error) {
+      console.error('Failed to load truck data:', error);
+
+      // Hide loading and show empty state with error
+      if (loadingDiv) loadingDiv.hidden = true;
+      if (emptyDiv) {
+        emptyDiv.hidden = false;
+        const emptyTitle = emptyDiv.querySelector('h4');
+        const emptyText = emptyDiv.querySelector('p');
+        if (emptyTitle) emptyTitle.textContent = 'Error loading trucks';
+        if (emptyText) emptyText.textContent = 'Failed to fetch vehicle data from MyGeotab.';
+      }
+      if (tableContainer) tableContainer.style.display = 'none';
+    }
+  }
+
+  populateTruckTable(trucks) {
+    console.log('🚛 populateTruckTable called with trucks:', trucks.length);
+    const tbody = document.getElementById('truck-table-body');
+    console.log('🚛 Table body found:', !!tbody);
+    if (!tbody) {
+      console.error('🚛 Table body not found!');
+      return;
+    }
+
+    tbody.innerHTML = ''; // Clear existing rows
+    console.log('🚛 Creating rows for trucks');
+
+    trucks.forEach((truck, index) => {
+      console.log(`🚛 Creating row ${index + 1} for truck:`, truck.name || truck.id);
+      const row = document.createElement('tr');
+
+      // Zoom column
+      const zoomCell = document.createElement('td');
+      zoomCell.innerHTML = `
+        <calcite-icon 
+          icon="zoom-to-object" 
+          scale="m" 
+          class="truck-zoom-btn"
+          title="Zoom to ${truck.name || truck.id}"
+          data-truck-id="${truck.id}"
+          data-truck-lat="${truck.latitude}"
+          data-truck-lng="${truck.longitude}">
+        </calcite-icon>
+      `;
+
+      // Add click handler for zoom
+      const zoomIcon = zoomCell.querySelector('.truck-zoom-btn');
+      if (zoomIcon) {
+        zoomIcon.addEventListener('click', () => {
+          this.zoomToTruck(truck);
+        });
+      }
+
+      // Truck name column
+      const nameCell = document.createElement('td');
+      nameCell.innerHTML = `
+        <div class="truck-name-cell">
+          <calcite-icon icon="${truck.typeIcon}" scale="s" class="truck-type-icon"></calcite-icon>
+          <span>${this.formatTruckName(truck)}</span>
+        </div>
+      `;
+
+      // Installer column
+      const installerCell = document.createElement('td');
+      installerCell.textContent = truck.installer || truck.driver || 'Unknown';
+
+      // Status column
+      const statusCell = document.createElement('td');
+      const status = this.getTruckStatus(truck);
+      statusCell.innerHTML = `<span class="truck-status-${status.toLowerCase()}">${status}</span>`;
+
+      // Location column
+      const locationCell = document.createElement('td');
+      locationCell.textContent = this.formatTruckLocation(truck);
+
+      // Add cells to row
+      row.appendChild(zoomCell);
+      row.appendChild(nameCell);
+      row.appendChild(installerCell);
+      row.appendChild(statusCell);
+      row.appendChild(locationCell);
+
+      tbody.appendChild(row);
+    });
+
+    console.log('🚛 populateTruckTable completed, total rows added:', trucks.length);
+
+    // Additional debugging
+    console.log('🚛 Table body children count:', tbody.children.length);
+    console.log('🚛 Table body innerHTML length:', tbody.innerHTML.length);
+    console.log('🚛 First few table rows:', Array.from(tbody.children).slice(0, 3).map(row => row.innerHTML.substring(0, 100)));
+
+    // Check if there are any CSS issues with table rows
+    setTimeout(() => {
+      const allRows = tbody.querySelectorAll('tr');
+      console.log('🚛 Total TR elements found:', allRows.length);
+      console.log('🚛 Visible rows check:', Array.from(allRows).slice(0, 5).map(row => ({
+        display: window.getComputedStyle(row).display,
+        height: window.getComputedStyle(row).height,
+        visibility: window.getComputedStyle(row).visibility
+      })));
+    }, 100);
+  }
+
+  formatTruckName(truck) {
+    if (truck.name) {
+      return truck.name;
+    }
+
+    // Create a name from truck data
+    const type = truck.type === 'fiber' ? 'Fiber' : 'Electric';
+    const installer = truck.installer || truck.driver || '';
+    const shortInstaller = installer.split(' ')[0]; // First name only
+
+    return `${type} Truck${shortInstaller ? ` (${shortInstaller})` : ''}`;
+  }
+
+  getTruckStatus(truck) {
+    if (!truck.communication_status || truck.communication_status === 'offline') {
+      return 'Offline';
+    }
+
+    if (truck.is_driving || (truck.speed && truck.speed > 5)) {
+      return 'Online';
+    }
+
+    return 'Idle';
+  }
+
+  formatTruckLocation(truck) {
+    if (truck.address) {
+      return truck.address;
+    }
+
+    // Format coordinates if no address
+    if (truck.latitude && truck.longitude) {
+      return `${truck.latitude.toFixed(4)}, ${truck.longitude.toFixed(4)}`;
+    }
+
+    return 'Location unknown';
+  }
+
+  zoomToTruck(truck) {
+    if (!truck.latitude || !truck.longitude) {
+      this.showVehicleNotification('Location not available for this vehicle', 'warning');
+      return;
+    }
+
+    // Get the map view
+    const mapView = window.mapView;
+    if (!mapView) {
+      this.showVehicleNotification('Map not available', 'danger');
+      return;
+    }
+
+    // Create point and zoom to it
+    import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
+      const point = new Point({
+        longitude: truck.longitude,
+        latitude: truck.latitude,
+        spatialReference: { wkid: 4326 }
+      });
+
+      // Zoom to the truck location
+      mapView.goTo({
+        target: point,
+        zoom: 16
+      }).then(() => {
+        // Close the modal after zooming
+        const modal = document.getElementById('truck-table-modal');
+        if (modal) {
+          modal.open = false;
+        }
+
+        // Show success notification
+        const truckName = this.formatTruckName(truck);
+        this.showVehicleNotification(`Zoomed to ${truckName}`, 'success');
+      }).catch(error => {
+        console.error('Failed to zoom to truck:', error);
+        this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
+      });
+    });
+  }
+
+  filterTruckTable(searchTerm) {
+    if (!this.currentTruckData) return;
+
+    const filtered = this.currentTruckData.filter(truck => {
+      const name = this.formatTruckName(truck).toLowerCase();
+      const installer = (truck.installer || truck.driver || '').toLowerCase();
+      const location = this.formatTruckLocation(truck).toLowerCase();
+      const search = searchTerm.toLowerCase();
+
+      return name.includes(search) ||
+        installer.includes(search) ||
+        location.includes(search);
+    });
+
+    this.populateTruckTable(filtered);
+
+    // Update count
+    const truckCountSpan = document.getElementById('truck-count');
+    if (truckCountSpan) {
+      truckCountSpan.textContent = `${filtered.length} truck${filtered.length !== 1 ? 's' : ''} ${searchTerm ? '(filtered)' : ''}`;
+    }
+  }
+
+  sortTruckTable(sortBy) {
+    if (!this.currentTruckData) return;
+
+    const sorted = [...this.currentTruckData].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return this.formatTruckName(a).localeCompare(this.formatTruckName(b));
+        case 'installer':
+          const installerA = a.installer || a.driver || '';
+          const installerB = b.installer || b.driver || '';
+          return installerA.localeCompare(installerB);
+        case 'type':
+          return a.type.localeCompare(b.type);
+        case 'status':
+          return this.getTruckStatus(a).localeCompare(this.getTruckStatus(b));
+        default:
+          return 0;
+      }
+    });
+
+    this.populateTruckTable(sorted);
+  }
+
+  showVehicleNotification(message, kind = 'info') {
+    const noticeContainer = document.querySelector('#notice-container') || document.body;
+    const notice = document.createElement('calcite-notice');
+    notice.setAttribute('open', '');
+    notice.setAttribute('kind', kind);
+    notice.setAttribute('closable', '');
+    notice.setAttribute('icon', kind === 'success' ? 'check-circle' :
+      kind === 'danger' ? 'exclamation-mark-triangle' : 'information');
+
+    const messageDiv = document.createElement('div');
+    messageDiv.slot = 'message';
+    messageDiv.textContent = message;
+
+    notice.appendChild(messageDiv);
+    noticeContainer.appendChild(notice);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => notice.remove(), 3000);
   }
 
   updateBuildInfo() {
@@ -2609,8 +3657,8 @@ class Application {
   }
 
   setupLayerToggleHandlers() {
-    // Desktop layer toggles (checkboxes) - layers, osp, network-parent, and tools panels
-    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
+    // Desktop layer toggles (checkboxes) - layers, osp, vehicles, network-parent, and tools panels
+    const checkboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #vehicles-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
 
     // Log initial checkbox states for debugging
     checkboxes.forEach(checkbox => {
@@ -2804,8 +3852,8 @@ class Application {
     const labelText = labelMapping[layerId];
     if (!labelText) return;
 
-    // Sync desktop checkboxes (layers, osp, network-parent, and tools panels)
-    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
+    // Sync desktop checkboxes (layers, osp, vehicles, network-parent, and tools panels)
+    const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #vehicles-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
     desktopCheckboxes.forEach(checkbox => {
       const label = checkbox.closest('calcite-label');
       if (label && label.textContent.trim() === labelText) {
@@ -3542,6 +4590,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Start the main application
   window.app = new Application();
+
+  // Expose debug function globally for testing
+  window.testVehicleList = () => {
+    console.log('🚛 Global testVehicleList called');
+    if (window.app && window.app.services && window.app.services.layerPanel) {
+      window.app.services.layerPanel.testVehicleList();
+    } else {
+      console.log('🚛 Layer panel not available. Available services:',
+        window.app?.services ? Object.keys(window.app.services) : 'none');
+    }
+  };
 });
 
 

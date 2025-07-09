@@ -72,12 +72,12 @@ export function isGeotabConfigured() {
  * Default configuration for truck layers
  */
 export const TRUCK_LAYER_DEFAULTS = {
-    refreshInterval: 10000, // 10 seconds - real-time updates for users
+    refreshInterval: 90000, // 90 seconds - respect 10 calls/minute limit (6 calls/minute = safe)
     maxSpeed: 100, // mph
     speedThreshold: 5, // mph - below this is considered stopped
     onlineTimeout: 300000, // 5 minutes - consider offline after this
     maxRetries: 2, // Conservative retry count
-    retryDelay: 15000, // 15 seconds - conservative retry timing
+    retryDelay: 30000, // 30 seconds - longer retry timing for rate limits
 
     // Visual settings
     colors: {
