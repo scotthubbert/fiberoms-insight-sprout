@@ -26,18 +26,25 @@ export function getGeotabConfig() {
         retryDelay: TRUCK_LAYER_DEFAULTS.retryDelay
     };
 
-    // Only log configuration status in development
-    if (isDevelopment) {
-        log.info('🚛 GeotabConfig Configuration Check:');
-        log.info('Username:', config.username ? 'Set ✅' : 'Missing ❌');
-        log.info('Password:', config.password ? 'Set ✅' : 'Missing ❌');
-        log.info('Database:', config.database ? 'Set ✅' : 'Missing ❌');
-        log.info('Enabled:', config.enabled ? 'Yes ✅' : 'No ❌');
-        log.info('Refresh Interval:', config.refreshInterval + 'ms');
-        log.info('Timeout:', config.timeout + 'ms');
-        log.info('Max Retries:', config.maxRetries);
-        log.info('Retry Delay:', config.retryDelay + 'ms');
+    // Always log configuration status for debugging
+    console.log('🚛 GeotabConfig Configuration Check:');
+    console.log('Username:', config.username ? 'Set ✅' : 'Missing ❌');
+    console.log('Password:', config.password ? 'Set ✅' : 'Missing ❌');
+    console.log('Database:', config.database ? 'Set ✅' : 'Missing ❌');
+    console.log('Enabled:', config.enabled ? 'Yes ✅' : 'No ❌');
+    console.log('Refresh Interval:', config.refreshInterval + 'ms');
+    console.log('Timeout:', config.timeout + 'ms');
+    console.log('Max Retries:', config.maxRetries);
+    console.log('Retry Delay:', config.retryDelay + 'ms');
+    console.log('Environment:', import.meta.env.MODE);
 
+    // Additional debugging for production
+    if (!isDevelopment) {
+        console.log('🚛 Production Environment Variables Check:');
+        console.log('VITE_GEOTAB_ENABLED:', import.meta.env.VITE_GEOTAB_ENABLED);
+        console.log('VITE_GEOTAB_USERNAME length:', import.meta.env.VITE_GEOTAB_USERNAME?.length || 0);
+        console.log('VITE_GEOTAB_PASSWORD length:', import.meta.env.VITE_GEOTAB_PASSWORD?.length || 0);
+        console.log('VITE_GEOTAB_DATABASE length:', import.meta.env.VITE_GEOTAB_DATABASE?.length || 0);
     }
 
     // Validate configuration

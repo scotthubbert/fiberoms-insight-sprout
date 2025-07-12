@@ -607,10 +607,12 @@ class LayerPanel {
     // Add production debugging
     console.log('🚛 Environment check:', {
       isDev: import.meta.env.DEV,
+      isProd: import.meta.env.PROD,
       mode: import.meta.env.MODE,
       hasApp: !!window.app,
       hasLayerManager: !!window.app?.layerManager,
-      hasGeotabService: !!window.geotabService
+      hasGeotabService: !!window.geotabService,
+      userAgent: navigator.userAgent.substring(0, 50)
     });
 
     const vehicleListBlock = document.getElementById('vehicle-list-block');
@@ -636,7 +638,9 @@ class LayerPanel {
 
       if (window.app?.layerManager) {
         // List all available layers
-        console.log('🚛 Debug: Available layers:', Object.keys(window.app.layerManager.layers || {}));
+        const allLayers = window.app.layerManager.getAllLayers();
+        console.log('🚛 Debug: Available layers:', allLayers.map(l => l.id));
+        console.log('🚛 Debug: Layer manager layers map:', Object.keys(window.app.layerManager.layers || {}));
       }
 
       // First, try to get data from existing vehicle layers (much faster!)
@@ -721,75 +725,90 @@ class LayerPanel {
       // Try alternative access: get cached data directly from GeotabService
       console.log('🚛 Trying to access cached data from GeotabService...');
 
-      const geotabModule = await import('./services/GeotabService.js');
-      const cachedData = geotabModule.geotabService.lastTruckData;
-      console.log('🚛 GeotabService cached data:', cachedData);
+      try {
+        const geotabModule = await import('./services/GeotabService.js');
+        const geotabService = geotabModule.geotabService;
+        console.log('🚛 GeotabService imported successfully');
+        console.log('🚛 GeotabService status:', geotabService.getStatus());
 
-      if (cachedData && (cachedData.fiber?.length > 0 || cachedData.electric?.length > 0)) {
-        console.log('✅ Using cached data from GeotabService');
+        const cachedData = geotabService.lastTruckData;
+        console.log('🚛 GeotabService cached data:', cachedData);
 
-        // Process cached data
-        if (cachedData.fiber?.length > 0) {
-          cachedData.fiber.forEach(truck => {
+        if (cachedData && (cachedData.fiber?.length > 0 || cachedData.electric?.length > 0)) {
+          console.log('✅ Using cached data from GeotabService');
+
+          // Process cached data
+          if (cachedData.fiber?.length > 0) {
+            cachedData.fiber.forEach(truck => {
+              allVehicles.push({
+                ...truck,
+                type: 'Fiber',
+                typeIcon: 'car',
+                installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+              });
+            });
+          }
+
+          if (cachedData.electric?.length > 0) {
+            cachedData.electric.forEach(truck => {
+              allVehicles.push({
+                ...truck,
+                type: 'Electric',
+                typeIcon: 'flash',
+                installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+              });
+            });
+          }
+
+          console.log('🚛 Total vehicles from cached data:', allVehicles.length);
+          this.displayVehicleList(allVehicles);
+          return;
+        }
+
+        // Fallback: try to get fresh data from GeotabService (but this might hit rate limits)
+        console.log('🚛 No cached data found, trying GeotabService API as fallback...');
+
+        const truckData = await geotabService.getTruckData();
+        console.log('🚛 Fallback: Vehicle data received:', truckData);
+
+        // Process GeotabService data
+        if (truckData.fiber?.length > 0) {
+          truckData.fiber.forEach(truck => {
             allVehicles.push({
               ...truck,
               type: 'Fiber',
               typeIcon: 'car',
-              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+              installer: truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
             });
           });
         }
 
-        if (cachedData.electric?.length > 0) {
-          cachedData.electric.forEach(truck => {
+        if (truckData.electric?.length > 0) {
+          truckData.electric.forEach(truck => {
             allVehicles.push({
               ...truck,
               type: 'Electric',
               typeIcon: 'flash',
-              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+              installer: truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
             });
           });
         }
 
-        console.log('🚛 Total vehicles from cached data:', allVehicles.length);
+        console.log('🚛 Total vehicles from GeotabService API:', allVehicles.length);
         this.displayVehicleList(allVehicles);
+
+      } catch (geotabError) {
+        console.error('🚛 GeotabService error:', geotabError);
+        console.log('🚛 GeotabService unavailable, trying fallback data...');
+
+        // Final fallback: show informative message about service status
+        this.displayVehicleServiceStatus(geotabError);
         return;
       }
 
-      // Fallback: try to get fresh data from GeotabService (but this might hit rate limits)
-      console.log('🚛 No cached data found, trying GeotabService as fallback...');
-
-      const truckData = await geotabModule.geotabService.getTruckData();
-      console.log('🚛 Fallback: Vehicle data received:', truckData);
-
-      // Process GeotabService data
-      if (truckData.fiber?.length > 0) {
-        truckData.fiber.forEach(truck => {
-          allVehicles.push({
-            ...truck,
-            type: 'Fiber',
-            typeIcon: 'car',
-            installer: truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
-          });
-        });
-      }
-
-      if (truckData.electric?.length > 0) {
-        truckData.electric.forEach(truck => {
-          allVehicles.push({
-            ...truck,
-            type: 'Electric',
-            typeIcon: 'flash',
-            installer: truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
-          });
-        });
-      }
-
-      console.log('🚛 Total vehicles from GeotabService fallback:', allVehicles.length);
-      this.displayVehicleList(allVehicles);
-
     } catch (error) {
       console.error('🚛 Error loading vehicle list:', error);
+      console.error('🚛 Error stack:', error.stack);
 
       // Hide loading and show empty state with error
       if (loadingDiv) loadingDiv.hidden = true;
@@ -804,6 +823,38 @@ class LayerPanel {
       if (footer) footer.hidden = true;
     } finally {
       this.isLoadingVehicleList = false;
+    }
+  }
+
+  displayVehicleServiceStatus(error) {
+    console.log('🚛 displayVehicleServiceStatus called with error:', error?.message);
+
+    const vehicleListBlock = document.getElementById('vehicle-list-block');
+    const loadingDiv = document.getElementById('vehicle-list-loading');
+    const emptyDiv = document.getElementById('vehicle-list-empty');
+    const vehicleList = document.getElementById('vehicle-list');
+    const footer = document.getElementById('vehicle-list-footer');
+
+    // Hide loading and list
+    if (loadingDiv) loadingDiv.hidden = true;
+    if (vehicleList) vehicleList.hidden = true;
+    if (footer) footer.hidden = true;
+
+    // Show informative empty state
+    if (emptyDiv) {
+      emptyDiv.hidden = false;
+      const emptyTitle = emptyDiv.querySelector('h4');
+      const emptyText = emptyDiv.querySelector('p');
+
+      if (emptyTitle) emptyTitle.textContent = 'Vehicle Tracking Service';
+      if (emptyText) {
+        const isProduction = import.meta.env.PROD;
+        if (isProduction) {
+          emptyText.textContent = 'Vehicle tracking service is currently unavailable. Please contact support if this issue persists.';
+        } else {
+          emptyText.textContent = `Vehicle tracking service configuration issue: ${error?.message || 'Unknown error'}. Check environment variables.`;
+        }
+      }
     }
   }
 
@@ -4638,7 +4689,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start the main application
   window.app = new Application();
 
-  // Expose debug function globally for testing
+  // Expose debug functions globally for testing
   window.testVehicleList = () => {
     console.log('🚛 Global testVehicleList called');
     if (window.app && window.app.services && window.app.services.layerPanel) {
@@ -4646,6 +4697,101 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       console.log('🚛 Layer panel not available. Available services:',
         window.app?.services ? Object.keys(window.app.services) : 'none');
+    }
+  };
+
+  // Debug function to check vehicle list status
+  window.debugVehicleList = () => {
+    try {
+      console.log('🚛 === Vehicle Debug Info ===');
+      console.log('Environment:', {
+        isDev: import.meta.env.DEV,
+        isProd: import.meta.env.PROD,
+        mode: import.meta.env.MODE
+      });
+      console.log('Global objects:', {
+        app: !!window.app,
+        layerManager: !!window.app?.services?.layerManager,
+        geotabService: !!window.geotabService,
+        layerPanel: !!window.app?.services?.layerPanel
+      });
+
+      // Check DOM elements
+      const elements = ['vehicle-list', 'vehicle-list-loading', 'vehicle-list-empty'];
+      elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          console.log(`${id}:`, {
+            exists: true,
+            hidden: el.hidden,
+            display: getComputedStyle(el).display,
+            children: el.children.length
+          });
+        } else {
+          console.log(`${id}: NOT FOUND`);
+        }
+      });
+
+      // Try to get vehicle data
+      if (window.app?.services?.layerManager) {
+        const layers = ['fiber-trucks', 'electric-trucks'];
+        layers.forEach(layerId => {
+          const layer = window.app.services.layerManager.getLayer(layerId);
+          console.log(`${layerId} layer:`, {
+            exists: !!layer,
+            hasSource: !!layer?.source,
+            itemCount: layer?.source?.items?.length || 0,
+            visible: layer?.visible,
+            type: layer?.type
+          });
+        });
+
+        // Also check all layers
+        const allLayers = window.app.services.layerManager.getAllLayers();
+        console.log('All layers in LayerManager:', allLayers.map(l => ({
+          id: l.id,
+          title: l.title,
+          type: l.type,
+          visible: l.visible
+        })));
+      } else {
+        console.log('LayerManager not available');
+      }
+
+      // Check GeotabService
+      if (window.geotabService) {
+        console.log('GeotabService status:', window.geotabService.getStatus());
+      } else {
+        console.log('GeotabService not available');
+      }
+
+      // Force load vehicle list
+      if (window.app?.services?.layerPanel) {
+        console.log('🚛 Force loading vehicle list...');
+        window.app.services.layerPanel.loadVehicleList();
+      }
+
+    } catch (error) {
+      console.error('🚛 Error in debugVehicleList:', error);
+    }
+  };
+
+  // Function to enable vehicle layers for testing
+  window.enableVehicleLayers = async () => {
+    console.log('🚛 Enabling vehicle layers...');
+    if (window.app?.services?.layerManager) {
+      try {
+        await window.app.services.layerManager.toggleLayerVisibility('fiber-trucks', true);
+        await window.app.services.layerManager.toggleLayerVisibility('electric-trucks', true);
+        console.log('✅ Vehicle layers enabled');
+        return 'Vehicle layers enabled successfully';
+      } catch (error) {
+        console.error('❌ Failed to enable vehicle layers:', error);
+        return `Error: ${error.message}`;
+      }
+    } else {
+      console.log('❌ LayerManager not available');
+      return 'LayerManager not available';
     }
   };
 
