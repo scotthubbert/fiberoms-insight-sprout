@@ -944,75 +944,98 @@ class LayerPanel {
     vehicleList.innerHTML = '';
 
     vehicles.forEach((vehicle, index) => {
-      // Validate vehicle data to prevent CalciteUI errors
-      if (!vehicle || typeof vehicle !== 'object') {
-        console.warn('🚛 Skipping invalid vehicle data at index', index, vehicle);
-        return;
+      try {
+        // Validate vehicle data to prevent CalciteUI errors
+        if (!vehicle || typeof vehicle !== 'object') {
+          console.warn('🚛 Skipping invalid vehicle data at index', index, vehicle);
+          return;
+        }
+
+        const listItem = document.createElement('calcite-list-item');
+
+        // Format vehicle name with proper validation
+        const vehicleName = (vehicle.name && typeof vehicle.name === 'string')
+          ? vehicle.name.trim()
+          : `${vehicle.type || 'Unknown'} Truck`;
+
+        const installer = (vehicle.installer && typeof vehicle.installer === 'string')
+          ? vehicle.installer.trim()
+          : 'Unknown';
+
+        const status = this.getVehicleStatus(vehicle) || 'Unknown';
+
+        // Ensure all attributes are non-empty strings to prevent CalciteUI errors
+        const safeLabel = vehicleName || 'Vehicle';
+        const safeDescription = `${installer} • ${status}`;
+
+        listItem.setAttribute('label', safeLabel);
+        listItem.setAttribute('description', safeDescription);
+
+        // Add vehicle type icon with validation
+        const typeIcon = document.createElement('calcite-icon');
+        typeIcon.slot = 'content-start';
+        const iconName = (vehicle.typeIcon && typeof vehicle.typeIcon === 'string')
+          ? vehicle.typeIcon
+          : 'car'; // Default icon
+        typeIcon.setAttribute('icon', iconName);
+        typeIcon.className = 'vehicle-type-icon';
+
+        // Only append if icon is valid
+        if (iconName) {
+          listItem.appendChild(typeIcon);
+        }
+
+        // Add status indicator
+        const statusIcon = document.createElement('calcite-icon');
+        statusIcon.slot = 'content-end';
+        statusIcon.setAttribute('scale', 's');
+        statusIcon.className = `vehicle-status-${String(status).toLowerCase().replace(/[^a-z]/g, '')}`;
+
+        let statusIconName = 'circle';
+        if (status === 'Online') {
+          statusIconName = 'circle-filled';
+        } else if (status === 'Idle') {
+          statusIconName = 'circle-filled';
+        }
+
+        statusIcon.setAttribute('icon', statusIconName);
+        listItem.appendChild(statusIcon);
+
+        // Add click handler to zoom to vehicle
+        listItem.addEventListener('click', () => {
+          this.zoomToVehicle(vehicle);
+        });
+
+        vehicleList.appendChild(listItem);
+
+      } catch (error) {
+        console.error('🚛 Error creating list item for vehicle', index, ':', error);
+        console.error('🚛 Vehicle data:', vehicle);
       }
-
-      const listItem = document.createElement('calcite-list-item');
-
-      // Format vehicle name with proper validation
-      const vehicleName = (vehicle.name && typeof vehicle.name === 'string')
-        ? vehicle.name
-        : `${vehicle.type || 'Unknown'} Truck`;
-
-      const installer = (vehicle.installer && typeof vehicle.installer === 'string')
-        ? vehicle.installer
-        : 'Unknown';
-
-      const status = this.getVehicleStatus(vehicle);
-
-      // Ensure all attributes are strings to prevent CalciteUI errors
-      listItem.setAttribute('label', String(vehicleName));
-      listItem.setAttribute('description', `${String(installer)} • ${String(status)}`);
-
-      // Add vehicle type icon with validation
-      const typeIcon = document.createElement('calcite-icon');
-      typeIcon.slot = 'content-start';
-      typeIcon.icon = (vehicle.typeIcon && typeof vehicle.typeIcon === 'string')
-        ? vehicle.typeIcon
-        : 'car'; // Default icon
-      typeIcon.className = 'vehicle-type-icon';
-      listItem.appendChild(typeIcon);
-
-      // Add status indicator
-      const statusIcon = document.createElement('calcite-icon');
-      statusIcon.slot = 'content-end';
-      statusIcon.scale = 's';
-      statusIcon.className = `vehicle-status-${String(status).toLowerCase()}`;
-
-      if (status === 'Online') {
-        statusIcon.icon = 'circle-filled';
-      } else if (status === 'Idle') {
-        statusIcon.icon = 'circle-filled';
-      } else {
-        statusIcon.icon = 'circle';
-      }
-
-      listItem.appendChild(statusIcon);
-
-      // Add click handler to zoom to vehicle
-      listItem.addEventListener('click', () => {
-        this.zoomToVehicle(vehicle);
-      });
-
-      vehicleList.appendChild(listItem);
     });
 
     console.log('🚛 populateVehicleList completed, total items added:', vehicles.length);
   }
 
   getVehicleStatus(vehicle) {
-    if (!vehicle.communication_status || vehicle.communication_status === 'offline') {
-      return 'Offline';
-    }
+    try {
+      if (!vehicle || typeof vehicle !== 'object') {
+        return 'Unknown';
+      }
 
-    if (vehicle.is_driving || (vehicle.speed && vehicle.speed > 5)) {
-      return 'Online';
-    }
+      if (!vehicle.communication_status || vehicle.communication_status === 'offline') {
+        return 'Offline';
+      }
 
-    return 'Idle';
+      if (vehicle.is_driving || (vehicle.speed && vehicle.speed > 5)) {
+        return 'Online';
+      }
+
+      return 'Idle';
+    } catch (error) {
+      console.error('🚛 Error determining vehicle status:', error);
+      return 'Unknown';
+    }
   }
 
   zoomToVehicle(vehicle) {
@@ -4628,45 +4651,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Simple production debug function
   window.debugVehicles = () => {
-    console.log('🚛 === Vehicle Debug Info ===');
-    console.log('Environment:', {
-      isDev: import.meta.env.DEV,
-      mode: import.meta.env.MODE
-    });
-    console.log('Global objects:', {
-      app: !!window.app,
-      layerManager: !!window.app?.layerManager,
-      geotabService: !!window.geotabService,
-      layerPanel: !!window.app?.services?.layerPanel
-    });
-
-    // Check DOM elements
-    const elements = ['vehicle-list', 'vehicle-list-loading', 'vehicle-list-empty'];
-    elements.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        console.log(`${id}:`, {
-          exists: true,
-          hidden: el.hidden,
-          display: getComputedStyle(el).display,
-          children: el.children.length
-        });
-      } else {
-        console.log(`${id}: NOT FOUND`);
-      }
-    });
-
-    // Try to get vehicle data
-    if (window.app?.layerManager) {
-      const layers = ['fiber-trucks', 'electric-trucks'];
-      layers.forEach(layerId => {
-        const layer = window.app.layerManager.getLayer(layerId);
-        console.log(`${layerId} layer:`, {
-          exists: !!layer,
-          hasSource: !!layer?.source,
-          itemCount: layer?.source?.items?.length || 0
-        });
+    try {
+      console.log('🚛 === Vehicle Debug Info ===');
+      console.log('Environment:', {
+        isDev: import.meta.env.DEV,
+        mode: import.meta.env.MODE
       });
+      console.log('Global objects:', {
+        app: !!window.app,
+        layerManager: !!window.app?.layerManager,
+        geotabService: !!window.geotabService,
+        layerPanel: !!window.app?.services?.layerPanel
+      });
+
+      // Check DOM elements
+      const elements = ['vehicle-list', 'vehicle-list-loading', 'vehicle-list-empty'];
+      elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          console.log(`${id}:`, {
+            exists: true,
+            hidden: el.hidden,
+            display: getComputedStyle(el).display,
+            children: el.children.length
+          });
+        } else {
+          console.log(`${id}: NOT FOUND`);
+        }
+      });
+
+      // Try to get vehicle data
+      if (window.app?.layerManager) {
+        const layers = ['fiber-trucks', 'electric-trucks'];
+        layers.forEach(layerId => {
+          const layer = window.app.layerManager.getLayer(layerId);
+          console.log(`${layerId} layer:`, {
+            exists: !!layer,
+            hasSource: !!layer?.source,
+            itemCount: layer?.source?.items?.length || 0
+          });
+        });
+      }
+
+      console.log('🚛 === Debug Complete ===');
+      return 'Debug info logged to console';
+    } catch (error) {
+      console.error('🚛 Debug function error:', error);
+      return `Debug error: ${error.message}`;
     }
   };
 });
