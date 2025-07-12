@@ -618,6 +618,15 @@ class LayerPanel {
       return;
     }
 
+    // Ensure CalciteUI components are ready
+    try {
+      await customElements.whenDefined('calcite-list');
+      await customElements.whenDefined('calcite-list-item');
+      await customElements.whenDefined('calcite-icon');
+    } catch (error) {
+      console.warn('🚛 CalciteUI components not fully ready:', error);
+    }
+
     this.isLoadingVehicleList = true;
     console.log('🚛 Starting vehicle list load process...');
 
@@ -1001,10 +1010,16 @@ class LayerPanel {
   }
 
   populateVehicleList(vehicles) {
-    console.log('🚛 populateVehicleList called with vehicles:', vehicles.length);
+    console.log('🚛 populateVehicleList called with vehicles:', vehicles?.length || 0);
     const vehicleList = document.getElementById('vehicle-list');
     if (!vehicleList) {
       console.error('🚛 Vehicle list element not found!');
+      return;
+    }
+
+    // Validate vehicles array
+    if (!Array.isArray(vehicles)) {
+      console.error('🚛 Invalid vehicles data - not an array:', typeof vehicles);
       return;
     }
 
@@ -1021,52 +1036,75 @@ class LayerPanel {
 
         const listItem = document.createElement('calcite-list-item');
 
-        // Format vehicle name with proper validation
-        const vehicleName = (vehicle.name && typeof vehicle.name === 'string')
+        // Format vehicle name with strict validation for CalciteUI
+        const vehicleName = (vehicle.name && typeof vehicle.name === 'string' && vehicle.name.trim().length > 0)
           ? vehicle.name.trim()
           : `${vehicle.type || 'Unknown'} Truck`;
 
-        const installer = (vehicle.installer && typeof vehicle.installer === 'string')
+        const installer = (vehicle.installer && typeof vehicle.installer === 'string' && vehicle.installer.trim().length > 0)
           ? vehicle.installer.trim()
           : 'Unknown';
 
-        const status = this.getVehicleStatus(vehicle) || 'Unknown';
+        const status = this.getVehicleStatus(vehicle);
+        const safeStatus = (status && typeof status === 'string' && status.trim().length > 0)
+          ? status.trim()
+          : 'Unknown';
 
         // Ensure all attributes are non-empty strings to prevent CalciteUI errors
-        const safeLabel = vehicleName || 'Vehicle';
-        const safeDescription = `${installer} • ${status}`;
+        // CalciteUI components expect proper string values, not undefined/null
+        const safeLabel = String(vehicleName || 'Vehicle').trim();
+        const safeDescription = String(`${installer} • ${safeStatus}`).trim();
 
-        listItem.setAttribute('label', safeLabel);
-        listItem.setAttribute('description', safeDescription);
-
-        // Add vehicle type icon with validation
-        const typeIcon = document.createElement('calcite-icon');
-        typeIcon.slot = 'content-start';
-        const iconName = (vehicle.typeIcon && typeof vehicle.typeIcon === 'string')
-          ? vehicle.typeIcon
-          : 'car'; // Default icon
-        typeIcon.setAttribute('icon', iconName);
-        typeIcon.className = 'vehicle-type-icon';
-
-        // Only append if icon is valid
-        if (iconName) {
-          listItem.appendChild(typeIcon);
+        // Validate that we have actual content before setting attributes
+        if (safeLabel && safeLabel !== 'undefined' && safeLabel !== 'null') {
+          listItem.setAttribute('label', safeLabel);
+        } else {
+          listItem.setAttribute('label', 'Vehicle');
         }
 
-        // Add status indicator
+        if (safeDescription && safeDescription !== 'undefined • undefined' && safeDescription !== 'null • null') {
+          listItem.setAttribute('description', safeDescription);
+        } else {
+          listItem.setAttribute('description', 'Vehicle Information');
+        }
+
+        // Add vehicle type icon with strict validation
+        const typeIcon = document.createElement('calcite-icon');
+        typeIcon.slot = 'content-start';
+        const iconName = (vehicle.typeIcon && typeof vehicle.typeIcon === 'string' && vehicle.typeIcon.trim().length > 0)
+          ? vehicle.typeIcon.trim()
+          : 'car'; // Default icon
+
+        // Ensure icon name is valid and not undefined/null
+        const safeIconName = String(iconName || 'car').trim();
+        if (safeIconName && safeIconName !== 'undefined' && safeIconName !== 'null') {
+          typeIcon.setAttribute('icon', safeIconName);
+        } else {
+          typeIcon.setAttribute('icon', 'car');
+        }
+        typeIcon.className = 'vehicle-type-icon';
+        listItem.appendChild(typeIcon);
+
+        // Add status indicator with strict validation
         const statusIcon = document.createElement('calcite-icon');
         statusIcon.slot = 'content-end';
         statusIcon.setAttribute('scale', 's');
-        statusIcon.className = `vehicle-status-${String(status).toLowerCase().replace(/[^a-z]/g, '')}`;
 
+        // Safe status class name generation
+        const safeStatusForClass = String(safeStatus || 'unknown').toLowerCase().replace(/[^a-z]/g, '');
+        statusIcon.className = `vehicle-status-${safeStatusForClass}`;
+
+        // Determine status icon based on safe status
         let statusIconName = 'circle';
-        if (status === 'Online') {
+        if (safeStatus === 'Online') {
           statusIconName = 'circle-filled';
-        } else if (status === 'Idle') {
+        } else if (safeStatus === 'Idle') {
           statusIconName = 'circle-filled';
         }
 
-        statusIcon.setAttribute('icon', statusIconName);
+        // Ensure status icon name is valid
+        const safeStatusIconName = String(statusIconName || 'circle').trim();
+        statusIcon.setAttribute('icon', safeStatusIconName);
         listItem.appendChild(statusIcon);
 
         // Add click handler to zoom to vehicle
@@ -1074,7 +1112,12 @@ class LayerPanel {
           this.zoomToVehicle(vehicle);
         });
 
-        vehicleList.appendChild(listItem);
+        // Safely append to the list
+        try {
+          vehicleList.appendChild(listItem);
+        } catch (error) {
+          console.error('🚛 Error appending list item:', error);
+        }
 
       } catch (error) {
         console.error('🚛 Error creating list item for vehicle', index, ':', error);
@@ -1091,11 +1134,17 @@ class LayerPanel {
         return 'Unknown';
       }
 
-      if (!vehicle.communication_status || vehicle.communication_status === 'offline') {
+      // Ensure communication_status is a valid string
+      const commStatus = vehicle.communication_status;
+      if (!commStatus || typeof commStatus !== 'string' || commStatus.toLowerCase() === 'offline') {
         return 'Offline';
       }
 
-      if (vehicle.is_driving || (vehicle.speed && vehicle.speed > 5)) {
+      // Check driving status with proper validation
+      const isDriving = vehicle.is_driving === true || vehicle.is_driving === 'true';
+      const speed = typeof vehicle.speed === 'number' ? vehicle.speed : 0;
+
+      if (isDriving || speed > 5) {
         return 'Online';
       }
 
