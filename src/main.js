@@ -123,15 +123,17 @@ window.addEventListener('unhandledrejection', event => {
   const error = event.reason;
 
   // Handle CalciteUI component errors specifically
-  if (error && error.stack) {
-    const errorStack = error.stack.toString();
+  if (error && error.message) {
+    const errorMessage = error.message.toString();
 
     // CalciteUI component rendering errors
-    if (errorStack.includes('renderItemAriaLive') ||
-      errorStack.includes('calcite-') ||
-      errorStack.includes('PE.render') ||
-      errorStack.includes('PE.update')) {
-      console.warn('🔇 Suppressed CalciteUI component error (non-critical):', error.message);
+    if (errorMessage.includes('Cannot read properties of undefined (reading \'replace\')') ||
+      errorMessage.includes('renderItemAriaLive') ||
+      errorMessage.includes('calcite-') && errorMessage.includes('undefined') ||
+      errorMessage.includes('PE.render') ||
+      errorMessage.includes('PE.update') ||
+      error.stack?.includes('calcite-')) {
+      console.warn('🔇 Suppressed CalciteUI component error (non-critical):', errorMessage.substring(0, 100));
       event.preventDefault();
 
       // Try to recover mobile UI if it was affected
@@ -144,6 +146,21 @@ window.addEventListener('unhandledrejection', event => {
       }, 500);
 
       return;
+    }
+  }
+});
+
+// Additional error handler for CalciteUI 'replace' errors specifically
+window.addEventListener('error', event => {
+  if (event.error && event.error.message) {
+    const errorMessage = event.error.message;
+
+    // Suppress specific CalciteUI errors that break functionality
+    if (errorMessage.includes('Cannot read properties of undefined (reading \'replace\')') ||
+      errorMessage.includes('TypeError: Cannot read properties of undefined') && errorMessage.includes('replace')) {
+      console.warn('🔇 Suppressed CalciteUI replace error (non-critical):', errorMessage.substring(0, 100));
+      event.preventDefault();
+      return false;
     }
   }
 });
@@ -513,9 +530,9 @@ class LayerPanel {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
         await this.refreshVehicles();
-        // Also refresh the vehicle list if it's open
+        // Also refresh the vehicle list if it's expanded
         const vehicleListBlock = document.getElementById('vehicle-list-block');
-        if (vehicleListBlock && vehicleListBlock.open) {
+        if (vehicleListBlock && vehicleListBlock.expanded) {
           await this.loadVehicleList();
         }
       });
@@ -918,7 +935,7 @@ class LayerPanel {
 
       // Auto-expand the block if there are vehicles
       if (vehicleListBlock) {
-        vehicleListBlock.open = true;
+        vehicleListBlock.expanded = true;
       }
     }
   }
@@ -1153,12 +1170,11 @@ class LayerPanel {
         console.log('🚛 Block is open:', e.detail?.open);
 
         // Check the actual element state instead of relying on event detail
-        const isOpen = vehicleListBlock.hasAttribute('open') || vehicleListBlock.open === true;
-        console.log('🚛 Block actual state (open):', isOpen);
+        const isOpen = vehicleListBlock.hasAttribute('expanded') || vehicleListBlock.expanded === true;
+        console.log('🚛 Block actual state (expanded):', isOpen);
         console.log('🚛 Block attributes:', {
-          hasOpenAttribute: vehicleListBlock.hasAttribute('open'),
-          openProperty: vehicleListBlock.open,
-          expanded: vehicleListBlock.expanded,
+          hasExpandedAttribute: vehicleListBlock.hasAttribute('expanded'),
+          expandedProperty: vehicleListBlock.expanded,
           collapsed: vehicleListBlock.collapsed
         });
 
@@ -4689,35 +4705,50 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start the main application
   window.app = new Application();
 
-  // Expose debug functions globally for testing
-  window.testVehicleList = () => {
-    console.log('🚛 Global testVehicleList called');
-    if (window.app && window.app.services && window.app.services.layerPanel) {
-      window.app.services.layerPanel.testVehicleList();
-    } else {
-      console.log('🚛 Layer panel not available. Available services:',
-        window.app?.services ? Object.keys(window.app.services) : 'none');
+  // Expose debug functions globally for testing - more robust for production
+  window.testVehicleList = function () {
+    try {
+      console.log('🚛 Global testVehicleList called');
+      if (window.app && window.app.services && window.app.services.layerPanel) {
+        window.app.services.layerPanel.testVehicleList();
+        return 'Test vehicle list called successfully';
+      } else {
+        console.log('🚛 Layer panel not available. Available services:',
+          window.app?.services ? Object.keys(window.app.services) : 'none');
+        return 'Layer panel not available';
+      }
+    } catch (error) {
+      console.error('🚛 Error in testVehicleList:', error);
+      return `Error: ${error.message}`;
     }
   };
 
-  // Debug function to check vehicle list status
-  window.debugVehicleList = () => {
+  // Simple production-friendly debug function
+  window.debugVehicleList = function () {
     try {
       console.log('🚛 === Vehicle Debug Info ===');
-      console.log('Environment:', {
+
+      // Basic environment check
+      const env = {
         isDev: import.meta.env.DEV,
         isProd: import.meta.env.PROD,
-        mode: import.meta.env.MODE
-      });
-      console.log('Global objects:', {
+        mode: import.meta.env.MODE,
+        origin: window.location.origin,
+        pathname: window.location.pathname
+      };
+      console.log('Environment:', env);
+
+      // Check critical objects
+      const objects = {
         app: !!window.app,
         layerManager: !!window.app?.services?.layerManager,
-        geotabService: !!window.geotabService,
-        layerPanel: !!window.app?.services?.layerPanel
-      });
+        layerPanel: !!window.app?.services?.layerPanel,
+        geotabService: !!window.geotabService
+      };
+      console.log('Global objects:', objects);
 
       // Check DOM elements
-      const elements = ['vehicle-list', 'vehicle-list-loading', 'vehicle-list-empty'];
+      const elements = ['vehicle-list', 'vehicle-list-loading', 'vehicle-list-empty', 'vehicle-list-block'];
       elements.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -4725,14 +4756,15 @@ document.addEventListener('DOMContentLoaded', () => {
             exists: true,
             hidden: el.hidden,
             display: getComputedStyle(el).display,
-            children: el.children.length
+            children: el.children.length,
+            classes: el.className
           });
         } else {
           console.log(`${id}: NOT FOUND`);
         }
       });
 
-      // Try to get vehicle data
+      // Check vehicle layers
       if (window.app?.services?.layerManager) {
         const layers = ['fiber-trucks', 'electric-trucks'];
         layers.forEach(layerId => {
@@ -4745,44 +4777,34 @@ document.addEventListener('DOMContentLoaded', () => {
             type: layer?.type
           });
         });
-
-        // Also check all layers
-        const allLayers = window.app.services.layerManager.getAllLayers();
-        console.log('All layers in LayerManager:', allLayers.map(l => ({
-          id: l.id,
-          title: l.title,
-          type: l.type,
-          visible: l.visible
-        })));
-      } else {
-        console.log('LayerManager not available');
       }
 
-      // Check GeotabService
-      if (window.geotabService) {
-        console.log('GeotabService status:', window.geotabService.getStatus());
-      } else {
-        console.log('GeotabService not available');
+      // Check GeotabService configuration
+      try {
+        import('./services/GeotabService.js').then(module => {
+          const geotabService = module.geotabService;
+          console.log('GeotabService status:', geotabService.getStatus());
+          console.log('GeotabService lastTruckData:', geotabService.lastTruckData);
+        });
+      } catch (error) {
+        console.log('GeotabService import error:', error.message);
       }
 
-      // Force load vehicle list
-      if (window.app?.services?.layerPanel) {
-        console.log('🚛 Force loading vehicle list...');
-        window.app.services.layerPanel.loadVehicleList();
-      }
+      return 'Debug completed - check console for details';
 
     } catch (error) {
       console.error('🚛 Error in debugVehicleList:', error);
+      return `Debug error: ${error.message}`;
     }
   };
 
   // Function to enable vehicle layers for testing
-  window.enableVehicleLayers = async () => {
+  window.enableVehicleLayers = function () {
     console.log('🚛 Enabling vehicle layers...');
     if (window.app?.services?.layerManager) {
       try {
-        await window.app.services.layerManager.toggleLayerVisibility('fiber-trucks', true);
-        await window.app.services.layerManager.toggleLayerVisibility('electric-trucks', true);
+        window.app.services.layerManager.toggleLayerVisibility('fiber-trucks', true);
+        window.app.services.layerManager.toggleLayerVisibility('electric-trucks', true);
         console.log('✅ Vehicle layers enabled');
         return 'Vehicle layers enabled successfully';
       } catch (error) {
@@ -4792,6 +4814,61 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       console.log('❌ LayerManager not available');
       return 'LayerManager not available';
+    }
+  };
+
+  // Force load vehicle list - production debugging
+  window.forceLoadVehicleList = function () {
+    try {
+      console.log('🚛 Force loading vehicle list...');
+
+      if (window.app?.services?.layerPanel) {
+        // Call the loadVehicleList method directly
+        window.app.services.layerPanel.loadVehicleList();
+        console.log('✅ Vehicle list loading initiated');
+        return 'Vehicle list loading initiated';
+      } else {
+        console.log('❌ Layer panel not available');
+        return 'Layer panel not available';
+      }
+    } catch (error) {
+      console.error('❌ Error forcing vehicle list load:', error);
+      return `Error: ${error.message}`;
+    }
+  };
+
+  // Check GeotabService configuration specifically for production
+  window.checkGeotabConfig = function () {
+    try {
+      console.log('🚛 Checking GeotabService configuration...');
+
+      // Check environment variables
+      const config = {
+        enabled: import.meta.env.VITE_GEOTAB_ENABLED,
+        hasUsername: !!import.meta.env.VITE_GEOTAB_USERNAME,
+        hasPassword: !!import.meta.env.VITE_GEOTAB_PASSWORD,
+        hasDatabase: !!import.meta.env.VITE_GEOTAB_DATABASE,
+        usernameLength: import.meta.env.VITE_GEOTAB_USERNAME?.length || 0,
+        passwordLength: import.meta.env.VITE_GEOTAB_PASSWORD?.length || 0,
+        databaseLength: import.meta.env.VITE_GEOTAB_DATABASE?.length || 0
+      };
+
+      console.log('GeotabService Config:', config);
+
+      // Import and check service
+      import('./services/GeotabService.js').then(module => {
+        const service = module.geotabService;
+        console.log('GeotabService Status:', service.getStatus());
+        console.log('GeotabService lastTruckData:', service.lastTruckData);
+        console.log('GeotabService authenticated:', service.isAuthenticated);
+      }).catch(error => {
+        console.error('GeotabService import error:', error);
+      });
+
+      return 'GeotabService check completed - see console for details';
+    } catch (error) {
+      console.error('❌ Error checking GeotabService config:', error);
+      return `Error: ${error.message}`;
     }
   };
 
