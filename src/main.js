@@ -604,6 +604,15 @@ class LayerPanel {
     this.isLoadingVehicleList = true;
     console.log('🚛 Starting vehicle list load process...');
 
+    // Add production debugging
+    console.log('🚛 Environment check:', {
+      isDev: import.meta.env.DEV,
+      mode: import.meta.env.MODE,
+      hasApp: !!window.app,
+      hasLayerManager: !!window.app?.layerManager,
+      hasGeotabService: !!window.geotabService
+    });
+
     const vehicleListBlock = document.getElementById('vehicle-list-block');
     const loadingDiv = document.getElementById('vehicle-list-loading');
     const emptyDiv = document.getElementById('vehicle-list-empty');
@@ -935,20 +944,35 @@ class LayerPanel {
     vehicleList.innerHTML = '';
 
     vehicles.forEach((vehicle, index) => {
+      // Validate vehicle data to prevent CalciteUI errors
+      if (!vehicle || typeof vehicle !== 'object') {
+        console.warn('🚛 Skipping invalid vehicle data at index', index, vehicle);
+        return;
+      }
+
       const listItem = document.createElement('calcite-list-item');
 
-      // Format vehicle name
-      const vehicleName = vehicle.name || `${vehicle.type} Truck`;
-      const installer = vehicle.installer || 'Unknown';
+      // Format vehicle name with proper validation
+      const vehicleName = (vehicle.name && typeof vehicle.name === 'string')
+        ? vehicle.name
+        : `${vehicle.type || 'Unknown'} Truck`;
+
+      const installer = (vehicle.installer && typeof vehicle.installer === 'string')
+        ? vehicle.installer
+        : 'Unknown';
+
       const status = this.getVehicleStatus(vehicle);
 
-      listItem.setAttribute('label', vehicleName);
-      listItem.setAttribute('description', `${installer} • ${status}`);
+      // Ensure all attributes are strings to prevent CalciteUI errors
+      listItem.setAttribute('label', String(vehicleName));
+      listItem.setAttribute('description', `${String(installer)} • ${String(status)}`);
 
-      // Add vehicle type icon
+      // Add vehicle type icon with validation
       const typeIcon = document.createElement('calcite-icon');
       typeIcon.slot = 'content-start';
-      typeIcon.icon = vehicle.typeIcon;
+      typeIcon.icon = (vehicle.typeIcon && typeof vehicle.typeIcon === 'string')
+        ? vehicle.typeIcon
+        : 'car'; // Default icon
       typeIcon.className = 'vehicle-type-icon';
       listItem.appendChild(typeIcon);
 
@@ -956,7 +980,7 @@ class LayerPanel {
       const statusIcon = document.createElement('calcite-icon');
       statusIcon.slot = 'content-end';
       statusIcon.scale = 's';
-      statusIcon.className = `vehicle-status-${status.toLowerCase()}`;
+      statusIcon.className = `vehicle-status-${String(status).toLowerCase()}`;
 
       if (status === 'Online') {
         statusIcon.icon = 'circle-filled';
@@ -4599,6 +4623,50 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       console.log('🚛 Layer panel not available. Available services:',
         window.app?.services ? Object.keys(window.app.services) : 'none');
+    }
+  };
+
+  // Simple production debug function
+  window.debugVehicles = () => {
+    console.log('🚛 === Vehicle Debug Info ===');
+    console.log('Environment:', {
+      isDev: import.meta.env.DEV,
+      mode: import.meta.env.MODE
+    });
+    console.log('Global objects:', {
+      app: !!window.app,
+      layerManager: !!window.app?.layerManager,
+      geotabService: !!window.geotabService,
+      layerPanel: !!window.app?.services?.layerPanel
+    });
+
+    // Check DOM elements
+    const elements = ['vehicle-list', 'vehicle-list-loading', 'vehicle-list-empty'];
+    elements.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        console.log(`${id}:`, {
+          exists: true,
+          hidden: el.hidden,
+          display: getComputedStyle(el).display,
+          children: el.children.length
+        });
+      } else {
+        console.log(`${id}: NOT FOUND`);
+      }
+    });
+
+    // Try to get vehicle data
+    if (window.app?.layerManager) {
+      const layers = ['fiber-trucks', 'electric-trucks'];
+      layers.forEach(layerId => {
+        const layer = window.app.layerManager.getLayer(layerId);
+        console.log(`${layerId} layer:`, {
+          exists: !!layer,
+          hasSource: !!layer?.source,
+          itemCount: layer?.source?.items?.length || 0
+        });
+      });
     }
   };
 });

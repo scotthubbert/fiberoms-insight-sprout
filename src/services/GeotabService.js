@@ -191,11 +191,18 @@ export class GeotabService {
         }
 
         try {
-            return await this.api.call('Get', {
+            const result = await this.api.call('Get', {
                 typeName: 'Device'
             });
+            console.log('🚛 getDevices result:', Array.isArray(result) ? `${result.length} devices` : typeof result);
+            return result;
         } catch (error) {
             log.error('❌ Failed to get devices:', error);
+            console.error('🚛 getDevices error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
             throw error;
         }
     }
@@ -219,9 +226,16 @@ export class GeotabService {
                 };
             }
 
-            return await this.api.call('Get', params);
+            const result = await this.api.call('Get', params);
+            console.log('🚛 getDeviceStatus result:', Array.isArray(result) ? `${result.length} status records` : typeof result);
+            return result;
         } catch (error) {
             log.error('❌ Failed to get device status:', error);
+            console.error('🚛 getDeviceStatus error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
             throw error;
         }
     }
