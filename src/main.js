@@ -4659,7 +4659,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       console.log('Global objects:', {
         app: !!window.app,
-        layerManager: !!window.app?.layerManager,
+        layerManager: !!window.app?.services?.layerManager,
         geotabService: !!window.geotabService,
         layerPanel: !!window.app?.services?.layerPanel
       });
@@ -4681,16 +4681,40 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       // Try to get vehicle data
-      if (window.app?.layerManager) {
+      if (window.app?.services?.layerManager) {
         const layers = ['fiber-trucks', 'electric-trucks'];
         layers.forEach(layerId => {
-          const layer = window.app.layerManager.getLayer(layerId);
+          const layer = window.app.services.layerManager.getLayer(layerId);
           console.log(`${layerId} layer:`, {
             exists: !!layer,
             hasSource: !!layer?.source,
-            itemCount: layer?.source?.items?.length || 0
+            itemCount: layer?.source?.items?.length || 0,
+            visible: layer?.visible,
+            type: layer?.type
           });
         });
+
+        // Also check all layers
+        const allLayers = window.app.services.layerManager.getAllLayers();
+        console.log('All layers in LayerManager:', allLayers.map(l => ({
+          id: l.id,
+          title: l.title,
+          type: l.type,
+          visible: l.visible
+        })));
+      } else {
+        console.log('LayerManager not available');
+      }
+
+      // Check GeotabService
+      if (window.geotabService) {
+        console.log('GeotabService status:', {
+          isConnected: window.geotabService.isConnected,
+          lastUpdate: window.geotabService.lastUpdate,
+          vehicleCount: window.geotabService.vehicles?.length || 0
+        });
+      } else {
+        console.log('GeotabService not available');
       }
 
       console.log('🚛 === Debug Complete ===');
