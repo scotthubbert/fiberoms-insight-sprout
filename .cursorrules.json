@@ -1,0 +1,189 @@
+{
+    "rules": {
+        "general": {
+            "language": "JavaScript (ES6+)",
+            "framework": "Vite + ArcGIS Maps SDK 4.33 + Calcite Components 3.2+",
+            "database": "Supabase",
+            "maps": "ArcGIS JavaScript API (NPM bundled, NOT CDN)",
+            "ui_framework": "Calcite Design System",
+            "build_tool": "Vite",
+            "deployment": "Progressive Web App with Service Worker",
+            "target_audience": "Small to medium ISPs - service dispatchers and field technicians",
+            "key_requirement": "Mobile-first for field workers on cellular connections"
+        },
+        "critical_architectural_decisions": {
+            "npm_vs_cdn": "Use NPM for ALL dependencies - NO CDN links for enterprise reliability in VPN-only environments",
+            "mobile_first": "Every feature starts with mobile design - follow mobile-first methodology religiously",
+            "offline_capability": "Design for intermittent connectivity and offline functionality",
+            "performance_critical": "Must meet strict performance targets for 3G connections"
+        },
+        "solid_principles_web_adapted": {
+            "single_responsibility": "Each module/component has one reason to change - Services handle only data, Components focus on single UI concerns, Utilities perform specific transformations",
+            "open_closed": "Open for extension, closed for modification - Use composition over inheritance, leverage CalciteUI slots, create plugin-based layer system",
+            "liskov_substitution": "Components must be replaceable - All layer implementations adhere to base interface, service implementations fulfill contracts",
+            "interface_segregation": "Don't depend on unused interfaces - Split large services, use specific event handlers, create targeted API endpoints",
+            "dependency_inversion": "Depend on abstractions not concretions - Inject services as dependencies, use configuration objects, abstract external APIs"
+        },
+        "code_organization_solid": {
+            "services": "src/services/ - Single Responsibility: Data & Business Logic",
+            "services_base": "src/services/base/ - Abstract service interfaces (DIP)",
+            "services_data": "src/services/data/ - Concrete implementations (SupabaseService, GeotabService)",
+            "services_layers": "src/services/layers/ - Layer-specific services",
+            "components": "src/components/ - Single Responsibility: UI Components",
+            "utils": "src/utils/ - Single Responsibility: Pure functions",
+            "config": "src/config/ - Open/Closed: Configuration over modification"
+        },
+        "performance_requirements": {
+            "initial_load": "< 3 seconds on 3G",
+            "map_interaction": "< 100ms response",
+            "layer_loading": "< 2 seconds per layer",
+            "touch_targets": "Minimum 44px",
+            "font_size": "Minimum 16px"
+        },
+        "component_guidelines": {
+            "web_components": "Use native Web Components with Calcite Design System",
+            "lifecycle": "Implement proper connectedCallback and disconnectedCallback",
+            "event_handling": "Use CustomEvent for component communication",
+            "styling": "Use Calcite CSS variables for theming",
+            "accessibility": "Follow WCAG 2.1 AA standards"
+        },
+        "service_layer": {
+            "single_responsibility": "Each service has one clear responsibility",
+            "data_access": "Use dedicated service classes for data operations",
+            "caching": "Implement proper caching strategies with CacheService",
+            "real_time": "Use Supabase real-time subscriptions for live data",
+            "error_boundaries": "Implement proper error handling and recovery"
+        },
+        "esri_arcgis": {
+            "imports": "Use dynamic imports for ArcGIS modules to enable code splitting",
+            "initialization": "Initialize map and services in proper order",
+            "memory_management": "Properly dispose of ArcGIS objects",
+            "projections": "Use appropriate spatial reference systems",
+            "performance": "Optimize layer rendering and queries"
+        },
+        "pwa_requirements": {
+            "offline_support": "Implement proper offline functionality",
+            "service_worker": "Use Workbox for service worker management",
+            "caching_strategy": "StaleWhileRevalidate for API calls",
+            "installation": "Proper PWA manifest and installation prompts",
+            "updates": "Handle app updates gracefully"
+        },
+        "testing": {
+            "unit_tests": "Test individual functions and methods",
+            "integration_tests": "Test component interactions",
+            "e2e_tests": "Test complete user workflows",
+            "coverage": "Aim for >80% code coverage"
+        },
+        "performance": {
+            "bundle_size": "Keep bundle sizes reasonable with code splitting",
+            "lazy_loading": "Lazy load components and services",
+            "memory_leaks": "Properly clean up event listeners and subscriptions",
+            "network_efficiency": "Minimize API calls and batch requests"
+        },
+        "security": {
+            "input_validation": "Validate all user inputs",
+            "api_security": "Use proper authentication and authorization",
+            "xss_prevention": "Sanitize HTML content",
+            "secrets_management": "Use environment variables for sensitive data"
+        },
+        "documentation": {
+            "code_comments": "Document complex logic and business rules",
+            "jsdoc": "Use JSDoc for function documentation",
+            "feature_docs": "Document new features in docs/features/",
+            "adr": "Document architectural decisions in docs/adr/",
+            "readme": "Keep README.md up to date"
+        },
+        "git_workflow": {
+            "commits": "Use conventional commit format",
+            "branches": "Use feature branches for development",
+            "pull_requests": "Require PR reviews for main branch",
+            "versioning": "Use semantic versioning"
+        },
+        "production_readiness": {
+            "error_handling": "Graceful error handling with user-friendly messages",
+            "logging": "Comprehensive logging with appropriate levels",
+            "monitoring": "Performance monitoring and error tracking",
+            "deployment": "Automated deployment with proper CI/CD"
+        },
+        "mobile_first": {
+            "responsive_design": "Design for mobile devices first",
+            "touch_interactions": "Proper touch event handling",
+            "performance": "Optimize for mobile network conditions",
+            "offline_capability": "Essential features work offline"
+        },
+        "development_phases": {
+            "phase_1": "Foundation - PWA setup, basic map, theme toggle",
+            "phase_2": "First Data Layer - Supabase connection, demo offline subscribers",
+            "phase_3": "Core Layer System",
+            "phase_4": "Infrastructure Layers",
+            "phase_5": "Search Functionality",
+            "phase_6": "Outage Management",
+            "phase_7": "Vehicle Tracking",
+            "phase_8": "Advanced Features",
+            "phase_9": "Production Ready",
+            "important": "Complete each phase fully before moving to the next. Do not skip ahead."
+        },
+        "mobile_first_css": {
+            "pattern": "Mobile base styles first, then desktop enhancements",
+            "example": ".component { /* mobile styling */ } @media (min-width: 769px) { .component { /* desktop improvements */ } }"
+        },
+        "build_practices": {
+            "framework_respect": "Trust framework intelligence over manual optimization",
+            "measure_first": "Only optimize specific, measured issues",
+            "dependency_awareness": "Understand abstraction layers before optimization",
+            "safe_optimizations": "Use standard Vite configuration, avoid manual chunking",
+            "dangerous_patterns": "Avoid manual chunking without analysis, complex rollup customizations"
+        },
+        "data_layer_pattern": {
+            "structure": "Each layer follows consistent SOLID pattern",
+            "service_class": "class SubscriberLayerService extends BaseLayerService",
+            "dependency_injection": "constructor(dataService) { this.dataService = dataService; }",
+            "configuration": "Extend through config, not modification"
+        }
+    },
+    "examples": {
+        "solid_patterns": {
+            "single_responsibility_good": "class DataService { async fetchData() { /* only data fetching */ } }",
+            "open_closed_good": "const layerConfigs = { subscriber: { renderer: subscriberRenderer, popup: subscriberPopup } }",
+            "dependency_injection": "const layerService = new SubscriberLayerService(dataService);"
+        },
+        "mobile_first_css": {
+            "base_mobile": ".component { font-size: 16px; padding: 8px; }",
+            "desktop_enhancement": "@media (min-width: 769px) { .component { font-size: 18px; padding: 12px; } }"
+        },
+        "layer_service_pattern": {
+            "service": "class SubscriberLayerService extends BaseLayerService { constructor(dataService) { super(); this.dataService = dataService; } }",
+            "usage": "const layer = await layerService.createLayer(subscriberConfig); map.add(layer);"
+        }
+    },
+    "enforcement": {
+        "required_patterns": [
+            "Follow SOLID principles religiously",
+            "Mobile-first design for every feature",
+            "Use NPM bundled dependencies only (NO CDN)",
+            "Implement proper offline capability",
+            "Meet strict performance targets",
+            "Complete development phases in order",
+            "Use Calcite Design System consistently",
+            "Implement dependency injection",
+            "Trust framework defaults over manual optimization"
+        ],
+        "prohibited_patterns": [
+            "CDN links for any dependencies",
+            "Desktop-first design approaches",
+            "Manual build chunking without measurement",
+            "Breaking SOLID principles",
+            "Skipping development phases",
+            "Circular dependencies",
+            "Synchronous network requests",
+            "Direct DOM manipulation without framework",
+            "Hardcoded values over configuration"
+        ],
+        "critical_requirements": {
+            "npm_only": "NEVER use CDN links - enterprise reliability requires self-contained deployment",
+            "mobile_first": "EVERY feature must start with mobile design and work on 3G connections",
+            "solid_compliance": "ALL code must follow SOLID principles - this is non-negotiable",
+            "performance_targets": "Must meet all performance requirements - initial load < 3s on 3G"
+        }
+    }
+}

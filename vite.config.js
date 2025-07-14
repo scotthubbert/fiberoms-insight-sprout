@@ -57,7 +57,8 @@ export default defineConfig({
       '@arcgis/core/intl',
       '@arcgis/map-components',
       '@esri/calcite-components',
-      '@supabase/supabase-js'
+      '@supabase/supabase-js',
+      'dexie'
     ]
   },
   plugins: [
