@@ -64,41 +64,10 @@ export default defineConfig({
     // Copy essential assets for production build
     viteStaticCopy({
       targets: [
-        // Copy only the specific icons we actually use
-        ...['search', 'layer', 'apps', 'circle', 'polygon', 'line', 'ellipsis', 'rain',
-          'exclamationMarkTriangle', 'flash', 'car', 'person', 'information', 'clock',
-          'spinner', 'arrowRight', 'refresh', 'brightness', 'download', 'x', 'trash',
-          'users', 'linkChart', 'layers', 'triangle', 'organization', 'utilityNetwork', 'utility-network', 'diamond', 'square',
-          'data', 'code', 'globe', 'fileText', 'launch', 'exclamation-mark-triangle',
-          // Essential CalciteUI component icons (prevents rendering failures)
-          'loading', 'check', 'minus', 'plus', 'question', 'asterisk', 'calendar',
-          'chevron-left', 'chevron-right', 'chevron-up', 'chevron-down', 'chevronLeft', 'chevronRight', 'chevronUp', 'chevronDown',
-          'handle-horizontal', 'handle-vertical', 'grip', 'menu', 'caret-down', 'caret-up',
-          // Mobile UI specific icons
-          'home', 'locate', 'navigation', 'drag', 'resize', 'grid', 'view-visible', 'view-hide',
-          // Popup action icons
-          'duplicate', 'map', 'pinTear', 'check',
-          // ArcGIS popup widget icons
-          'dockRight', 'magnifyingGlassPlus', 'tables', 'minimize',
-          // ArcGIS Map widget icons
-          'zoomOutFixed', 'zoomInFixed', 'compassNorthCircle', 'home', 'chevronsRight',
-          'basemap', 'pause', 'moon', 'chevronUp', 'chevronDown', 'chevronLeft', 'chevronRight',
-          // Additional icons for list items and UI elements
-          'close', 'checkCircle', 'xCircle', 'gear', 'loading', 'chevron-right',
-          'chevron-left', 'chevron-up', 'chevron-down', 'link-chart', 'link', 'warning',
-          // Notice component icons
-          'exclamationMarkCircle', 'checkCircleF', 'exclamationMarkTriangleF', 'informationF'
-        ].flatMap(iconName => {
-          return [16, 24, 32].map(size => ({
-            src: `node_modules/@esri/calcite-components/dist/calcite/assets/icon/${iconName}${size}.json`,
-            dest: 'calcite/assets/icon',
-            noErrorOnMissing: true
-          }));
-        }),
-        // Copy minimal t9n files
+        // Copy ALL CalciteUI assets (complete approach)
         {
-          src: 'node_modules/@esri/calcite-components/dist/calcite/assets/t9n/en.json',
-          dest: 'calcite/assets/t9n'
+          src: 'node_modules/@esri/calcite-components/dist/calcite/assets/**/*',
+          dest: 'calcite/assets'
         },
         // Copy ArcGIS theme CSS files for proper theming
         {

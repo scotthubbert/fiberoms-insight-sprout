@@ -22,8 +22,8 @@ export function getFormattedBuildInfo() {
     branch: buildInfo.branch,
     buildDate: buildInfo.buildDate,
     environment: buildInfo.environment,
-    displayVersion: buildInfo.isProduction 
-      ? `v${buildInfo.version} (${buildInfo.hash})` 
+    displayVersion: buildInfo.isProduction
+      ? `v${buildInfo.version} (${buildInfo.hash})`
       : `v${buildInfo.version}-${buildInfo.branch} (${buildInfo.hash})`
   };
 }

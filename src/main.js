@@ -32,49 +32,56 @@ import '@arcgis/map-components/dist/components/arcgis-expand';
 import '@arcgis/map-components/dist/components/arcgis-track';
 import '@arcgis/map-components/dist/components/arcgis-fullscreen';
 
-// Import Calcite Components
-import '@esri/calcite-components/dist/components/calcite-button';
+// Import ALL CalciteUI components we need (comprehensive approach)
 import '@esri/calcite-components/dist/components/calcite-shell';
 import '@esri/calcite-components/dist/components/calcite-shell-panel';
 import '@esri/calcite-components/dist/components/calcite-panel';
+import '@esri/calcite-components/dist/components/calcite-block';
 import '@esri/calcite-components/dist/components/calcite-action';
 import '@esri/calcite-components/dist/components/calcite-action-bar';
-import '@esri/calcite-components/dist/components/calcite-block';
+import '@esri/calcite-components/dist/components/calcite-button';
+import '@esri/calcite-components/dist/components/calcite-icon';
 import '@esri/calcite-components/dist/components/calcite-label';
 import '@esri/calcite-components/dist/components/calcite-checkbox';
-import '@esri/calcite-components/dist/components/calcite-input';
+import '@esri/calcite-components/dist/components/calcite-list';
+import '@esri/calcite-components/dist/components/calcite-list-item';
 import '@esri/calcite-components/dist/components/calcite-navigation';
 import '@esri/calcite-components/dist/components/calcite-navigation-logo';
-import '@esri/calcite-components/dist/components/calcite-icon';
 import '@esri/calcite-components/dist/components/calcite-segmented-control';
 import '@esri/calcite-components/dist/components/calcite-segmented-control-item';
-import '@esri/calcite-components/dist/components/calcite-list';
-import '@esri/calcite-components/dist/components/calcite-list-item';
-import '@esri/calcite-components/dist/components/calcite-switch';
-import '@esri/calcite-components/dist/components/calcite-dialog';
-import '@esri/calcite-components/dist/components/calcite-list';
-import '@esri/calcite-components/dist/components/calcite-list-item';
-import '@esri/calcite-components/dist/components/calcite-select';
-import '@esri/calcite-components/dist/components/calcite-option';
 import '@esri/calcite-components/dist/components/calcite-loader';
 import '@esri/calcite-components/dist/components/calcite-chip';
-import '@esri/calcite-components/dist/components/calcite-card';
+import '@esri/calcite-components/dist/components/calcite-modal';
+import '@esri/calcite-components/dist/components/calcite-dialog';
+import '@esri/calcite-components/dist/components/calcite-sheet';
+import '@esri/calcite-components/dist/components/calcite-scrim';
+import '@esri/calcite-components/dist/components/calcite-input';
+import '@esri/calcite-components/dist/components/calcite-switch';
 import '@esri/calcite-components/dist/components/calcite-autocomplete';
 import '@esri/calcite-components/dist/components/calcite-autocomplete-item';
 import '@esri/calcite-components/dist/components/calcite-alert';
 import '@esri/calcite-components/dist/components/calcite-notice';
+import '@esri/calcite-components/dist/components/calcite-select';
+import '@esri/calcite-components/dist/components/calcite-option';
+import '@esri/calcite-components/dist/components/calcite-card';
+// Import popup components that might be missing
+import '@esri/calcite-components/dist/components/calcite-popover';
+import '@esri/calcite-components/dist/components/calcite-tooltip';
+import '@esri/calcite-components/dist/components/calcite-dropdown';
+import '@esri/calcite-components/dist/components/calcite-dropdown-group';
+import '@esri/calcite-components/dist/components/calcite-dropdown-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
-// Set Calcite assets path for both dev and production
-// In development, Vite serves node_modules directly
-// In production, Vite copies assets to dist folder
-const isProduction = import.meta.env.PROD;
-const assetsPath = isProduction
-  ? window.location.origin + '/calcite/assets'
+// Set Calcite assets path - simplified approach
+const assetsPath = import.meta.env.PROD
+  ? '/calcite/assets'
   : '/node_modules/@esri/calcite-components/dist/calcite/assets';
 
-// Try local assets first, fallback to CDN if needed
+console.log('🎨 Setting CalciteUI asset path:', assetsPath);
 setAssetPath(assetsPath);
+
+// Simplified CalciteUI initialization - all assets are now copied
+console.log('✅ CalciteUI components loaded with bulk import and complete asset copying');
 
 // Setup icon fallback handling
 setupCalciteIconFallback();
@@ -360,8 +367,8 @@ class LayerPanel {
     this.toolsContent = document.getElementById('tools-content');
     this.infoContent = document.getElementById('info-content');
 
-    // Initialize loading flags
-    this.isLoadingVehicleList = false;
+    // Initialize state
+    this.currentVehicleData = [];
 
     this.init();
   }
@@ -459,6 +466,8 @@ class LayerPanel {
         this.vehiclesContent.style.display = 'block';
         this.vehiclesAction.active = true;
         this.updateVehicleStatus();
+        // Load the simple vehicle list
+        this.loadSimpleVehicleList();
         break;
       case 'power-outages':
         this.powerOutagesContent.hidden = false;
@@ -530,16 +539,26 @@ class LayerPanel {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
         await this.refreshVehicles();
-        // Also refresh the vehicle list if it's expanded
-        const vehicleListBlock = document.getElementById('vehicle-list-block');
-        if (vehicleListBlock && vehicleListBlock.expanded) {
-          await this.loadVehicleList();
-        }
+        // Also refresh the simple vehicle list
+        await this.loadSimpleVehicleList();
       });
     }
 
-    // Set up vehicle list event listeners
-    this.setupVehicleListEventListeners();
+    // Set up vehicle layer toggle listeners
+    this.setupVehicleLayerToggles();
+  }
+
+  setupVehicleLayerToggles() {
+    // Listen for vehicle layer toggle changes and refresh the list
+    const vehicleToggles = document.querySelectorAll('#vehicles-content calcite-checkbox');
+    vehicleToggles.forEach(toggle => {
+      toggle.addEventListener('calciteCheckboxChange', async () => {
+        // Small delay to allow layer changes to process
+        setTimeout(() => {
+          this.loadSimpleVehicleList();
+        }, 100);
+      });
+    });
   }
 
   async refreshVehicles() {
@@ -609,167 +628,159 @@ class LayerPanel {
     }
   }
 
-  async loadVehicleList() {
-    console.log('🚛 ========== loadVehicleList called at', new Date().toLocaleTimeString(), '==========');
-
-    // Prevent multiple concurrent calls
-    if (this.isLoadingVehicleList) {
-      console.log('🚛 Vehicle list already loading, skipping...');
+  async loadSimpleVehicleList() {
+    console.log('🚛 Loading simple vehicle list...');
+    const vehiclesList = document.getElementById('vehicle-list');
+    if (!vehiclesList) {
+      console.error('🚛 vehicle-list element not found');
       return;
     }
 
-    // Ensure CalciteUI components are ready
+    // Clear existing vehicles
+    vehiclesList.innerHTML = '';
+
     try {
-      await customElements.whenDefined('calcite-list');
+      // Wait for CalciteUI components to be ready
       await customElements.whenDefined('calcite-list-item');
       await customElements.whenDefined('calcite-icon');
-    } catch (error) {
-      console.warn('🚛 CalciteUI components not fully ready:', error);
-    }
 
-    this.isLoadingVehicleList = true;
-    console.log('🚛 Starting vehicle list load process...');
+      // Get vehicle data from layers or GeotabService
+      const allVehicles = await this.getVehicleData();
+      console.log('🚛 Retrieved vehicles:', allVehicles.length);
 
-    // Add production debugging
-    console.log('🚛 Environment check:', {
-      isDev: import.meta.env.DEV,
-      isProd: import.meta.env.PROD,
-      mode: import.meta.env.MODE,
-      hasApp: !!window.app,
-      hasLayerManager: !!window.app?.layerManager,
-      hasGeotabService: !!window.geotabService,
-      userAgent: navigator.userAgent.substring(0, 50)
-    });
+      if (allVehicles.length === 0) {
+        // Show empty state
+        const emptyItem = document.createElement('calcite-list-item');
+        emptyItem.setAttribute('label', 'No vehicles available');
+        emptyItem.setAttribute('description', 'Enable Electric or Fiber truck layers to see vehicles');
+        emptyItem.disabled = true;
 
-    const vehicleListBlock = document.getElementById('vehicle-list-block');
-    const loadingDiv = document.getElementById('vehicle-list-loading');
-    const emptyDiv = document.getElementById('vehicle-list-empty');
-    const vehicleList = document.getElementById('vehicle-list');
-    const vehicleCount = document.getElementById('vehicle-count');
-    const lastUpdated = document.getElementById('vehicle-last-updated');
-    const footer = document.getElementById('vehicle-list-footer');
+        const infoIcon = document.createElement('calcite-icon');
+        infoIcon.slot = 'content-start';
+        infoIcon.icon = 'information';
+        infoIcon.style.color = 'var(--calcite-color-text-3)';
+        emptyItem.appendChild(infoIcon);
 
-    // Show loading state briefly
-    if (loadingDiv) loadingDiv.hidden = false;
-    if (emptyDiv) emptyDiv.hidden = true;
-    if (vehicleList) vehicleList.hidden = true;
-    if (footer) footer.hidden = true;
-
-    try {
-      console.log('🚛 Trying to get vehicle data from existing layers...');
-
-      // Debug layer access
-      console.log('🚛 Debug: window.app exists:', !!window.app);
-      console.log('🚛 Debug: window.app.layerManager exists:', !!window.app?.layerManager);
-
-      if (window.app?.layerManager) {
-        // List all available layers
-        const allLayers = window.app.layerManager.getAllLayers();
-        console.log('🚛 Debug: Available layers:', allLayers.map(l => l.id));
-        console.log('🚛 Debug: Layer manager layers map:', Object.keys(window.app.layerManager.layers || {}));
-      }
-
-      // First, try to get data from existing vehicle layers (much faster!)
-      const allVehicles = [];
-
-      // Get data from fiber trucks layer
-      const fiberLayer = window.app?.layerManager?.getLayer('fiber-trucks');
-      console.log('🚛 Debug: fiberLayer found:', !!fiberLayer);
-      if (fiberLayer) {
-        console.log('🚛 Debug: fiberLayer.source exists:', !!fiberLayer.source);
-        console.log('🚛 Debug: fiberLayer.source.items exists:', !!fiberLayer.source?.items);
-        console.log('🚛 Debug: fiberLayer.source.items.length:', fiberLayer.source?.items?.length);
-        console.log('🚛 Debug: fiberLayer structure:', {
-          type: typeof fiberLayer,
-          keys: Object.keys(fiberLayer),
-          source: fiberLayer.source ? Object.keys(fiberLayer.source) : 'no source'
-        });
-      }
-
-      if (fiberLayer && fiberLayer.source && fiberLayer.source.items.length > 0) {
-        console.log('🚛 Found fiber trucks layer with', fiberLayer.source.items.length, 'trucks');
-        fiberLayer.source.items.forEach(graphic => {
-          const attrs = graphic.attributes;
-          allVehicles.push({
-            id: attrs.id,
-            name: attrs.name,
-            latitude: graphic.geometry.latitude,
-            longitude: graphic.geometry.longitude,
-            installer: attrs.installer,
-            speed: attrs.speed,
-            is_driving: attrs.is_driving,
-            last_updated: attrs.last_updated,
-            communication_status: attrs.communication_status,
-            type: 'Fiber',
-            typeIcon: 'car'
-          });
-        });
-      } else {
-        console.log('🚛 No fiber trucks layer data found');
-      }
-
-      // Get data from electric trucks layer
-      const electricLayer = window.app?.layerManager?.getLayer('electric-trucks');
-      console.log('🚛 Debug: electricLayer found:', !!electricLayer);
-      if (electricLayer) {
-        console.log('🚛 Debug: electricLayer.source exists:', !!electricLayer.source);
-        console.log('🚛 Debug: electricLayer.source.items exists:', !!electricLayer.source?.items);
-        console.log('🚛 Debug: electricLayer.source.items.length:', electricLayer.source?.items?.length);
-      }
-
-      if (electricLayer && electricLayer.source && electricLayer.source.items.length > 0) {
-        console.log('🚛 Found electric trucks layer with', electricLayer.source.items.length, 'trucks');
-        electricLayer.source.items.forEach(graphic => {
-          const attrs = graphic.attributes;
-          allVehicles.push({
-            id: attrs.id,
-            name: attrs.name,
-            latitude: graphic.geometry.latitude,
-            longitude: graphic.geometry.longitude,
-            installer: attrs.installer,
-            speed: attrs.speed,
-            is_driving: attrs.is_driving,
-            last_updated: attrs.last_updated,
-            communication_status: attrs.communication_status,
-            type: 'Electric',
-            typeIcon: 'flash'
-          });
-        });
-      } else {
-        console.log('🚛 No electric trucks layer data found');
-      }
-
-      console.log('🚛 Total vehicles from layers:', allVehicles.length);
-
-      // If we got data from layers, use it!
-      if (allVehicles.length > 0) {
-        console.log('✅ Using vehicle data from existing layers');
-        this.displayVehicleList(allVehicles);
+        vehiclesList.appendChild(emptyItem);
+        console.log('🚛 Showing empty state');
         return;
       }
 
-      // Try alternative access: get cached data directly from GeotabService
-      console.log('🚛 Trying to access cached data from GeotabService...');
+      // Populate the simple list
+      allVehicles.forEach((vehicle, index) => {
+        try {
+          const listItem = document.createElement('calcite-list-item');
 
-      try {
+          // Safely set attributes with fallbacks
+          const vehicleName = (vehicle.name && String(vehicle.name).trim()) || `${vehicle.type || 'Unknown'} Truck`;
+          const installer = (vehicle.installer && String(vehicle.installer).trim()) || 'Unknown';
+
+          listItem.setAttribute('label', vehicleName);
+          listItem.setAttribute('description', installer);
+
+          // Add type icon
+          const typeIcon = document.createElement('calcite-icon');
+          typeIcon.slot = 'content-start';
+          typeIcon.icon = vehicle.type === 'Electric' ? 'flash' : 'car';
+          typeIcon.style.color = vehicle.type === 'Electric' ? 'var(--calcite-color-status-success)' : 'var(--calcite-color-brand)';
+          listItem.appendChild(typeIcon);
+
+          // Add click handler to zoom to vehicle
+          listItem.style.cursor = 'pointer';
+          listItem.addEventListener('click', () => {
+            console.log('🚛 Clicking vehicle:', vehicle.name);
+            this.zoomToVehicle(vehicle);
+          });
+
+          vehiclesList.appendChild(listItem);
+          console.log(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
+        } catch (vehicleError) {
+          console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
+        }
+      });
+
+      console.log('🚛 Vehicle list populated successfully');
+
+    } catch (error) {
+      console.error('🚛 Error loading vehicle list:', error);
+      // Show error state
+      const errorItem = document.createElement('calcite-list-item');
+      errorItem.setAttribute('label', 'Error Loading Vehicles');
+      errorItem.setAttribute('description', error.message || 'Unable to load vehicle data');
+      errorItem.disabled = true;
+
+      const errorIcon = document.createElement('calcite-icon');
+      errorIcon.slot = 'content-start';
+      errorIcon.icon = 'exclamation-mark-triangle';
+      errorIcon.style.color = 'var(--calcite-color-status-danger)';
+      errorItem.appendChild(errorIcon);
+
+      vehiclesList.appendChild(errorItem);
+    }
+  }
+
+  async getVehicleData() {
+    const allVehicles = [];
+
+    try {
+      // Get layer manager
+      const layerManager = window.app?.layerManager || window.app?.services?.layerManager || window.layerManager;
+
+      if (layerManager) {
+        // Get data from fiber trucks layer
+        const fiberLayer = layerManager.getLayer('fiber-trucks');
+        if (fiberLayer && fiberLayer.source && fiberLayer.source.items.length > 0) {
+          fiberLayer.source.items.forEach(graphic => {
+            const attrs = graphic.attributes || {};
+            const geometry = graphic.geometry || {};
+
+            if (attrs.id && (geometry.latitude || geometry.y)) {
+              allVehicles.push({
+                id: attrs.id,
+                name: attrs.name || 'Fiber Truck',
+                latitude: geometry.latitude || geometry.y,
+                longitude: geometry.longitude || geometry.x,
+                installer: attrs.installer || attrs.name?.split(' ')?.slice(-1)[0] || 'Unknown',
+                type: 'Fiber'
+              });
+            }
+          });
+        }
+
+        // Get data from electric trucks layer
+        const electricLayer = layerManager.getLayer('electric-trucks');
+        if (electricLayer && electricLayer.source && electricLayer.source.items.length > 0) {
+          electricLayer.source.items.forEach(graphic => {
+            const attrs = graphic.attributes || {};
+            const geometry = graphic.geometry || {};
+
+            if (attrs.id && (geometry.latitude || geometry.y)) {
+              allVehicles.push({
+                id: attrs.id,
+                name: attrs.name || 'Electric Truck',
+                latitude: geometry.latitude || geometry.y,
+                longitude: geometry.longitude || geometry.x,
+                installer: attrs.installer || attrs.name?.split(' ')?.slice(-1)[0] || 'Unknown',
+                type: 'Electric'
+              });
+            }
+          });
+        }
+      }
+
+      // If no data from layers, try GeotabService
+      if (allVehicles.length === 0) {
         const geotabModule = await import('./services/GeotabService.js');
         const geotabService = geotabModule.geotabService;
-        console.log('🚛 GeotabService imported successfully');
-        console.log('🚛 GeotabService status:', geotabService.getStatus());
 
-        const cachedData = geotabService.lastTruckData;
-        console.log('🚛 GeotabService cached data:', cachedData);
+        if (geotabService?.lastTruckData) {
+          const cachedData = geotabService.lastTruckData;
 
-        if (cachedData && (cachedData.fiber?.length > 0 || cachedData.electric?.length > 0)) {
-          console.log('✅ Using cached data from GeotabService');
-
-          // Process cached data
           if (cachedData.fiber?.length > 0) {
             cachedData.fiber.forEach(truck => {
               allVehicles.push({
                 ...truck,
                 type: 'Fiber',
-                typeIcon: 'car',
                 installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
               });
             });
@@ -780,173 +791,288 @@ class LayerPanel {
               allVehicles.push({
                 ...truck,
                 type: 'Electric',
-                typeIcon: 'flash',
                 installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
               });
             });
           }
-
-          console.log('🚛 Total vehicles from cached data:', allVehicles.length);
-          this.displayVehicleList(allVehicles);
-          return;
         }
-
-        // Fallback: try to get fresh data from GeotabService (but this might hit rate limits)
-        console.log('🚛 No cached data found, trying GeotabService API as fallback...');
-
-        const truckData = await geotabService.getTruckData();
-        console.log('🚛 Fallback: Vehicle data received:', truckData);
-
-        // Process GeotabService data
-        if (truckData.fiber?.length > 0) {
-          truckData.fiber.forEach(truck => {
-            allVehicles.push({
-              ...truck,
-              type: 'Fiber',
-              typeIcon: 'car',
-              installer: truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
-            });
-          });
-        }
-
-        if (truckData.electric?.length > 0) {
-          truckData.electric.forEach(truck => {
-            allVehicles.push({
-              ...truck,
-              type: 'Electric',
-              typeIcon: 'flash',
-              installer: truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
-            });
-          });
-        }
-
-        console.log('🚛 Total vehicles from GeotabService API:', allVehicles.length);
-        this.displayVehicleList(allVehicles);
-
-      } catch (geotabError) {
-        console.error('🚛 GeotabService error:', geotabError);
-        console.log('🚛 GeotabService unavailable, trying fallback data...');
-
-        // Final fallback: show informative message about service status
-        this.displayVehicleServiceStatus(geotabError);
-        return;
       }
 
     } catch (error) {
-      console.error('🚛 Error loading vehicle list:', error);
-      console.error('🚛 Error stack:', error.stack);
-
-      // Hide loading and show empty state with error
-      if (loadingDiv) loadingDiv.hidden = true;
-      if (emptyDiv) {
-        emptyDiv.hidden = false;
-        const emptyTitle = emptyDiv.querySelector('h4');
-        const emptyText = emptyDiv.querySelector('p');
-        if (emptyTitle) emptyTitle.textContent = 'Error Loading Vehicles';
-        if (emptyText) emptyText.textContent = `Failed to load vehicle data: ${error.message}`;
-      }
-      if (vehicleList) vehicleList.hidden = true;
-      if (footer) footer.hidden = true;
-    } finally {
-      this.isLoadingVehicleList = false;
+      console.error('Error getting vehicle data:', error);
     }
+
+    return allVehicles;
   }
 
-  displayVehicleServiceStatus(error) {
-    console.log('🚛 displayVehicleServiceStatus called with error:', error?.message);
 
-    const vehicleListBlock = document.getElementById('vehicle-list-block');
-    const loadingDiv = document.getElementById('vehicle-list-loading');
-    const emptyDiv = document.getElementById('vehicle-list-empty');
-    const vehicleList = document.getElementById('vehicle-list');
-    const footer = document.getElementById('vehicle-list-footer');
 
-    // Hide loading and list
-    if (loadingDiv) loadingDiv.hidden = true;
-    if (vehicleList) vehicleList.hidden = true;
-    if (footer) footer.hidden = true;
-
-    // Show informative empty state
-    if (emptyDiv) {
-      emptyDiv.hidden = false;
-      const emptyTitle = emptyDiv.querySelector('h4');
-      const emptyText = emptyDiv.querySelector('p');
-
-      if (emptyTitle) emptyTitle.textContent = 'Vehicle Tracking Service';
-      if (emptyText) {
-        const isProduction = import.meta.env.PROD;
-        if (isProduction) {
-          emptyText.textContent = 'Vehicle tracking service is currently unavailable. Please contact support if this issue persists.';
-        } else {
-          emptyText.textContent = `Vehicle tracking service configuration issue: ${error?.message || 'Unknown error'}. Check environment variables.`;
-        }
-      }
-    }
-  }
-
-  displayVehicleList(allVehicles) {
+  async displayVehicleList(allVehicles) {
     console.log('🚛 displayVehicleList called with', allVehicles.length, 'vehicles');
 
-    const vehicleListBlock = document.getElementById('vehicle-list-block');
-    const loadingDiv = document.getElementById('vehicle-list-loading');
-    const emptyDiv = document.getElementById('vehicle-list-empty');
+    const simpleVehicleListBlock = document.getElementById('simple-vehicle-list');
     const vehicleList = document.getElementById('vehicle-list');
-    const vehicleCount = document.getElementById('vehicle-count');
-    const lastUpdated = document.getElementById('vehicle-last-updated');
-    const footer = document.getElementById('vehicle-list-footer');
 
     console.log('🚛 DOM elements found:', {
-      vehicleListBlock: !!vehicleListBlock,
-      loadingDiv: !!loadingDiv,
-      emptyDiv: !!emptyDiv,
-      vehicleList: !!vehicleList,
-      vehicleCount: !!vehicleCount,
-      lastUpdated: !!lastUpdated,
-      footer: !!footer
+      simpleVehicleListBlock: !!simpleVehicleListBlock,
+      vehicleList: !!vehicleList
     });
+
+    if (!vehicleList) {
+      console.error('🚛 Vehicle list block element not found!');
+      return;
+    }
 
     // Store for filtering
     this.currentVehicleData = allVehicles;
 
-    // Always hide loading when we have data or empty result
-    if (loadingDiv) {
-      loadingDiv.hidden = true;
-      loadingDiv.style.display = 'none'; // Force hide
-      console.log('🚛 Loading div hidden');
-    }
-
     if (allVehicles.length === 0) {
-      console.log('🚛 No vehicles found, showing empty state');
-      if (emptyDiv) emptyDiv.hidden = false;
-      if (vehicleList) vehicleList.hidden = true;
-      if (footer) footer.hidden = true;
+      console.log('🚛 No vehicles found, hiding vehicle list');
+      if (simpleVehicleListBlock) simpleVehicleListBlock.hidden = true;
     } else {
       console.log('🚛 Showing vehicle list with vehicles:', allVehicles.length);
-      if (emptyDiv) emptyDiv.hidden = true;
+
+      // Show the vehicle list container
+      if (simpleVehicleListBlock) {
+        simpleVehicleListBlock.hidden = false;
+        simpleVehicleListBlock.style.display = '';
+      }
+
+      // Enhanced visibility restoration for production
       if (vehicleList) {
-        vehicleList.hidden = false;
-        vehicleList.style.display = 'block'; // Force show
-      }
-      if (footer) {
-        footer.hidden = false;
-        footer.style.display = 'flex'; // Force show
+        this.forceVehicleListVisibility(vehicleList);
+        console.log('🚛 Vehicle list visibility forced');
       }
 
-      // Populate vehicle list
-      this.populateVehicleList(allVehicles);
+      // Force CalciteUI components to render properly
+      await this.forceCalciteListRendering(vehicleList);
 
-      // Update footer
-      if (vehicleCount) vehicleCount.textContent = `${allVehicles.length} vehicles`;
-      if (lastUpdated) {
-        const now = new Date();
-        lastUpdated.textContent = `Last updated: ${now.toLocaleTimeString()}`;
-      }
+      // Use the robust approach that avoids CalciteUI errors
+      vehicleList.innerHTML = '';
 
-      // Auto-expand the block if there are vehicles
-      if (vehicleListBlock) {
-        vehicleListBlock.expanded = true;
-      }
+      // Wait for CalciteUI components to be ready
+      await customElements.whenDefined('calcite-list-item');
+      await customElements.whenDefined('calcite-icon');
+
+      // Populate using a robust approach
+      allVehicles.forEach((vehicle, index) => {
+        try {
+          // Create list item with defensive programming
+          const listItem = document.createElement('calcite-list-item');
+
+          // Sanitize and validate text values to prevent CalciteUI errors
+          const rawName = vehicle.name || vehicle.description || `${vehicle.type || 'Vehicle'} ${vehicle.id || index + 1}`;
+          const vehicleName = String(rawName).replace(/[^\w\s\-\.]/g, '').trim() || `Vehicle ${index + 1}`;
+
+          const rawInstaller = vehicle.installer || vehicle.operator || '';
+          const installer = String(rawInstaller).replace(/[^\w\s\-\.]/g, '').trim() || 'Unassigned';
+
+          // Set attributes safely with sanitized values
+          listItem.label = vehicleName;
+          listItem.description = installer;
+
+          // Set icon property instead of creating child element
+          listItem.icon = vehicle.type === 'Electric' ? 'flash' : 'car';
+
+          // Add click handler to zoom to vehicle
+          listItem.style.cursor = 'pointer';
+          listItem.addEventListener('click', () => {
+            console.log('🚛 Clicking vehicle:', vehicleName);
+            this.zoomToVehicle(vehicle);
+          });
+
+          vehicleList.appendChild(listItem);
+          console.log(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
+        } catch (vehicleError) {
+          console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
+        }
+      });
+
+      console.log('🚛 Vehicle list populated successfully');
     }
+  }
+
+  // Enhanced visibility restoration for production CalciteUI issues
+  forceVehicleListVisibility(vehicleList) {
+    // Multiple approaches to ensure visibility in production
+    vehicleList.hidden = false;
+    vehicleList.removeAttribute('hidden');
+
+    // Force CSS properties
+    vehicleList.style.display = 'block';
+    vehicleList.style.visibility = 'visible';
+    vehicleList.style.opacity = '1';
+    vehicleList.style.position = 'static';
+    vehicleList.style.height = 'auto';
+    vehicleList.style.maxHeight = 'none';
+    vehicleList.style.overflow = 'visible';
+
+    // Force parent container visibility
+    const parentContainer = vehicleList.closest('#vehicle-list-content');
+    if (parentContainer) {
+      parentContainer.style.display = 'block';
+      parentContainer.style.visibility = 'visible';
+      parentContainer.style.opacity = '1';
+    }
+
+    // Force CalciteUI internal visibility and height calculation
+    requestAnimationFrame(() => {
+      // First, check if height is the issue (common in production CalciteUI)
+      const computedStyle = window.getComputedStyle(vehicleList);
+      const currentHeight = parseFloat(computedStyle.height);
+
+      console.log('🚛 Vehicle list height check:', {
+        height: computedStyle.height,
+        display: computedStyle.display,
+        visibility: computedStyle.visibility,
+        childCount: vehicleList.children.length
+      });
+
+      // If height is 0 but we have children, force CalciteUI height recalculation
+      if (currentHeight === 0 && vehicleList.children.length > 0) {
+        console.warn('🚛 Vehicle list height is 0px despite having content - forcing height recalculation');
+
+        // Force CalciteUI to recalculate internal dimensions
+        vehicleList.style.height = 'auto';
+        vehicleList.style.minHeight = 'min-content';
+
+        // Trigger multiple reflows to force CalciteUI recalculation
+        vehicleList.offsetHeight;
+        vehicleList.getBoundingClientRect();
+
+        // Force CalciteUI internal update if component has update methods
+        if (typeof vehicleList.requestUpdate === 'function') {
+          vehicleList.requestUpdate();
+        }
+
+        // Force all child list items to be visible and have proper height
+        Array.from(vehicleList.children).forEach((child, index) => {
+          if (child.tagName === 'CALCITE-LIST-ITEM') {
+            child.style.display = 'flex';
+            child.style.visibility = 'visible';
+            child.style.minHeight = '56px'; // Standard CalciteUI list item height
+            child.style.height = 'auto';
+
+            // Trigger reflow for each item
+            child.offsetHeight;
+
+            // Force CalciteUI list item update
+            if (typeof child.requestUpdate === 'function') {
+              child.requestUpdate();
+            }
+          }
+        });
+
+        // Final height override if still 0
+        setTimeout(() => {
+          const finalHeight = parseFloat(window.getComputedStyle(vehicleList).height);
+          if (finalHeight === 0 && vehicleList.children.length > 0) {
+            console.warn('🚛 Final height override - calculating manual height');
+            const itemCount = vehicleList.children.length;
+            const estimatedHeight = itemCount * 56; // 56px per item (standard CalciteUI)
+            vehicleList.style.height = `${estimatedHeight}px`;
+            vehicleList.style.minHeight = `${estimatedHeight}px`;
+          }
+        }, 100);
+      }
+
+      // Reset some properties to let CalciteUI manage them
+      vehicleList.style.removeProperty('visibility');
+      vehicleList.style.removeProperty('display');
+      vehicleList.style.removeProperty('opacity');
+
+      // Final visibility check
+      if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+        console.warn('🚛 Vehicle list still hidden after force visibility - applying final override');
+        vehicleList.style.display = 'block !important';
+        vehicleList.style.visibility = 'visible !important';
+        vehicleList.style.opacity = '1 !important';
+      }
+    });
+  }
+
+  // Force CalciteUI components to render their Shadow DOM properly
+  async forceCalciteListRendering(vehicleList) {
+    if (!vehicleList) return;
+
+    console.log('🚛 Forcing CalciteUI components to render properly...');
+
+    // Force the container to be visible
+    const container = document.getElementById('simple-vehicle-list');
+    if (container) {
+      container.style.visibility = 'visible';
+      container.style.display = 'flex';
+      container.style.minHeight = '200px';
+    }
+
+    // Force the list to be visible and have dimensions
+    vehicleList.style.visibility = 'visible';
+    vehicleList.style.display = 'block';
+    vehicleList.style.minHeight = '150px';
+    vehicleList.style.height = 'auto';
+
+    // Force list items to render
+    const items = Array.from(vehicleList.children);
+    items.forEach((item, index) => {
+      item.style.visibility = 'visible';
+      item.style.display = 'block';
+      item.style.minHeight = '48px';
+      item.style.height = 'auto';
+
+      // Force CalciteUI component to update if method exists
+      if (typeof item.requestUpdate === 'function') {
+        item.requestUpdate();
+      }
+    });
+
+    // Force the main list component to update
+    if (typeof vehicleList.requestUpdate === 'function') {
+      vehicleList.requestUpdate();
+    }
+
+    // Wait a moment for CalciteUI to process
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Final check and force rendering
+    requestAnimationFrame(() => {
+      const rect = vehicleList.getBoundingClientRect();
+      const computedStyle = window.getComputedStyle(vehicleList);
+
+      console.log('🚛 After forced rendering:', {
+        height: rect.height,
+        width: rect.width,
+        display: computedStyle.display,
+        visibility: computedStyle.visibility,
+        childCount: vehicleList.children.length
+      });
+
+      // If still not visible, apply nuclear option
+      if (rect.height === 0 || computedStyle.visibility === 'hidden') {
+        console.log('🚛 Applying nuclear CalciteUI visibility fix...');
+        vehicleList.style.cssText = `
+          visibility: visible !important;
+          display: block !important;
+          min-height: 150px !important;
+          height: auto !important;
+          opacity: 1 !important;
+          overflow-y: auto !important;
+          border: 1px solid var(--calcite-color-border-2) !important;
+          border-radius: var(--calcite-border-radius) !important;
+          background: var(--calcite-color-background) !important;
+        `;
+
+        // Force each item to be visible
+        items.forEach(item => {
+          item.style.cssText = `
+            visibility: visible !important;
+            display: block !important;
+            min-height: 48px !important;
+            height: auto !important;
+            opacity: 1 !important;
+          `;
+        });
+      }
+    });
   }
 
   // DEBUG: Force test the vehicle list with real cached data
@@ -984,7 +1110,7 @@ class LayerPanel {
         }
 
         console.log('🚛 DEBUG: Processed vehicles for display:', testVehicles.length);
-        this.displayVehicleList(testVehicles);
+        await this.displayVehicleList(testVehicles);
       } else {
         console.log('🚛 DEBUG: No cached data available, using simple mock data');
         const mockVehicles = [
@@ -1002,20 +1128,34 @@ class LayerPanel {
             typeIcon: 'car'
           }
         ];
-        this.displayVehicleList(mockVehicles);
+        await this.displayVehicleList(mockVehicles);
       }
     } catch (error) {
       console.error('🚛 DEBUG: Error in testVehicleList:', error);
     }
   }
 
-  populateVehicleList(vehicles) {
+  async populateVehicleList(vehicles) {
     console.log('🚛 populateVehicleList called with vehicles:', vehicles?.length || 0);
     const vehicleList = document.getElementById('vehicle-list');
     if (!vehicleList) {
       console.error('🚛 Vehicle list element not found!');
       return;
     }
+
+    // Wait for CalciteUI list component to be ready
+    if (customElements.get('calcite-list')) {
+      await customElements.whenDefined('calcite-list');
+    }
+
+    // Debug visibility
+    console.log('🚛 Vehicle list visibility before:', {
+      hidden: vehicleList.hidden,
+      display: window.getComputedStyle(vehicleList).display,
+      visibility: window.getComputedStyle(vehicleList).visibility,
+      opacity: window.getComputedStyle(vehicleList).opacity,
+      height: window.getComputedStyle(vehicleList).height
+    });
 
     // Validate vehicles array
     if (!Array.isArray(vehicles)) {
@@ -1031,6 +1171,12 @@ class LayerPanel {
         // Validate vehicle data to prevent CalciteUI errors
         if (!vehicle || typeof vehicle !== 'object') {
           console.warn('🚛 Skipping invalid vehicle data at index', index, vehicle);
+          return;
+        }
+
+        // Ensure CalciteUI is loaded before creating components
+        if (!customElements.get('calcite-list-item')) {
+          console.error('🚛 CalciteUI components not yet defined');
           return;
         }
 
@@ -1055,18 +1201,10 @@ class LayerPanel {
         const safeLabel = String(vehicleName || 'Vehicle').trim();
         const safeDescription = String(`${installer} • ${safeStatus}`).trim();
 
-        // Validate that we have actual content before setting attributes
-        if (safeLabel && safeLabel !== 'undefined' && safeLabel !== 'null') {
-          listItem.setAttribute('label', safeLabel);
-        } else {
-          listItem.setAttribute('label', 'Vehicle');
-        }
-
-        if (safeDescription && safeDescription !== 'undefined • undefined' && safeDescription !== 'null • null') {
-          listItem.setAttribute('description', safeDescription);
-        } else {
-          listItem.setAttribute('description', 'Vehicle Information');
-        }
+        // Use properties instead of setAttribute for CalciteUI components
+        // This is the recommended approach and avoids internal CalciteUI processing errors
+        listItem.label = safeLabel || 'Vehicle';
+        listItem.description = safeDescription || 'Vehicle Information';
 
         // Add vehicle type icon with strict validation
         const typeIcon = document.createElement('calcite-icon');
@@ -1075,23 +1213,26 @@ class LayerPanel {
           ? vehicle.typeIcon.trim()
           : 'car'; // Default icon
 
-        // Ensure icon name is valid and not undefined/null
-        const safeIconName = String(iconName || 'car').trim();
-        if (safeIconName && safeIconName !== 'undefined' && safeIconName !== 'null') {
-          typeIcon.setAttribute('icon', safeIconName);
-        } else {
-          typeIcon.setAttribute('icon', 'car');
-        }
+        // Use properties for CalciteUI icon component
+        typeIcon.icon = iconName || 'car';
         typeIcon.className = 'vehicle-type-icon';
         listItem.appendChild(typeIcon);
 
-        // Add status indicator with strict validation
+        // Add status indicator using properties
         const statusIcon = document.createElement('calcite-icon');
         statusIcon.slot = 'content-end';
-        statusIcon.setAttribute('scale', 's');
+        statusIcon.scale = 's';
 
-        // Safe status class name generation
-        const safeStatusForClass = String(safeStatus || 'unknown').toLowerCase().replace(/[^a-z]/g, '');
+        // Safe status class name generation - ensure replace is called on a valid string
+        let safeStatusForClass = 'unknown';
+        try {
+          const statusStr = String(safeStatus || 'unknown');
+          if (statusStr && typeof statusStr.replace === 'function') {
+            safeStatusForClass = statusStr.toLowerCase().replace(/[^a-z]/g, '');
+          }
+        } catch (err) {
+          console.warn('🚛 Error processing status class:', err);
+        }
         statusIcon.className = `vehicle-status-${safeStatusForClass}`;
 
         // Determine status icon based on safe status
@@ -1102,9 +1243,8 @@ class LayerPanel {
           statusIconName = 'circle-filled';
         }
 
-        // Ensure status icon name is valid
-        const safeStatusIconName = String(statusIconName || 'circle').trim();
-        statusIcon.setAttribute('icon', safeStatusIconName);
+        // Use property for status icon
+        statusIcon.icon = statusIconName || 'circle';
         listItem.appendChild(statusIcon);
 
         // Add click handler to zoom to vehicle
@@ -1120,12 +1260,51 @@ class LayerPanel {
         }
 
       } catch (error) {
+        // Log error details but continue processing other vehicles
         console.error('🚛 Error creating list item for vehicle', index, ':', error);
         console.error('🚛 Vehicle data:', vehicle);
+
+        // If CalciteUI error, try to provide more context
+        if (error.message && error.message.includes('replace')) {
+          console.error('🚛 CalciteUI string processing error - likely an undefined value passed to component');
+        }
       }
     });
 
     console.log('🚛 populateVehicleList completed, total items added:', vehicles.length);
+
+    // Force CalciteUI list to be visible after populating
+    // This is a workaround for CalciteUI visibility issue in production
+    // The issue is that CalciteUI sometimes doesn't properly handle visibility
+    // when the list is initially hidden and then populated
+    requestAnimationFrame(() => {
+      if (vehicleList && vehicleList.children.length > 0) {
+        // Reset all visibility-related styles
+        vehicleList.style.removeProperty('visibility');
+        vehicleList.style.removeProperty('display');
+        vehicleList.style.removeProperty('opacity');
+
+        // Force CalciteUI to recalculate layout
+        vehicleList.offsetHeight; // Trigger reflow
+
+        // Ensure the list container is also visible
+        const listContainer = vehicleList.closest('#vehicle-list-content > div');
+        if (listContainer) {
+          listContainer.style.removeProperty('visibility');
+          listContainer.style.removeProperty('display');
+        }
+      }
+    });
+
+    // Debug visibility after
+    console.log('🚛 Vehicle list visibility after:', {
+      hidden: vehicleList.hidden,
+      display: window.getComputedStyle(vehicleList).display,
+      visibility: window.getComputedStyle(vehicleList).visibility,
+      opacity: window.getComputedStyle(vehicleList).opacity,
+      height: window.getComputedStyle(vehicleList).height,
+      childCount: vehicleList.children.length
+    });
   }
 
   getVehicleStatus(vehicle) {
@@ -1198,6 +1377,33 @@ class LayerPanel {
 
     console.log('🚛 Setting up vehicle list event listeners...');
 
+    // Add listener for vehicle list block expansion
+    const vehicleListBlock = document.getElementById('vehicle-list-block');
+    if (vehicleListBlock) {
+      // Listen for both the standard event and attribute changes
+      vehicleListBlock.addEventListener('calciteBlockToggle', async (e) => {
+        console.log('🚛 Vehicle list block toggled, expanded:', e.target.expanded);
+        if (e.target.expanded) {
+          await this.loadVehicleList();
+        }
+      });
+
+      // Also observe attribute changes as a fallback
+      let isLoadingFromObserver = false;
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach(async (mutation) => {
+          if (mutation.attributeName === 'expanded' && vehicleListBlock.hasAttribute('expanded') && !isLoadingFromObserver && !this.isLoadingVehicleList) {
+            isLoadingFromObserver = true;
+            console.log('🚛 Vehicle list block expanded via attribute change');
+            await this.loadVehicleList();
+            isLoadingFromObserver = false;
+          }
+        });
+      });
+      observer.observe(vehicleListBlock, { attributes: true });
+      console.log('🚛 Vehicle list block listeners added');
+    }
+
     // Search functionality
     const searchInput = document.getElementById('vehicle-search');
     if (searchInput) {
@@ -1210,33 +1416,14 @@ class LayerPanel {
       console.log('🚛 Search input not found');
     }
 
-    // Load vehicle list when block is expanded
-    const vehicleListBlock = document.getElementById('vehicle-list-block');
-    if (vehicleListBlock) {
-      vehicleListBlock.addEventListener('calciteBlockToggle', (e) => {
-        console.log('🚛 Vehicle list block toggled!');
-        console.log('🚛 Toggle event detail:', e.detail);
-        console.log('🚛 Block is open:', e.detail?.open);
-
-        // Check the actual element state instead of relying on event detail
-        const isOpen = vehicleListBlock.hasAttribute('expanded') || vehicleListBlock.expanded === true;
-        console.log('🚛 Block actual state (expanded):', isOpen);
-        console.log('🚛 Block attributes:', {
-          hasExpandedAttribute: vehicleListBlock.hasAttribute('expanded'),
-          expandedProperty: vehicleListBlock.expanded,
-          collapsed: vehicleListBlock.collapsed
-        });
-
-        if (isOpen) {
-          console.log('🚛 Block opened - calling loadVehicleList()');
-          this.loadVehicleList();
-        } else {
-          console.log('🚛 Block closed');
-        }
+    // Add refresh button listener
+    const refreshBtn = document.getElementById('refresh-vehicle-list');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
+        console.log('🚛 Refresh button clicked');
+        await this.loadVehicleList();
       });
-      console.log('🚛 Vehicle list block listener added');
-    } else {
-      console.log('🚛 Vehicle list block not found');
+      console.log('🚛 Refresh button listener added');
     }
   }
 
@@ -4720,7 +4907,7 @@ class PWAInstaller {
 }
 
 // Initialize the application when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Initialize PWA installer
   const pwaInstaller = new PWAInstaller();
   pwaInstaller.init();
@@ -4751,6 +4938,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
+  // Debug CalciteUI components before starting the app
+  await debugCalciteUIComponents();
+
   // Start the main application
   window.app = new Application();
 
@@ -4770,6 +4960,21 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('🚛 Error in testVehicleList:', error);
       return `Error: ${error.message}`;
     }
+  };
+
+  // Quick CalciteUI verification command for production
+  window.verifyCalciteUI = function () {
+    const components = ['calcite-list', 'calcite-list-item', 'calcite-icon', 'calcite-button'];
+    const results = {};
+
+    console.log('🔍 CalciteUI Production Verification:');
+    components.forEach(component => {
+      const isRegistered = !!customElements.get(component);
+      results[component] = isRegistered;
+      console.log(`${isRegistered ? '✅' : '❌'} ${component}: ${isRegistered ? 'registered' : 'NOT registered'}`);
+    });
+
+    return results;
   };
 
   // Simple production-friendly debug function
@@ -4996,6 +5201,486 @@ document.addEventListener('DOMContentLoaded', () => {
       return `Debug error: ${error.message}`;
     }
   };
+
+  // Enhanced production debug function for vehicle list issues
+  window.debugVehicleListProduction = async function () {
+    console.log('🚛 === PRODUCTION VEHICLE LIST DEBUG ===');
+
+    // 1. Environment and build info
+    const env = {
+      isDev: import.meta.env.DEV,
+      isProd: import.meta.env.PROD,
+      mode: import.meta.env.MODE,
+      origin: window.location.origin,
+      pathname: window.location.pathname,
+      userAgent: navigator.userAgent.substring(0, 100)
+    };
+    console.log('Environment:', env);
+
+    // 2. Check CalciteUI asset path
+    console.log('CalciteUI asset path:', {
+      isProduction: import.meta.env.PROD,
+      expectedPath: import.meta.env.PROD ? window.location.origin + '/calcite/assets' : '/node_modules/@esri/calcite-components/dist/calcite/assets'
+    });
+
+    // 3. Test CalciteUI component definitions
+    const calciteComponents = [
+      'calcite-list',
+      'calcite-list-item',
+      'calcite-icon',
+      'calcite-block',
+      'calcite-dialog',
+      'calcite-switch'
+    ];
+
+    console.log('CalciteUI Component Status:');
+    for (const component of calciteComponents) {
+      const defined = customElements.get(component);
+      console.log(`  ${component}: ${defined ? 'DEFINED ✅' : 'NOT DEFINED ❌'}`);
+    }
+
+    // 4. Test asset loading
+    try {
+      // Test loading a common CalciteUI icon
+      const testIcon = document.createElement('calcite-icon');
+      testIcon.setAttribute('icon', 'circle');
+      testIcon.style.position = 'absolute';
+      testIcon.style.top = '-9999px';
+      document.body.appendChild(testIcon);
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const iconLoaded = testIcon.shadowRoot && testIcon.shadowRoot.querySelector('svg');
+      console.log('CalciteUI Icon Test:', iconLoaded ? 'LOADED ✅' : 'FAILED ❌');
+
+      testIcon.remove();
+    } catch (error) {
+      console.log('CalciteUI Icon Test: ERROR ❌', error.message);
+    }
+
+    // 5. Check DOM elements
+    const elements = ['vehicle-list', 'vehicle-list-loading', 'vehicle-list-empty', 'vehicle-list-block'];
+    console.log('DOM Elements:');
+    elements.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        const styles = window.getComputedStyle(el);
+        console.log(`  ${id}:`, {
+          exists: true,
+          hidden: el.hidden,
+          display: styles.display,
+          visibility: styles.visibility,
+          opacity: styles.opacity,
+          height: styles.height,
+          children: el.children.length,
+          hasContent: el.innerHTML.length > 0
+        });
+      } else {
+        console.log(`  ${id}: NOT FOUND ❌`);
+      }
+    });
+
+    // 6. Check application state
+    const appState = {
+      app: !!window.app,
+      layerManager: !!window.app?.services?.layerManager,
+      layerPanel: !!window.app?.services?.layerPanel,
+      geotabService: !!window.geotabService,
+      isLoadingVehicleList: window.app?.services?.layerPanel?.isLoadingVehicleList
+    };
+    console.log('Application State:', appState);
+
+    // 7. Check vehicle data
+    if (window.app?.services?.layerManager) {
+      const layers = ['fiber-trucks', 'electric-trucks'];
+      console.log('Vehicle Layers:');
+      layers.forEach(layerId => {
+        const layer = window.app.services.layerManager.getLayer(layerId);
+        console.log(`  ${layerId}:`, {
+          exists: !!layer,
+          hasSource: !!layer?.source,
+          itemCount: layer?.source?.items?.length || 0,
+          visible: layer?.visible,
+          type: layer?.type
+        });
+      });
+    }
+
+    // 8. Check GeotabService
+    try {
+      const geotabModule = await import('./services/GeotabService.js');
+      const geotabService = geotabModule.geotabService;
+      const status = geotabService.getStatus();
+      console.log('GeotabService:', {
+        status: status,
+        lastTruckData: geotabService.lastTruckData,
+        authenticated: geotabService.isAuthenticated
+      });
+    } catch (error) {
+      console.log('GeotabService: ERROR ❌', error.message);
+    }
+
+    // 9. Test vehicle list loading
+    console.log('Testing vehicle list loading...');
+    if (window.app?.services?.layerPanel) {
+      try {
+        await window.app.services.layerPanel.loadVehicleList();
+        console.log('Vehicle list loading test: COMPLETED ✅');
+      } catch (error) {
+        console.log('Vehicle list loading test: ERROR ❌', error.message);
+      }
+    }
+
+    // 10. Force vehicle list visibility
+    console.log('Force showing vehicle list...');
+    const vehicleList = document.getElementById('vehicle-list');
+    const vehicleListBlock = document.getElementById('vehicle-list-block');
+
+    if (vehicleList && vehicleListBlock) {
+      // Force expand the block
+      vehicleListBlock.expanded = true;
+      vehicleListBlock.setAttribute('expanded', '');
+
+      // Force show the list
+      vehicleList.hidden = false;
+      vehicleList.style.display = 'block';
+      vehicleList.style.visibility = 'visible';
+      vehicleList.style.opacity = '1';
+
+      // Create test content if empty
+      if (vehicleList.children.length === 0) {
+        const testItem = document.createElement('calcite-list-item');
+        testItem.setAttribute('label', 'Test Vehicle');
+        testItem.setAttribute('description', 'This is a test vehicle item');
+        vehicleList.appendChild(testItem);
+      }
+
+      console.log('Force visibility applied to vehicle list');
+    }
+
+    console.log('🚛 === DEBUG COMPLETE ===');
+    return 'Production debug completed - check console for detailed results';
+  };
+
+  // Function to test CalciteUI component creation in isolation
+  window.testCalciteUIComponents = async function () {
+    console.log('🧪 Testing CalciteUI Component Creation...');
+
+    try {
+      // Wait for components to be defined
+      await customElements.whenDefined('calcite-list');
+      await customElements.whenDefined('calcite-list-item');
+      await customElements.whenDefined('calcite-icon');
+
+      // Create test container
+      const testContainer = document.createElement('div');
+      testContainer.id = 'calcite-test-container';
+      testContainer.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: white; padding: 20px; border: 1px solid #ccc; max-width: 300px;';
+
+      // Create test list
+      const testList = document.createElement('calcite-list');
+      testList.setAttribute('selection-mode', 'none');
+
+      // Create test items
+      for (let i = 0; i < 3; i++) {
+        const listItem = document.createElement('calcite-list-item');
+        listItem.setAttribute('label', `Test Item ${i + 1}`);
+        listItem.setAttribute('description', `Test description ${i + 1}`);
+
+        const icon = document.createElement('calcite-icon');
+        icon.setAttribute('icon', 'circle');
+        icon.setAttribute('slot', 'content-start');
+        listItem.appendChild(icon);
+
+        testList.appendChild(listItem);
+      }
+
+      testContainer.appendChild(testList);
+      document.body.appendChild(testContainer);
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        testContainer.remove();
+      }, 5000);
+
+      console.log('✅ CalciteUI test components created successfully');
+      return 'CalciteUI components working - test UI added to top-right corner';
+
+    } catch (error) {
+      console.error('❌ CalciteUI component test failed:', error);
+      return `CalciteUI component test failed: ${error.message}`;
+    }
+  };
+
+  // Function to diagnose CalciteUI asset loading issues
+  window.diagnoseCalciteUIAssets = async function () {
+    console.log('🔍 Diagnosing CalciteUI Asset Issues...');
+
+    // Test asset paths
+    const isProduction = import.meta.env.PROD;
+    const expectedAssetPath = isProduction ? window.location.origin + '/calcite/assets' : '/node_modules/@esri/calcite-components/dist/calcite/assets';
+
+    console.log('Asset path configuration:', {
+      isProduction,
+      expectedAssetPath,
+      origin: window.location.origin
+    });
+
+    // Test specific asset files
+    const testAssets = [
+      'icon/circle16.json',
+      'icon/circle24.json',
+      'icon/circle32.json',
+      't9n/en.json'
+    ];
+
+    const assetResults = {};
+    for (const asset of testAssets) {
+      const assetUrl = `${expectedAssetPath}/${asset}`;
+      try {
+        const response = await fetch(assetUrl);
+        assetResults[asset] = {
+          status: response.status,
+          ok: response.ok,
+          url: assetUrl
+        };
+        console.log(`Asset ${asset}: ${response.ok ? '✅ OK' : '❌ FAILED'} (${response.status})`);
+      } catch (error) {
+        assetResults[asset] = {
+          status: 'ERROR',
+          ok: false,
+          url: assetUrl,
+          error: error.message
+        };
+        console.log(`Asset ${asset}: ❌ ERROR - ${error.message}`);
+      }
+    }
+
+    // Check if CalciteUI components are properly defined
+    const components = ['calcite-list', 'calcite-list-item', 'calcite-icon'];
+    const componentStatus = {};
+
+    for (const component of components) {
+      const defined = customElements.get(component);
+      componentStatus[component] = !!defined;
+      console.log(`Component ${component}: ${defined ? '✅ DEFINED' : '❌ NOT DEFINED'}`);
+    }
+
+    // Generate troubleshooting report
+    const hasAssetFailures = Object.values(assetResults).some(result => !result.ok);
+    const hasComponentFailures = Object.values(componentStatus).some(status => !status);
+
+    console.log('📊 DIAGNOSIS SUMMARY:');
+    console.log(`Asset Loading: ${hasAssetFailures ? '❌ ISSUES FOUND' : '✅ OK'}`);
+    console.log(`Component Definitions: ${hasComponentFailures ? '❌ ISSUES FOUND' : '✅ OK'}`);
+
+    if (hasAssetFailures) {
+      console.log('💡 SUGGESTED FIXES:');
+      console.log('1. Check network connectivity');
+      console.log('2. Verify Vite build copied assets to /calcite/assets/');
+      console.log('3. Check service worker cache');
+      console.log('4. Try hard refresh (Ctrl+Shift+R)');
+      console.log('5. Clear browser cache and storage');
+    }
+
+    return {
+      assetResults,
+      componentStatus,
+      hasAssetFailures,
+      hasComponentFailures,
+      recommendations: hasAssetFailures ? [
+        'Check network connectivity',
+        'Verify Vite build copied assets to /calcite/assets/',
+        'Check service worker cache',
+        'Try hard refresh (Ctrl+Shift+R)',
+        'Clear browser cache and storage'
+      ] : ['No issues found']
+    };
+  };
+
+  // Function to force-fix vehicle list visibility (last resort)
+  window.forceFixVehicleList = function () {
+    console.log('🔧 Force-fixing vehicle list visibility and height...');
+
+    const vehicleList = document.getElementById('vehicle-list');
+    const vehicleListBlock = document.getElementById('vehicle-list-block');
+    const vehicleListContent = document.getElementById('vehicle-list-content');
+
+    if (!vehicleList || !vehicleListBlock) {
+      console.error('❌ Vehicle list elements not found');
+      return 'Vehicle list elements not found';
+    }
+
+    // Check current state
+    const currentStyle = window.getComputedStyle(vehicleList);
+    console.log('🔧 Current vehicle list state:', {
+      height: currentStyle.height,
+      display: currentStyle.display,
+      visibility: currentStyle.visibility,
+      childCount: vehicleList.children.length
+    });
+
+    // Force expand block
+    vehicleListBlock.expanded = true;
+    vehicleListBlock.setAttribute('expanded', '');
+    vehicleListBlock.style.setProperty('--calcite-block-content-display', 'block', 'important');
+
+    // Force show list
+    vehicleList.hidden = false;
+    vehicleList.removeAttribute('hidden');
+    vehicleList.style.setProperty('display', 'block', 'important');
+    vehicleList.style.setProperty('visibility', 'visible', 'important');
+    vehicleList.style.setProperty('opacity', '1', 'important');
+    vehicleList.style.setProperty('height', 'auto', 'important');
+    vehicleList.style.setProperty('min-height', 'min-content', 'important');
+    vehicleList.style.setProperty('max-height', 'none', 'important');
+
+    // Force show content container
+    if (vehicleListContent) {
+      vehicleListContent.style.setProperty('display', 'block', 'important');
+      vehicleListContent.style.setProperty('visibility', 'visible', 'important');
+      vehicleListContent.style.setProperty('opacity', '1', 'important');
+    }
+
+    // Add some test content if empty
+    if (vehicleList.children.length === 0) {
+      const testItem = document.createElement('calcite-list-item');
+      testItem.setAttribute('label', 'Force Fix Test');
+      testItem.setAttribute('description', 'Vehicle list visibility has been force-fixed');
+      vehicleList.appendChild(testItem);
+    }
+
+    // Force height calculation if needed
+    setTimeout(() => {
+      const finalStyle = window.getComputedStyle(vehicleList);
+      const finalHeight = parseFloat(finalStyle.height);
+
+      console.log('🔧 After force fix:', {
+        height: finalStyle.height,
+        display: finalStyle.display,
+        visibility: finalStyle.visibility,
+        childCount: vehicleList.children.length
+      });
+
+      // If height is still 0, calculate manual height
+      if (finalHeight === 0 && vehicleList.children.length > 0) {
+        const itemCount = vehicleList.children.length;
+        const calculatedHeight = itemCount * 56; // 56px per CalciteUI list item
+        vehicleList.style.setProperty('height', `${calculatedHeight}px`, 'important');
+        vehicleList.style.setProperty('min-height', `${calculatedHeight}px`, 'important');
+
+        console.log(`🔧 Applied manual height: ${calculatedHeight}px for ${itemCount} items`);
+
+        // Force each child to be visible
+        Array.from(vehicleList.children).forEach(child => {
+          if (child.tagName === 'CALCITE-LIST-ITEM') {
+            child.style.setProperty('display', 'flex', 'important');
+            child.style.setProperty('min-height', '56px', 'important');
+            child.style.setProperty('height', 'auto', 'important');
+          }
+        });
+      }
+    }, 200);
+
+    console.log('✅ Vehicle list visibility and height force-fixed');
+    return 'Vehicle list visibility and height force-fixed - check the vehicles panel';
+  };
 });
+
+// Add this debug function before the LayerPanel class
+async function debugCalciteUIComponents() {
+  console.log('🔍 === CalciteUI Component Debug ===');
+
+  // Check environment
+  console.log('🌍 Environment:', {
+    isDev: import.meta.env.DEV,
+    isProd: import.meta.env.PROD,
+    mode: import.meta.env.MODE
+  });
+
+  // Check if CalciteUI is loaded
+  console.log('📦 CalciteUI Package Check:', {
+    hasCalciteComponents: !!window.CalciteComponents,
+    customElementsRegistry: !!window.customElements,
+    customElementsCount: window.customElements ? Object.keys(window.customElements).length : 0
+  });
+
+  // List of components we need
+  const requiredComponents = [
+    'calcite-list',
+    'calcite-list-item',
+    'calcite-icon',
+    'calcite-button',
+    'calcite-shell',
+    'calcite-panel',
+    'calcite-block'
+  ];
+
+  console.log('🧩 Component Registration Status:');
+  const componentStatus = {};
+
+  for (const component of requiredComponents) {
+    const isDefined = customElements.get(component);
+    componentStatus[component] = {
+      isDefined: !!isDefined,
+      constructor: isDefined ? isDefined.name : 'undefined'
+    };
+
+    if (isDefined) {
+      console.log(`✅ ${component}: registered (${isDefined.name})`);
+    } else {
+      console.log(`❌ ${component}: NOT registered`);
+    }
+  }
+
+  // Try to create test components
+  console.log('🧪 Component Creation Test:');
+  try {
+    const testList = document.createElement('calcite-list');
+    const testItem = document.createElement('calcite-list-item');
+    const testIcon = document.createElement('calcite-icon');
+
+    console.log('✅ Component creation successful:', {
+      list: testList.tagName,
+      listItem: testItem.tagName,
+      icon: testIcon.tagName
+    });
+
+    // Test setting properties
+    testItem.label = 'Test Label';
+    testItem.description = 'Test Description';
+    testIcon.icon = 'information';
+
+    console.log('✅ Property setting successful');
+
+  } catch (error) {
+    console.error('❌ Component creation failed:', error);
+  }
+
+  // Check for any CalciteUI errors in console
+  const originalError = console.error;
+  const calciteErrors = [];
+  console.error = function (...args) {
+    if (args.some(arg => String(arg).toLowerCase().includes('calcite'))) {
+      calciteErrors.push(args);
+    }
+    originalError.apply(console, args);
+  };
+
+  // Wait a moment to capture any errors
+  setTimeout(() => {
+    console.error = originalError;
+    if (calciteErrors.length > 0) {
+      console.log('🚨 CalciteUI Errors Found:', calciteErrors);
+    } else {
+      console.log('✅ No CalciteUI errors detected');
+    }
+  }, 1000);
+
+  return componentStatus;
+}
+
+// Add this to be called when the app loads
+window.debugCalciteUI = debugCalciteUIComponents;
 
 

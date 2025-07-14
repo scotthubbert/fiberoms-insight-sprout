@@ -1794,6 +1794,38 @@ calcite-dialog.mobile-only calcite-block {
 }
 
 /* Webkit scrollbar styling for Chromium browsers */
+/* Simple vehicle list styling - flexible height */
+#simple-vehicle-list {
+  height: calc(100vh - 300px); /* Adjust based on available space */
+  min-height: 200px;
+  max-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+}
+
+#vehicle-list {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--calcite-color-border-2);
+  border-radius: var(--calcite-border-radius);
+  background: var(--calcite-color-background);
+  min-height: 150px;
+}
+
+#vehicle-list calcite-list-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#vehicle-list calcite-list-item:hover {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+.vehicle-type-icon {
+  color: var(--calcite-color-brand);
+}
+
+/* Scrollbar styling for vehicle list */
 #vehicle-list::-webkit-scrollbar {
   width: 8px;
 }
@@ -1812,45 +1844,22 @@ calcite-dialog.mobile-only calcite-block {
   background: var(--calcite-color-border-2);
 }
 
-#vehicle-list calcite-list-item {
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-#vehicle-list calcite-list-item:hover {
-  background-color: var(--calcite-color-foreground-2);
-}
-
-.vehicle-status-online {
-  color: var(--calcite-color-status-success);
-}
-
-.vehicle-status-offline {
-  color: var(--calcite-color-status-danger);
-}
-
-.vehicle-status-idle {
-  color: var(--calcite-color-status-warning);
-}
-
-.vehicle-type-icon {
-  color: var(--calcite-color-brand);
-}
-
-/* Vehicle list search styling */
-#vehicle-search-container {
-  /* Search container is now part of the vehicle list content box */
-}
-
-/* Mobile adjustments for vehicle list */
+/* Mobile adjustments */
 @media (max-width: 768px) {
-  /* Vehicle list container height adjustment for mobile */
-  #vehicle-list-content > div:nth-child(2) {
-    height: 280px !important; /* Slightly smaller on mobile */
+  #simple-vehicle-list {
+    height: calc(100vh - 400px); /* Account for mobile UI elements */
+    min-height: 150px;
   }
 
-  .vehicle-list-footer {
-    font-size: 11px !important;
+  #vehicle-list {
+    min-height: 120px;
+  }
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) and (min-width: 769px) {
+  #simple-vehicle-list {
+    height: calc(100vh - 350px);
   }
 }
 

@@ -145,42 +145,13 @@
             </calcite-label>
           </calcite-block>
 
-          <!-- Vehicle List - moved to second position -->
-          <calcite-block heading="Vehicle List" collapsible collapsed id="vehicle-list-block">
-            <calcite-icon slot="icon" icon="list"></calcite-icon>
-
-            <div id="vehicle-list-content" style="background: var(--calcite-color-foreground-2); border: 1px solid var(--calcite-color-border-2); border-radius: var(--calcite-border-radius); padding: 12px; margin: 12px 0;">
-              <div id="vehicle-search-container" style="margin-bottom: 12px;">
-                <calcite-input id="vehicle-search" type="search" placeholder="Search vehicles..." icon="search"
-                  scale="s" clearable>
-                </calcite-input>
-              </div>
-
-              <div style="background: var(--calcite-color-background); border: 1px solid var(--calcite-color-border-3); border-radius: var(--calcite-border-radius); height: 350px; overflow: hidden; display: flex; flex-direction: column;">
-                <div id="vehicle-list-loading" class="vehicle-list-state" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                  <calcite-loader scale="s"></calcite-loader>
-                  <p style="margin: 8px 0; text-align: center; color: var(--calcite-color-text-2);">Loading vehicles...</p>
-                </div>
-
-                <div id="vehicle-list-empty" class="vehicle-list-state" hidden style="flex: 1; display: flex; align-items: center; justify-content: center;">
-                  <div style="text-align: center; padding: 16px;">
-                    <calcite-icon icon="car" scale="m" style="color: var(--calcite-color-text-3);"></calcite-icon>
-                    <p style="margin: 8px 0; color: var(--calcite-color-text-2);">No vehicles found</p>
-                  </div>
-                </div>
-
-                <calcite-list id="vehicle-list" selection-mode="none" hidden style="flex: 1; overflow-y: auto; overflow-x: hidden; margin: 0;">
-                  <!-- Vehicle items will be populated here -->
-                </calcite-list>
-              </div>
-
-              <div id="vehicle-list-footer" class="vehicle-list-footer" hidden
-                style="margin-top: 12px; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--calcite-color-text-3);">
-                <small id="vehicle-count" style="flex-shrink: 0;">0 vehicles</small>
-                <small id="vehicle-last-updated" style="flex-shrink: 0; text-align: right;">Last updated: --</small>
-              </div>
-            </div>
-          </calcite-block>
+          <!-- Simple Vehicle List -->
+          <div id="simple-vehicle-list" style="margin-top: 12px;">
+            <calcite-list id="vehicle-list" selection-mode="none" filter-enabled
+              filter-placeholder="Filter vehicles by name or driver">
+              <!-- Vehicle items will be populated here -->
+            </calcite-list>
+          </div>
 
           <!-- Fleet Management - Commented out for now -->
           <!--
