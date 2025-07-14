@@ -4856,7 +4856,7 @@ class PWAInstaller {
     toast.id = 'update-toast';
     toast.setAttribute('open', '');
     toast.setAttribute('kind', 'info');
-    toast.setAttribute('placement', 'bottom');
+    toast.setAttribute('placement', 'top');
 
     // Create button programmatically to handle click properly
     const refreshButton = document.createElement('calcite-button');

@@ -55,11 +55,11 @@ export class LoadingIndicator {
     const styles = `
       .loading-indicator-container {
         position: fixed;
-        bottom: 20px;
+        top: 20px;
         right: 20px;
         z-index: 1000;
         display: flex;
-        flex-direction: column-reverse;
+        flex-direction: column;
         gap: 10px;
         max-width: 350px;
         width: calc(100% - 40px);
@@ -96,7 +96,7 @@ export class LoadingIndicator {
       /* Mobile-first responsive adjustments */
       @media (max-width: 768px) {
         .loading-indicator-container {
-          bottom: 10px;
+          top: 10px;
           right: 10px;
           left: 10px;
           width: auto;
@@ -107,7 +107,7 @@ export class LoadingIndicator {
       /* Adjust for smaller screens */
       @media (max-width: 480px) {
         .loading-indicator-container {
-          bottom: 5px;
+          top: 5px;
           right: 5px;
           left: 5px;
         }
