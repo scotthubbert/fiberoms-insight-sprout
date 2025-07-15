@@ -149,15 +149,14 @@
                 <calcite-button id="refresh-data" icon-start="refresh" scale="s" width="full">
                   Refresh Data
                 </calcite-button>
+                <calcite-button id="desktop-export-offline-csv-btn" icon-start="download" scale="s" width="full"
+                  appearance="outline">
+                  Export Offline CSV
+                </calcite-button>
               </div>
             </calcite-block>
 
-            <calcite-block heading="Fiber Outages" collapsible expanded>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Fiber Network Outages
-              </calcite-label>
-            </calcite-block>
+
           </div>
 
           <!-- OSP Content -->
@@ -263,10 +262,7 @@
                 Weather Radar
               </calcite-label>
             </calcite-block>
-            <calcite-block heading="Sketch Tools" collapsible expanded>
-              <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
-              <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
-            </calcite-block>
+
             <calcite-block heading="Measurement Tools" collapsible expanded>
               <calcite-button width="full" icon-start="measure-line" scale="s" id="distance-measurement-btn">Distance
                 Measurement</calcite-button>
@@ -491,7 +487,8 @@
         <calcite-block heading="Tools" expanded>
           <calcite-button width="full" icon-start="refresh" appearance="outline" id="refresh-subscriber-data">Refresh
             Data</calcite-button>
-          <calcite-button width="full" icon-start="download" appearance="outline">Export Offline CSV</calcite-button>
+          <calcite-button width="full" icon-start="download" appearance="outline" id="export-offline-csv-btn">Export
+            Offline CSV</calcite-button>
         </calcite-block>
       </div>
     </calcite-dialog>
@@ -559,7 +556,6 @@
         </calcite-block>
 
         <calcite-block heading="Tools" expanded>
-          <calcite-button width="full" icon-start="polygon" appearance="outline">Draw Outage Area</calcite-button>
           <calcite-button width="full" icon-start="rain" appearance="outline" id="mobile-radar-toggle">Weather
             Radar</calcite-button>
         </calcite-block>
@@ -624,10 +620,7 @@
           </calcite-list>
         </calcite-block>
 
-        <calcite-block heading="Sketch Tools" expanded>
-          <calcite-button width="full" icon-start="polygon" appearance="outline">Draw Outage Area</calcite-button>
-          <calcite-button width="full" icon-start="download" appearance="outline">Export CSV</calcite-button>
-        </calcite-block>
+
 
         <calcite-block heading="Offline Data Cache" expanded>
           <div id="mobile-cache-status" style="padding: 12px;">

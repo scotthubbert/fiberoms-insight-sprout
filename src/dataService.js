@@ -416,6 +416,70 @@ export class SubscriberDataService {
         }
     }
 
+    // Get all subscribers (online and offline) for CSV export
+    async getAllSubscribers() {
+        const cacheKey = 'all_subscribers'
+
+        // Return cached data if valid
+        if (this.isCacheValid(cacheKey)) {
+            return this.getCache(cacheKey)
+        }
+
+        try {
+            log.info('📡 Fetching all subscribers from Supabase...')
+
+            // Select all fields for CSV export
+            const { data, error, count } = await supabase
+                .from('mfs')
+                .select('*', { count: 'exact' })
+
+            if (isDevelopment) {
+                log.info('📊 All subscribers response:')
+                log.info('- Count:', count)
+                log.info('- Data length:', data?.length || 0)
+                log.info('- Error:', error)
+            }
+
+            if (error) {
+                log.error('❌ Error fetching all subscribers:', error)
+                throw error
+            }
+
+            if (!data || data.length === 0) {
+                log.warn('⚠️ No subscribers found in database')
+                return []
+            }
+
+            // Sort by TA5K column for better organization
+            const sortedData = data.sort((a, b) => {
+                const ta5kA = (a.TA5K || '').toString().toLowerCase()
+                const ta5kB = (b.TA5K || '').toString().toLowerCase()
+
+                // Handle empty/null values - put them at the end
+                if (!ta5kA && !ta5kB) return 0
+                if (!ta5kA) return 1
+                if (!ta5kB) return -1
+
+                return ta5kA.localeCompare(ta5kB)
+            })
+
+            log.info(`📊 Retrieved ${sortedData.length} subscribers for CSV export`)
+
+            // Cache the result
+            this.setCache(cacheKey, sortedData)
+
+            return sortedData
+        } catch (error) {
+            log.error('Failed to fetch all subscribers:', error)
+            // Return cached data if available, even if expired
+            if (this.getCache(cacheKey)) {
+                const cachedData = this.getCache(cacheKey)
+                return cachedData
+            }
+            throw error
+        }
+    }
+
     // Get all subscribers with status breakdown
     async getSubscribersSummary() {
         const cacheKey = 'subscribers_summary'

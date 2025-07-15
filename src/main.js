@@ -14,6 +14,7 @@ import { RainViewerService } from './services/RainViewerService.js';
 import { subscriberDataService, pollingManager } from './dataService.js';
 import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConfigs.js';
 import { geotabService } from './services/GeotabService.js';
+import { CSVExportService } from './utils/csvExport.js';
 
 // Import components
 import './components/PowerOutageStats.js';
@@ -678,7 +679,6 @@ class LayerPanel {
           // Add click handler to zoom to vehicle
           listItem.style.cursor = 'pointer';
           listItem.addEventListener('click', () => {
-            console.log('🚛 Clicking vehicle:', vehicle.name);
             this.zoomToVehicle(vehicle);
           });
 
@@ -867,7 +867,6 @@ class LayerPanel {
           // Add click handler to zoom to vehicle
           listItem.style.cursor = 'pointer';
           listItem.addEventListener('click', () => {
-            console.log('🚛 Clicking vehicle:', vehicleName);
             this.zoomToVehicle(vehicle);
           });
 
@@ -1237,7 +1236,6 @@ class LayerPanel {
         statusIcon.icon = statusIconName || 'circle';
         listItem.appendChild(statusIcon);
 
-        // Add click handler to zoom to vehicle
         listItem.addEventListener('click', () => {
           this.zoomToVehicle(vehicle);
         });
@@ -1324,40 +1322,61 @@ class LayerPanel {
     }
   }
 
-  zoomToVehicle(vehicle) {
-    if (!vehicle.latitude || !vehicle.longitude) {
-      this.showVehicleNotification('Location not available for this vehicle', 'warning');
-      return;
-    }
+  async zoomToVehicle(vehicle) {
+    try {
+      const { geotabService } = await import('./services/GeotabService.js');
+      let currentVehicle = vehicle;
+      let dataSource = 'layer';
 
-    // Get the map view
-    const mapView = window.mapView;
-    if (!mapView) {
-      this.showVehicleNotification('Map not available', 'danger');
-      return;
-    }
+      if (geotabService?.lastTruckData && vehicle.id) {
+        const allTrucks = [
+          ...(geotabService.lastTruckData.fiber || []),
+          ...(geotabService.lastTruckData.electric || [])
+        ];
 
-    // Create point and zoom to it
-    import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
-      const point = new Point({
-        longitude: vehicle.longitude,
-        latitude: vehicle.latitude,
-        spatialReference: { wkid: 4326 }
+        const freshVehicleData = allTrucks.find(truck => truck.id === vehicle.id);
+
+        if (freshVehicleData && freshVehicleData.latitude && freshVehicleData.longitude) {
+          currentVehicle = freshVehicleData;
+          dataSource = 'api';
+        }
+      }
+
+      if (!currentVehicle.latitude || !currentVehicle.longitude) {
+        this.showVehicleNotification('Location not available for this vehicle', 'warning');
+        return;
+      }
+
+      const mapView = window.mapView;
+      if (!mapView) {
+        this.showVehicleNotification('Map not available', 'danger');
+        return;
+      }
+
+      import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
+        const point = new Point({
+          longitude: currentVehicle.longitude,
+          latitude: currentVehicle.latitude,
+          spatialReference: { wkid: 4326 }
+        });
+
+        mapView.goTo({
+          target: point,
+          zoom: 16
+        }).then(() => {
+          const vehicleName = currentVehicle.name || `${currentVehicle.type} Truck`;
+          const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
+          this.showVehicleNotification(`Zoomed to ${vehicleName} (${dataAge})`, 'success');
+        }).catch(error => {
+          console.error('Failed to zoom to vehicle:', error);
+          this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
+        });
       });
 
-      // Zoom to the vehicle location
-      mapView.goTo({
-        target: point,
-        zoom: 16
-      }).then(() => {
-        // Show success notification
-        const vehicleName = vehicle.name || `${vehicle.type} Truck`;
-        this.showVehicleNotification(`Zoomed to ${vehicleName}`, 'success');
-      }).catch(error => {
-        console.error('Failed to zoom to vehicle:', error);
-        this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
-      });
-    });
+    } catch (error) {
+      console.error('Error in zoomToVehicle:', error);
+      this.showVehicleNotification('Failed to get vehicle location', 'danger');
+    }
   }
 
   setupVehicleListEventListeners() {
@@ -1732,46 +1751,66 @@ class LayerPanel {
     return 'Location unknown';
   }
 
-  zoomToTruck(truck) {
-    if (!truck.latitude || !truck.longitude) {
-      this.showVehicleNotification('Location not available for this vehicle', 'warning');
-      return;
-    }
+  async zoomToTruck(truck) {
+    try {
+      const { geotabService } = await import('./services/GeotabService.js');
+      let currentTruck = truck;
+      let dataSource = 'layer';
 
-    // Get the map view
-    const mapView = window.mapView;
-    if (!mapView) {
-      this.showVehicleNotification('Map not available', 'danger');
-      return;
-    }
+      if (geotabService?.lastTruckData && truck.id) {
+        const allTrucks = [
+          ...(geotabService.lastTruckData.fiber || []),
+          ...(geotabService.lastTruckData.electric || [])
+        ];
 
-    // Create point and zoom to it
-    import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
-      const point = new Point({
-        longitude: truck.longitude,
-        latitude: truck.latitude,
-        spatialReference: { wkid: 4326 }
-      });
+        const freshTruckData = allTrucks.find(t => t.id === truck.id);
 
-      // Zoom to the truck location
-      mapView.goTo({
-        target: point,
-        zoom: 16
-      }).then(() => {
-        // Close the modal after zooming
-        const modal = document.getElementById('truck-table-modal');
-        if (modal) {
-          modal.open = false;
+        if (freshTruckData && freshTruckData.latitude && freshTruckData.longitude) {
+          currentTruck = freshTruckData;
+          dataSource = 'api';
         }
+      }
 
-        // Show success notification
-        const truckName = this.formatTruckName(truck);
-        this.showVehicleNotification(`Zoomed to ${truckName}`, 'success');
-      }).catch(error => {
-        console.error('Failed to zoom to truck:', error);
-        this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
+      if (!currentTruck.latitude || !currentTruck.longitude) {
+        this.showVehicleNotification('Location not available for this vehicle', 'warning');
+        return;
+      }
+
+      const mapView = window.mapView;
+      if (!mapView) {
+        this.showVehicleNotification('Map not available', 'danger');
+        return;
+      }
+
+      import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
+        const point = new Point({
+          longitude: currentTruck.longitude,
+          latitude: currentTruck.latitude,
+          spatialReference: { wkid: 4326 }
+        });
+
+        mapView.goTo({
+          target: point,
+          zoom: 16
+        }).then(() => {
+          const modal = document.getElementById('truck-table-modal');
+          if (modal) {
+            modal.open = false;
+          }
+
+          const truckName = this.formatTruckName(currentTruck);
+          const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
+          this.showVehicleNotification(`Zoomed to ${truckName} (${dataAge})`, 'success');
+        }).catch(error => {
+          console.error('Failed to zoom to truck:', error);
+          this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
+        });
       });
-    });
+
+    } catch (error) {
+      console.error('Error in zoomToTruck:', error);
+      this.showVehicleNotification('Failed to get vehicle location', 'danger');
+    }
   }
 
   filterTruckTable(searchTerm) {
@@ -4157,6 +4196,126 @@ class Application {
     }
   }
 
+  /**
+   * Setup CSV export functionality for offline subscribers
+   */
+  setupCSVExport() {
+    const desktopExportBtn = document.getElementById('desktop-export-offline-csv-btn');
+    if (desktopExportBtn) {
+      desktopExportBtn.addEventListener('click', async () => {
+        await this.handleCSVExport(desktopExportBtn);
+      });
+    }
+
+    const mobileExportBtn = document.getElementById('export-offline-csv-btn');
+    if (mobileExportBtn) {
+      mobileExportBtn.addEventListener('click', async () => {
+        await this.handleCSVExport(mobileExportBtn);
+      });
+    }
+  }
+
+  /**
+   * Handle CSV export with proper UI feedback
+   * @param {HTMLElement} button - The button that triggered the export
+   */
+  async handleCSVExport(button) {
+    if (!button) return;
+
+    const originalText = button.textContent;
+    const originalIcon = button.getAttribute('icon-start');
+
+    try {
+      button.setAttribute('loading', 'true');
+      button.textContent = 'Preparing Download...';
+      button.setAttribute('icon-start', 'loading');
+      button.disabled = true;
+
+      await CSVExportService.exportOfflineSubscribers();
+
+      button.removeAttribute('loading');
+      button.setAttribute('icon-start', 'check');
+      button.textContent = 'Download Complete!';
+      button.setAttribute('kind', 'success');
+      button.disabled = false;
+
+      this.showNotification('success', 'CSV downloaded successfully', 3000);
+
+      setTimeout(() => {
+        this.resetCSVButton(button, originalText, originalIcon);
+      }, 3000);
+
+    } catch (error) {
+      console.error('CSV download failed:', error);
+
+      button.removeAttribute('loading');
+      button.setAttribute('icon-start', 'exclamation-mark-triangle');
+      button.textContent = 'Download Failed';
+      button.setAttribute('kind', 'danger');
+      button.disabled = false;
+
+      this.showNotification('error', `CSV download failed: ${error.message}`, 5000);
+
+      setTimeout(() => {
+        this.resetCSVButton(button, originalText, originalIcon);
+      }, 5000);
+    }
+  }
+
+  /**
+   * Reset CSV button to original state
+   * @param {HTMLElement} button - The button to reset
+   * @param {string} originalText - Original button text
+   * @param {string} originalIcon - Original button icon
+   */
+  resetCSVButton(button, originalText, originalIcon) {
+    if (!button) return;
+
+    button.removeAttribute('loading');
+    button.removeAttribute('kind');
+    button.setAttribute('icon-start', originalIcon || 'download');
+    button.textContent = originalText || 'Export Offline CSV';
+    button.disabled = false;
+  }
+
+  /**
+   * Show notification to user
+   * @param {string} type - Notification type ('success', 'error', 'warning', 'info')
+   * @param {string} message - Notification message
+   * @param {number} duration - How long to show the notification in milliseconds
+   */
+  showNotification(type, message, duration = 5000) {
+    const notification = document.createElement('calcite-notice');
+    notification.setAttribute('kind', type);
+    notification.setAttribute('width', 'auto');
+    notification.setAttribute('scale', 'm');
+    notification.setAttribute('active', 'true');
+    notification.style.position = 'fixed';
+    notification.style.top = '80px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '9999';
+    notification.style.maxWidth = '400px';
+
+    const messageDiv = document.createElement('div');
+    messageDiv.slot = 'message';
+    messageDiv.textContent = message;
+    notification.appendChild(messageDiv);
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, duration);
+
+    notification.addEventListener('calciteNoticeClose', () => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    });
+  }
+
 
 
   async handleLayerToggle(element, checked) {
@@ -4446,6 +4605,8 @@ class Application {
         }
       });
     }
+
+    this.setupCSVExport();
 
     // Test button for subscriber updates in development
     const testSubscriberButton = document.getElementById('test-subscriber-update');
