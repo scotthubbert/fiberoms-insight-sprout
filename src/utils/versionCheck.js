@@ -12,21 +12,21 @@ export function initVersionCheck() {
     console.log('Build Info:', buildInfo);
   }
 
-  // Check version on load
-  checkVersion();
+  // Check version on load, but don't show notification on first load
+  checkVersion(true);
 
   // Check version periodically (every 5 minutes)
-  setInterval(checkVersion, 5 * 60 * 1000);
+  setInterval(() => checkVersion(false), 5 * 60 * 1000);
 
   // Check version when window regains focus
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-      checkVersion();
+      checkVersion(false);
     }
   });
 }
 
-async function checkVersion() {
+async function checkVersion(isInitialLoad = false) {
   try {
     // Skip if we've already shown notification this session
     if (sessionStorage.getItem('version-notification-shown')) {
@@ -73,9 +73,17 @@ async function checkVersion() {
         // Update stored hash immediately
         localStorage.setItem('app-build-hash', currentHash);
 
-        // Show notification
-        showUpdateNotification();
-        sessionStorage.setItem('version-notification-shown', 'true');
+        // Only show notification if this is NOT the initial load
+        // If it's the initial load, the user is already on the latest version
+        if (!isInitialLoad) {
+          showUpdateNotification();
+          sessionStorage.setItem('version-notification-shown', 'true');
+        } else {
+          // On initial load with a new version, just log it
+          if (import.meta.env.DEV) {
+            console.log('Initial load detected new version - not showing notification');
+          }
+        }
       }
     }
 
