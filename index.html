@@ -267,6 +267,14 @@
               <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
               <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
             </calcite-block>
+            <calcite-block heading="Measurement Tools" collapsible expanded>
+              <calcite-button width="full" icon-start="measure-line" scale="s" id="distance-measurement-btn">Distance
+                Measurement</calcite-button>
+              <calcite-button width="full" icon-start="polygon" scale="s" id="area-measurement-btn">Area
+                Measurement</calcite-button>
+              <calcite-button width="full" icon-start="trash" scale="s" id="clear-measurement-btn">Clear
+                Measurements</calcite-button>
+            </calcite-block>
             <calcite-block heading="Offline Data Cache" collapsible expanded>
               <div id="cache-status" style="padding: 12px;">
                 <calcite-list selection-mode="none">
@@ -338,6 +346,7 @@
             <arcgis-basemap-gallery theme="light"></arcgis-basemap-gallery>
           </arcgis-expand>
           <arcgis-fullscreen position="top-left" theme="light"></arcgis-fullscreen>
+          <arcgis-measurement id="measurement-tool" theme="light"></arcgis-measurement>
         </arcgis-map>
       </div>
 

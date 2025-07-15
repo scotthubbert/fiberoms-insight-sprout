@@ -31,6 +31,7 @@ import '@arcgis/map-components/dist/components/arcgis-basemap-gallery';
 import '@arcgis/map-components/dist/components/arcgis-expand';
 import '@arcgis/map-components/dist/components/arcgis-track';
 import '@arcgis/map-components/dist/components/arcgis-fullscreen';
+import '@arcgis/map-components/dist/components/arcgis-measurement';
 
 // Import ALL CalciteUI components we need (comprehensive approach)
 import '@esri/calcite-components/dist/components/calcite-shell';
@@ -351,10 +352,10 @@ class LayerPanel {
   constructor() {
     this.shellPanel = document.getElementById('shell-panel-start');
     this.panel = document.getElementById('panel-content');
-    
+
     // Get all actions
     this.actions = this.shellPanel?.querySelectorAll('calcite-action');
-    
+
     // Content sections
     this.layersContent = document.getElementById('layers-content');
     this.ospContent = document.getElementById('osp-content');
@@ -375,10 +376,10 @@ class LayerPanel {
     await customElements.whenDefined('calcite-shell-panel');
     await customElements.whenDefined('calcite-action');
     await customElements.whenDefined('calcite-panel');
-    
+
     this.setupActionBarNavigation();
     this.setupCacheManagement();
-    
+
     // Show layers content by default
     this.showContent('layers');
   }
@@ -388,7 +389,7 @@ class LayerPanel {
     this.actions?.forEach(action => {
       action.addEventListener('click', (event) => {
         const actionId = action.id;
-        
+
         // Map action IDs to content names
         const contentMap = {
           'layers-action': 'layers',
@@ -400,19 +401,19 @@ class LayerPanel {
           'tools-action': 'tools',
           'info-action': 'info'
         };
-        
+
         const contentName = contentMap[actionId];
-        
+
         if (contentName) {
           // Update all action states
           this.actions.forEach(a => a.active = false);
           action.active = true;
-          
+
           // Update panel heading
           if (this.panel) {
             this.panel.heading = action.text;
           }
-          
+
           // Show appropriate content
           this.showContent(contentName);
         }
@@ -4050,7 +4051,113 @@ class Application {
         this.toggleMobileRadar();
       });
     }
+
+    // Initialize measurement widget
+    this.initializeMeasurementWidget();
   }
+
+  initializeMeasurementWidget() {
+    const measurementWidget = document.getElementById('measurement-tool');
+    if (measurementWidget) {
+      // Set up event listeners for the measurement widget
+      measurementWidget.addEventListener('arcgisReady', () => {
+        this.setupMeasurementButtons();
+      });
+
+      // Fallback: Set up buttons after a delay even if arcgisReady doesn't fire
+      setTimeout(() => {
+        this.setupMeasurementButtons();
+      }, 3000);
+    }
+  }
+
+  setupMeasurementButtons() {
+    const measurementWidget = document.getElementById('measurement-tool');
+    if (!measurementWidget) {
+      log.error('Measurement widget not found');
+      return;
+    }
+
+    // Distance measurement button
+    const distanceBtn = document.getElementById('distance-measurement-btn');
+    if (distanceBtn) {
+      // Remove existing listeners to prevent duplicates
+      distanceBtn.removeEventListener('click', this.distanceBtnHandler);
+
+      this.distanceBtnHandler = () => {
+        try {
+          measurementWidget.activeTool = 'distance';
+          this.updateMeasurementButtons('distance');
+        } catch (error) {
+          log.error('Error activating distance measurement:', error);
+        }
+      };
+
+      distanceBtn.addEventListener('click', this.distanceBtnHandler);
+    }
+
+    // Area measurement button
+    const areaBtn = document.getElementById('area-measurement-btn');
+    if (areaBtn) {
+      // Remove existing listeners to prevent duplicates
+      areaBtn.removeEventListener('click', this.areaBtnHandler);
+
+      this.areaBtnHandler = () => {
+        try {
+          measurementWidget.activeTool = 'area';
+          this.updateMeasurementButtons('area');
+        } catch (error) {
+          log.error('Error activating area measurement:', error);
+        }
+      };
+
+      areaBtn.addEventListener('click', this.areaBtnHandler);
+    }
+
+    // Clear measurements button
+    const clearBtn = document.getElementById('clear-measurement-btn');
+    if (clearBtn) {
+      // Remove existing listeners to prevent duplicates
+      clearBtn.removeEventListener('click', this.clearBtnHandler);
+
+      this.clearBtnHandler = () => {
+        try {
+          measurementWidget.clear();
+          measurementWidget.activeTool = null;
+          this.updateMeasurementButtons(null);
+        } catch (error) {
+          log.error('Error clearing measurements:', error);
+        }
+      };
+
+      clearBtn.addEventListener('click', this.clearBtnHandler);
+    }
+  }
+
+  updateMeasurementButtons(activeTool) {
+    const distanceBtn = document.getElementById('distance-measurement-btn');
+    const areaBtn = document.getElementById('area-measurement-btn');
+    const clearBtn = document.getElementById('clear-measurement-btn');
+
+    // Reset all buttons
+    [distanceBtn, areaBtn, clearBtn].forEach(btn => {
+      if (btn) {
+        btn.appearance = 'solid';
+        btn.kind = 'neutral';
+      }
+    });
+
+    // Highlight active button
+    if (activeTool === 'distance' && distanceBtn) {
+      distanceBtn.appearance = 'solid';
+      distanceBtn.kind = 'brand';
+    } else if (activeTool === 'area' && areaBtn) {
+      areaBtn.appearance = 'solid';
+      areaBtn.kind = 'brand';
+    }
+  }
+
+
 
   async handleLayerToggle(element, checked) {
     // Validate inputs
@@ -4950,6 +5057,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       return `Error: ${error.message}`;
     }
   };
+
+
 
   // Quick CalciteUI verification command for production
   window.verifyCalciteUI = function () {
