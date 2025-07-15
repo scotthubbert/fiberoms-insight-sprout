@@ -36,6 +36,11 @@ calcite-shell {
   height: 100%;
 }
 
+/* Ensure hidden content divs are truly hidden */
+[hidden] {
+  display: none !important;
+}
+
 /* Ensure header slot content is properly sized */
 calcite-shell [slot="header"] {
   flex-shrink: 0;

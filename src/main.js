@@ -349,15 +349,13 @@ class PollingService {
 // Layer Panel Manager - Single Responsibility Principle
 class LayerPanel {
   constructor() {
-    this.shellPanel = document.getElementById('layers-panel');
-    this.layersAction = document.getElementById('layers-action');
-    this.ospAction = document.getElementById('osp-action');
-    this.vehiclesAction = document.getElementById('vehicles-action');
-    this.powerOutagesAction = document.getElementById('power-outages-action');
-    this.searchAction = document.getElementById('search-action');
-    this.networkParentAction = document.getElementById('network-parent-action');
-    this.toolsAction = document.getElementById('tools-action');
-    this.infoAction = document.getElementById('info-action');
+    this.shellPanel = document.getElementById('shell-panel-start');
+    this.panel = document.getElementById('panel-content');
+    
+    // Get all actions
+    this.actions = this.shellPanel?.querySelectorAll('calcite-action');
+    
+    // Content sections
     this.layersContent = document.getElementById('layers-content');
     this.ospContent = document.getElementById('osp-content');
     this.vehiclesContent = document.getElementById('vehicles-content');
@@ -377,123 +375,114 @@ class LayerPanel {
     await customElements.whenDefined('calcite-shell-panel');
     await customElements.whenDefined('calcite-action');
     await customElements.whenDefined('calcite-panel');
+    
     this.setupActionBarNavigation();
     this.setupCacheManagement();
+    
+    // Show layers content by default
+    this.showContent('layers');
   }
 
   setupActionBarNavigation() {
-    this.layersAction?.addEventListener('click', () => this.handleActionClick('layers'));
-    this.ospAction?.addEventListener('click', () => this.handleActionClick('osp'));
-    this.vehiclesAction?.addEventListener('click', () => this.handleActionClick('vehicles'));
-    this.powerOutagesAction?.addEventListener('click', () => this.handleActionClick('power-outages'));
-    this.searchAction?.addEventListener('click', () => this.handleActionClick('search'));
-    this.networkParentAction?.addEventListener('click', () => this.handleActionClick('network-parent'));
-    this.toolsAction?.addEventListener('click', () => this.handleActionClick('tools'));
-    this.infoAction?.addEventListener('click', () => this.handleActionClick('info'));
+    // Set up action click handlers following the Calcite example pattern
+    this.actions?.forEach(action => {
+      action.addEventListener('click', (event) => {
+        const actionId = action.id;
+        
+        // Map action IDs to content names
+        const contentMap = {
+          'layers-action': 'layers',
+          'osp-action': 'osp',
+          'vehicles-action': 'vehicles',
+          'power-outages-action': 'power-outages',
+          'search-action': 'search',
+          'network-parent-action': 'network-parent',
+          'tools-action': 'tools',
+          'info-action': 'info'
+        };
+        
+        const contentName = contentMap[actionId];
+        
+        if (contentName) {
+          // Update all action states
+          this.actions.forEach(a => a.active = false);
+          action.active = true;
+          
+          // Update panel heading
+          if (this.panel) {
+            this.panel.heading = action.text;
+          }
+          
+          // Show appropriate content
+          this.showContent(contentName);
+        }
+      });
+    });
   }
 
-  handleActionClick(panelName) {
-    const clickedAction = this.getActionByPanel(panelName);
+  showContent(contentName) {
+    // Hide all content sections
+    if (this.layersContent) this.layersContent.hidden = true;
+    if (this.ospContent) this.ospContent.hidden = true;
+    if (this.vehiclesContent) this.vehiclesContent.hidden = true;
+    if (this.powerOutagesContent) this.powerOutagesContent.hidden = true;
+    if (this.searchContent) this.searchContent.hidden = true;
+    if (this.networkParentContent) this.networkParentContent.hidden = true;
+    if (this.toolsContent) this.toolsContent.hidden = true;
+    if (this.infoContent) this.infoContent.hidden = true;
 
-    if (clickedAction?.active && !this.shellPanel?.collapsed) {
-      this.shellPanel.collapsed = true;
-      return;
-    }
-
-    if (this.shellPanel?.collapsed) {
-      this.shellPanel.collapsed = false;
-    }
-    this.showPanel(panelName);
-  }
-
-  getActionByPanel(panelName) {
-    switch (panelName) {
-      case 'layers': return this.layersAction;
-      case 'osp': return this.ospAction;
-      case 'vehicles': return this.vehiclesAction;
-      case 'power-outages': return this.powerOutagesAction;
-      case 'search': return this.searchAction;
-      case 'network-parent': return this.networkParentAction;
-      case 'tools': return this.toolsAction;
-      case 'info': return this.infoAction;
-      default: return null;
-    }
-  }
-
-  showPanel(panelName) {
-    // Hide all panels using both hidden attribute AND display style for reliability
-    this.layersContent.hidden = true;
-    this.layersContent.style.display = 'none';
-    this.ospContent.hidden = true;
-    this.ospContent.style.display = 'none';
-    this.vehiclesContent.hidden = true;
-    this.vehiclesContent.style.display = 'none';
-    this.powerOutagesContent.hidden = true;
-    this.powerOutagesContent.style.display = 'none';
-    this.searchContent.hidden = true;
-    this.searchContent.style.display = 'none';
-    this.networkParentContent.hidden = true;
-    this.networkParentContent.style.display = 'none';
-    this.toolsContent.hidden = true;
-    this.toolsContent.style.display = 'none';
-    this.infoContent.hidden = true;
-    this.infoContent.style.display = 'none';
-
-    // Remove active state from all actions
-    this.layersAction.active = false;
-    this.ospAction.active = false;
-    this.vehiclesAction.active = false;
-    this.powerOutagesAction.active = false;
-    this.searchAction.active = false;
-    this.networkParentAction.active = false;
-    this.toolsAction.active = false;
-    this.infoAction.active = false;
-
-    // Show selected panel and set active action
-    switch (panelName) {
+    // Show selected content
+    switch (contentName) {
       case 'layers':
-        this.layersContent.hidden = false;
-        this.layersContent.style.display = 'block';
-        this.layersAction.active = true;
+        if (this.layersContent) {
+          this.layersContent.hidden = false;
+          this.layersContent.style.display = '';
+        }
         break;
       case 'osp':
-        this.ospContent.hidden = false;
-        this.ospContent.style.display = 'block';
-        this.ospAction.active = true;
+        if (this.ospContent) {
+          this.ospContent.hidden = false;
+          this.ospContent.style.display = '';
+        }
         break;
       case 'vehicles':
-        this.vehiclesContent.hidden = false;
-        this.vehiclesContent.style.display = 'block';
-        this.vehiclesAction.active = true;
+        if (this.vehiclesContent) {
+          this.vehiclesContent.hidden = false;
+          this.vehiclesContent.style.display = '';
+        }
         this.updateVehicleStatus();
-        // Load the simple vehicle list
         this.loadSimpleVehicleList();
         break;
       case 'power-outages':
-        this.powerOutagesContent.hidden = false;
-        this.powerOutagesContent.style.display = 'block';
-        this.powerOutagesAction.active = true;
+        if (this.powerOutagesContent) {
+          this.powerOutagesContent.hidden = false;
+          this.powerOutagesContent.style.display = '';
+        }
         break;
       case 'search':
-        this.searchContent.hidden = false;
-        this.searchContent.style.display = 'block';
-        this.searchAction.active = true;
+        if (this.searchContent) {
+          this.searchContent.hidden = false;
+          this.searchContent.style.display = '';
+        }
         break;
       case 'network-parent':
-        this.networkParentContent.hidden = false;
-        this.networkParentContent.style.display = 'block';
-        this.networkParentAction.active = true;
+        if (this.networkParentContent) {
+          this.networkParentContent.hidden = false;
+          this.networkParentContent.style.display = '';
+        }
         break;
       case 'tools':
-        this.toolsContent.hidden = false;
-        this.toolsContent.style.display = 'block';
-        this.toolsAction.active = true;
+        if (this.toolsContent) {
+          this.toolsContent.hidden = false;
+          this.toolsContent.style.display = '';
+        }
         this.updateCacheStatus();
         break;
       case 'info':
-        this.infoContent.hidden = false;
-        this.infoContent.style.display = 'block';
-        this.infoAction.active = true;
+        if (this.infoContent) {
+          this.infoContent.hidden = false;
+          this.infoContent.style.display = '';
+        }
         this.updateBuildInfo();
         break;
     }

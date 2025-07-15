@@ -58,251 +58,216 @@
       </calcite-navigation>
 
       <!-- Side Panel - Desktop Only -->
-      <calcite-shell-panel slot="panel-start" id="layers-panel" collapsed display-mode="dock" class="desktop-only">
-        <calcite-action-bar slot="action-bar">
-          <calcite-action id="layers-action" text="Layers" icon="layer" active></calcite-action>
-          <calcite-action id="osp-action" text="OSP (Outside Plant)" icon="utility-network"></calcite-action>
-          <calcite-action id="vehicles-action" text="Vehicles" icon="car"></calcite-action>
-          <calcite-action id="power-outages-action" text="Power Outages" icon="flash"></calcite-action>
-          <calcite-action id="search-action" text="Search" icon="search"></calcite-action>
-          <calcite-action id="network-parent-action" text="Network Infrastructure" icon="linkChart"></calcite-action>
-          <calcite-action id="tools-action" text="Tools" icon="apps"></calcite-action>
-          <calcite-action id="info-action" text="Info" icon="information" slot="actions-end"></calcite-action>
+      <calcite-shell-panel slot="panel-start" id="shell-panel-start" position="start" display-mode="dock"
+        width-scale="m" class="desktop-only">
+        <calcite-action-bar slot="action-bar" expanded>
+          <calcite-action-group>
+            <calcite-action id="layers-action" text="Subscribers" icon="users" active text-enabled></calcite-action>
+            <calcite-action id="osp-action" text="OSP (Outside Plant)" icon="utility-network"
+              text-enabled></calcite-action>
+            <calcite-action id="vehicles-action" text="Vehicles" icon="car" text-enabled></calcite-action>
+            <calcite-action id="power-outages-action" text="Power Outages" icon="flash" text-enabled></calcite-action>
+          </calcite-action-group>
+          <calcite-action-group>
+            <!-- <calcite-action id="search-action" text="Search" icon="search" text-enabled></calcite-action> -->
+            <calcite-action id="network-parent-action" text="Network Infrastructure" icon="linkChart"
+              text-enabled></calcite-action>
+            <calcite-action id="tools-action" text="Tools" icon="apps" text-enabled></calcite-action>
+          </calcite-action-group>
+          <calcite-action id="info-action" text="Info" icon="information" slot="bottom-actions"
+            text-enabled></calcite-action>
         </calcite-action-bar>
-        <calcite-panel heading="Layers" id="layers-content">
-          <calcite-block heading="Subscriber Status" collapsible>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Online Subscribers
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox checked></calcite-checkbox>
-              Offline Subscribers
-            </calcite-label>
-            <div class="block-actions">
-              <calcite-button id="refresh-data" icon-start="refresh" scale="s" width="full">
-                Refresh Data
-              </calcite-button>
-              <!-- Test button for development -->
-              <calcite-button id="test-subscriber-update" icon-start="information" scale="s" width="full"
-                appearance="outline" style="margin-top: 8px; display: none;">
-                Test Subscriber Toast
-              </calcite-button>
-            </div>
-          </calcite-block>
 
-          <calcite-block heading="Fiber Outages" collapsible>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Fiber Network Outages
-            </calcite-label>
-          </calcite-block>
-        </calcite-panel>
-        <calcite-panel heading="OSP (Outside Plant)" id="osp-content" hidden>
-          <calcite-block heading="OSP (Outside Plant)" collapsible>
-            <calcite-icon slot="icon" icon="utility-network"></calcite-icon>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              FSA Boundaries
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Main Line Fiber
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Main Line Old
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              MST Terminals
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              MST Fiber
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Splitters
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Closures
-            </calcite-label>
-          </calcite-block>
-        </calcite-panel>
-        <calcite-panel heading="Vehicles" id="vehicles-content" hidden>
-          <calcite-block heading="Vehicle Tracking" collapsible expanded>
-            <calcite-icon slot="icon" icon="car"></calcite-icon>
+        <calcite-panel heading="Subscribers" id="panel-content">
+          <!-- Subscribers Content -->
+          <div id="layers-content">
+            <calcite-block heading="Subscriber Status" collapsible expanded>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Online Subscribers
+              </calcite-label>
+              <calcite-label>
+                <calcite-checkbox checked></calcite-checkbox>
+                Offline Subscribers
+              </calcite-label>
+              <div class="block-actions">
+                <calcite-button id="refresh-data" icon-start="refresh" scale="s" width="full">
+                  Refresh Data
+                </calcite-button>
+              </div>
+            </calcite-block>
 
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Electric Trucks
-            </calcite-label>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Fiber Trucks
-            </calcite-label>
-          </calcite-block>
-
-          <!-- Simple Vehicle List -->
-          <div id="simple-vehicle-list" style="margin-top: 12px;">
-            <calcite-list id="vehicle-list" selection-mode="none" filter-enabled
-              filter-placeholder="Filter vehicles by name or driver">
-              <!-- Vehicle items will be populated here -->
-            </calcite-list>
+            <calcite-block heading="Fiber Outages" collapsible expanded>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Fiber Network Outages
+              </calcite-label>
+            </calcite-block>
           </div>
 
-          <!-- Fleet Management - Commented out for now -->
-          <!--
-          <calcite-block heading="Fleet Management" collapsible>
-            <calcite-icon slot="icon" icon="flash"></calcite-icon>
+          <!-- OSP Content -->
+          <div id="osp-content" hidden>
+            <calcite-block heading="OSP (Outside Plant)" collapsible expanded>
+              <calcite-icon slot="icon" icon="utility-network"></calcite-icon>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                FSA Boundaries
+              </calcite-label>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Main Line Fiber
+              </calcite-label>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Main Line Old
+              </calcite-label>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                MST Terminals
+              </calcite-label>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                MST Fiber
+              </calcite-label>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Splitters
+              </calcite-label>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Closures
+              </calcite-label>
+            </calcite-block>
+          </div>
 
-            <div style="padding: 8px 0;">
-              <calcite-list selection-mode="none">
-                <calcite-list-item label="MyGeotab Status" description="Real-time tracking connection">
-                  <calcite-icon slot="content-start" icon="globe"></calcite-icon>
-                  <calcite-chip slot="content-end" appearance="outline" scale="s" id="geotab-status-chip">
-                    Connecting...
-                  </calcite-chip>
-                </calcite-list-item>
-                <calcite-list-item label="Update Interval" description="Vehicle location refresh rate">
-                  <calcite-icon slot="content-start" icon="clock"></calcite-icon>
-                  <span slot="content-end" style="color: var(--calcite-color-text-2); font-size: 12px;">
-                    Every 90 seconds
-                  </span>
-                </calcite-list-item>
+          <!-- Vehicles Content -->
+          <div id="vehicles-content" hidden>
+            <calcite-block heading="Vehicle Tracking" collapsible expanded>
+              <calcite-icon slot="icon" icon="car"></calcite-icon>
+
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Electric Trucks
+              </calcite-label>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Fiber Trucks
+              </calcite-label>
+            </calcite-block>
+
+            <!-- Simple Vehicle List -->
+            <div id="simple-vehicle-list" style="margin-top: 12px;">
+              <calcite-list id="vehicle-list" selection-mode="none" filter-enabled
+                filter-placeholder="Filter vehicles by name or driver">
+                <!-- Vehicle items will be populated here -->
               </calcite-list>
             </div>
-          </calcite-block>
-          -->
+          </div>
 
-          <!-- Vehicle Actions - Commented out for now -->
-          <!--
-          <calcite-block heading="Vehicle Actions" collapsible>
-            <calcite-icon slot="icon" icon="apps"></calcite-icon>
+          <!-- Power Outages Content -->
+          <div id="power-outages-content" hidden>
+            <calcite-block heading="Power Outages" collapsible expanded>
+              <calcite-icon slot="icon" icon="flash"></calcite-icon>
 
-            <div class="block-actions">
-              <calcite-button id="refresh-vehicles" icon-start="refresh" scale="s" width="full">
-                Refresh Vehicle Locations
-              </calcite-button>
-            </div>
-          </calcite-block>
-          -->
-        </calcite-panel>
-        <calcite-panel heading="Power Outages" id="power-outages-content" hidden>
-          <calcite-block heading="Power Outages" collapsible expanded>
-            <calcite-icon slot="icon" icon="flash"></calcite-icon>
+              <!-- Power Outage Statistics -->
+              <power-outage-stats id="power-outage-stats"></power-outage-stats>
 
-            <!-- Power Outage Statistics -->
-            <power-outage-stats id="power-outage-stats"></power-outage-stats>
-
-            <div class="block-actions">
-              <calcite-button id="refresh-power-outages" icon-start="refresh" scale="s" width="full">
-                Refresh Power Outages
-              </calcite-button>
-              <!-- Test button for development -->
-              <calcite-button id="test-outage-update" icon-start="information" scale="s" width="full"
-                appearance="outline" style="margin-top: 8px; display: none;">
-                Test Update Toast
-              </calcite-button>
-            </div>
-          </calcite-block>
-        </calcite-panel>
-        <calcite-panel heading="Search" id="search-content" hidden>
-          <calcite-block heading="MFS Database Search">
-            <calcite-autocomplete id="desktop-search" placeholder="Search addresses, customers, accounts..."
-              icon="search" clearable scale="m">
-              <!-- Search results will be populated here -->
-            </calcite-autocomplete>
-            <calcite-button width="full" appearance="solid" scale="s"
-              style="margin-top: var(--calcite-spacing-sm);">Advanced Search</calcite-button>
-          </calcite-block>
-        </calcite-panel>
-        <calcite-panel heading="Network Infrastructure" id="network-parent-content" hidden>
-          <calcite-block heading="Node Sites" collapsible>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Node Sites
-            </calcite-label>
-          </calcite-block>
-          <calcite-block heading="Network Map" collapsible>
-            <calcite-icon slot="icon" icon="map"></calcite-icon>
-            <div style="margin-top: 12px;">
-              <iframe width="225" height="750" frameborder="1"
-                src="https://139.60.151.250/public/mapshow.htm?id=11824&mapid=1314418B-78B5-4F47-94B1-C2E2DA6EC55A"
-                style="border: 1px solid var(--calcite-color-border-2); border-radius: 4px; width: 100%;"
-                title="Network Infrastructure Map">
-              </iframe>
-            </div>
-          </calcite-block>
-        </calcite-panel>
-        <calcite-panel heading="Tools" id="tools-content" hidden>
-          <calcite-block heading="Weather Overlays" collapsible>
-            <calcite-label>
-              <calcite-checkbox></calcite-checkbox>
-              Weather Radar
-            </calcite-label>
-          </calcite-block>
-          <calcite-block heading="Sketch Tools" collapsible>
-            <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
-            <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
-          </calcite-block>
-          <calcite-block heading="Offline Data Cache" collapsible>
-            <div id="cache-status" style="padding: 12px;">
-              <calcite-list selection-mode="none">
-                <calcite-list-item label="Cache Status" description="Loading cache information...">
-                  <calcite-icon slot="content-start" icon="data"></calcite-icon>
-                  <span slot="content-end" id="cache-size-text" style="color: var(--calcite-color-text-2);">--</span>
-                </calcite-list-item>
-              </calcite-list>
-              <div id="cache-details" style="margin-top: 12px;"></div>
-              <div style="margin-top: 12px; display: flex; gap: 8px;">
-                <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s"
-                  id="refresh-cache-btn">Refresh Cache Info</calcite-button>
-                <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s"
-                  id="clear-cache-btn">Clear All Cache</calcite-button>
+              <div class="block-actions">
+                <calcite-button id="refresh-power-outages" icon-start="refresh" scale="s" width="full">
+                  Refresh Power Outages
+                </calcite-button>
               </div>
-            </div>
-          </calcite-block>
-        </calcite-panel>
+            </calcite-block>
+          </div>
 
-        <!-- Info Panel -->
-        <calcite-panel heading="Information" id="info-content" hidden>
-          <calcite-block heading="App Details" expanded>
-            <div id="app-info" style="padding: 12px;">
+          <!-- Network Infrastructure Content -->
+          <div id="network-parent-content" hidden>
+            <calcite-block heading="Node Sites" collapsible expanded>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Node Sites
+              </calcite-label>
+            </calcite-block>
+            <calcite-block heading="Network Map" collapsible expanded>
+              <calcite-icon slot="icon" icon="map"></calcite-icon>
+              <div style="margin-top: 12px;">
+                <iframe width="225" height="750" frameborder="1"
+                  src="https://139.60.151.250/public/mapshow.htm?id=11824&mapid=1314418B-78B5-4F47-94B1-C2E2DA6EC55A"
+                  style="border: 1px solid var(--calcite-color-border-2); border-radius: 4px; width: 100%;"
+                  title="Network Infrastructure Map">
+                </iframe>
+              </div>
+            </calcite-block>
+          </div>
+
+          <!-- Tools Content -->
+          <div id="tools-content" hidden>
+            <calcite-block heading="Weather Overlays" collapsible expanded>
+              <calcite-label>
+                <calcite-checkbox></calcite-checkbox>
+                Weather Radar
+              </calcite-label>
+            </calcite-block>
+            <calcite-block heading="Sketch Tools" collapsible expanded>
+              <calcite-button width="full" icon-start="polygon" scale="s">Draw Outage Area</calcite-button>
+              <calcite-button width="full" icon-start="download" scale="s">Export CSV</calcite-button>
+            </calcite-block>
+            <calcite-block heading="Offline Data Cache" collapsible expanded>
+              <div id="cache-status" style="padding: 12px;">
+                <calcite-list selection-mode="none">
+                  <calcite-list-item label="Cache Status" description="Loading cache information...">
+                    <calcite-icon slot="content-start" icon="data"></calcite-icon>
+                    <span slot="content-end" id="cache-size-text" style="color: var(--calcite-color-text-2);">--</span>
+                  </calcite-list-item>
+                </calcite-list>
+                <div id="cache-details" style="margin-top: 12px;"></div>
+                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                  <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s"
+                    id="refresh-cache-btn">Refresh Cache Info</calcite-button>
+                  <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s"
+                    id="clear-cache-btn">Clear All Cache</calcite-button>
+                </div>
+              </div>
+            </calcite-block>
+          </div>
+
+          <!-- Info Content -->
+          <div id="info-content" hidden>
+            <calcite-block heading="App Details" expanded>
+              <div id="app-info" style="padding: 12px;">
+                <calcite-list selection-mode="none">
+                  <calcite-list-item label="Build Version" id="build-version-item">
+                    <calcite-icon slot="content-start" icon="code"></calcite-icon>
+                    <span slot="content-end" id="build-version-text"
+                      style="font-family: monospace; color: var(--calcite-color-text-2);">Loading...</span>
+                  </calcite-list-item>
+                  <calcite-list-item label="Last Updated" id="build-date-item">
+                    <calcite-icon slot="content-start" icon="clock"></calcite-icon>
+                    <span slot="content-end" id="build-date-text"
+                      style="color: var(--calcite-color-text-2);">Loading...</span>
+                  </calcite-list-item>
+                  <calcite-list-item label="Environment" id="environment-item">
+                    <calcite-icon slot="content-start" icon="globe"></calcite-icon>
+                    <span slot="content-end" id="environment-text"
+                      style="color: var(--calcite-color-text-2);">Loading...</span>
+                  </calcite-list-item>
+                </calcite-list>
+              </div>
+            </calcite-block>
+
+            <calcite-block heading="Resources" collapsible expanded>
               <calcite-list selection-mode="none">
-                <calcite-list-item label="Build Version" id="build-version-item">
-                  <calcite-icon slot="content-start" icon="code"></calcite-icon>
-                  <span slot="content-end" id="build-version-text"
-                    style="font-family: monospace; color: var(--calcite-color-text-2);">Loading...</span>
+                <calcite-list-item label="Documentation" description="View application documentation">
+                  <calcite-icon slot="content-start" icon="fileText"></calcite-icon>
+                  <calcite-action slot="actions-end" icon="launch" id="docs-link"></calcite-action>
                 </calcite-list-item>
-                <calcite-list-item label="Last Updated" id="build-date-item">
-                  <calcite-icon slot="content-start" icon="clock"></calcite-icon>
-                  <span slot="content-end" id="build-date-text"
-                    style="color: var(--calcite-color-text-2);">Loading...</span>
-                </calcite-list-item>
-                <calcite-list-item label="Environment" id="environment-item">
-                  <calcite-icon slot="content-start" icon="globe"></calcite-icon>
-                  <span slot="content-end" id="environment-text"
-                    style="color: var(--calcite-color-text-2);">Loading...</span>
+                <calcite-list-item label="Report Issue" description="Submit bug reports or feedback">
+                  <calcite-icon slot="content-start" icon="exclamation-mark-triangle"></calcite-icon>
+                  <calcite-action slot="actions-end" icon="launch" id="issue-link"></calcite-action>
                 </calcite-list-item>
               </calcite-list>
-            </div>
-          </calcite-block>
-
-          <calcite-block heading="Resources" collapsible>
-            <calcite-list selection-mode="none">
-              <calcite-list-item label="Documentation" description="View application documentation">
-                <calcite-icon slot="content-start" icon="fileText"></calcite-icon>
-                <calcite-action slot="actions-end" icon="launch" id="docs-link"></calcite-action>
-              </calcite-list-item>
-              <calcite-list-item label="Report Issue" description="Submit bug reports or feedback">
-                <calcite-icon slot="content-start" icon="exclamation-mark-triangle"></calcite-icon>
-                <calcite-action slot="actions-end" icon="launch" id="issue-link"></calcite-action>
-              </calcite-list-item>
-            </calcite-list>
-          </calcite-block>
+            </calcite-block>
+          </div>
         </calcite-panel>
       </calcite-shell-panel>
 
