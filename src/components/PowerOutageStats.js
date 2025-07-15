@@ -135,8 +135,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
      */
     render() {
         this.innerHTML = `
-            <div style="padding: 4px 0;">
-                <div class="stats-content">
+            <div class="power-outage-stats-container" style="padding: 4px 0; height: 100%; display: flex; flex-direction: column;">
+                <div class="stats-content" style="flex: 1; display: flex; flex-direction: column;">
                     <div style="display: flex; align-items: center; justify-content: center; padding: 20px; color: var(--calcite-color-text-2);">
                         <calcite-icon icon="loading" scale="s" style="margin-right: 8px;"></calcite-icon>
                         <span style="font-size: 14px;">Loading outage data...</span>
@@ -174,7 +174,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
 
         statsContent.innerHTML = `
             <!-- Static Summary Section -->
-            <div style="margin-bottom: 16px;">
+            <div class="power-stats-summary" style="margin-bottom: 16px; flex-shrink: 0;">
                 ${this.renderCompanySummary('APCo', apcoCount, apcoCustomers)}
                 ${this.renderCompanySummary('Tombigbee', tombigbeeCount, tombigbeeCustomers)}
                 <div style="text-align: center; font-size: 11px; color: var(--calcite-color-text-3); margin-top: 8px;">
@@ -183,11 +183,11 @@ export class PowerOutageStatsComponent extends HTMLElement {
             </div>
 
             <!-- Scrollable Outages List -->
-            <div style="border-top: 1px solid var(--calcite-color-border-2); padding-top: 12px;">
+            <div class="outages-list-container" style="border-top: 1px solid var(--calcite-color-border-2); padding-top: 12px; flex: 1; display: flex; flex-direction: column;">
                 <div style="font-size: 12px; font-weight: 600; color: var(--calcite-color-text-2); margin-bottom: 8px; text-transform: uppercase;">
                     Active Outages (${allOutages.length})
                 </div>
-                <calcite-list style="max-height: 250px; overflow-y: auto; overflow-x: hidden;" class="outages-list">
+                <calcite-list class="outages-list" style="flex: 1; overflow-y: auto; overflow-x: hidden; border: 1px solid var(--calcite-color-border-2); border-radius: var(--calcite-border-radius); background: var(--calcite-color-background);">
                     ${allOutages.length > 0 ?
                 allOutages.map(outage => this.renderCalciteOutageItem(outage)).join('') :
                 `<calcite-list-item label="No active outages" description="All systems are operational" disabled>

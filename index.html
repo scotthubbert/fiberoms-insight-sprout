@@ -136,26 +136,82 @@
         <calcite-panel heading="Subscribers" id="panel-content">
           <!-- Subscribers Content -->
           <div id="layers-content">
-            <calcite-block heading="Subscriber Status" collapsible expanded>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Online Subscribers
-              </calcite-label>
-              <calcite-label>
-                <calcite-checkbox checked></calcite-checkbox>
-                Offline Subscribers
-              </calcite-label>
-              <div class="block-actions">
-                <calcite-button id="refresh-data" icon-start="refresh" scale="s" width="full">
-                  Refresh Data
-                </calcite-button>
-                <calcite-button id="desktop-export-offline-csv-btn" icon-start="download" scale="s" width="full"
-                  appearance="outline">
-                  Export Offline CSV
-                </calcite-button>
+
+            <!-- Subscriber Statistics -->
+            <calcite-block heading="Network Status" collapsible expanded>
+              <calcite-icon slot="icon" icon="users"></calcite-icon>
+
+              <div class="subscriber-stats-container" style="margin-bottom: 16px;">
+                <calcite-card class="subscriber-stat-card">
+                  <div class="stat-icon">
+                    <calcite-icon icon="circle-filled" scale="s"
+                      style="color: var(--calcite-color-status-success);"></calcite-icon>
+                  </div>
+                  <div class="stat-label">Online</div>
+                  <div class="stat-value" id="online-count-display">--</div>
+                  <div class="stat-subtext">subscribers</div>
+                </calcite-card>
+
+                <calcite-card class="subscriber-stat-card">
+                  <div class="stat-icon">
+                    <calcite-icon icon="circle-filled" scale="s"
+                      style="color: var(--calcite-color-status-danger);"></calcite-icon>
+                  </div>
+                  <div class="stat-label">Offline</div>
+                  <div class="stat-value" id="offline-count-display">--</div>
+                  <div class="stat-subtext">subscribers</div>
+                </calcite-card>
               </div>
+
+              <!-- Last Updated Info -->
+              <calcite-notice scale="s" width="full" kind="info">
+                <div slot="message">
+                  <calcite-icon icon="clock" style="margin-right: 4px;"></calcite-icon>
+                  <span id="last-updated-display">Last updated: --</span>
+                </div>
+              </calcite-notice>
             </calcite-block>
 
+            <!-- Layer Controls -->
+            <calcite-block heading="Map Layers" collapsible expanded>
+              <calcite-icon slot="icon" icon="layers"></calcite-icon>
+
+              <calcite-list selection-mode="none">
+                <calcite-list-item label="Online Subscribers" description="Show connected subscribers on map">
+                  <calcite-icon slot="content-start" icon="circle-filled"
+                    style="color: var(--calcite-color-status-success);"></calcite-icon>
+                  <calcite-switch slot="content-end" id="online-subscribers-switch"></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="Offline Subscribers" description="Show disconnected subscribers on map">
+                  <calcite-icon slot="content-start" icon="circle-filled"
+                    style="color: var(--calcite-color-status-danger);"></calcite-icon>
+                  <calcite-switch slot="content-end" id="offline-subscribers-switch" checked></calcite-switch>
+                </calcite-list-item>
+              </calcite-list>
+            </calcite-block>
+
+            <!-- Actions -->
+            <calcite-block heading="Actions" collapsible expanded>
+              <calcite-icon slot="icon" icon="gear"></calcite-icon>
+
+              <div class="actions-container">
+                <calcite-button id="refresh-data" icon-start="refresh" scale="m" width="full" appearance="solid">
+                  Refresh Data
+                </calcite-button>
+
+                <div class="action-group" style="margin-top: 12px;">
+                  <calcite-button id="desktop-export-offline-csv-btn" icon-start="download" scale="s" width="full"
+                    appearance="outline">
+                    Export Offline Subscribers
+                  </calcite-button>
+                  <calcite-button id="desktop-export-all-csv-btn" icon-start="download" scale="s" width="full"
+                    appearance="outline">
+                    Export All Subscribers
+                  </calcite-button>
+                </div>
+              </div>
+            </calcite-block>
 
           </div>
 
@@ -163,34 +219,43 @@
           <div id="osp-content" hidden>
             <calcite-block heading="OSP (Outside Plant)" collapsible expanded>
               <calcite-icon slot="icon" icon="utility-network"></calcite-icon>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                FSA Boundaries
-              </calcite-label>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Main Line Fiber
-              </calcite-label>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Main Line Old
-              </calcite-label>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                MST Terminals
-              </calcite-label>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                MST Fiber
-              </calcite-label>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Splitters
-              </calcite-label>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Closures
-              </calcite-label>
+
+              <calcite-list selection-mode="none">
+                <calcite-list-item label="FSA Boundaries" description="Service area boundaries">
+                  <calcite-icon slot="content-start" icon="polygon" style="color: rgb(30, 144, 255);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="Main Line Fiber" description="Primary fiber routes">
+                  <calcite-icon slot="content-start" icon="line" style="color: rgb(165, 42, 42);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="Main Line Old" description="Legacy fiber infrastructure">
+                  <calcite-icon slot="content-start" icon="line" style="color: rgb(105, 105, 105);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="MST Terminals" description="Multi-service terminals">
+                  <calcite-icon slot="content-start" icon="circle" style="color: rgb(0, 191, 255);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="MST Fiber" description="MST fiber connections">
+                  <calcite-icon slot="content-start" icon="line" style="color: rgb(75, 0, 130);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="Splitters" description="Optical splitters">
+                  <calcite-icon slot="content-start" icon="diamond" style="color: rgb(128, 0, 128);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="Closures" description="Fiber splice closures">
+                  <calcite-icon slot="content-start" icon="square" style="color: rgb(255, 140, 0);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+              </calcite-list>
             </calcite-block>
           </div>
 
@@ -199,14 +264,17 @@
             <calcite-block heading="Vehicle Tracking" collapsible expanded>
               <calcite-icon slot="icon" icon="car"></calcite-icon>
 
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Electric Trucks
-              </calcite-label>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Fiber Trucks
-              </calcite-label>
+              <calcite-list selection-mode="none">
+                <calcite-list-item label="Electric Trucks" description="Track electric maintenance fleet">
+                  <calcite-icon slot="content-start" icon="flash" style="color: rgb(74, 124, 89);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="Fiber Trucks" description="Track fiber installation fleet">
+                  <calcite-icon slot="content-start" icon="car" style="color: rgb(30, 95, 175);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+              </calcite-list>
             </calcite-block>
 
             <!-- Simple Vehicle List -->
@@ -237,10 +305,14 @@
           <!-- Network Infrastructure Content -->
           <div id="network-parent-content" hidden>
             <calcite-block heading="Node Sites" collapsible expanded>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Node Sites
-              </calcite-label>
+              <calcite-icon slot="icon" icon="linkChart"></calcite-icon>
+
+              <calcite-list selection-mode="none">
+                <calcite-list-item label="Node Sites" description="Network node locations">
+                  <calcite-icon slot="content-start" icon="circle" style="color: rgb(255, 165, 0);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+              </calcite-list>
             </calcite-block>
             <calcite-block heading="Network Map" collapsible expanded>
               <calcite-icon slot="icon" icon="map"></calcite-icon>
@@ -257,10 +329,13 @@
           <!-- Tools Content -->
           <div id="tools-content" hidden>
             <calcite-block heading="Weather Overlays" collapsible expanded>
-              <calcite-label>
-                <calcite-checkbox></calcite-checkbox>
-                Weather Radar
-              </calcite-label>
+              <calcite-list selection-mode="none">
+                <calcite-list-item label="Weather Radar" description="Live weather overlay from RainViewer">
+                  <calcite-icon slot="content-start" icon="rain"
+                    style="color: var(--calcite-color-info);"></calcite-icon>
+                  <calcite-switch slot="content-end"></calcite-switch>
+                </calcite-list-item>
+              </calcite-list>
             </calcite-block>
 
             <calcite-block heading="Measurement Tools" collapsible expanded>

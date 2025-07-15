@@ -1299,6 +1299,165 @@ calcite-autocomplete-item:focus {
   }
 }
 
+/* Subscriber Statistics Cards */
+.subscriber-stats-container {
+  display: flex;
+  gap: var(--calcite-spacing-sm);
+  margin-bottom: var(--calcite-spacing-md);
+}
+
+.subscriber-stat-card {
+  flex: 1;
+  padding: var(--calcite-spacing-md);
+  border: 2px solid var(--calcite-color-border-2);
+  border-radius: var(--calcite-border-radius);
+  background: var(--calcite-color-foreground-1);
+  transition: all 0.3s ease;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.subscriber-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Online subscribers card styling */
+.subscriber-stat-card:first-child {
+  border-color: var(--calcite-color-status-success);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-1) 0%,
+    rgba(76, 175, 80, 0.05) 100%
+  );
+}
+
+.subscriber-stat-card:first-child:hover {
+  border-color: var(--calcite-color-success);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.2);
+}
+
+/* Offline subscribers card styling */
+.subscriber-stat-card:last-child {
+  border-color: var(--calcite-color-status-danger);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-1) 0%,
+    rgba(244, 67, 54, 0.05) 100%
+  );
+}
+
+.subscriber-stat-card:last-child:hover {
+  border-color: var(--calcite-color-danger);
+  box-shadow: 0 4px 16px rgba(244, 67, 54, 0.2);
+}
+
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--calcite-spacing-xs);
+  width: 100%;
+}
+
+.stat-label {
+  font-size: var(--calcite-font-size-0);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 var(--calcite-spacing-xs) 0;
+  text-align: center;
+  width: 100%;
+}
+
+/* Online label styling */
+.subscriber-stat-card:first-child .stat-label {
+  color: var(--calcite-color-success);
+}
+
+/* Offline label styling */
+.subscriber-stat-card:last-child .stat-label {
+  color: var(--calcite-color-danger);
+}
+
+.stat-value {
+  font-size: var(--calcite-font-size-3);
+  font-weight: 700;
+  color: var(--calcite-color-text-1);
+  margin-bottom: var(--calcite-spacing-xs);
+  line-height: 1.1;
+  text-align: center;
+  width: 100%;
+}
+
+.stat-subtext {
+  font-size: var(--calcite-font-size--1);
+  color: var(--calcite-color-text-3);
+  font-weight: 500;
+  margin: 0;
+  text-align: center;
+  width: 100%;
+}
+
+/* Actions container styling */
+.actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calcite-spacing-sm);
+}
+
+.action-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calcite-spacing-xs);
+}
+
+/* Enhanced list item styling for layer controls */
+#layers-content calcite-list-item,
+#osp-content calcite-list-item,
+#vehicles-content calcite-list-item,
+#tools-content calcite-list-item {
+  --calcite-list-item-spacing-indent: var(--calcite-spacing-md);
+  transition: background-color 0.2s ease;
+}
+
+#layers-content calcite-list-item[label="Online Subscribers"] {
+  --calcite-list-item-color-active: var(--calcite-color-status-success);
+}
+
+#layers-content calcite-list-item[label="Offline Subscribers"] {
+  --calcite-list-item-color-active: var(--calcite-color-status-danger);
+}
+
+/* Clickable list item styling */
+calcite-list-item[style*="cursor: pointer"]:hover {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+calcite-list-item[style*="cursor: pointer"]:active {
+  background-color: var(--calcite-color-foreground-3);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .subscriber-stats-container {
+    flex-direction: column;
+    gap: var(--calcite-spacing-xs);
+  }
+
+  .subscriber-stat-card {
+    padding: var(--calcite-spacing-sm);
+  }
+
+  .stat-value {
+    font-size: var(--calcite-font-size-1);
+  }
+}
+
 /* Enhanced Power Outages Panel Styles */
 /* Dedicated panel for Power Outages with improved spacing and visual hierarchy */
 #power-outages-content {
@@ -1869,6 +2028,106 @@ calcite-dialog.mobile-only calcite-block {
 /* Tablet adjustments */
 @media (max-width: 1024px) and (min-width: 769px) {
   #simple-vehicle-list {
+    height: calc(100vh - 350px);
+  }
+}
+
+/* Power Outages - Full Height Layout */
+#power-outages-content {
+  height: calc(100vh - 200px); /* Use full height minus header/footer space */
+  min-height: 300px;
+  max-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+}
+
+#power-outages-content calcite-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#power-outages-content calcite-block [slot="content"] {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Power Outage Stats Component - Full Height */
+power-outage-stats {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+power-outage-stats .power-outage-stats-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+power-outage-stats .stats-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+power-outage-stats .outages-list-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+power-outage-stats .outages-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 150px;
+}
+
+power-outage-stats .outages-list calcite-list-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+power-outage-stats .outages-list calcite-list-item:hover {
+  background-color: var(--calcite-color-foreground-2);
+}
+
+/* Scrollbar styling for power outages list */
+power-outage-stats .outages-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+power-outage-stats .outages-list::-webkit-scrollbar-track {
+  background: var(--calcite-color-foreground-2);
+  border-radius: 4px;
+}
+
+power-outage-stats .outages-list::-webkit-scrollbar-thumb {
+  background: var(--calcite-color-border-1);
+  border-radius: 4px;
+}
+
+power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
+  background: var(--calcite-color-border-2);
+}
+
+/* Mobile adjustments for power outages */
+@media (max-width: 768px) {
+  #power-outages-content {
+    height: calc(100vh - 400px); /* Account for mobile UI elements */
+    min-height: 250px;
+  }
+
+  power-outage-stats .outages-list {
+    min-height: 120px;
+  }
+}
+
+/* Tablet adjustments for power outages */
+@media (max-width: 1024px) and (min-width: 769px) {
+  #power-outages-content {
     height: calc(100vh - 350px);
   }
 }

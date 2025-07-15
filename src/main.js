@@ -3688,6 +3688,9 @@ class Application {
       // Create power outage layers
       await this.initializePowerOutageLayers();
 
+      // Update subscriber statistics after layers are loaded
+      await this.updateSubscriberStatistics();
+
     } catch (error) {
       log.error('Failed to initialize subscriber layers:', error);
       loadingIndicator.showError('offline-subscribers', 'Offline Subscribers', 'Failed to load');
@@ -4203,14 +4206,21 @@ class Application {
     const desktopExportBtn = document.getElementById('desktop-export-offline-csv-btn');
     if (desktopExportBtn) {
       desktopExportBtn.addEventListener('click', async () => {
-        await this.handleCSVExport(desktopExportBtn);
+        await this.handleCSVExport(desktopExportBtn, 'offline');
+      });
+    }
+
+    const desktopExportAllBtn = document.getElementById('desktop-export-all-csv-btn');
+    if (desktopExportAllBtn) {
+      desktopExportAllBtn.addEventListener('click', async () => {
+        await this.handleCSVExport(desktopExportAllBtn, 'all');
       });
     }
 
     const mobileExportBtn = document.getElementById('export-offline-csv-btn');
     if (mobileExportBtn) {
       mobileExportBtn.addEventListener('click', async () => {
-        await this.handleCSVExport(mobileExportBtn);
+        await this.handleCSVExport(mobileExportBtn, 'offline');
       });
     }
   }
@@ -4218,8 +4228,9 @@ class Application {
   /**
    * Handle CSV export with proper UI feedback
    * @param {HTMLElement} button - The button that triggered the export
+   * @param {string} exportType - 'offline' or 'all'
    */
-  async handleCSVExport(button) {
+  async handleCSVExport(button, exportType = 'offline') {
     if (!button) return;
 
     const originalText = button.textContent;
@@ -4231,7 +4242,11 @@ class Application {
       button.setAttribute('icon-start', 'loading');
       button.disabled = true;
 
-      await CSVExportService.exportOfflineSubscribers();
+      if (exportType === 'all') {
+        await CSVExportService.exportAllSubscribers();
+      } else {
+        await CSVExportService.exportOfflineSubscribers();
+      }
 
       button.removeAttribute('loading');
       button.setAttribute('icon-start', 'check');
@@ -4276,6 +4291,150 @@ class Application {
     button.setAttribute('icon-start', originalIcon || 'download');
     button.textContent = originalText || 'Export Offline CSV';
     button.disabled = false;
+  }
+
+  /**
+   * Setup subscriber statistics UI elements
+   */
+  setupSubscriberStatistics() {
+    this.setupLayerSwitches();
+    this.updateSubscriberStatistics();
+
+    // Update statistics when data changes
+    document.addEventListener('subscriberDataUpdate', () => {
+      this.updateSubscriberStatistics();
+    });
+  }
+
+  /**
+   * Setup layer control switches
+   */
+  setupLayerSwitches() {
+    // Setup subscriber switches
+    const onlineSwitch = document.getElementById('online-subscribers-switch');
+    const offlineSwitch = document.getElementById('offline-subscribers-switch');
+
+    if (onlineSwitch) {
+      onlineSwitch.addEventListener('calciteSwitchChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    }
+
+    if (offlineSwitch) {
+      offlineSwitch.addEventListener('calciteSwitchChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    }
+
+    // Setup layer switches for all sections
+    this.setupLayerSwitchesForAllSections();
+
+    // Setup clickable list items
+    this.setupClickableListItems();
+  }
+
+  /**
+   * Setup layer switches for all sections (OSP, Vehicles, Tools)
+   */
+  setupLayerSwitchesForAllSections() {
+    // Setup OSP switches
+    const ospSwitches = document.querySelectorAll('#osp-content calcite-switch');
+    ospSwitches.forEach(switchElement => {
+      switchElement.addEventListener('calciteSwitchChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    });
+
+    // Setup vehicle switches
+    const vehicleSwitches = document.querySelectorAll('#vehicles-content calcite-switch');
+    vehicleSwitches.forEach(switchElement => {
+      switchElement.addEventListener('calciteSwitchChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    });
+
+    // Setup weather/tools switches
+    const toolsSwitches = document.querySelectorAll('#tools-content calcite-switch');
+    toolsSwitches.forEach(switchElement => {
+      switchElement.addEventListener('calciteSwitchChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    });
+
+    // Setup node sites switches
+    const nodeSitesSwitches = document.querySelectorAll('#network-parent-content calcite-switch');
+    nodeSitesSwitches.forEach(switchElement => {
+      switchElement.addEventListener('calciteSwitchChange', (e) => {
+        this.handleLayerToggle(e.target, e.target.checked);
+      });
+    });
+  }
+
+  /**
+   * Make list items clickable to toggle their switches
+   */
+  setupClickableListItems() {
+    const listItems = document.querySelectorAll('calcite-list-item');
+    listItems.forEach(listItem => {
+      const switchElement = listItem.querySelector('calcite-switch');
+      if (switchElement) {
+        listItem.style.cursor = 'pointer';
+        listItem.addEventListener('click', (e) => {
+          // Don't trigger if the switch itself was clicked or any of its internal elements
+          if (!e.target.closest('calcite-switch')) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Toggle the switch
+            switchElement.checked = !switchElement.checked;
+
+            // Trigger the layer toggle directly
+            this.handleLayerToggle(switchElement, switchElement.checked);
+          }
+        });
+      }
+    });
+  }
+
+  /**
+ * Update subscriber statistics display
+ */
+  async updateSubscriberStatistics() {
+    try {
+      const summary = await subscriberDataService.getSubscribersSummary();
+
+      // Update count displays using correct property names
+      const onlineCountEl = document.getElementById('online-count-display');
+      const offlineCountEl = document.getElementById('offline-count-display');
+      const lastUpdatedEl = document.getElementById('last-updated-display');
+
+      if (onlineCountEl) {
+        onlineCountEl.textContent = summary.online?.toLocaleString() || '0';
+      }
+
+      if (offlineCountEl) {
+        offlineCountEl.textContent = summary.offline?.toLocaleString() || '0';
+      }
+
+      if (lastUpdatedEl) {
+        const lastUpdated = summary.lastUpdated ?
+          new Date(summary.lastUpdated).toLocaleString() :
+          'Never';
+        lastUpdatedEl.textContent = `Last updated: ${lastUpdated}`;
+      }
+
+    } catch (error) {
+      console.error('Failed to update subscriber statistics:', error);
+
+      // Show fallback values
+      const onlineCountEl = document.getElementById('online-count-display');
+      const offlineCountEl = document.getElementById('offline-count-display');
+      const lastUpdatedEl = document.getElementById('last-updated-display');
+
+      if (onlineCountEl) onlineCountEl.textContent = '--';
+      if (offlineCountEl) offlineCountEl.textContent = '--';
+      if (lastUpdatedEl) lastUpdatedEl.textContent = 'Last updated: Error loading data';
+    }
   }
 
   /**
@@ -4367,6 +4526,14 @@ class Application {
   }
 
   getLayerIdFromElement(element) {
+    // Check for specific switch IDs first
+    if (element.id === 'online-subscribers-switch') {
+      return 'online-subscribers';
+    }
+    if (element.id === 'offline-subscribers-switch') {
+      return 'offline-subscribers';
+    }
+
     // Check for power outage switches with specific classes
     if (element.classList.contains('apco-toggle')) {
       return 'apco-outages';
@@ -4570,6 +4737,9 @@ class Application {
           // Update stored counts
           previousOfflineCount = currentOfflineCount;
           previousOnlineCount = currentOnlineCount;
+
+          // Update subscriber statistics display
+          await this.updateSubscriberStatistics();
         }
       } catch (error) {
         log.error('Failed to handle subscriber update:', error);
@@ -4598,6 +4768,11 @@ class Application {
           // Clear cache and perform immediate update
           subscriberDataService.clearCache();
           await this.pollingManager.performUpdate('subscribers');
+
+          // Update statistics display
+          if (window.app && window.app.updateSubscriberStatistics) {
+            await window.app.updateSubscriberStatistics();
+          }
         } finally {
           refreshButton.removeAttribute('loading');
           // Clear manual refresh flag
@@ -4607,6 +4782,7 @@ class Application {
     }
 
     this.setupCSVExport();
+    this.setupSubscriberStatistics();
 
     // Test button for subscriber updates in development
     const testSubscriberButton = document.getElementById('test-subscriber-update');
