@@ -66,7 +66,9 @@ async function checkVersion() {
 
       // Check if hash has changed (new deployment)
       if (storedHash !== currentHash) {
-        console.log('New version detected:', currentHash, 'was:', storedHash);
+        if (import.meta.env.DEV) {
+          console.log('New version detected:', currentHash, 'was:', storedHash);
+        }
 
         // Update stored hash immediately
         localStorage.setItem('app-build-hash', currentHash);

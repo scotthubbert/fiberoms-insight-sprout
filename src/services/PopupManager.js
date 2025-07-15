@@ -136,12 +136,13 @@ export class PopupManager {
                 data.push(`Customer: ${titleElement.textContent.trim()}`);
             }
 
-            // Try multiple selectors for field data
+            // Try multiple selectors for field data - be more comprehensive
             const fieldSelectors = [
-                '.esri-popup__content tr',           // Table rows
-                '.esri-popup__content .esri-popup__content-element', // Content elements
+                '.esri-popup__content table tr',     // Table rows (most common)
                 '.esri-popup__content .esri-feature-fields tr',      // Feature fields
-                '.esri-popup__content .esri-feature-fields__field-data' // Field data
+                '.esri-popup__content .esri-feature-fields__field-data tr', // Field data rows
+                '.esri-popup__content .esri-popup__content-element tr', // Content elements
+                '.esri-popup__content tr'            // Any table row in popup content
             ];
 
             let foundFields = false;
@@ -150,16 +151,18 @@ export class PopupManager {
 
                 if (elements.length > 0) {
                     elements.forEach(element => {
-                        // Try table row format
+                        // Try table row format - check for both td and th elements
                         const labelCell = element.querySelector('td:first-child, th:first-child');
-                        const valueCell = element.querySelector('td:last-child');
+                        const valueCell = element.querySelector('td:last-child, th:last-child');
 
-                        if (labelCell && valueCell) {
+                        if (labelCell && valueCell && labelCell !== valueCell) {
                             const label = labelCell.textContent.trim();
                             const value = valueCell.textContent.trim();
 
-                            if (value && value !== 'null' && value !== '' && value !== label) {
-                                data.push(`${label}: ${value}`);
+                            // Include all values, even empty ones (show as "N/A" or empty)
+                            if (label && label !== value) {
+                                const displayValue = value || 'N/A';
+                                data.push(`${label}: ${displayValue}`);
                                 foundFields = true;
                             }
                         }
@@ -175,20 +178,39 @@ export class PopupManager {
                 if (graphic?.attributes) {
                     const attrs = graphic.attributes;
 
-                    // Add common subscriber fields
-                    if (attrs.customer_number) data.push(`Account #: ${attrs.customer_number}`);
-                    if (attrs.address) data.push(`Service Address: ${attrs.address}`);
-                    if (attrs.city) data.push(`City: ${attrs.city}`);
-                    if (attrs.state) data.push(`State: ${attrs.state}`);
-                    if (attrs.zip) data.push(`ZIP: ${attrs.zip}`);
-                    if (attrs.status) data.push(`Connection Status: ${attrs.status}`);
-                    if (attrs.phone_number) data.push(`Phone: ${attrs.phone_number}`);
-                    if (attrs.county) data.push(`County: ${attrs.county}`);
+                    // Add ALL subscriber fields from the popup configuration
+                    const subscriberFields = [
+                        { attr: 'account', label: 'Account' },
+                        { attr: 'status', label: 'Status' },
+                        { attr: 'full_address', label: 'Full Address' },
+                        { attr: 'service_type', label: 'Service Type' },
+                        { attr: 'plan_name', label: 'Plan' },
+                        { attr: 'ta5k', label: 'TA5K' },
+                        { attr: 'remote_id', label: 'Remote ID' },
+                        { attr: 'ont', label: 'ONT' },
+                        { attr: 'has_electric', label: 'Electric Available' },
+                        { attr: 'fiber_distance', label: 'Fiber Distance' },
+                        { attr: 'light', label: 'Light Level' },
+                        { attr: 'last_update', label: 'Last Update' },
+                        { attr: 'service_address', label: 'Service Address' },
+                        { attr: 'city', label: 'City' },
+                        { attr: 'state', label: 'State' },
+                        { attr: 'zip_code', label: 'Zip Code' },
+                        { attr: 'county', label: 'County' }
+                    ];
+
+                    subscriberFields.forEach(field => {
+                        const value = attrs[field.attr];
+                        if (value !== undefined && value !== null) {
+                            const displayValue = value.toString().trim() || 'N/A';
+                            data.push(`${field.label}: ${displayValue}`);
+                        }
+                    });
                 }
             }
 
             // Add timestamp
-            data.push(`Copied: ${new Date().toLocaleString()}`);
+            data.push(`\nCopied: ${new Date().toLocaleString()}`);
 
             // Add coordinates if available
             const graphic = this.view.popup?.selectedFeature;

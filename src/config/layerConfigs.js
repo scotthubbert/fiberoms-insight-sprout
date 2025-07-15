@@ -280,7 +280,7 @@ const createSubscriberPopup = (status) => ({
             fieldInfos: [
                 { fieldName: 'account', label: 'Account', visible: true },
                 { fieldName: 'status', label: 'Status', visible: true },
-                { fieldName: 'service_address', label: 'Full Address', visible: true },
+                { fieldName: 'full_address', label: 'Full Address', visible: true },
                 { fieldName: 'service_type', label: 'Service Type', visible: true },
                 { fieldName: 'plan_name', label: 'Plan', visible: true },
                 { fieldName: 'ta5k', label: 'TA5K', visible: true },
@@ -318,6 +318,7 @@ const subscriberFields = [
     { name: 'city', type: 'string', alias: 'City' },
     { name: 'state', type: 'string', alias: 'State' },
     { name: 'zip_code', type: 'integer', alias: 'ZIP Code' },
+    { name: 'full_address', type: 'string', alias: 'Full Address' },
     { name: 'status', type: 'string', alias: 'Connection Status' },
     { name: 'county', type: 'string', alias: 'County' },
     { name: 'latitude', type: 'double', alias: 'Latitude' },

@@ -813,6 +813,14 @@ export class SubscriberDataService {
                     county: record.county || '',
                     phone_number: '', // No phone_number in schema
 
+                    // Create full address field combining all address components
+                    full_address: [
+                        record.service_address || '',
+                        record.city || '',
+                        record.state || '',
+                        record.zip_code || ''
+                    ].filter(part => part && part.toString().trim() !== '').join(', '),
+
                     // Include all original fields
                     ...record
                 }

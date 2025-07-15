@@ -117,11 +117,8 @@ export class GeotabService {
      * Initialize and authenticate with MyGeotab
      */
     async initialize() {
-        console.log('🚛 initialize() called');
-        console.log('🚛 config.enabled:', this.config.enabled);
-
         if (!this.config.enabled) {
-            console.log('🚛 GeotabService is disabled in config');
+            log.info('🚛 GeotabService is disabled in config');
             return false;
         }
 
@@ -133,25 +130,23 @@ export class GeotabService {
         }
 
         try {
-            console.log('🚛 Starting authentication process...');
-            console.log('🚛 API exists:', !!this.api);
+            log.info('🚛 Starting authentication process...');
 
             if (!this.api) {
-                console.log('🚛 No API found, initializing...');
+                log.info('🚛 No API found, initializing...');
                 await this.initializeApi();
-                console.log('🚛 API after init:', !!this.api);
             }
 
             if (this.api) {
-                console.log('🚛 Authenticating with MyGeotab...');
+                log.info('🚛 Authenticating with MyGeotab...');
                 await this.api.authenticate();
                 this.isAuthenticated = true;
                 this.connectionRetries = 0;
                 this.authRetryCount = 0;
-                console.log('✅ GeotabService authenticated successfully');
+                log.info('✅ GeotabService authenticated successfully');
                 return true;
             } else {
-                console.error('❌ No API available after initialization');
+                log.error('❌ No API available after initialization');
             }
         } catch (error) {
             log.error('❌ GeotabService authentication failed:', error);
@@ -244,11 +239,11 @@ export class GeotabService {
      * Get processed truck data categorized by type
      */
     async getTruckData() {
-        console.log('🚛 getTruckData called at', new Date().toLocaleTimeString());
+        log.info('🚛 getTruckData called at', new Date().toLocaleTimeString());
 
         // If already fetching, return the pending promise to avoid duplicate calls
         if (this.isCurrentlyFetching && this.pendingPromise) {
-            console.log('🔄 getTruckData already in progress, returning pending promise');
+            log.info('🔄 getTruckData already in progress, returning pending promise');
             return this.pendingPromise;
         }
 
@@ -257,14 +252,13 @@ export class GeotabService {
         if (this.lastTruckData && this.lastUpdateTime) {
             const age = Date.now() - this.lastUpdateTime.getTime();
             if (age < cacheMaxAge) {
-                console.log(`🚛 Using fresh cached truck data (${Math.round(age / 1000)}s old)`);
-                console.log('🚛 Cached data:', this.lastTruckData);
+                log.info(`🚛 Using fresh cached truck data (${Math.round(age / 1000)}s old)`);
                 return this.lastTruckData;
             } else {
-                console.log(`🚛 Cached data too old (${Math.round(age / 1000)}s), fetching fresh`);
+                log.info(`🚛 Cached data too old (${Math.round(age / 1000)}s), fetching fresh`);
             }
         } else {
-            console.log('🚛 No cached data available, fetching fresh');
+            log.info('🚛 No cached data available, fetching fresh');
         }
 
         // Check if we're rate limited
@@ -299,40 +293,37 @@ export class GeotabService {
      * @private
      */
     async _fetchTruckDataInternal() {
-        console.log('🚛 _fetchTruckDataInternal called');
-        console.log('🚛 isAuthenticated:', this.isAuthenticated);
+        log.info('🚛 _fetchTruckDataInternal called');
 
         if (!this.isAuthenticated) {
-            console.log('🚛 Not authenticated, trying to initialize...');
+            log.info('🚛 Not authenticated, trying to initialize...');
             await this.initialize();
         }
 
         // Double-check authentication after potential rate limit during initialize
-        console.log('🚛 After initialize - isAuthenticated:', this.isAuthenticated);
         if (!this.isAuthenticated) {
-            console.warn('⚠️ GeotabService not authenticated, returning cached data if available');
+            log.warn('⚠️ GeotabService not authenticated, returning cached data if available');
             if (this.lastTruckData) {
-                console.log('🚛 Returning cached data due to no auth');
+                log.info('🚛 Returning cached data due to no auth');
                 return this.lastTruckData;
             }
             // No authentication and no cached data - return empty
-            console.warn('⚠️ No authentication and no cached data available, returning empty data');
+            log.warn('⚠️ No authentication and no cached data available, returning empty data');
             return { fiber: [], electric: [] };
         }
 
         try {
-            console.log('🚛 Fetching fresh truck data from MyGeotab API...');
+            log.info('🚛 Fetching fresh truck data from MyGeotab API...');
 
             // Get devices and status in parallel
-            console.log('🚛 Making API calls for devices and status...');
             const [devices, statusData] = await Promise.all([
                 this.getDevices(),
                 this.getDeviceStatus()
             ]);
 
-            console.log('🚛 API calls completed');
-            console.log('🚛 Devices received:', devices?.length || 0);
-            console.log('🚛 Status data received:', statusData?.length || 0);
+            log.info('🚛 API calls completed');
+            log.info('🚛 Devices received:', devices?.length || 0);
+            log.info('🚛 Status data received:', statusData?.length || 0);
 
             // Create lookup map for status data
             const statusMap = new Map();
@@ -342,23 +333,21 @@ export class GeotabService {
                 }
             });
 
-            console.log('🚛 Status map created with', statusMap.size, 'entries');
+            log.info('🚛 Status map created with', statusMap.size, 'entries');
 
             const fiberTrucks = [];
             const electricTrucks = [];
 
-            console.log('🚛 Processing devices...');
+            log.info('🚛 Processing devices...');
             devices.forEach((device, index) => {
-                console.log(`🚛 Processing device ${index + 1}/${devices.length}:`, device.name);
-
                 if (!device.name) {
-                    console.log(`🚛 Skipping device ${index + 1} - no name`);
+                    log.info(`🚛 Skipping device ${index + 1} - no name`);
                     return;
                 }
 
                 const status = statusMap.get(device.id);
                 if (!status?.latitude || !status?.longitude) {
-                    console.log(`🚛 Skipping device ${device.name} - no location data`, {
+                    log.info(`🚛 Skipping device ${device.name} - no location data`, {
                         hasStatus: !!status,
                         lat: status?.latitude,
                         lng: status?.longitude
