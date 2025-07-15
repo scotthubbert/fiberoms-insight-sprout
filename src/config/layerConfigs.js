@@ -901,6 +901,7 @@ const createSplitterPopup = () => ({
             type: 'fields',
             fieldInfos: [
                 { fieldName: 'STRUCTURE_', label: 'Structure ID', visible: true },
+                { fieldName: 'CLLI', label: 'CLLI Code', visible: true },
                 { fieldName: 'EQUIP_FRAB', label: 'Equipment FRAB', visible: true },
                 { fieldName: 'OUTPUTPORT', label: 'Output Port Count', visible: true }
             ]
@@ -917,15 +918,13 @@ const createSplitterPopup = () => ({
 });
 
 const createClosurePopup = () => ({
-    title: 'Closure: {Name}',
+    title: 'Closure: {STRUCTURE_}',
     content: [
         {
             type: 'fields',
             fieldInfos: [
-                { fieldName: 'Name', label: 'Closure Name', visible: true },
-                { fieldName: 'Type', label: 'Closure Type', visible: true },
-                { fieldName: 'Status', label: 'Status', visible: true },
-                { fieldName: 'Location', label: 'Location', visible: true }
+                { fieldName: 'STRUCTURE_', label: 'Structure ID', visible: true },
+                { fieldName: 'CLLI', label: 'CLLI Code', visible: true }
             ]
         }
     ],
@@ -1013,15 +1012,14 @@ const createMSTTerminalFields = () => [
 
 const createSplitterFields = () => [
     { name: 'STRUCTURE_', type: 'string', alias: 'Structure ID' },
+    { name: 'CLLI', type: 'string', alias: 'CLLI Code' },
     { name: 'EQUIP_FRAB', type: 'string', alias: 'Equipment FRAB' },
     { name: 'OUTPUTPORT', type: 'integer', alias: 'Output Port Count' }
 ];
 
 const createClosureFields = () => [
-    { name: 'Name', type: 'string', alias: 'Closure Name' },
-    { name: 'Type', type: 'string', alias: 'Closure Type' },
-    { name: 'Status', type: 'string', alias: 'Status' },
-    { name: 'Location', type: 'string', alias: 'Location' }
+    { name: 'STRUCTURE_', type: 'string', alias: 'Structure ID' },
+    { name: 'CLLI', type: 'string', alias: 'CLLI Code' }
 ];
 
 const createMSTFiberFields = () => [
