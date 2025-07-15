@@ -15,6 +15,7 @@ import { subscriberDataService, pollingManager } from './dataService.js';
 import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConfigs.js';
 import { geotabService } from './services/GeotabService.js';
 import { CSVExportService } from './utils/csvExport.js';
+import * as clipboardUtils from './utils/clipboardUtils.js';
 
 // Import components
 import './components/PowerOutageStats.js';
@@ -3570,6 +3571,9 @@ class Application {
 
     // Store theme manager globally for component access
     window.themeManager = this.services.themeManager;
+
+    // Make clipboard utils available globally for popup templates
+    window.clipboardUtils = clipboardUtils;
 
     // Initialize all services
     await this.services.dashboard.init();

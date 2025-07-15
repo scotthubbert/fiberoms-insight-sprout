@@ -276,21 +276,52 @@ const createSubscriberPopup = (status) => ({
     title: '{name}',
     content: [
         {
-            type: 'fields',
-            fieldInfos: [
-                { fieldName: 'account', label: 'Account', visible: true },
-                { fieldName: 'status', label: 'Status', visible: true },
-                { fieldName: 'full_address', label: 'Full Address', visible: true },
-                { fieldName: 'service_type', label: 'Service Type', visible: true },
-                { fieldName: 'plan_name', label: 'Plan', visible: true },
-                { fieldName: 'ta5k', label: 'TA5K', visible: true },
-                { fieldName: 'remote_id', label: 'Remote ID', visible: true },
-                { fieldName: 'ont', label: 'ONT', visible: true },
-                { fieldName: 'has_electric', label: 'Electric Available', visible: true },
-                { fieldName: 'fiber_distance', label: 'Fiber Distance', visible: true },
-                { fieldName: 'light', label: 'Light Level', visible: true },
-                { fieldName: 'last_update', label: 'Last Update', visible: true }
-            ]
+            type: 'custom',
+            outFields: ['*'],
+            creator: function (feature) {
+                const attributes = feature.graphic.attributes;
+
+                // Field configuration for subscriber popup
+                const fieldsConfig = [
+                    { fieldName: 'account', label: 'Account' },
+                    { fieldName: 'status', label: 'Status' },
+                    { fieldName: 'full_address', label: 'Full Address' },
+                    { fieldName: 'service_type', label: 'Service Type' },
+                    { fieldName: 'plan_name', label: 'Plan' },
+                    { fieldName: 'ta5k', label: 'TA5K' },
+                    { fieldName: 'remote_id', label: 'Remote ID' },
+                    { fieldName: 'ont', label: 'ONT' },
+                    { fieldName: 'has_electric', label: 'Electric Available' },
+                    { fieldName: 'fiber_distance', label: 'Fiber Distance' },
+                    { fieldName: 'light', label: 'Light Level' },
+                    { fieldName: 'last_update', label: 'Last Update', format: { dateFormat: 'short-date-short-time' } }
+                ];
+
+                // Use clipboard utility if available
+                if (window.clipboardUtils && window.clipboardUtils.createPopupWithCopyButtons) {
+                    return window.clipboardUtils.createPopupWithCopyButtons(attributes, fieldsConfig);
+                }
+
+                // Fallback to simple content if clipboard utils not available
+                const container = document.createElement('div');
+                container.innerHTML = `
+                    <div style="padding: 12px;">
+                        <div><strong>Account:</strong> ${attributes.account || 'N/A'}</div>
+                        <div><strong>Status:</strong> ${attributes.status || 'N/A'}</div>
+                        <div><strong>Address:</strong> ${attributes.full_address || 'N/A'}</div>
+                        <div><strong>Service Type:</strong> ${attributes.service_type || 'N/A'}</div>
+                        <div><strong>Plan:</strong> ${attributes.plan_name || 'N/A'}</div>
+                        <div><strong>TA5K:</strong> ${attributes.ta5k || 'N/A'}</div>
+                        <div><strong>Remote ID:</strong> ${attributes.remote_id || 'N/A'}</div>
+                        <div><strong>ONT:</strong> ${attributes.ont || 'N/A'}</div>
+                        <div><strong>Electric Available:</strong> ${attributes.has_electric ? 'Yes' : 'No'}</div>
+                        <div><strong>Fiber Distance:</strong> ${attributes.fiber_distance || 'N/A'}</div>
+                        <div><strong>Light Level:</strong> ${attributes.light || 'N/A'}</div>
+                        <div><strong>Last Update:</strong> ${attributes.last_update ? new Date(attributes.last_update).toLocaleString() : 'N/A'}</div>
+                    </div>
+                `;
+                return container;
+            }
         }
     ],
     actions: [
