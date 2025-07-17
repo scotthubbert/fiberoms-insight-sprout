@@ -193,12 +193,6 @@ const createPowerOutagePopup = (company) => {
                     title: 'Copy Outage Info',
                     icon: 'duplicate',
                     type: 'button'
-                },
-                {
-                    id: 'view-affected-area',
-                    title: 'View Affected Area',
-                    icon: 'map',
-                    type: 'button'
                 }
             ]
         };
