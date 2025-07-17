@@ -204,12 +204,12 @@ const createNodeSiteRenderer = () => ({
     type: 'simple',
     symbol: {
         type: 'simple-marker',
-        style: 'circle',
-        color: [0, 120, 212, 0.8], // Blue color for network infrastructure
-        size: 10,
+        style: 'diamond',
+        color: [255, 165, 0, 0.8], // Orange color for network infrastructure
+        size: 12,
         outline: {
-            color: [0, 120, 212, 1],
-            width: 2
+            color: [255, 165, 0, 1],
+            width: 1
         }
     }
 });
