@@ -3682,6 +3682,9 @@ class Application {
       }
     }, 1500);
 
+    // Set flag to indicate initial loading is complete
+    this.initialLoadComplete = true;
+
     // Start polling for subscriber data updates
     this.startSubscriberPolling();
 
@@ -4717,13 +4720,12 @@ class Application {
     const handleSubscriberUpdate = async (data) => {
       try {
         if (data.offline || data.online) {
-          // Show loading indicators for updates
-          if (!window._isManualRefresh) {
+          // Show loading indicators for realtime data updates (never cached)
+          if (!window._isManualRefresh && data.offline) {
             loadingIndicator.showLoading('offline-subscribers-update', 'Offline Subscribers');
-            // Only show online loading indicator if layer is actually loaded
-            if (this.onlineLayerLoaded) {
-              loadingIndicator.showLoading('online-subscribers-update', 'Online Subscribers');
-            }
+          }
+          if (!window._isManualRefresh && data.online && this.onlineLayerLoaded) {
+            loadingIndicator.showLoading('online-subscribers-update', 'Online Subscribers');
           }
 
           // Get current counts
@@ -4736,7 +4738,7 @@ class Application {
 
           if (offlineLayer && data.offline) {
             await this.services.layerManager.updateLayerData('offline-subscribers', data.offline);
-            log.info(`📊 Updated offline subscribers: ${data.offline.count} records`);
+            log.info(`📊 Updated offline subscribers: ${data.offline.count} records (realtime)`);
             if (!window._isManualRefresh) {
               loadingIndicator.showNetwork('offline-subscribers-update', 'Offline Subscribers');
             }
@@ -4745,7 +4747,7 @@ class Application {
           // Only update online layer if it's actually loaded
           if (onlineLayer && data.online && this.onlineLayerLoaded) {
             await this.services.layerManager.updateLayerData('online-subscribers', data.online);
-            log.info(`📊 Updated online subscribers: ${data.online.count} records`);
+            log.info(`📊 Updated online subscribers: ${data.online.count} records (realtime)`);
             if (!window._isManualRefresh) {
               loadingIndicator.showNetwork('online-subscribers-update', 'Online Subscribers');
             }

@@ -150,13 +150,21 @@ export class SubscriberDataService {
     }
 
     // Check if data exists in cache (used by loading indicator)
+    // Note: Realtime data types (subscribers, outages, vehicles) are never cached
     isDataCached(dataType) {
-        // Map data types to cache keys
+        // Realtime data types that are never cached
+        const realtimeTypes = [
+            'offlineSubscribers', 'onlineSubscribers',
+            'apcoOutages', 'tombigbeeOutages',
+            'fiberTrucks', 'electricTrucks'
+        ];
+
+        if (realtimeTypes.includes(dataType)) {
+            return false; // Never cached
+        }
+
+        // Map data types to cache keys for infrastructure data that can be cached
         const cacheKeyMap = {
-            'offlineSubscribers': 'offline_subscribers',
-            'onlineSubscribers': 'online_subscribers',
-            'apcoOutages': 'apco_outages',
-            'tombigbeeOutages': 'tombigbee_outages',
             'nodeSites': 'nodeSites',
             'fsaBoundaries': 'fsa',
             'mainLineFiber': 'mainFiber',
@@ -164,13 +172,11 @@ export class SubscriberDataService {
             'mstTerminals': 'mstTerminals',
             'mstFiber': 'mstFiber',
             'splitters': 'splitters',
-            'closures': 'closures',
-            'fiberTrucks': 'fiber_trucks',
-            'electricTrucks': 'electric_trucks'
+            'closures': 'closures'
         };
 
-        const cacheKey = cacheKeyMap[dataType] || dataType;
-        return this.isCacheValid(cacheKey);
+        const cacheKey = cacheKeyMap[dataType];
+        return cacheKey ? this.isCacheValid(cacheKey) : false;
     }
 
     // Clean up old version caches
@@ -254,17 +260,10 @@ export class SubscriberDataService {
         }
     }
 
-    // Get offline subscribers for map display (includes geometry)
+    // Get offline subscribers for map display (includes geometry) - REALTIME (no caching)
     async getOfflineSubscribers() {
-        const cacheKey = 'offline_subscribers'
-
-        // Return cached data if valid
-        if (this.isCacheValid(cacheKey)) {
-            return this.getCache(cacheKey)
-        }
-
         try {
-            log.info('📡 Fetching offline subscribers from Supabase...')
+            log.info('📡 Fetching offline subscribers from Supabase... (realtime - no cache)')
 
             // Select all fields for feature layer creation
             const { data, error, count } = await supabase
@@ -296,7 +295,8 @@ export class SubscriberDataService {
                     count: 0,
                     data: [],
                     features: [],
-                    lastUpdated: new Date().toISOString()
+                    lastUpdated: new Date().toISOString(),
+                    fromCache: false
                 }
             }
 
@@ -317,39 +317,22 @@ export class SubscriberDataService {
                 count: count || 0,
                 data: data || [],
                 features: features,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
             }
 
-            // Cache the result
-            this.setCache(cacheKey, result)
-
+            // No caching for realtime data
             return result
         } catch (error) {
             log.error('Failed to fetch offline subscribers:', error)
-            // Return cached data if available, even if expired
-            if (this.getCache(cacheKey)) {
-                const cachedData = this.getCache(cacheKey)
-                return {
-                    ...cachedData,
-                    error: true,
-                    errorMessage: error.message
-                }
-            }
             throw error
         }
     }
 
-    // Get online subscribers for map display (includes geometry)
+    // Get online subscribers for map display (includes geometry) - REALTIME (no caching)
     async getOnlineSubscribers() {
-        const cacheKey = 'online_subscribers'
-
-        // Return cached data if valid
-        if (this.isCacheValid(cacheKey)) {
-            return this.getCache(cacheKey)
-        }
-
         try {
-            log.info('📡 Fetching online subscribers from Supabase...')
+            log.info('📡 Fetching online subscribers from Supabase... (realtime - no cache)')
 
             // Select all fields for feature layer creation
             const { data, error, count } = await supabase
@@ -381,7 +364,8 @@ export class SubscriberDataService {
                     count: 0,
                     data: [],
                     features: [],
-                    lastUpdated: new Date().toISOString()
+                    lastUpdated: new Date().toISOString(),
+                    fromCache: false
                 }
             }
 
@@ -394,39 +378,22 @@ export class SubscriberDataService {
                 count: count || 0,
                 data: data || [],
                 features: features,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
             }
 
-            // Cache the result
-            this.setCache(cacheKey, result)
-
+            // No caching for realtime data
             return result
         } catch (error) {
             log.error('Failed to fetch online subscribers:', error)
-            // Return cached data if available, even if expired
-            if (this.getCache(cacheKey)) {
-                const cachedData = this.getCache(cacheKey)
-                return {
-                    ...cachedData,
-                    error: true,
-                    errorMessage: error.message
-                }
-            }
             throw error
         }
     }
 
-    // Get all subscribers (online and offline) for CSV export
+    // Get all subscribers (online and offline) for CSV export - REALTIME (no caching)
     async getAllSubscribers() {
-        const cacheKey = 'all_subscribers'
-
-        // Return cached data if valid
-        if (this.isCacheValid(cacheKey)) {
-            return this.getCache(cacheKey)
-        }
-
         try {
-            log.info('📡 Fetching all subscribers from Supabase...')
+            log.info('📡 Fetching all subscribers from Supabase... (realtime - no cache)')
 
             // Select all fields for CSV export
             const { data, error, count } = await supabase
@@ -465,31 +432,19 @@ export class SubscriberDataService {
 
             log.info(`📊 Retrieved ${sortedData.length} subscribers for CSV export`)
 
-            // Cache the result
-            this.setCache(cacheKey, sortedData)
-
+            // No caching for realtime data
             return sortedData
         } catch (error) {
             log.error('Failed to fetch all subscribers:', error)
-            // Return cached data if available, even if expired
-            if (this.getCache(cacheKey)) {
-                const cachedData = this.getCache(cacheKey)
-                return cachedData
-            }
             throw error
         }
     }
 
-    // Get all subscribers with status breakdown
+    // Get all subscribers with status breakdown - REALTIME (no caching)
     async getSubscribersSummary() {
-        const cacheKey = 'subscribers_summary'
-
-        // Return cached data if valid
-        if (this.isCacheValid(cacheKey)) {
-            return this.getCache(cacheKey)
-        }
-
         try {
+            log.info('📡 Fetching subscribers summary from Supabase... (realtime - no cache)')
+
             const { data, error } = await supabase
                 .from('mfs')
                 .select('status')
@@ -512,24 +467,14 @@ export class SubscriberDataService {
                 offline: statusCounts['Offline'] || 0,
                 unknown: statusCounts['Unknown'] || 0,
                 statusBreakdown: statusCounts,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
             }
 
-            // Cache the result
-            this.setCache(cacheKey, result)
-
+            // No caching for realtime data
             return result
         } catch (error) {
             log.error('Failed to fetch subscribers summary:', error)
-            // Return cached data if available, even if expired
-            if (this.getCache(cacheKey)) {
-                const cachedData = this.getCache(cacheKey)
-                return {
-                    ...cachedData,
-                    error: true,
-                    errorMessage: error.message
-                }
-            }
             throw error
         }
     }
@@ -738,21 +683,11 @@ export class SubscriberDataService {
     }
 
     // Refresh specific data type
+    // Note: Realtime data types (subscribers, outages, vehicles) are never cached, so no need to clear cache
     async refreshData(type = 'all') {
         const keysToDelete = [];
 
-        if (type === 'offline' || type === 'all') {
-            keysToDelete.push('offline_subscribers');
-        }
-        if (type === 'online' || type === 'all') {
-            keysToDelete.push('online_subscribers');
-        }
-        if (type === 'summary' || type === 'all') {
-            keysToDelete.push('subscribers_summary');
-        }
-        if (type === 'outages' || type === 'all') {
-            keysToDelete.push('apco_outages', 'tombigbee_outages');
-        }
+        // Only clear cache for infrastructure data that can be cached
         if (type === 'infrastructure' || type === 'all') {
             keysToDelete.push('node_sites');
         }
@@ -775,7 +710,7 @@ export class SubscriberDataService {
             this.cacheExpiry.delete(versionedKey);
         });
 
-        log.info(`Refreshed ${type} data cache`);
+        log.info(`Refreshed ${type} data cache (realtime data is never cached)`);
     }
 
     // Convert Supabase data to GeoJSON features for ArcGIS
@@ -880,17 +815,10 @@ export class SubscriberDataService {
         }).filter(feature => feature !== null)
     }
 
-    // Get APCo power outages from Supabase storage
+    // Get APCo power outages from Supabase storage - REALTIME (no caching)
     async getApcoOutages() {
-        const cacheKey = 'apco_outages'
-
-        // Return cached data if valid
-        if (this.isCacheValid(cacheKey)) {
-            return this.getCache(cacheKey)
-        }
-
         try {
-            log.info('📡 Fetching APCo power outages from Supabase storage...')
+            log.info('📡 Fetching APCo power outages from Supabase storage... (realtime - no cache)')
 
             let geojsonData;
 
@@ -905,105 +833,53 @@ export class SubscriberDataService {
 
             // Extract features and properties - handle Kubra data format for APCo
             const features = geojsonData.features || []
-            const outageData = features.map(feature => {
-                const props = feature.properties
-                const desc = props.desc || {}
 
-                // Extract coordinates based on geometry type
-                let latitude, longitude;
-                if (feature.geometry.type === 'Point') {
-                    longitude = feature.geometry.coordinates[0];
-                    latitude = feature.geometry.coordinates[1];
-                } else if (feature.geometry.type === 'Polygon') {
-                    // For polygons, calculate centroid from first ring
-                    const ring = feature.geometry.coordinates[0];
-                    let sumLng = 0, sumLat = 0;
-                    for (const coord of ring) {
-                        sumLng += coord[0];
-                        sumLat += coord[1];
-                    }
-                    longitude = sumLng / ring.length;
-                    latitude = sumLat / ring.length;
+            // Process each feature to extract outage information
+            const processedFeatures = features.map(feature => {
+                const props = feature.properties || {}
+
+                // Extract outage details from Kubra format
+                const outageData = {
+                    id: props.id || props.outageId || 'unknown',
+                    customers_affected: props.custAffected || props.customersAffected || 0,
+                    estimated_restoration: props.etrDesc || props.estimatedRestoration || 'Unknown',
+                    cause: props.cause || props.outageType || 'Unknown',
+                    crew_status: props.crewStatus || props.status || 'Unknown',
+                    last_update: props.lastUpdateTime || props.lastUpdated || new Date().toISOString(),
+                    utility: 'APCo',
+                    // Geographic info
+                    area: props.areaName || props.area || 'Unknown',
+                    city: props.city || props.municipality || 'Unknown',
+                    county: props.county || 'Unknown',
+                    state: props.state || 'AL',
+                    // Additional metadata
+                    priority: props.priority || 'Normal',
+                    is_planned: props.isPlanned || false,
+                    // Raw properties for debugging
+                    raw_properties: props
                 }
 
                 return {
-                    id: props.id,
-                    outage_id: desc.inc_id || props.id,
-                    customers_affected: desc.cust_a?.val || 0,
-                    cause: desc.cause || 'Unknown',
-                    start_time: desc.start_time || null,
-                    estimated_restore: desc.etr && desc.etr !== 'ETR-EXP' ? desc.etr : null,
-                    status: desc.crew_status || (desc.comments ? 'In Progress' : 'Reported'),
-                    area_description: props.title || 'Area Outage',
-                    comments: desc.comments || '',
-                    crew_on_site: desc.crew_icon || false,
-                    latitude: latitude,
-                    longitude: longitude,
-                    // Include original data for debugging
-                    ...props
+                    ...feature,
+                    properties: outageData
                 }
             })
-
-            // Apply geographic filtering for APCo (Alabama Power service area)
-            const filteredData = outageData.filter(outage => {
-                const lng = outage.longitude
-                const lat = outage.latitude
-                // APCo service area bounds
-                return lng >= -88.277 && lng <= -87.263 && lat >= 33.510 && lat <= 34.632
-            })
-
-            log.info(`📍 APCo outages after geographic filtering: ${filteredData.length}`)
-
-            // Convert to the expected format, preserving original geometries
-            // Use the same centroid calculation logic for filtering
-            const filteredFeatures = features.filter(feature => {
-                let longitude, latitude;
-                if (feature.geometry.type === 'Point') {
-                    longitude = feature.geometry.coordinates[0];
-                    latitude = feature.geometry.coordinates[1];
-                } else if (feature.geometry.type === 'Polygon') {
-                    // Calculate centroid for filtering
-                    const ring = feature.geometry.coordinates[0];
-                    let sumLng = 0, sumLat = 0;
-                    for (const coord of ring) {
-                        sumLng += coord[0];
-                        sumLat += coord[1];
-                    }
-                    longitude = sumLng / ring.length;
-                    latitude = sumLat / ring.length;
-                }
-                // APCo service area bounds (using centroid for both points and polygons)
-                return longitude >= -88.277 && longitude <= -87.263 && latitude >= 33.510 && latitude <= 34.632;
-            })
-            const processedFeatures = this.convertPowerOutageToGeoJSONFeatures(filteredData, 'apco', filteredFeatures)
 
             const result = {
-                count: filteredData.length,
-                data: filteredData,
+                count: processedFeatures.length,
+                data: processedFeatures,
                 features: processedFeatures,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
             }
 
-            // Cache the result with shorter cache time for outage data (1 minute)
-            const originalCacheDuration = this.CACHE_DURATION
-            this.CACHE_DURATION = 60 * 1000 // 1 minute for power outages
-            this.setCache(cacheKey, result)
-            this.CACHE_DURATION = originalCacheDuration // Restore original
+            // No caching for realtime data
 
             log.info('🔌 APCo outages loaded:', result.count, 'outages')
             return result
 
         } catch (error) {
             log.error('Failed to fetch APCo outages:', error)
-            // Return cached data if available, even if expired
-            if (this.getCache(cacheKey)) {
-                const cachedData = this.getCache(cacheKey)
-                return {
-                    ...cachedData,
-                    error: true,
-                    errorMessage: error.message
-                }
-            }
 
             // Return empty result as fallback
             return {
@@ -1012,144 +888,77 @@ export class SubscriberDataService {
                 features: [],
                 lastUpdated: new Date().toISOString(),
                 error: true,
-                errorMessage: error.message
+                errorMessage: error.message,
+                fromCache: false
             }
         }
     }
 
-    // Get Tombigbee Electric power outages from Supabase storage
+    // Get Tombigbee power outages from Supabase storage - REALTIME (no caching)
     async getTombigbeeOutages() {
-        const cacheKey = 'tombigbee_outages'
-
-        // Return cached data if valid
-        if (this.isCacheValid(cacheKey)) {
-            return this.getCache(cacheKey)
-        }
-
         try {
-            log.info('📡 Fetching Tombigbee Electric power outages from Supabase storage...')
+            log.info('📡 Fetching Tombigbee power outages from Supabase storage... (realtime - no cache)')
 
             let geojsonData;
 
             // Direct fetch from Supabase public URL
-            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/tec_outages.geojson')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/tombigbee_outages.geojson')
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`)
             }
             geojsonData = await response.json()
             log.info('✅ Loaded Tombigbee outages from Supabase public URL')
+            log.info(`📊 Total features in Tombigbee GeoJSON: ${geojsonData.features?.length || 0}`)
 
-            // Extract features and properties - handle Tombigbee direct format (not Kubra)
+            // Extract features and properties - handle Kubra data format for Tombigbee
             const features = geojsonData.features || []
-            const outageData = features.map(feature => {
-                const props = feature.properties
 
-                // Extract coordinates based on geometry type
-                let latitude, longitude;
-                if (feature.geometry.type === 'Point') {
-                    longitude = feature.geometry.coordinates[0];
-                    latitude = feature.geometry.coordinates[1];
-                } else if (feature.geometry.type === 'Polygon') {
-                    // For polygons, calculate centroid from first ring
-                    const ring = feature.geometry.coordinates[0];
-                    let sumLng = 0, sumLat = 0;
-                    for (const coord of ring) {
-                        sumLng += coord[0];
-                        sumLat += coord[1];
-                    }
-                    longitude = sumLng / ring.length;
-                    latitude = sumLat / ring.length;
-                }
+            // Process each feature to extract outage information
+            const processedFeatures = features.map(feature => {
+                const props = feature.properties || {}
 
-                // Determine crew status
-                let crewStatus = 'Reported';
-                if (props.crew_dispatched === true) {
-                    crewStatus = 'Dispatched';
-                } else if (props.verified === true) {
-                    crewStatus = 'Verified';
-                }
-
-                // Get outage cause
-                const cause = props.verified_cause || props.suspected_cause || 'Unknown';
-
-                // Calculate duration from start time
-                let duration = '';
-                if (props.outage_start) {
-                    const startTime = new Date(props.outage_start);
-                    const now = new Date();
-                    const diffMs = now - startTime;
-                    const diffMins = Math.floor(diffMs / (1000 * 60));
-                    const diffHours = Math.floor(diffMins / 60);
-                    const diffDays = Math.floor(diffHours / 24);
-
-                    if (diffDays > 0) {
-                        duration = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-                    } else if (diffHours > 0) {
-                        duration = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-                    } else if (diffMins > 0) {
-                        duration = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-                    } else {
-                        duration = 'Just now';
-                    }
+                // Extract outage details from Kubra format
+                const outageData = {
+                    id: props.id || props.outageId || 'unknown',
+                    customers_affected: props.custAffected || props.customersAffected || 0,
+                    estimated_restoration: props.etrDesc || props.estimatedRestoration || 'Unknown',
+                    cause: props.cause || props.outageType || 'Unknown',
+                    crew_status: props.crewStatus || props.status || 'Unknown',
+                    last_update: props.lastUpdateTime || props.lastUpdated || new Date().toISOString(),
+                    utility: 'Tombigbee',
+                    // Geographic info
+                    area: props.areaName || props.area || 'Unknown',
+                    city: props.city || props.municipality || 'Unknown',
+                    county: props.county || 'Unknown',
+                    state: props.state || 'AL',
+                    // Additional metadata
+                    priority: props.priority || 'Normal',
+                    is_planned: props.isPlanned || false,
+                    // Raw properties for debugging
+                    raw_properties: props
                 }
 
                 return {
-                    id: props.outage_id || props.id,
-                    outage_id: props.outage_id,
-                    customers_affected: props.customers_out_now || 0,
-                    cause: cause,
-                    start_time: props.outage_start ? new Date(props.outage_start).getTime() : null,
-                    estimated_restore: props.outage_end ? new Date(props.outage_end).getTime() : null,
-                    status: crewStatus,
-                    outage_status: props.status || 'N/A',
-                    area_description: props.outage_name || 'Area Outage',
-                    comments: crewStatus,
-                    crew_on_site: props.crew_dispatched || false,
-                    substation: props.substation || 'N/A',
-                    feeder: props.feeder || 'N/A',
-                    district: props.district || 'N/A',
-                    customers_restored: props.customers_restored || 0,
-                    initially_affected: props.customers_out_initially || props.customers_out_now || 0,
-                    equipment: props.outage_name || 'N/A',
-                    description: `Outage affecting ${props.customers_out_now || 0} customers`,
-                    last_update: props.last_update ? new Date(props.last_update).getTime() : null,
-                    duration: duration,
-                    latitude: latitude,
-                    longitude: longitude,
-                    ...props
+                    ...feature,
+                    properties: outageData
                 }
             })
 
-            // Convert to the expected format, preserving original geometries
-            const processedFeatures = this.convertPowerOutageToGeoJSONFeatures(outageData, 'tombigbee', features)
-
             const result = {
-                count: outageData.length,
-                data: outageData,
+                count: processedFeatures.length,
+                data: processedFeatures,
                 features: processedFeatures,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
             }
 
-            // Cache the result with shorter cache time for outage data (1 minute)
-            const originalCacheDuration = this.CACHE_DURATION
-            this.CACHE_DURATION = 60 * 1000 // 1 minute for power outages
-            this.setCache(cacheKey, result)
-            this.CACHE_DURATION = originalCacheDuration // Restore original
+            // No caching for realtime data
 
             log.info('🔌 Tombigbee outages loaded:', result.count, 'outages')
             return result
 
         } catch (error) {
             log.error('Failed to fetch Tombigbee outages:', error)
-            // Return cached data if available, even if expired
-            if (this.getCache(cacheKey)) {
-                const cachedData = this.getCache(cacheKey)
-                return {
-                    ...cachedData,
-                    error: true,
-                    errorMessage: error.message
-                }
-            }
 
             // Return empty result as fallback
             return {
@@ -1158,7 +967,8 @@ export class SubscriberDataService {
                 features: [],
                 lastUpdated: new Date().toISOString(),
                 error: true,
-                errorMessage: error.message
+                errorMessage: error.message,
+                fromCache: false
             }
         }
     }
@@ -1243,19 +1053,10 @@ export class SubscriberDataService {
         )
     }
 
-    // Get fiber trucks data from GeotabService
+    // Get fiber trucks data from GeotabService - REALTIME (no caching)
     async getFiberTrucks() {
-        const cacheKey = 'fiber_trucks';
-
-        // Return cached data if valid
-        if (this.isCacheValid(cacheKey)) {
-            const cachedData = this.getCache(cacheKey);
-            cachedData.fromCache = true;
-            return cachedData;
-        }
-
         try {
-            log.info('🚛 Fetching fiber trucks from GeotabService...');
+            log.info('🚛 Fetching fiber trucks from GeotabService... (realtime - no cache)');
 
             // Import GeotabService dynamically to avoid circular imports
             const { geotabService } = await import('./services/GeotabService.js');
@@ -1275,28 +1076,12 @@ export class SubscriberDataService {
                 fromCache: false
             };
 
-            // Cache the result with shorter cache time (30 seconds for real-time data)
-            const originalCacheDuration = this.CACHE_DURATION;
-            this.CACHE_DURATION = 30 * 1000; // 30 seconds for truck data
-            this.setCache(cacheKey, result);
-            this.CACHE_DURATION = originalCacheDuration; // Restore original
+            // No caching for realtime data
 
             log.info(`✅ Fetched ${fiberTrucks.length} fiber trucks`);
             return result;
         } catch (error) {
-            log.error('❌ Failed to fetch fiber trucks:', error);
-
-            // Return cached data if available, even if expired
-            const cachedData = this.getCache(cacheKey);
-            if (cachedData) {
-                log.warn('⚠️ Using cached fiber truck data due to fetch error');
-                return {
-                    ...cachedData,
-                    error: true,
-                    errorMessage: error.message,
-                    fromCache: true
-                };
-            }
+            log.error('Failed to fetch fiber trucks:', error);
 
             // Return empty result as fallback
             return {
@@ -1311,19 +1096,10 @@ export class SubscriberDataService {
         }
     }
 
-    // Get electric trucks data from GeotabService
+    // Get electric trucks data from GeotabService - REALTIME (no caching)
     async getElectricTrucks() {
-        const cacheKey = 'electric_trucks';
-
-        // Return cached data if valid
-        if (this.isCacheValid(cacheKey)) {
-            const cachedData = this.getCache(cacheKey);
-            cachedData.fromCache = true;
-            return cachedData;
-        }
-
         try {
-            log.info('🚛 Fetching electric trucks from GeotabService...');
+            log.info('🚛 Fetching electric trucks from GeotabService... (realtime - no cache)');
 
             // Import GeotabService dynamically to avoid circular imports
             const { geotabService } = await import('./services/GeotabService.js');
@@ -1343,28 +1119,12 @@ export class SubscriberDataService {
                 fromCache: false
             };
 
-            // Cache the result with shorter cache time (30 seconds for real-time data)
-            const originalCacheDuration = this.CACHE_DURATION;
-            this.CACHE_DURATION = 30 * 1000; // 30 seconds for truck data
-            this.setCache(cacheKey, result);
-            this.CACHE_DURATION = originalCacheDuration; // Restore original
+            // No caching for realtime data
 
             log.info(`✅ Fetched ${electricTrucks.length} electric trucks`);
             return result;
         } catch (error) {
-            log.error('❌ Failed to fetch electric trucks:', error);
-
-            // Return cached data if available, even if expired
-            const cachedData = this.getCache(cacheKey);
-            if (cachedData) {
-                log.warn('⚠️ Using cached electric truck data due to fetch error');
-                return {
-                    ...cachedData,
-                    error: true,
-                    errorMessage: error.message,
-                    fromCache: true
-                };
-            }
+            log.error('Failed to fetch electric trucks:', error);
 
             // Return empty result as fallback
             return {
@@ -1430,8 +1190,24 @@ export class PollingManager {
         this.updateCallbacks.set(dataType, callback)
         this.isFirstUpdate.set(dataType, true)
 
-        // Delay first update for subscriber data to ensure layers are properly initialized
+        // For subscriber data, check if layers already have data to avoid redundant first update
         if (dataType === 'subscribers') {
+            const layerManager = window.app?.services?.layerManager;
+            const offlineLayer = layerManager?.getLayer('offline-subscribers');
+            const hasOfflineData = offlineLayer?.graphics?.length > 0;
+
+            // If offline layer already has data, skip the delayed first update
+            if (hasOfflineData) {
+                log.info('📊 Skipping polling first update - offline layer already has data');
+                this.isFirstUpdate.set(dataType, false);
+                // Start periodic polling immediately without first update
+                const intervalId = setInterval(() => {
+                    this.performUpdate(dataType)
+                }, interval)
+                this.pollingIntervals.set(dataType, intervalId)
+                return;
+            }
+
             // Wait 3 seconds before first check to ensure layer state is accurate
             setTimeout(() => {
                 this.performUpdate(dataType)
