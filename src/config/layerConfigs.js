@@ -235,6 +235,43 @@ const createNodeSitePopup = () => ({
     ]
 });
 
+// Node Sites labeling configuration
+const createNodeSiteLabeling = () => [
+    {
+        symbol: {
+            type: 'text',
+            color: [255, 255, 255],
+            font: {
+                family: 'Segoe UI, Arial, sans-serif',
+                size: 11,
+                weight: 'bold'
+            },
+            backgroundColor: [40, 40, 40, 0.9],
+            borderLineColor: [255, 165, 0, 1],
+            borderLineSize: 2,
+            haloColor: [0, 0, 0, 0.8],
+            haloSize: 1,
+            callout: {
+                type: 'line',
+                color: [255, 165, 0, 1],
+                size: 2,
+                cap: 'round',
+                join: 'round'
+            }
+        },
+        labelPlacement: 'center-right',
+        labelExpressionInfo: {
+            expression: '$feature.Name'
+        },
+        deconflictionStrategy: 'none',
+        repeatLabel: false,
+        removeDuplicateLabels: true,
+        maxScale: 0,
+        minScale: 0,
+        priority: 'high'
+    }
+];
+
 // Node Sites field definitions
 const createNodeSiteFields = () => [
     { name: 'Name', type: 'string', alias: 'Site Name' }
@@ -1228,8 +1265,9 @@ export const layerConfigs = {
         renderer: createNodeSiteRenderer(),
         popupTemplate: createNodeSitePopup(),
         fields: createNodeSiteFields(),
+        labelingInfo: createNodeSiteLabeling(),
         visible: false,
-        zOrder: 40,
+        zOrder: 120,
         dataServiceMethod: () => subscriberDataService.getNodeSites()
     },
 

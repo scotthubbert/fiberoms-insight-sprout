@@ -27,19 +27,19 @@ export class LayerManager {
         // Layer z-order configuration
         this.zOrder = {
             rainViewerRadar: -10,
-            'fsa-boundaries': 5, // Below all point layers
-            'apco-outages': 8,    // Power outage polygons below subscriber points
-            'tombigbee-outages': 8, // Power outage polygons below subscriber points
-            'online-subscribers': 10,  // Fixed: was onlineSubscribers without hyphen
-            'main-line-old': 28, // Below current main line
+            'fsa-boundaries': 5,
+            'apco-outages': 8,
+            'tombigbee-outages': 8,
+            'online-subscribers': 10,
+            'main-line-old': 28,
             'main-line-fiber': 30,
             'mst-fiber': 35,
             'closures': 40,
-            'node-sites': 40,
             'mst-terminals': 50,
             'splitters': 60,
-            'offline-subscribers': 100, // Clustered points above everything
+            'offline-subscribers': 100,
             fiberOutages: 120,
+            'node-sites': 120,
             vehicles: 130,
             weatherRadar: 140
         };
@@ -104,12 +104,13 @@ export class LayerManager {
             featureReduction: layerConfig.featureReduction,
             fields: layerConfig.fields, // Explicit field definitions to prevent inference warnings
             listMode: layerConfig.visible ? 'show' : 'hide',
-            visible: layerConfig.visible !== undefined ? layerConfig.visible : true
+            visible: layerConfig.visible !== undefined ? layerConfig.visible : true,
+            labelingInfo: layerConfig.labelingInfo || []
         });
 
         this.layers.set(layerConfig.id, layer);
         this.layerConfigs.set(layerConfig.id, layerConfig);
-        this.blobUrls.set(layerConfig.id, blobUrl); // Track for cleanup
+        this.blobUrls.set(layerConfig.id, blobUrl);
 
         // Set up scale-dependent labeling for FSA boundaries
         if (layerConfig.id === 'fsa-boundaries' && layerConfig.labelingInfo) {
