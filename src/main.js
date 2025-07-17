@@ -178,7 +178,7 @@ window.addEventListener('error', event => {
 // Basemap configuration for theme management
 const BASEMAP_CONFIG = {
   light: {
-    primary: 'streets-navigation-vector',
+    primary: 'streets-vector',
     alternate: 'hybrid'
   },
   dark: {

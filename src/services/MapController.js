@@ -200,8 +200,8 @@ export class MapController {
         if (!this.view || !this.map) return;
 
         const fallbackBasemaps = isDarkMode
-            ? ['streets-night-vector', 'dark-gray-vector', 'satellite']
-            : ['streets-navigation-vector', 'streets-vector', 'satellite'];
+            ? ['streets-night-vector', 'dark-gray-vector', 'gray-vector']
+            : ['streets-vector', 'gray-vector', 'satellite'];
 
         // Set the primary basemap for the theme
         const primaryBasemap = fallbackBasemaps[0];
