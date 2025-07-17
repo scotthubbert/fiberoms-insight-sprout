@@ -60,7 +60,11 @@ export class PowerOutageStatsComponent extends HTMLElement {
     connectedCallback() {
         this.render();
         this.setupEventListeners();
-        this.updateStats();
+
+        // Delay initial stats update to allow layers to initialize first
+        setTimeout(() => {
+            this.updateStats();
+        }, 2000); // 2 second delay to allow layer initialization
 
         // Ensure component is ready for layer interaction
         setTimeout(() => {
@@ -73,25 +77,135 @@ export class PowerOutageStatsComponent extends HTMLElement {
      * @private
      */
     setupEventListeners() {
+        // Listen for layer visibility changes
         document.addEventListener('layerVisibilityChanged', (event) => {
             if (event.detail.layerId === 'apco-outages' || event.detail.layerId === 'tombigbee-outages') {
                 this.updateStats();
             }
         });
+
+        // Listen for layer data updates (when polling updates the layers)
+        document.addEventListener('layerDataUpdated', (event) => {
+            if (event.detail.layerId === 'apco-outages' || event.detail.layerId === 'tombigbee-outages') {
+                this.updateStats();
+            }
+        });
+
+        // Listen for power outage data updates from polling
+        document.addEventListener('powerOutageDataUpdated', () => {
+            this.updateStats();
+        });
     }
 
     /**
      * Update outage statistics and handle notifications
+     * Gets data from existing layers instead of fetching directly
      * @param {boolean} skipNotification - Whether to skip showing update notifications
      * @returns {Promise<void>}
      */
     async updateStats(skipNotification = false) {
         try {
-            // Fetch current outage data
-            const [apcoData, tombigbeeData] = await Promise.all([
-                subscriberDataService.getApcoOutages(),
-                subscriberDataService.getTombigbeeOutages()
-            ]);
+            // Get data from existing layers instead of fetching directly
+            const layerManager = window.app?.services?.layerManager;
+            let apcoData = { data: [] };
+            let tombigbeeData = { data: [] };
+
+            if (layerManager) {
+                // Try to get data from existing layers first
+                const apcoLayer = layerManager.getLayer('apco-outages');
+                const tombigbeeLayer = layerManager.getLayer('tombigbee-outages');
+
+                log.info(`🔌 Layer manager found. APCo layer: ${!!apcoLayer}, Tombigbee layer: ${!!tombigbeeLayer}`);
+
+                if (apcoLayer) {
+                    log.info(`🔌 APCo layer details: graphics=${!!apcoLayer.graphics}, graphics.items=${apcoLayer.graphics?.items?.length || 'none'}`);
+                }
+
+                if (tombigbeeLayer) {
+                    log.info(`🔌 Tombigbee layer details: graphics=${!!tombigbeeLayer.graphics}, graphics.items=${tombigbeeLayer.graphics?.items?.length || 'none'}`);
+                }
+
+                if (apcoLayer && apcoLayer.graphics && apcoLayer.graphics.items) {
+                    // Extract data from layer graphics
+                    apcoData.data = apcoLayer.graphics.items.map(graphic => {
+                        const attributes = graphic.attributes || {};
+                        const geometry = graphic.geometry;
+
+                        // Handle different geometry types
+                        let latitude, longitude;
+                        if (geometry) {
+                            if (geometry.type === 'point') {
+                                latitude = geometry.latitude || geometry.y;
+                                longitude = geometry.longitude || geometry.x;
+                            } else if (geometry.type === 'polygon' && geometry.centroid) {
+                                latitude = geometry.centroid.latitude || geometry.centroid.y;
+                                longitude = geometry.centroid.longitude || geometry.centroid.x;
+                            } else if (geometry.extent) {
+                                latitude = geometry.extent.center.latitude || geometry.extent.center.y;
+                                longitude = geometry.extent.center.longitude || geometry.extent.center.x;
+                            }
+                        }
+
+                        return {
+                            ...attributes,
+                            latitude: latitude || attributes.latitude,
+                            longitude: longitude || attributes.longitude
+                        };
+                    });
+                }
+
+                if (tombigbeeLayer && tombigbeeLayer.graphics && tombigbeeLayer.graphics.items) {
+                    // Extract data from layer graphics
+                    tombigbeeData.data = tombigbeeLayer.graphics.items.map(graphic => {
+                        const attributes = graphic.attributes || {};
+                        const geometry = graphic.geometry;
+
+                        // Handle different geometry types
+                        let latitude, longitude;
+                        if (geometry) {
+                            if (geometry.type === 'point') {
+                                latitude = geometry.latitude || geometry.y;
+                                longitude = geometry.longitude || geometry.x;
+                            } else if (geometry.type === 'polygon' && geometry.centroid) {
+                                latitude = geometry.centroid.latitude || geometry.centroid.y;
+                                longitude = geometry.centroid.longitude || geometry.centroid.x;
+                            } else if (geometry.extent) {
+                                latitude = geometry.extent.center.latitude || geometry.extent.center.y;
+                                longitude = geometry.extent.center.longitude || geometry.extent.center.x;
+                            }
+                        }
+
+                        return {
+                            ...attributes,
+                            latitude: latitude || attributes.latitude,
+                            longitude: longitude || attributes.longitude
+                        };
+                    });
+                }
+
+                // If no layer data available, fall back to direct fetch (only during initialization)
+                if ((!apcoData.data || apcoData.data.length === 0) && (!tombigbeeData.data || tombigbeeData.data.length === 0)) {
+                    log.info('🔌 No layer data available, fetching directly (initialization only)');
+                    log.info(`🔌 APCo layer data: ${apcoData.data?.length || 0} items, Tombigbee layer data: ${tombigbeeData.data?.length || 0} items`);
+                    const [fetchedApcoData, fetchedTombigbeeData] = await Promise.all([
+                        subscriberDataService.getApcoOutages(),
+                        subscriberDataService.getTombigbeeOutages()
+                    ]);
+                    apcoData = fetchedApcoData;
+                    tombigbeeData = fetchedTombigbeeData;
+                } else {
+                    log.info(`🔌 Using layer data - APCo: ${apcoData.data?.length || 0} items, Tombigbee: ${tombigbeeData.data?.length || 0} items`);
+                }
+            } else {
+                // Fallback for when layer manager is not available (early initialization)
+                log.info('🔌 Layer manager not available, fetching directly (early initialization)');
+                const [fetchedApcoData, fetchedTombigbeeData] = await Promise.all([
+                    subscriberDataService.getApcoOutages(),
+                    subscriberDataService.getTombigbeeOutages()
+                ]);
+                apcoData = fetchedApcoData;
+                tombigbeeData = fetchedTombigbeeData;
+            }
 
             this.outagesData.apco = apcoData.data || [];
             this.outagesData.tombigbee = tombigbeeData.data || [];

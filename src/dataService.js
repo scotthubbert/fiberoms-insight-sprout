@@ -833,41 +833,82 @@ export class SubscriberDataService {
 
             // Extract features and properties - handle Kubra data format for APCo
             const features = geojsonData.features || []
-
-            // Process each feature to extract outage information
-            const processedFeatures = features.map(feature => {
+            const outageData = features.map(feature => {
                 const props = feature.properties || {}
+                const desc = props.desc || {}
 
-                // Extract outage details from Kubra format
-                const outageData = {
-                    id: props.id || props.outageId || 'unknown',
-                    customers_affected: props.custAffected || props.customersAffected || 0,
-                    estimated_restoration: props.etrDesc || props.estimatedRestoration || 'Unknown',
-                    cause: props.cause || props.outageType || 'Unknown',
-                    crew_status: props.crewStatus || props.status || 'Unknown',
-                    last_update: props.lastUpdateTime || props.lastUpdated || new Date().toISOString(),
-                    utility: 'APCo',
-                    // Geographic info
-                    area: props.areaName || props.area || 'Unknown',
-                    city: props.city || props.municipality || 'Unknown',
-                    county: props.county || 'Unknown',
-                    state: props.state || 'AL',
-                    // Additional metadata
-                    priority: props.priority || 'Normal',
-                    is_planned: props.isPlanned || false,
-                    // Raw properties for debugging
-                    raw_properties: props
+                // Extract coordinates based on geometry type
+                let latitude, longitude;
+                if (feature.geometry.type === 'Point') {
+                    longitude = feature.geometry.coordinates[0];
+                    latitude = feature.geometry.coordinates[1];
+                } else if (feature.geometry.type === 'Polygon') {
+                    // For polygons, calculate centroid from first ring
+                    const ring = feature.geometry.coordinates[0];
+                    let sumLng = 0, sumLat = 0;
+                    for (const coord of ring) {
+                        sumLng += coord[0];
+                        sumLat += coord[1];
+                    }
+                    longitude = sumLng / ring.length;
+                    latitude = sumLat / ring.length;
                 }
 
                 return {
-                    ...feature,
-                    properties: outageData
+                    id: props.id,
+                    outage_id: desc.inc_id || props.id,
+                    customers_affected: desc.cust_a?.val || 0,
+                    cause: desc.cause || 'Unknown',
+                    start_time: desc.start_time || null,
+                    estimated_restore: desc.etr && desc.etr !== 'ETR-EXP' ? desc.etr : null,
+                    status: desc.crew_status || (desc.comments ? 'In Progress' : 'Reported'),
+                    area_description: props.title || 'Area Outage',
+                    comments: desc.comments || '',
+                    crew_on_site: desc.crew_icon || false,
+                    latitude: latitude,
+                    longitude: longitude,
+                    // Include original data for debugging
+                    ...props
                 }
             })
 
+            // Apply geographic filtering for APCo (Alabama Power service area)
+            const filteredData = outageData.filter(outage => {
+                const lng = outage.longitude
+                const lat = outage.latitude
+                // APCo service area bounds
+                return lng >= -88.277 && lng <= -87.263 && lat >= 33.510 && lat <= 34.632
+            })
+
+            log.info(`📍 APCo outages after geographic filtering: ${filteredData.length}`)
+
+            // Convert to the expected format, preserving original geometries
+            // Use the same centroid calculation logic for filtering
+            const filteredFeatures = features.filter(feature => {
+                let longitude, latitude;
+                if (feature.geometry.type === 'Point') {
+                    longitude = feature.geometry.coordinates[0];
+                    latitude = feature.geometry.coordinates[1];
+                } else if (feature.geometry.type === 'Polygon') {
+                    // Calculate centroid for filtering
+                    const ring = feature.geometry.coordinates[0];
+                    let sumLng = 0, sumLat = 0;
+                    for (const coord of ring) {
+                        sumLng += coord[0];
+                        sumLat += coord[1];
+                    }
+                    longitude = sumLng / ring.length;
+                    latitude = sumLat / ring.length;
+                }
+                // APCo service area bounds (using centroid for both points and polygons)
+                return longitude >= -88.277 && longitude <= -87.263 && latitude >= 33.510 && latitude <= 34.632;
+            })
+
+            const processedFeatures = this.convertPowerOutageToGeoJSONFeatures(filteredData, 'apco', filteredFeatures)
+
             const result = {
-                count: processedFeatures.length,
-                data: processedFeatures,
+                count: filteredData.length,
+                data: filteredData,
                 features: processedFeatures,
                 lastUpdated: new Date().toISOString(),
                 fromCache: false
@@ -897,56 +938,105 @@ export class SubscriberDataService {
     // Get Tombigbee power outages from Supabase storage - REALTIME (no caching)
     async getTombigbeeOutages() {
         try {
-            log.info('📡 Fetching Tombigbee power outages from Supabase storage... (realtime - no cache)')
+            log.info('📡 Fetching Tombigbee Electric power outages from Supabase storage... (realtime - no cache)')
 
             let geojsonData;
 
             // Direct fetch from Supabase public URL
-            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/tombigbee_outages.geojson')
+            const response = await fetch('https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/tec_outages.geojson')
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`)
             }
             geojsonData = await response.json()
             log.info('✅ Loaded Tombigbee outages from Supabase public URL')
-            log.info(`📊 Total features in Tombigbee GeoJSON: ${geojsonData.features?.length || 0}`)
 
-            // Extract features and properties - handle Kubra data format for Tombigbee
+            // Extract features and properties - handle Tombigbee direct format (not Kubra)
             const features = geojsonData.features || []
+            const outageData = features.map(feature => {
+                const props = feature.properties
 
-            // Process each feature to extract outage information
-            const processedFeatures = features.map(feature => {
-                const props = feature.properties || {}
+                // Extract coordinates based on geometry type
+                let latitude, longitude;
+                if (feature.geometry.type === 'Point') {
+                    longitude = feature.geometry.coordinates[0];
+                    latitude = feature.geometry.coordinates[1];
+                } else if (feature.geometry.type === 'Polygon') {
+                    // For polygons, calculate centroid from first ring
+                    const ring = feature.geometry.coordinates[0];
+                    let sumLng = 0, sumLat = 0;
+                    for (const coord of ring) {
+                        sumLng += coord[0];
+                        sumLat += coord[1];
+                    }
+                    longitude = sumLng / ring.length;
+                    latitude = sumLat / ring.length;
+                }
 
-                // Extract outage details from Kubra format
-                const outageData = {
-                    id: props.id || props.outageId || 'unknown',
-                    customers_affected: props.custAffected || props.customersAffected || 0,
-                    estimated_restoration: props.etrDesc || props.estimatedRestoration || 'Unknown',
-                    cause: props.cause || props.outageType || 'Unknown',
-                    crew_status: props.crewStatus || props.status || 'Unknown',
-                    last_update: props.lastUpdateTime || props.lastUpdated || new Date().toISOString(),
-                    utility: 'Tombigbee',
-                    // Geographic info
-                    area: props.areaName || props.area || 'Unknown',
-                    city: props.city || props.municipality || 'Unknown',
-                    county: props.county || 'Unknown',
-                    state: props.state || 'AL',
-                    // Additional metadata
-                    priority: props.priority || 'Normal',
-                    is_planned: props.isPlanned || false,
-                    // Raw properties for debugging
-                    raw_properties: props
+                // Determine crew status
+                let crewStatus = 'Reported';
+                if (props.crew_dispatched === true) {
+                    crewStatus = 'Dispatched';
+                } else if (props.verified === true) {
+                    crewStatus = 'Verified';
+                }
+
+                // Get outage cause
+                const cause = props.verified_cause || props.suspected_cause || 'Unknown';
+
+                // Calculate duration from start time
+                let duration = '';
+                if (props.outage_start) {
+                    const startTime = new Date(props.outage_start);
+                    const now = new Date();
+                    const diffMs = now - startTime;
+                    const diffMins = Math.floor(diffMs / (1000 * 60));
+                    const diffHours = Math.floor(diffMins / 60);
+                    const diffDays = Math.floor(diffHours / 24);
+
+                    if (diffDays > 0) {
+                        duration = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+                    } else if (diffHours > 0) {
+                        duration = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                    } else if (diffMins > 0) {
+                        duration = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+                    } else {
+                        duration = 'Just now';
+                    }
                 }
 
                 return {
-                    ...feature,
-                    properties: outageData
+                    id: props.outage_id || props.id,
+                    outage_id: props.outage_id,
+                    customers_affected: props.customers_out_now || 0,
+                    cause: cause,
+                    start_time: props.outage_start ? new Date(props.outage_start).getTime() : null,
+                    estimated_restore: props.outage_end ? new Date(props.outage_end).getTime() : null,
+                    status: crewStatus,
+                    outage_status: props.status || 'N/A',
+                    area_description: props.outage_name || 'Area Outage',
+                    comments: crewStatus,
+                    crew_on_site: props.crew_dispatched || false,
+                    substation: props.substation || 'N/A',
+                    feeder: props.feeder || 'N/A',
+                    district: props.district || 'N/A',
+                    customers_restored: props.customers_restored || 0,
+                    initially_affected: props.customers_out_initially || props.customers_out_now || 0,
+                    equipment: props.outage_name || 'N/A',
+                    description: `Outage affecting ${props.customers_out_now || 0} customers`,
+                    last_update: props.last_update ? new Date(props.last_update).getTime() : null,
+                    duration: duration,
+                    latitude: latitude,
+                    longitude: longitude,
+                    ...props
                 }
             })
 
+            // Convert to the expected format, preserving original geometries
+            const processedFeatures = this.convertPowerOutageToGeoJSONFeatures(outageData, 'tombigbee', features)
+
             const result = {
-                count: processedFeatures.length,
-                data: processedFeatures,
+                count: outageData.length,
+                data: outageData,
                 features: processedFeatures,
                 lastUpdated: new Date().toISOString(),
                 fromCache: false
@@ -1194,11 +1284,58 @@ export class PollingManager {
         if (dataType === 'subscribers') {
             const layerManager = window.app?.services?.layerManager;
             const offlineLayer = layerManager?.getLayer('offline-subscribers');
-            const hasOfflineData = offlineLayer?.graphics?.length > 0;
+
+            // Check multiple ways a layer might have data
+            let hasOfflineData = false;
+            if (offlineLayer) {
+                // Check graphics collection (GraphicsLayer)
+                if (offlineLayer.graphics && offlineLayer.graphics.length > 0) {
+                    hasOfflineData = true;
+                } else if (offlineLayer.graphics && offlineLayer.graphics.items && offlineLayer.graphics.items.length > 0) {
+                    hasOfflineData = true;
+                    // Check source collection (FeatureLayer)
+                } else if (offlineLayer.source && offlineLayer.source.length > 0) {
+                    hasOfflineData = true;
+                } else if (offlineLayer.source && offlineLayer.source.items && offlineLayer.source.items.length > 0) {
+                    hasOfflineData = true;
+                    // Check for GeoJSONLayer (different structure)
+                } else if (offlineLayer.type === 'geojson' && offlineLayer.loaded) {
+                    hasOfflineData = true;
+                    // Check for layer visibility as another indicator of data presence
+                } else if (offlineLayer.visible && offlineLayer.opacity > 0) {
+                    hasOfflineData = true;
+                }
+
+                log.info(`📊 Offline layer data check: type=${offlineLayer.type}, loaded=${offlineLayer.loaded}, graphics=${offlineLayer.graphics?.length || offlineLayer.graphics?.items?.length || 'none'}, source=${offlineLayer.source?.length || offlineLayer.source?.items?.length || 'none'}, hasData=${hasOfflineData}`);
+            }
 
             // If offline layer already has data, skip the delayed first update
             if (hasOfflineData) {
                 log.info('📊 Skipping polling first update - offline layer already has data');
+                this.isFirstUpdate.set(dataType, false);
+                // Start periodic polling immediately without first update
+                const intervalId = setInterval(() => {
+                    this.performUpdate(dataType)
+                }, interval)
+                this.pollingIntervals.set(dataType, intervalId)
+                return;
+            }
+
+            // Wait 5 seconds before first check to ensure layer graphics are populated
+            setTimeout(() => {
+                this.performUpdate(dataType)
+            }, 5000)
+        } else if (dataType === 'power-outages') {
+            // For power outages, check if layers already have data to avoid redundant first update
+            const layerManager = window.app?.services?.layerManager;
+            const apcoLayer = layerManager?.getLayer('apco-outages');
+            const tombigbeeLayer = layerManager?.getLayer('tombigbee-outages');
+            const hasApcoData = apcoLayer?.graphics?.length > 0;
+            const hasTombigbeeData = tombigbeeLayer?.graphics?.length > 0;
+
+            // If either layer already has data, skip the immediate first update
+            if (hasApcoData || hasTombigbeeData) {
+                log.info('⚡ Skipping polling first update - power outage layers already have data');
                 this.isFirstUpdate.set(dataType, false);
                 // Start periodic polling immediately without first update
                 const intervalId = setInterval(() => {

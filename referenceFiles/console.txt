@@ -1,0 +1,319 @@
+localhost/:16 X-Frame-Options may only be set via an HTTP header sent along with a document. It may not be set inside <meta>.
+client:495 [vite] connecting...
+client:618 [vite] connected.
+CacheService.js:7 🚀 Initializing CacheService...
+dataService.js:11 🔧 Supabase Config Check:
+dataService.js:11 URL: Set ✅
+dataService.js:11 Key: Set ✅
+dataService.js:11 RUNNING IN SUPABASE MODE - Database connected
+geotabConfig.js:30 🚛 GeotabConfig Configuration Check:
+geotabConfig.js:31 Username: Set ✅
+geotabConfig.js:32 Password: Set ✅
+geotabConfig.js:33 Database: Set ✅
+geotabConfig.js:34 Enabled: Yes ✅
+geotabConfig.js:35 Refresh Interval: 3000ms
+geotabConfig.js:36 Timeout: 30000ms
+geotabConfig.js:37 Max Retries: 2
+geotabConfig.js:38 Retry Delay: 30000ms
+geotabConfig.js:39 Environment: development
+chunk-O4U5XSWK.js?v=4a8d86a0:74 Using Calcite Components 3.2.1 [Date: 2025-05-29, Revision: 618973fec]
+main.js:83 🎨 Setting CalciteUI asset path: /node_modules/@esri/calcite-components/dist/calcite/assets
+main.js:87 ✅ CalciteUI components loaded with bulk import and complete asset copying
+versionCheck.js:12 Build Info: {version: '1.0.0', hash: '660010b', branch: 'main', buildId: '1.0.0-660010b', buildTime: '2025-07-17T14:31:41.318Z', …}
+main.js:6072 🔍 === CalciteUI Component Debug ===
+main.js:6075 🌍 Environment: {isDev: true, isProd: false, mode: 'development'}
+main.js:6082 📦 CalciteUI Package Check: {hasCalciteComponents: false, customElementsRegistry: true, customElementsCount: 0}
+main.js:6099 🧩 Component Registration Status:
+main.js:6110 ✅ calcite-list: registered (_List)
+main.js:6110 ✅ calcite-list-item: registered (_ListItem)
+main.js:6110 ✅ calcite-icon: registered (_Icon)
+main.js:6110 ✅ calcite-button: registered (_Button)
+main.js:6110 ✅ calcite-shell: registered (_Shell)
+main.js:6110 ✅ calcite-panel: registered (_Panel)
+main.js:6110 ✅ calcite-block: registered (_Block)
+main.js:6117 🧪 Component Creation Test:
+main.js:6123 ✅ Component creation successful: {list: 'CALCITE-LIST', listItem: 'CALCITE-LIST-ITEM', icon: 'CALCITE-ICON'}
+main.js:6134 ✅ Property setting successful
+RainViewerService.js:39 🌧️ Initializing RainViewer service...
+GeotabService.js:16 🚛 GeotabApi initialized
+chunk-FGOLTXER.js?v=4a8d86a0:172 No data was passed to the filter function.
+    The data argument should be an array of objects
+filter @ chunk-FGOLTXER.js?v=4a8d86a0:172
+(anonymous) @ chunk-FGOLTXER.js?v=4a8d86a0:234
+filter @ chunk-FGOLTXER.js?v=4a8d86a0:232
+filterAndUpdateData @ chunk-FGOLTXER.js?v=4a8d86a0:2970
+performFilter @ chunk-FGOLTXER.js?v=4a8d86a0:2986
+setFilterEl @ chunk-FGOLTXER.js?v=4a8d86a0:2993
+_updateRefValue @ chunk-4ZRTH6VP.js?v=4a8d86a0:215
+update @ chunk-4ZRTH6VP.js?v=4a8d86a0:195
+_$resolve @ chunk-PXHL2S3M.js?v=4a8d86a0:3234
+resolveDirective @ chunk-PXHL2S3M.js?v=4a8d86a0:675
+_$setValue @ chunk-PXHL2S3M.js?v=4a8d86a0:1225
+_update @ chunk-PXHL2S3M.js?v=4a8d86a0:741
+_commitTemplateResult @ chunk-PXHL2S3M.js?v=4a8d86a0:940
+_$setValue @ chunk-PXHL2S3M.js?v=4a8d86a0:828
+_update @ chunk-PXHL2S3M.js?v=4a8d86a0:741
+_commitTemplateResult @ chunk-PXHL2S3M.js?v=4a8d86a0:940
+_$setValue @ chunk-PXHL2S3M.js?v=4a8d86a0:828
+_update @ chunk-PXHL2S3M.js?v=4a8d86a0:741
+_commitTemplateResult @ chunk-PXHL2S3M.js?v=4a8d86a0:940
+_$setValue @ chunk-PXHL2S3M.js?v=4a8d86a0:828
+render @ chunk-PXHL2S3M.js?v=4a8d86a0:1273
+update @ chunk-PXHL2S3M.js?v=4a8d86a0:2185
+update @ chunk-PXHL2S3M.js?v=4a8d86a0:3877
+performUpdate @ chunk-PXHL2S3M.js?v=4a8d86a0:1952
+load_fn @ chunk-PXHL2S3M.js?v=4a8d86a0:3970
+await in load_fn
+(anonymous) @ chunk-PXHL2S3M.js?v=4a8d86a0:3818
+chunk-FGOLTXER.js?v=4a8d86a0:172 No data was passed to the filter function.
+    The data argument should be an array of objects
+filter @ chunk-FGOLTXER.js?v=4a8d86a0:172
+load @ chunk-FGOLTXER.js?v=4a8d86a0:242
+load_fn @ chunk-PXHL2S3M.js?v=4a8d86a0:3963
+await in load_fn
+(anonymous) @ chunk-PXHL2S3M.js?v=4a8d86a0:3818
+chunk-FGOLTXER.js?v=4a8d86a0:172 No data was passed to the filter function.
+    The data argument should be an array of objects
+filter @ chunk-FGOLTXER.js?v=4a8d86a0:172
+(anonymous) @ chunk-FGOLTXER.js?v=4a8d86a0:234
+filter @ chunk-FGOLTXER.js?v=4a8d86a0:232
+filterAndUpdateData @ chunk-FGOLTXER.js?v=4a8d86a0:2970
+(anonymous) @ chunk-FGOLTXER.js?v=4a8d86a0:2656
+invokeFunc @ chunk-33ZIILTG.js?v=4a8d86a0:217
+trailingEdge @ chunk-33ZIILTG.js?v=4a8d86a0:243
+timerExpired @ chunk-33ZIILTG.js?v=4a8d86a0:236
+setTimeout
+leadingEdge @ chunk-33ZIILTG.js?v=4a8d86a0:222
+debounced @ chunk-33ZIILTG.js?v=4a8d86a0:265
+handleListItemChange @ chunk-FGOLTXER.js?v=4a8d86a0:2753
+willUpdate @ chunk-FGOLTXER.js?v=4a8d86a0:2740
+performUpdate @ chunk-PXHL2S3M.js?v=4a8d86a0:1950
+load_fn @ chunk-PXHL2S3M.js?v=4a8d86a0:3970
+await in load_fn
+(anonymous) @ chunk-PXHL2S3M.js?v=4a8d86a0:3818
+CacheService.js:7 ✅ IndexedDB (FiberOMSCache) opened successfully
+calciteIconFallback.js:101 calcite circle-filled (s) icon failed to load
+console.error @ calciteIconFallback.js:101
+console.error @ main.js:6147
+forwardToConsole @ chunk-UJFM3QEI.js?v=4a8d86a0:40
+error @ chunk-UJFM3QEI.js?v=4a8d86a0:47
+(anonymous) @ chunk-GUFBZ6QG.js?v=4a8d86a0:72
+Promise.catch
+fetchIcon @ chunk-GUFBZ6QG.js?v=4a8d86a0:71
+loadIconPathData @ chunk-GUFBZ6QG.js?v=4a8d86a0:144
+(anonymous) @ chunk-GUFBZ6QG.js?v=4a8d86a0:124
+(anonymous) @ chunk-GUFBZ6QG.js?v=4a8d86a0:156
+intersectionObserver.createObserver.rootMargin @ chunk-GUFBZ6QG.js?v=4a8d86a0:152
+calciteIconFallback.js:101 calcite circle-filled (m) icon failed to load
+console.error @ calciteIconFallback.js:101
+console.error @ main.js:6147
+forwardToConsole @ chunk-UJFM3QEI.js?v=4a8d86a0:40
+error @ chunk-UJFM3QEI.js?v=4a8d86a0:47
+(anonymous) @ chunk-GUFBZ6QG.js?v=4a8d86a0:72
+Promise.catch
+fetchIcon @ chunk-GUFBZ6QG.js?v=4a8d86a0:71
+loadIconPathData @ chunk-GUFBZ6QG.js?v=4a8d86a0:144
+(anonymous) @ chunk-GUFBZ6QG.js?v=4a8d86a0:124
+(anonymous) @ chunk-GUFBZ6QG.js?v=4a8d86a0:156
+intersectionObserver.createObserver.rootMargin @ chunk-GUFBZ6QG.js?v=4a8d86a0:152
+(index):52 Page load time: NaN ms
+localhost/:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+RainViewerService.js:99 ✅ RainViewer data loaded successfully
+RainViewerService.js:43 ✅ RainViewer service initialized successfully
+main.js:95 ✅ RainViewer service initialized
+chunk-FGOLTXER.js?v=4a8d86a0:172 No data was passed to the filter function.
+    The data argument should be an array of objects
+filter @ chunk-FGOLTXER.js?v=4a8d86a0:172
+(anonymous) @ chunk-FGOLTXER.js?v=4a8d86a0:211
+invokeFunc @ chunk-33ZIILTG.js?v=4a8d86a0:217
+trailingEdge @ chunk-33ZIILTG.js?v=4a8d86a0:243
+timerExpired @ chunk-33ZIILTG.js?v=4a8d86a0:236
+setTimeout
+timerExpired @ chunk-33ZIILTG.js?v=4a8d86a0:238
+setTimeout
+leadingEdge @ chunk-33ZIILTG.js?v=4a8d86a0:222
+debounced @ chunk-33ZIILTG.js?v=4a8d86a0:265
+valueHandler @ chunk-FGOLTXER.js?v=4a8d86a0:257
+set value @ chunk-FGOLTXER.js?v=4a8d86a0:228
+set @ chunk-PXHL2S3M.js?v=4a8d86a0:1524
+set @ chunk-PXHL2S3M.js?v=4a8d86a0:3797
+_commitValue @ chunk-PXHL2S3M.js?v=4a8d86a0:1141
+_$setValue @ chunk-PXHL2S3M.js?v=4a8d86a0:1096
+_update @ chunk-PXHL2S3M.js?v=4a8d86a0:741
+_commitTemplateResult @ chunk-PXHL2S3M.js?v=4a8d86a0:940
+_$setValue @ chunk-PXHL2S3M.js?v=4a8d86a0:828
+_update @ chunk-PXHL2S3M.js?v=4a8d86a0:741
+_commitTemplateResult @ chunk-PXHL2S3M.js?v=4a8d86a0:940
+_$setValue @ chunk-PXHL2S3M.js?v=4a8d86a0:828
+_update @ chunk-PXHL2S3M.js?v=4a8d86a0:741
+_commitTemplateResult @ chunk-PXHL2S3M.js?v=4a8d86a0:940
+_$setValue @ chunk-PXHL2S3M.js?v=4a8d86a0:828
+render @ chunk-PXHL2S3M.js?v=4a8d86a0:1273
+update @ chunk-PXHL2S3M.js?v=4a8d86a0:2185
+update @ chunk-PXHL2S3M.js?v=4a8d86a0:3877
+performUpdate @ chunk-PXHL2S3M.js?v=4a8d86a0:1952
+load_fn @ chunk-PXHL2S3M.js?v=4a8d86a0:3970
+await in load_fn
+(anonymous) @ chunk-PXHL2S3M.js?v=4a8d86a0:3818
+dataService.js:11 📡 Fetching offline subscribers from Supabase... (realtime - no cache)
+dataService.js:11 📊 Supabase response:
+dataService.js:11 - Count: 170
+dataService.js:11 - Data length: 170
+dataService.js:11 - Error: null
+dataService.js:11 📋 Sample record: {account_status: 'CONNECTED', city: 'GUIN', county: 'FAYETTE', ont: 'ADTN2306A4CF', has_electric: 'YES', …}
+dataService.js:11 🗺️ Generated features: 170
+dataService.js:11 📍 Sample feature: {type: 'Feature', geometry: {…}, properties: {…}}
+dataService.js:11 📍 Sample coordinates: (2) [-87.9311474, 33.87864882]
+dataService.js:11 📍 First 3 coordinates: (3) [Array(2), Array(2), Array(2)]
+main.js:95 📊 Online subscribers configured for on-demand loading (saves ~2.7MB)
+dataService.js:11 📡 Fetching APCo power outages from Supabase storage... (realtime - no cache)
+main.js:6154 🚨 CalciteUI Errors Found: (2) [Array(3), Array(3)]
+dataService.js:11 ✅ Loaded APCo outages from Supabase public URL
+dataService.js:11 📊 Total features in APCo GeoJSON: 48
+dataService.js:11 📍 APCo outages after geographic filtering: 2
+dataService.js:11 🔌 APCo outages loaded: 2 outages
+LayerManager.js:15 ✅ Created APCo Power Outages with 3 graphics (1 points, 1 polygons)
+main.js:95 ✅ APCo power outages layer initialized
+dataService.js:11 📡 Fetching Tombigbee Electric power outages from Supabase storage... (realtime - no cache)
+dataService.js:11 ✅ Loaded Tombigbee outages from Supabase public URL
+dataService.js:11 🔌 Tombigbee outages loaded: 0 outages
+main.js:95 📭 No data available for layer: tombigbee-outages (empty dataset - no layer created)
+main.js:95 📭 Tombigbee power outages initialized (no outages available)
+dataService.js:11 🔍 Checking cache for Node Sites (key: nodeSites)...
+CacheService.js:7 🔍 Looking for cached data: nodeSites
+CacheService.js:7 📦 Found cached nodeSites, checking validity...
+CacheService.js:7    Timestamp: 2025-07-14T16:23:31.960Z
+CacheService.js:7    Age: 2 days
+CacheService.js:7 ✅ Cache is valid, returning nodeSites data
+dataService.js:11 📦 Using cached Node Sites data from IndexedDB
+main.js:95 ✅ Node Sites layer initialized
+main.js:95 🔌 Initializing fiber plant layers...
+dataService.js:11 🔍 Checking cache for FSA Boundaries (key: fsa)...
+CacheService.js:7 🔍 Looking for cached data: fsa
+CacheService.js:7 📦 Found cached fsa, checking validity...
+CacheService.js:7    Timestamp: 2025-07-14T16:23:32.273Z
+CacheService.js:7    Age: 2 days
+CacheService.js:7 ✅ Cache is valid, returning fsa data
+dataService.js:11 📦 Using cached FSA Boundaries data from IndexedDB
+main.js:95 ✅ FSA Boundaries layer initialized
+dataService.js:11 🔍 Checking cache for Main Line Fiber (key: mainFiber)...
+CacheService.js:7 🔍 Looking for cached data: mainFiber
+CacheService.js:7 📦 Found cached mainFiber, checking validity...
+CacheService.js:7    Timestamp: 2025-07-14T16:23:32.401Z
+CacheService.js:7    Age: 2 days
+CacheService.js:7 ✅ Cache is valid, returning mainFiber data
+dataService.js:11 📦 Using cached Main Line Fiber data from IndexedDB
+main.js:95 ✅ Main Line Fiber layer initialized
+dataService.js:11 🔍 Checking cache for Main Line Old (key: mainOld)...
+CacheService.js:7 🔍 Looking for cached data: mainOld
+CacheService.js:7 📦 Found cached mainOld, checking validity...
+CacheService.js:7    Timestamp: 2025-07-14T16:23:33.150Z
+CacheService.js:7    Age: 2 days
+CacheService.js:7 ✅ Cache is valid, returning mainOld data
+dataService.js:11 📦 Using cached Main Line Old data from IndexedDB
+main.js:95 ✅ Main Line Old layer initialized
+dataService.js:11 🔍 Checking cache for MST Terminals (key: mstTerminals)...
+CacheService.js:7 🔍 Looking for cached data: mstTerminals
+CacheService.js:7 📦 Found cached mstTerminals, checking validity...
+CacheService.js:7    Timestamp: 2025-07-14T16:23:33.773Z
+CacheService.js:7    Age: 2 days
+CacheService.js:7 ✅ Cache is valid, returning mstTerminals data
+dataService.js:11 📦 Using cached MST Terminals data from IndexedDB
+main.js:95 ✅ MST Terminals layer initialized
+dataService.js:11 🔍 Checking cache for MST Fiber (key: mstFiber)...
+CacheService.js:7 🔍 Looking for cached data: mstFiber
+CacheService.js:7 📦 Found cached mstFiber, checking validity...
+CacheService.js:7    Timestamp: 2025-07-14T16:23:34.409Z
+CacheService.js:7    Age: 2 days
+CacheService.js:7 ✅ Cache is valid, returning mstFiber data
+dataService.js:11 📦 Using cached MST Fiber data from IndexedDB
+main.js:95 ✅ MST Fiber layer initialized
+dataService.js:11 🔍 Checking cache for Splitters (key: splitters)...
+CacheService.js:7 🔍 Looking for cached data: splitters
+CacheService.js:7 📦 Found cached splitters, checking validity...
+CacheService.js:7    Timestamp: 2025-07-14T16:23:34.520Z
+CacheService.js:7    Age: 2 days
+CacheService.js:7 ✅ Cache is valid, returning splitters data
+dataService.js:11 📦 Using cached Splitters data from IndexedDB
+main.js:95 ✅ Splitters layer initialized
+dataService.js:11 🔍 Checking cache for Closures (key: closures)...
+CacheService.js:7 🔍 Looking for cached data: closures
+CacheService.js:7 📦 Found cached closures, checking validity...
+CacheService.js:7    Timestamp: 2025-07-14T16:23:35.138Z
+CacheService.js:7    Age: 2 days
+CacheService.js:7 ✅ Cache is valid, returning closures data
+dataService.js:11 📦 Using cached Closures data from IndexedDB
+main.js:95 ✅ Closures layer initialized
+main.js:95 🔌 Fiber plant layers initialization complete
+main.js:95 🚛 Initializing vehicle tracking layers...
+dataService.js:11 🚛 Fetching fiber trucks from GeotabService... (realtime - no cache)
+PowerOutageStats.js:19 🔌 Layer manager found. APCo layer: true, Tombigbee layer: false
+PowerOutageStats.js:19 🔌 APCo layer details: graphics=true, graphics.items=3
+PowerOutageStats.js:19 🔌 Using layer data - APCo: 3 items, Tombigbee: 0 items
+PowerOutageStats.js:19 🔌 Layer manager found. APCo layer: true, Tombigbee layer: false
+PowerOutageStats.js:19 🔌 APCo layer details: graphics=true, graphics.items=3
+PowerOutageStats.js:19 🔌 Using layer data - APCo: 3 items, Tombigbee: 0 items
+GeotabService.js:16 🚛 getTruckData called at 9:32:05 AM
+GeotabService.js:16 🚛 No cached data available, fetching fresh
+GeotabService.js:16 🚛 _fetchTruckDataInternal called
+GeotabService.js:16 🚛 Not authenticated, trying to initialize...
+GeotabService.js:16 🚛 Starting authentication process...
+GeotabService.js:16 🚛 Authenticating with MyGeotab...
+GeotabService.js:16 ✅ GeotabService authenticated successfully
+GeotabService.js:16 🚛 Fetching fresh truck data from MyGeotab API...
+GeotabService.js:225 🚛 getDeviceStatus result: 38 status records
+GeotabService.js:192 🚛 getDevices result: 39 devices
+GeotabService.js:16 🚛 API calls completed
+GeotabService.js:16 🚛 Devices received: 39
+GeotabService.js:16 🚛 Status data received: 38
+GeotabService.js:16 🚛 Status map created with 38 entries
+GeotabService.js:16 🚛 Processing devices...
+GeotabService.js:16 🚛 Skipping device Truck 8 - no location data {hasStatus: false, lat: undefined, lng: undefined}
+GeotabService.js:16 ✅ Fetched 18 fiber trucks and 20 electric trucks
+dataService.js:11 ✅ Fetched 18 fiber trucks
+LayerManager.js:15 ✅ Created Fiber Trucks FeatureLayer with 18 truck features
+main.js:95 ✅ Fiber Trucks layer initialized
+dataService.js:11 🚛 Fetching electric trucks from GeotabService... (realtime - no cache)
+GeotabService.js:16 🚛 getTruckData called at 9:32:06 AM
+GeotabService.js:16 🚛 Using fresh cached truck data (0s old)
+dataService.js:11 ✅ Fetched 20 electric trucks
+LayerManager.js:15 ✅ Created Electric Trucks FeatureLayer with 20 truck features
+main.js:95 ✅ Electric Trucks layer initialized
+main.js:95 🚛 Vehicle tracking layers initialization complete
+main.js:95 ✅ RainViewer radar layer created and added to map
+dataService.js:11 📡 Fetching subscribers summary from Supabase... (realtime - no cache)
+main.js:95 🔄 Starting subscriber data polling
+dataService.js:11 🔄 Starting polling for subscribers every 300 seconds
+dataService.js:11 📊 Offline layer data check: graphics=none, source=none, hasData=false
+dataService.js:11 📡 Fetching subscribers summary from Supabase... (realtime - no cache)
+main.js:95 ⚡ Starting power outage data polling (1 minute interval)
+dataService.js:11 🔄 Starting polling for power-outages every 60 seconds
+dataService.js:11 ⚡ Skipping polling first update - power outage layers already have data
+main.js:95 🚛 Initializing GeotabService...
+GeotabService.js:16 🚛 Starting authentication process...
+GeotabService.js:16 🚛 Authenticating with MyGeotab...
+LayerManager.js:15 🏷️ Setting up FSA scale-dependent labeling
+LayerManager.js:15 🏷️ Initial scale too far out, FSA labels will appear at zoom level 14+
+GeotabService.js:16 ✅ GeotabService authenticated successfully
+main.js:95 ✅ GeotabService ready
+MapController.js:35 MapController: Applying bounds fallback - detected world view
+(anonymous) @ MapController.js:35
+main.js:95 🎯 Final map refresh completed for all visible layers
+dataService.js:11 🔄 Fetching updated data for subscribers
+dataService.js:11 📊 Polling update (INITIAL) - Offline layer exists: true, Online layer exists: false, onlineLayerLoaded: false
+dataService.js:11 📊 Initial load - fetching only offline subscriber data to save bandwidth
+dataService.js:11 📡 Fetching offline subscribers from Supabase... (realtime - no cache)
+dataService.js:11 📊 Supabase response:
+dataService.js:11 - Count: 170
+dataService.js:11 - Data length: 170
+dataService.js:11 - Error: null
+dataService.js:11 📋 Sample record: {account_status: 'CONNECTED', city: 'GUIN', county: 'FAYETTE', ont: 'ADTN2306A4CF', has_electric: 'YES', …}
+dataService.js:11 🗺️ Generated features: 170
+dataService.js:11 📍 Sample feature: {type: 'Feature', geometry: {…}, properties: {…}}
+dataService.js:11 📍 Sample coordinates: (2) [-87.9311474, 33.87864882]
+dataService.js:11 📍 First 3 coordinates: (3) [Array(2), Array(2), Array(2)]
+LayerManager.js:15 🔄 Updating layer: offline-subscribers
+LayerManager.js:15 ✅ Recreated layer offline-subscribers with 170 features, visible: true
+main.js:95 📊 Updated offline subscribers: 170 records (realtime)
+dataService.js:11 📡 Fetching subscribers summary from Supabase... (realtime - no cache)
+LayerManager.js:15 ✅ Set visibility for offline-subscribers to true

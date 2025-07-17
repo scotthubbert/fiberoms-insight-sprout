@@ -2494,7 +2494,10 @@ class DashboardManager {
       // Clear cache to ensure fresh data
       subscriberDataService.clearCache();
 
-      await this.updateDashboard();
+      // Use consolidated update method to prevent duplicate fetches
+      if (window.app && window.app.updateSubscriberStatistics) {
+        await window.app.updateSubscriberStatistics();
+      }
 
       // Also refresh power outage stats without notification
       const powerStats = document.querySelector('power-outage-stats');
@@ -3647,8 +3650,8 @@ class Application {
     // Initialize radar layer
     await this.initializeRadarLayer();
 
-    // Update dashboard after layers are loaded
-    await this.services.dashboard.updateDashboard();
+    // Update dashboard and statistics after layers are loaded (consolidated)
+    await this.updateSubscriberStatistics();
 
     // Map initialization complete
     loadingIndicator.showNetwork('map-init', 'Map');
@@ -3721,8 +3724,7 @@ class Application {
       // Create power outage layers
       await this.initializePowerOutageLayers();
 
-      // Update subscriber statistics after layers are loaded
-      await this.updateSubscriberStatistics();
+      // Subscriber statistics will be updated in onMapReady() to prevent duplicate calls
 
     } catch (error) {
       log.error('Failed to initialize subscriber layers:', error);
@@ -4434,7 +4436,12 @@ class Application {
  */
   async updateSubscriberStatistics() {
     try {
+      // Fetch subscriber summary once and use for both dashboard and statistics
       const summary = await subscriberDataService.getSubscribersSummary();
+
+      // Update dashboard counts
+      this.services.dashboard.updateOfflineCount(summary.offline || 0);
+      this.services.dashboard.updateLastUpdatedTime();
 
       // Update count displays using correct property names
       const onlineCountEl = document.getElementById('online-count-display');
@@ -4459,7 +4466,9 @@ class Application {
     } catch (error) {
       console.error('Failed to update subscriber statistics:', error);
 
-      // Show fallback values
+      // Show fallback values for both dashboard and statistics
+      this.services.dashboard.updateOfflineCount(0);
+
       const onlineCountEl = document.getElementById('online-count-display');
       const offlineCountEl = document.getElementById('offline-count-display');
       const lastUpdatedEl = document.getElementById('last-updated-display');
@@ -4753,9 +4762,6 @@ class Application {
             }
           }
 
-          // Update dashboard counts
-          await this.services.dashboard.updateDashboard();
-
           // Show toast if counts have changed (and not first load or manual refresh)
           if (previousOfflineCount !== null && previousOnlineCount !== null && !window._isManualRefresh) {
             const offlineChange = currentOfflineCount - previousOfflineCount;
@@ -4770,7 +4776,7 @@ class Application {
           previousOfflineCount = currentOfflineCount;
           previousOnlineCount = currentOnlineCount;
 
-          // Update subscriber statistics display
+          // Update dashboard and subscriber statistics (consolidated to prevent duplicate fetches)
           await this.updateSubscriberStatistics();
         }
       } catch (error) {
@@ -4897,11 +4903,18 @@ class Application {
             loadingIndicator.showNetwork('tombigbee-outages-update', 'Tombigbee Power Outages');
           }
 
-          // Update power outage stats component if it exists
-          const powerStats = document.querySelector('power-outage-stats');
-          if (powerStats && typeof powerStats.updateStats === 'function') {
-            // Skip notifications if it's a manual refresh
-            powerStats.updateStats(window._isManualRefresh === true);
+          // Notify PowerOutageStats component about data updates
+          document.dispatchEvent(new CustomEvent('powerOutageDataUpdated', {
+            detail: {
+              apcoCount: data.apco?.count || 0,
+              tombigbeeCount: data.tombigbee?.count || 0
+            }
+          }));
+
+          // Update power outage statistics component
+          const powerOutageStatsComponent = document.querySelector('power-outage-stats');
+          if (powerOutageStatsComponent) {
+            powerOutageStatsComponent.updateStats();
           }
         }
       } catch (error) {
