@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -316,15 +316,28 @@
             </calcite-block>
             <calcite-block heading="Network Map" collapsible expanded>
               <calcite-icon slot="icon" icon="map"></calcite-icon>
-              <div style="margin-top: 12px;">
-                <iframe width="225" height="750" frameborder="1"
-                  src="https://139.60.151.250/public/mapshow.htm?id=11824&mapid=1314418B-78B5-4F47-94B1-C2E2DA6EC55A"
-                  style="border: 1px solid var(--calcite-color-border-2); border-radius: 4px; width: 100%;"
-                  title="Network Infrastructure Map">
+              <div id="prtg-container">
+                <div id="prtg-warning" style="padding: 1rem; text-align: center;">
+                  <calcite-notice open kind="warning" icon="exclamation-mark-triangle">
+                    <div slot="title">PRTG Connection</div>
+                    <div slot="message">
+                      To view the PRTG network map, you must first accept the security certificate from the server.
+                    </div>
+                  </calcite-notice>
+                  <calcite-button id="open-prtg" style="margin-top: 1rem;" width="full">
+                    Accept Certificate
+                  </calcite-button>
+                  <calcite-button id="reload-prtg" style="margin-top: 0.5rem;" width="full" appearance="outline">
+                    Reload Frame
+                  </calcite-button>
+                </div>
+                <iframe id="prtg-iframe" width="100%" height="750" frameborder="0" style="display: none;"
+                  src="about:blank">
                 </iframe>
               </div>
             </calcite-block>
           </div>
+
 
           <!-- Tools Content -->
           <div id="tools-content" hidden>

@@ -381,6 +381,7 @@ class LayerPanel {
 
     this.setupActionBarNavigation();
     this.setupCacheManagement();
+    this.setupPrtgIframe();
 
     // Show layers content by default
     this.showContent('layers');
@@ -2014,6 +2015,31 @@ class LayerPanel {
       setTimeout(() => notice.remove(), 3000);
     } catch (error) {
       console.error('Failed to clear cache:', error);
+    }
+  }
+
+  setupPrtgIframe() {
+    const openPrtgBtn = document.getElementById('open-prtg');
+    const reloadPrtgBtn = document.getElementById('reload-prtg');
+    const prtgIframe = document.getElementById('prtg-iframe');
+    const prtgWarning = document.getElementById('prtg-warning');
+
+    const prtgUrl = 'https://139.60.151.250/public/mapshow.htm?id=11824&mapid=1314418B-78B5-4F47-94B1-C2E2DA6EC55A';
+
+    if (openPrtgBtn) {
+      openPrtgBtn.addEventListener('click', () => {
+        window.open(prtgUrl, '_blank');
+      });
+    }
+
+    if (reloadPrtgBtn) {
+      reloadPrtgBtn.addEventListener('click', () => {
+        if (prtgIframe && prtgWarning) {
+          prtgIframe.src = prtgUrl;
+          prtgIframe.style.display = 'block';
+          prtgWarning.style.display = 'none';
+        }
+      });
     }
   }
 }
