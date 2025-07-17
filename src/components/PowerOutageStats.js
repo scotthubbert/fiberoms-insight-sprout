@@ -126,10 +126,20 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 }
 
                 if (apcoLayer && apcoLayer.graphics && apcoLayer.graphics.items) {
-                    // Extract data from layer graphics
-                    apcoData.data = apcoLayer.graphics.items.map(graphic => {
+                    // Extract data from layer graphics and deduplicate by outage_id
+                    const outageMap = new Map();
+
+                    apcoLayer.graphics.items.forEach(graphic => {
                         const attributes = graphic.attributes || {};
                         const geometry = graphic.geometry;
+
+                        // Use outage_id as key for deduplication
+                        const outageId = attributes.outage_id || attributes.id || 'unknown';
+
+                        // Skip if we already have this outage (prevents double counting)
+                        if (outageMap.has(outageId)) {
+                            return;
+                        }
 
                         // Handle different geometry types
                         let latitude, longitude;
@@ -146,19 +156,33 @@ export class PowerOutageStatsComponent extends HTMLElement {
                             }
                         }
 
-                        return {
+                        outageMap.set(outageId, {
                             ...attributes,
                             latitude: latitude || attributes.latitude,
                             longitude: longitude || attributes.longitude
-                        };
+                        });
                     });
+
+                    // Convert map values to array
+                    apcoData.data = Array.from(outageMap.values());
+                    log.info(`🔌 APCo deduplication: ${apcoLayer.graphics.items.length} graphics → ${apcoData.data.length} unique outages`);
                 }
 
                 if (tombigbeeLayer && tombigbeeLayer.graphics && tombigbeeLayer.graphics.items) {
-                    // Extract data from layer graphics
-                    tombigbeeData.data = tombigbeeLayer.graphics.items.map(graphic => {
+                    // Extract data from layer graphics and deduplicate by outage_id
+                    const outageMap = new Map();
+
+                    tombigbeeLayer.graphics.items.forEach(graphic => {
                         const attributes = graphic.attributes || {};
                         const geometry = graphic.geometry;
+
+                        // Use outage_id as key for deduplication
+                        const outageId = attributes.outage_id || attributes.id || 'unknown';
+
+                        // Skip if we already have this outage (prevents double counting)
+                        if (outageMap.has(outageId)) {
+                            return;
+                        }
 
                         // Handle different geometry types
                         let latitude, longitude;
@@ -175,12 +199,16 @@ export class PowerOutageStatsComponent extends HTMLElement {
                             }
                         }
 
-                        return {
+                        outageMap.set(outageId, {
                             ...attributes,
                             latitude: latitude || attributes.latitude,
                             longitude: longitude || attributes.longitude
-                        };
+                        });
                     });
+
+                    // Convert map values to array
+                    tombigbeeData.data = Array.from(outageMap.values());
+                    log.info(`🔌 Tombigbee deduplication: ${tombigbeeLayer.graphics.items.length} graphics → ${tombigbeeData.data.length} unique outages`);
                 }
 
                 // If no layer data available, fall back to direct fetch (only during initialization)
@@ -194,7 +222,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
                     apcoData = fetchedApcoData;
                     tombigbeeData = fetchedTombigbeeData;
                 } else {
-                    log.info(`🔌 Using layer data - APCo: ${apcoData.data?.length || 0} items, Tombigbee: ${tombigbeeData.data?.length || 0} items`);
+                    log.info(`🔌 Using layer data - APCo: ${apcoData.data?.length || 0} outages (deduplicated), Tombigbee: ${tombigbeeData.data?.length || 0} outages (deduplicated)`);
                 }
             } else {
                 // Fallback for when layer manager is not available (early initialization)
