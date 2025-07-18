@@ -214,15 +214,166 @@ const createNodeSiteRenderer = () => ({
     }
 });
 
-// Node Sites popup template
+// Node Sites popup template with metrics
 const createNodeSitePopup = () => ({
     title: '{Name}',
     content: [
         {
-            type: 'fields',
-            fieldInfos: [
-                { fieldName: 'Name', label: 'Site Name', visible: true }
-            ]
+            type: 'custom',
+            outFields: ['*'],
+            creator: function (feature) {
+                const attributes = feature.graphic.attributes;
+                const nodeSiteName = attributes.Name;
+
+                // Create container for popup content
+                const container = document.createElement('div');
+                container.style.cssText = 'padding: 0; font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;';
+
+                // Site name display
+                const siteNameDiv = document.createElement('div');
+                siteNameDiv.style.cssText = 'font-weight: 600; font-size: 16px; margin-bottom: 16px; color: var(--calcite-color-text-1); padding: 0 16px;';
+                siteNameDiv.textContent = nodeSiteName;
+                container.appendChild(siteNameDiv);
+
+                // Loading state
+                const loadingDiv = document.createElement('div');
+                loadingDiv.style.cssText = 'text-align: center; padding: 32px 16px; color: var(--calcite-color-text-3); background: var(--calcite-color-foreground-1); border: 1px solid var(--calcite-color-border-2); border-radius: 4px;';
+                loadingDiv.innerHTML = `
+                    <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid var(--calcite-color-border-2); border-top: 2px solid var(--calcite-color-brand); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="margin-top: 12px; font-size: 14px; color: var(--calcite-color-text-2);">Loading metrics...</div>
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                `;
+                container.appendChild(loadingDiv);
+
+                // Asynchronously load metrics
+                (async () => {
+                    try {
+                        // Import the service dynamically to avoid circular dependencies
+                        const { nodeSiteMetricsService } = await import('../services/NodeSiteMetricsService.js');
+                        const metrics = await nodeSiteMetricsService.getNodeSiteMetrics(nodeSiteName);
+
+                        // Remove loading state
+                        container.removeChild(loadingDiv);
+
+                        // Create metrics display
+                        const metricsDiv = document.createElement('div');
+                        metricsDiv.innerHTML = `
+                             <div style="background: var(--calcite-color-foreground-1); border: 1px solid var(--calcite-color-border-2); margin: 0;">
+                                 <div style="background: var(--calcite-color-foreground-2); border-bottom: 1px solid var(--calcite-color-border-2); padding: 12px 16px;">
+                                     <div style="font-weight: 600; font-size: 14px; color: var(--calcite-color-text-1); display: flex; align-items: center;">
+                                         <calcite-icon icon="graph-time-series" scale="s" style="margin-right: 8px; color: var(--calcite-color-text-2);"></calcite-icon>
+                                         Subscriber Metrics
+                                     </div>
+                                 </div>
+                                 
+                                 <div style="padding: 16px; background: var(--calcite-color-foreground-1);">
+                                     <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                                         <div style="text-align: center; flex: 1;">
+                                             <div style="font-size: 20px; font-weight: 600; color: var(--calcite-color-status-success); line-height: 1.2;">
+                                                 ${metrics.onlineSubscribers}
+                                             </div>
+                                             <div style="font-size: 12px; color: var(--calcite-color-text-3); margin-top: 4px;">Online</div>
+                                         </div>
+                                         <div style="text-align: center; flex: 1;">
+                                             <div style="font-size: 20px; font-weight: 600; color: var(--calcite-color-status-danger); line-height: 1.2;">
+                                                 ${metrics.offlineSubscribers}
+                                             </div>
+                                             <div style="font-size: 12px; color: var(--calcite-color-text-3); margin-top: 4px;">Offline</div>
+                                         </div>
+                                         <div style="text-align: center; flex: 1;">
+                                             <div style="font-size: 20px; font-weight: 600; color: var(--calcite-color-text-1); line-height: 1.2;">
+                                                 ${metrics.totalSubscribers}
+                                             </div>
+                                             <div style="font-size: 12px; color: var(--calcite-color-text-3); margin-top: 4px;">Total</div>
+                                         </div>
+                                     </div>
+                                     
+                                     <div style="background: var(--calcite-color-border-2); height: 4px; margin: 16px 0; overflow: hidden; border-radius: 2px;">
+                                         <div style="background: var(--calcite-color-status-success); height: 100%; width: ${metrics.onlinePercentage}%; float: left;"></div>
+                                         <div style="background: var(--calcite-color-status-danger); height: 100%; width: ${metrics.offlinePercentage}%; float: left;"></div>
+                                     </div>
+                                     
+                                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--calcite-color-text-2); margin-bottom: 16px;">
+                                         <span style="display: flex; align-items: center;">
+                                             <span style="color: var(--calcite-color-status-success); margin-right: 4px;">●</span>
+                                             ${metrics.onlinePercentage}% Online
+                                         </span>
+                                         <span style="display: flex; align-items: center;">
+                                             <span style="color: var(--calcite-color-status-danger); margin-right: 4px;">●</span>
+                                             ${metrics.offlinePercentage}% Offline
+                                         </span>
+                                     </div>
+                                     
+                                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--calcite-color-foreground-2); border: 1px solid var(--calcite-color-border-2); border-radius: 4px;">
+                                         <div style="display: flex; align-items: center;">
+                                             <div style="width: 8px; height: 8px; background: ${metrics.healthColor}; margin-right: 8px; border-radius: 50%;"></div>
+                                             <span style="font-size: 12px; text-transform: capitalize; color: var(--calcite-color-text-2); font-weight: 500;">
+                                                 ${metrics.healthStatus}
+                                             </span>
+                                         </div>
+                                         <div style="font-size: 12px; color: var(--calcite-color-text-3);">
+                                             ${metrics.recentActivity} recent updates
+                                         </div>
+                                     </div>
+                                     
+                                     ${metrics.ta5kNodes && metrics.ta5kNodes.length > 1 ? `
+                                         <div style="margin-top: 16px; border: 1px solid var(--calcite-color-border-2); background: var(--calcite-color-foreground-2); border-radius: 4px; overflow: hidden;">
+                                             <div style="padding: 12px; border-bottom: 1px solid var(--calcite-color-border-2); background: var(--calcite-color-foreground-1);">
+                                                 <div style="font-weight: 600; font-size: 12px; color: var(--calcite-color-text-1); display: flex; align-items: center;">
+                                                     <calcite-icon icon="organization" scale="s" style="margin-right: 6px; color: var(--calcite-color-text-3);"></calcite-icon>
+                                                     TA5K Node Breakdown (${metrics.ta5kNodes.length} nodes)
+                                                 </div>
+                                             </div>
+                                             <div style="padding: 12px;">
+                                                 ${Object.entries(metrics.ta5kBreakdown || {})
+                                    .map(([ta5k, data]) => `
+                                                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-1); border-radius: 2px; border: 1px solid var(--calcite-color-border-3);">
+                                                             <span style="color: var(--calcite-color-text-1); font-weight: 500;">${ta5k}</span>
+                                                             <span style="color: var(--calcite-color-text-3); font-family: monospace;">${data.total} (${data.online} online, ${data.offline} offline)</span>
+                                                         </div>
+                                                     `).join('')}
+                                             </div>
+                                         </div>
+                                     ` : ''}
+                                 </div>
+                             </div>
+                             
+                             <div style="font-size: 11px; color: var(--calcite-color-text-3); text-align: center; margin-top: 12px; padding: 8px 16px; opacity: 0.8;">
+                                 Last updated: ${new Date(metrics.lastUpdated).toLocaleString()}
+                             </div>
+                         `;
+
+                        container.appendChild(metricsDiv);
+
+                    } catch (error) {
+                        // Remove loading state
+                        if (container.contains(loadingDiv)) {
+                            container.removeChild(loadingDiv);
+                        }
+
+                        // Show error state
+                        const errorDiv = document.createElement('div');
+                        errorDiv.style.cssText = 'background: var(--calcite-color-status-danger-background); border: 1px solid var(--calcite-color-status-danger-border); padding: 16px; margin: 0; color: var(--calcite-color-status-danger-text); border-radius: 4px;';
+                        errorDiv.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center;">
+                                <calcite-icon icon="exclamation-mark-triangle" scale="s" style="margin-right: 8px; color: var(--calcite-color-status-danger);"></calcite-icon>
+                                Unable to load metrics
+                            </div>
+                            <div style="font-size: 12px; color: var(--calcite-color-text-3);">Please try refreshing the popup</div>
+                        `;
+                        container.appendChild(errorDiv);
+
+                        console.error('Error loading node site metrics:', error);
+                    }
+                })();
+
+                return container;
+            }
         }
     ],
     actions: [
@@ -230,6 +381,12 @@ const createNodeSitePopup = () => ({
             id: 'directions',
             title: 'Get Directions',
             icon: 'pin-tear',
+            type: 'button'
+        },
+        {
+            id: 'refresh-metrics',
+            title: 'Refresh Metrics',
+            icon: 'refresh',
             type: 'button'
         }
     ]

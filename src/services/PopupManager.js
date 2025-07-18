@@ -44,6 +44,12 @@ export class PopupManager {
                 setTimeout(() => {
                     this.handleDirectionsAction(button);
                 }, 100);
+            } else if (actionId === 'refresh-metrics' || buttonText.includes('refresh')) {
+                e.preventDefault();
+                e.stopPropagation();
+                setTimeout(() => {
+                    this.handleRefreshMetricsAction(button);
+                }, 100);
             }
         }, true); // Use capture phase to catch event before ArcGIS handles it
     }
@@ -335,7 +341,89 @@ export class PopupManager {
         }, 3000);
     }
 
+    // Handle refresh metrics action
+    async handleRefreshMetricsAction(button) {
+        const popup = this.view.popup;
+        const selectedFeature = popup.selectedFeature;
 
+        if (!selectedFeature) {
+            console.warn('No feature selected for metrics refresh');
+            return;
+        }
+
+        const attributes = selectedFeature.attributes;
+        const nodeSiteName = attributes.Name;
+
+        if (!nodeSiteName) {
+            console.warn('No node site name available for metrics refresh');
+            return;
+        }
+
+        try {
+            // Show loading indicator
+            const loadingToast = this.showToast('🔄 Refreshing metrics...', 'info');
+
+            // Import the service dynamically
+            const { nodeSiteMetricsService } = await import('./NodeSiteMetricsService.js');
+
+            // Invalidate cache for this node site
+            nodeSiteMetricsService.invalidateCache(nodeSiteName);
+
+            // Refresh the popup by closing and reopening it
+            const geometry = selectedFeature.geometry;
+            popup.close();
+
+            // Small delay to ensure popup is closed
+            setTimeout(() => {
+                popup.open({
+                    location: geometry,
+                    features: [selectedFeature]
+                });
+
+                // Remove loading toast
+                if (loadingToast && loadingToast.parentNode) {
+                    loadingToast.parentNode.removeChild(loadingToast);
+                }
+
+                this.showToast('✅ Metrics refreshed successfully', 'success');
+            }, 100);
+
+        } catch (error) {
+            console.error('Error refreshing metrics:', error);
+            this.showToast('❌ Failed to refresh metrics', 'error');
+        }
+    }
+
+    // Helper method to show toast notifications
+    showToast(message, type = 'info') {
+        const toast = document.createElement('calcite-notice');
+        toast.setAttribute('kind', type);
+        toast.setAttribute('open', 'true');
+        toast.setAttribute('auto-close', 'true');
+        toast.setAttribute('auto-close-duration', '3000');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            max-width: 300px;
+        `;
+
+        toast.innerHTML = `
+            <div slot="title">${message}</div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Auto-remove after duration
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+
+        return toast;
+    }
 
     // Add additional popup actions for future features
     addCustomAction(layerId, actionId, actionConfig) {
