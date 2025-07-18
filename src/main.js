@@ -178,7 +178,7 @@ window.addEventListener('error', event => {
 // Basemap configuration for theme management
 const BASEMAP_CONFIG = {
   light: {
-    primary: 'streets-vector',
+    primary: 'topo-vector',
     alternate: 'hybrid'
   },
   dark: {
@@ -3633,6 +3633,10 @@ class Application {
     // Store app instance globally for cross-component access
     window.app = this;
   }
+
+
+
+
 
   async onMapReady() {
     // Clear any previous loading state

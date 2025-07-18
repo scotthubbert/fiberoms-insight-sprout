@@ -1,6 +1,6 @@
 {
   "name": "fiberoms-insight-pwa",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "FiberOMS Insight PWA - Production SaaS for ISP outage management with mobile-first design",
   "type": "module",
