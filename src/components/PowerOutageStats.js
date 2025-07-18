@@ -371,27 +371,29 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }
 
         return `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: ${bgColor}; border-radius: 4px; margin-bottom: 8px;">
-                <div style="display: flex; align-items: center; flex: 1;">
-                    <img src="${logoPath}" alt="${company} Logo" style="width: 24px; height: 24px; object-fit: contain; margin-right: 8px;">
-                    <div style="flex: 1;">
-                        <span style="font-weight: 600; font-size: 14px;">${companyFullName}</span>
-                        <div style="font-size: 11px; color: var(--calcite-color-text-3);">${customerCount.toLocaleString()} affected</div>
+            <calcite-card class="power-company-card" data-company="${company.toLowerCase()}">
+                <div class="company-header">
+                    <div class="company-info">
+                        <img src="${logoPath}" alt="${company} Logo" class="company-logo">
+                        <div class="company-details">
+                            <div class="company-name">${companyFullName}</div>
+                            <div class="customers-affected">${customerCount.toLocaleString()} affected</div>
+                        </div>
+                    </div>
+                    <div class="company-actions">
+                        <div class="outage-counter">
+                            <div class="counter-value">${outageCount}</div>
+                            <div class="counter-label">outages</div>
+                        </div>
+                        <calcite-switch scale="s" ${isChecked ? 'checked' : ''} 
+                            class="power-company-toggle" 
+                            data-layer-id="${layerId}"
+                            data-company="${company}"
+                            id="toggle-${layerId}">
+                        </calcite-switch>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="text-align: center;">
-                        <span style="font-size: 20px; font-weight: 700; color: var(--calcite-color-text-1);">${outageCount}</span>
-                        <div style="font-size: 11px; color: var(--calcite-color-text-2);">outages</div>
-                    </div>
-                    <calcite-switch scale="s" ${isChecked ? 'checked' : ''} 
-                        class="power-company-toggle" 
-                        data-layer-id="${layerId}"
-                        data-company="${company}"
-                        id="toggle-${layerId}">
-                    </calcite-switch>
-                </div>
-            </div>
+            </calcite-card>
         `;
     }
 

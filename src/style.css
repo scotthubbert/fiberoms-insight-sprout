@@ -117,13 +117,40 @@ calcite-navigation.unified-header .navigation-content-center {
   opacity: 0.8;
 }
 
-/* Dashboard Metrics Chip - Simple and Clean */
+/* Dashboard Metrics Chip - Enhanced with vibrant colors */
 #metrics-chip {
   --calcite-chip-border-color: var(--calcite-color-status-danger);
   --calcite-chip-text-color: var(--calcite-color-status-danger);
-  font-family: "SF Mono", "Monaco", "Cascadia Code", monospace;
-  font-size: 16px;
-  font-weight: 700;
+  --calcite-chip-background-color: rgba(239, 68, 68, 0.1);
+  font-family: var(--calcite-font-family-monospace);
+  font-size: var(--calcite-font-size-0);
+  font-weight: var(--calcite-font-weight-bold);
+  min-width: 48px;
+  text-align: center;
+  border-width: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+#metrics-chip::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-status-danger) 0%,
+    rgba(239, 68, 68, 0.6) 100%
+  );
+}
+
+#metrics-chip:hover {
+  --calcite-chip-background-color: rgba(239, 68, 68, 0.15);
+  --calcite-chip-border-color: rgba(239, 68, 68, 0.8);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
 #metrics-chip span {
@@ -132,38 +159,23 @@ calcite-navigation.unified-header .navigation-content-center {
   font-weight: inherit;
 }
 
-/* Mobile responsiveness for metrics chip - Enhanced styling */
+/* Mobile responsiveness for metrics chip - Calcite aligned */
 @media (max-width: 768px) {
   #metrics-chip {
-    font-size: 20px;
-    font-weight: 800;
-    padding: var(--calcite-spacing-sm) var(--calcite-spacing-lg);
-    --calcite-chip-border-width: 2px;
-    --calcite-chip-background-color: var(--calcite-color-foreground-1);
-    --calcite-chip-border-color: var(--calcite-color-status-danger);
-    --calcite-chip-text-color: var(--calcite-color-status-danger);
-    border-radius: 28px;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    letter-spacing: 0.5px;
-  }
-
-  #metrics-chip span {
-    font-size: inherit;
-    font-weight: inherit;
-    letter-spacing: inherit;
+    font-size: var(--calcite-font-size-1);
+    font-weight: var(--calcite-font-weight-medium);
+    --calcite-chip-border-width: 1px;
+    --calcite-chip-spacing-inline: var(--calcite-spacing-md);
+    --calcite-chip-spacing-block: var(--calcite-spacing-sm);
+    min-height: 44px;
   }
 }
 
 @media (max-width: 480px) {
   #metrics-chip {
-    font-size: 18px;
-    min-height: 44px;
-    padding: var(--calcite-spacing-sm) var(--calcite-spacing-md);
-    border-radius: 24px;
+    font-size: var(--calcite-font-size-0);
+    min-height: 40px;
+    --calcite-chip-spacing-inline: var(--calcite-spacing-sm);
   }
 }
 
@@ -1299,7 +1311,7 @@ calcite-autocomplete-item:focus {
   }
 }
 
-/* Subscriber Statistics Cards */
+/* Subscriber Statistics Cards - Calcite Design System Aligned */
 .subscriber-stats-container {
   display: flex;
   gap: var(--calcite-spacing-sm);
@@ -1308,52 +1320,109 @@ calcite-autocomplete-item:focus {
 
 .subscriber-stat-card {
   flex: 1;
-  padding: var(--calcite-spacing-md);
-  border: 2px solid var(--calcite-color-border-2);
-  border-radius: var(--calcite-border-radius);
-  background: var(--calcite-color-foreground-1);
-  transition: all 0.3s ease;
+  --calcite-card-border-color: var(--calcite-color-border-2);
+  --calcite-card-background-color: var(--calcite-color-foreground-1);
+  --calcite-card-shadow: var(--calcite-shadow-0);
   text-align: center;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: var(--calcite-spacing-md);
+  border-radius: var(--calcite-border-radius);
+  border: 1px solid var(--calcite-color-border-2);
+  background: var(--calcite-color-foreground-1);
+  transition: var(--calcite-animation-timing) ease-in-out;
+  transition-property: transform, box-shadow, border-color;
 }
 
 .subscriber-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+  --calcite-card-shadow: var(--calcite-shadow-1);
+  box-shadow: var(--calcite-shadow-1);
 }
 
-/* Online subscribers card styling */
-.subscriber-stat-card:first-child {
+/* Status-specific styling using Calcite semantic colors with enhanced visual appeal */
+.subscriber-stat-card[data-status="online"] {
+  --calcite-card-border-color: var(--calcite-color-status-success);
   border-color: var(--calcite-color-status-success);
+  border-width: 2px;
   background: linear-gradient(
     135deg,
     var(--calcite-color-foreground-1) 0%,
-    rgba(76, 175, 80, 0.05) 100%
+    rgba(34, 197, 94, 0.08) 100%
   );
+  position: relative;
+  overflow: hidden;
 }
 
-.subscriber-stat-card:first-child:hover {
-  border-color: var(--calcite-color-success);
-  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.2);
-}
-
-/* Offline subscribers card styling */
-.subscriber-stat-card:last-child {
+.subscriber-stat-card[data-status="offline"] {
+  --calcite-card-border-color: var(--calcite-color-status-danger);
   border-color: var(--calcite-color-status-danger);
+  border-width: 2px;
   background: linear-gradient(
     135deg,
     var(--calcite-color-foreground-1) 0%,
-    rgba(244, 67, 54, 0.05) 100%
+    rgba(239, 68, 68, 0.08) 100%
   );
+  position: relative;
+  overflow: hidden;
 }
 
-.subscriber-stat-card:last-child:hover {
-  border-color: var(--calcite-color-danger);
-  box-shadow: 0 4px 16px rgba(244, 67, 54, 0.2);
+.subscriber-stat-card[data-status="online"]:hover {
+  --calcite-card-shadow: 0 8px 16px rgba(34, 197, 94, 0.25);
+  box-shadow: var(--calcite-card-shadow);
+  border-color: rgba(34, 197, 94, 0.8);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-1) 0%,
+    rgba(34, 197, 94, 0.12) 100%
+  );
+  transform: translateY(-2px);
+}
+
+.subscriber-stat-card[data-status="offline"]:hover {
+  --calcite-card-shadow: 0 8px 16px rgba(239, 68, 68, 0.25);
+  box-shadow: var(--calcite-card-shadow);
+  border-color: rgba(239, 68, 68, 0.8);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-1) 0%,
+    rgba(239, 68, 68, 0.12) 100%
+  );
+  transform: translateY(-2px);
+}
+
+/* Add subtle accent line at the top */
+.subscriber-stat-card[data-status="online"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-status-success) 0%,
+    rgba(34, 197, 94, 0.6) 100%
+  );
+  border-radius: var(--calcite-border-radius) var(--calcite-border-radius) 0 0;
+}
+
+.subscriber-stat-card[data-status="offline"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-status-danger) 0%,
+    rgba(239, 68, 68, 0.6) 100%
+  );
+  border-radius: var(--calcite-border-radius) var(--calcite-border-radius) 0 0;
 }
 
 .stat-icon {
@@ -1365,39 +1434,67 @@ calcite-autocomplete-item:focus {
 }
 
 .stat-label {
-  font-size: var(--calcite-font-size-0);
-  font-weight: 600;
+  font-size: var(--calcite-font-size--1);
+  font-weight: var(--calcite-font-weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--calcite-letter-spacing-wide);
   margin: 0 0 var(--calcite-spacing-xs) 0;
   text-align: center;
   width: 100%;
+  color: var(--calcite-color-text-2);
 }
 
-/* Online label styling */
-.subscriber-stat-card:first-child .stat-label {
-  color: var(--calcite-color-success);
+/* Status-specific label colors */
+.subscriber-stat-card[data-status="online"] .stat-label {
+  color: var(--calcite-color-status-success);
+  font-weight: var(--calcite-font-weight-bold);
 }
 
-/* Offline label styling */
-.subscriber-stat-card:last-child .stat-label {
-  color: var(--calcite-color-danger);
+.subscriber-stat-card[data-status="offline"] .stat-label {
+  color: var(--calcite-color-status-danger);
+  font-weight: var(--calcite-font-weight-bold);
 }
 
 .stat-value {
   font-size: var(--calcite-font-size-3);
-  font-weight: 700;
-  color: var(--calcite-color-text-1);
+  font-weight: var(--calcite-font-weight-bold);
   margin-bottom: var(--calcite-spacing-xs);
-  line-height: 1.1;
+  line-height: var(--calcite-line-height-tight);
   text-align: center;
   width: 100%;
+  font-family: var(--calcite-font-family-monospace);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced stat value colors */
+.subscriber-stat-card[data-status="online"] .stat-value {
+  color: var(--calcite-color-status-success);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-status-success) 0%,
+    rgba(34, 197, 94, 0.8) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subscriber-stat-card[data-status="offline"] .stat-value {
+  color: var(--calcite-color-status-danger);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-status-danger) 0%,
+    rgba(239, 68, 68, 0.8) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .stat-subtext {
   font-size: var(--calcite-font-size--1);
   color: var(--calcite-color-text-3);
-  font-weight: 500;
+  font-weight: var(--calcite-font-weight-normal);
   margin: 0;
   text-align: center;
   width: 100%;
@@ -1422,15 +1519,155 @@ calcite-autocomplete-item:focus {
 #vehicles-content calcite-list-item,
 #tools-content calcite-list-item {
   --calcite-list-item-spacing-indent: var(--calcite-spacing-md);
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
+/* Enhanced styling for subscriber layer controls with exact map colors */
 #layers-content calcite-list-item[label="Online Subscribers"] {
-  --calcite-list-item-color-active: var(--calcite-color-status-success);
+  --calcite-list-item-color-active: rgb(34, 197, 94);
+  border-left: 3px solid rgb(34, 197, 94);
+  background: linear-gradient(
+    90deg,
+    rgba(34, 197, 94, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+#layers-content calcite-list-item[label="Online Subscribers"]:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(34, 197, 94, 0.12) 0%,
+    var(--calcite-color-foreground-2) 100%
+  );
+  border-left-color: rgba(34, 197, 94, 0.9);
 }
 
 #layers-content calcite-list-item[label="Offline Subscribers"] {
-  --calcite-list-item-color-active: var(--calcite-color-status-danger);
+  --calcite-list-item-color-active: rgb(220, 38, 38);
+  border-left: 3px solid rgb(220, 38, 38);
+  background: linear-gradient(
+    90deg,
+    rgba(220, 38, 38, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+#layers-content calcite-list-item[label="Offline Subscribers"]:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(220, 38, 38, 0.12) 0%,
+    var(--calcite-color-foreground-2) 100%
+  );
+  border-left-color: rgba(220, 38, 38, 0.9);
+}
+
+/* Add subtle accent lines for subscriber toggles */
+#layers-content calcite-list-item[label="Online Subscribers"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgb(34, 197, 94) 0%,
+    rgba(34, 197, 94, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+#layers-content calcite-list-item[label="Offline Subscribers"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgb(220, 38, 38) 0%,
+    rgba(220, 38, 38, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+/* Enhanced styling for Node Sites layer controls - matches orange diamond icons */
+#network-parent-content calcite-list-item[label="Node Sites"] {
+  --calcite-list-item-color-active: rgb(255, 165, 0);
+  border-left: 3px solid rgb(255, 165, 0);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 165, 0, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+#network-parent-content calcite-list-item[label="Node Sites"]:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 165, 0, 0.12) 0%,
+    var(--calcite-color-foreground-2) 100%
+  );
+  border-left-color: rgba(255, 165, 0, 0.9);
+}
+
+#network-parent-content calcite-list-item[label="Node Sites"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgb(255, 165, 0) 0%,
+    rgba(255, 165, 0, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+/* Enhanced styling for Weather Radar */
+#tools-content calcite-list-item[label="Weather Radar"] {
+  --calcite-list-item-color-active: var(--calcite-color-status-info);
+  border-left: 3px solid var(--calcite-color-status-info);
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+#tools-content calcite-list-item[label="Weather Radar"]:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.12) 0%,
+    var(--calcite-color-foreground-2) 100%
+  );
+  border-left-color: rgba(59, 130, 246, 0.9);
+}
+
+#tools-content calcite-list-item[label="Weather Radar"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-status-info) 0%,
+    rgba(59, 130, 246, 0.6) 50%,
+    transparent 100%
+  );
 }
 
 /* Clickable list item styling */
@@ -1440,6 +1677,90 @@ calcite-list-item[style*="cursor: pointer"]:hover {
 
 calcite-list-item[style*="cursor: pointer"]:active {
   background-color: var(--calcite-color-foreground-3);
+}
+
+/* Enhanced styling for OSP (Fiber Plant) layer controls - matches exact map colors */
+#osp-content calcite-list-item[label*="FSA"] {
+  --calcite-list-item-color-active: rgb(255, 65, 54);
+  border-left: 3px solid rgb(255, 65, 54);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 65, 54, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+}
+
+#osp-content calcite-list-item[label*="Fiber"] {
+  --calcite-list-item-color-active: rgb(0, 255, 0);
+  border-left: 3px solid rgb(0, 255, 0);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 255, 0, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+}
+
+#osp-content calcite-list-item[label*="MST"] {
+  --calcite-list-item-color-active: rgb(0, 191, 255);
+  border-left: 3px solid rgb(0, 191, 255);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 191, 255, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+}
+
+#osp-content calcite-list-item[label*="Splitter"] {
+  --calcite-list-item-color-active: rgb(128, 0, 128);
+  border-left: 3px solid rgb(128, 0, 128);
+  background: linear-gradient(
+    90deg,
+    rgba(128, 0, 128, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+}
+
+#osp-content calcite-list-item[label*="Closure"] {
+  --calcite-list-item-color-active: rgb(255, 140, 0);
+  border-left: 3px solid rgb(255, 140, 0);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 140, 0, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+}
+
+/* Enhanced styling for Vehicle layer controls - matches exact truck colors */
+#vehicles-content calcite-list-item[label*="Electric"] {
+  --calcite-list-item-color-active: rgb(74, 124, 89);
+  border-left: 3px solid rgb(74, 124, 89);
+  background: linear-gradient(
+    90deg,
+    rgba(74, 124, 89, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+}
+
+#vehicles-content calcite-list-item[label*="Fiber"] {
+  --calcite-list-item-color-active: rgb(30, 95, 175);
+  border-left: 3px solid rgb(30, 95, 175);
+  background: linear-gradient(
+    90deg,
+    rgba(30, 95, 175, 0.08) 0%,
+    var(--calcite-color-foreground-1) 100%
+  );
+}
+
+/* Hover effects for all enhanced layer controls */
+#osp-content calcite-list-item[label*="FSA"]:hover,
+#osp-content calcite-list-item[label*="Fiber"]:hover,
+#osp-content calcite-list-item[label*="MST"]:hover,
+#osp-content calcite-list-item[label*="Splitter"]:hover,
+#osp-content calcite-list-item[label*="Closure"]:hover,
+#vehicles-content calcite-list-item[label*="Electric"]:hover,
+#vehicles-content calcite-list-item[label*="Fiber"]:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Mobile responsive adjustments */
@@ -2147,4 +2468,391 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   }
 }
 
-/* Force cache refresh 1751865388 */
+/* Node Site Metrics Popup - Calcite Design System Aligned */
+.node-site-metrics {
+  font-family: var(--calcite-font-family);
+  max-width: 400px;
+}
+
+.node-metrics-card {
+  --calcite-card-background-color: var(--calcite-color-foreground-1);
+  --calcite-card-border-color: var(--calcite-color-border-2);
+  margin: 0;
+}
+
+.metrics-header {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-sm);
+  padding: var(--calcite-spacing-md);
+  background: var(--calcite-color-foreground-2);
+  border-bottom: 1px solid var(--calcite-color-border-2);
+}
+
+.metrics-header calcite-icon {
+  color: var(--calcite-color-text-2);
+}
+
+.metrics-title {
+  font-size: var(--calcite-font-size-0);
+  font-weight: var(--calcite-font-weight-medium);
+  color: var(--calcite-color-text-1);
+}
+
+.metrics-content {
+  padding: var(--calcite-spacing-md);
+}
+
+.metrics-counters {
+  display: flex;
+  gap: var(--calcite-spacing-sm);
+  margin-bottom: var(--calcite-spacing-md);
+}
+
+.metric-item {
+  flex: 1;
+  text-align: center;
+  padding: var(--calcite-spacing-sm);
+  border-radius: var(--calcite-border-radius);
+  background: var(--calcite-color-foreground-2);
+  border: 1px solid var(--calcite-color-border-3);
+}
+
+.metric-item[data-status="online"] {
+  border-color: var(--calcite-color-status-success);
+  border-width: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-2) 0%,
+    rgba(34, 197, 94, 0.08) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-item[data-status="offline"] {
+  border-color: var(--calcite-color-status-danger);
+  border-width: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-2) 0%,
+    rgba(239, 68, 68, 0.08) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-item[data-status="total"] {
+  border-color: var(--calcite-color-brand);
+  border-width: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-2) 0%,
+    rgba(25, 118, 210, 0.08) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add subtle accent lines to popup metrics */
+.metric-item[data-status="online"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-status-success) 0%,
+    rgba(34, 197, 94, 0.6) 100%
+  );
+}
+
+.metric-item[data-status="offline"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-status-danger) 0%,
+    rgba(239, 68, 68, 0.6) 100%
+  );
+}
+
+.metric-item[data-status="total"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-brand) 0%,
+    rgba(25, 118, 210, 0.6) 100%
+  );
+}
+
+.metric-value {
+  font-size: var(--calcite-font-size-2);
+  font-weight: var(--calcite-font-weight-bold);
+  font-family: var(--calcite-font-family-monospace);
+  line-height: var(--calcite-line-height-tight);
+  margin-bottom: var(--calcite-spacing-xs);
+}
+
+.metric-item[data-status="online"] .metric-value {
+  color: var(--calcite-color-status-success);
+}
+
+.metric-item[data-status="offline"] .metric-value {
+  color: var(--calcite-color-status-danger);
+}
+
+.metric-item[data-status="total"] .metric-value {
+  color: var(--calcite-color-text-1);
+}
+
+.metric-label {
+  font-size: var(--calcite-font-size--1);
+  color: var(--calcite-color-text-3);
+  text-transform: uppercase;
+  letter-spacing: var(--calcite-letter-spacing-wide);
+  font-weight: var(--calcite-font-weight-medium);
+}
+
+.metrics-progress {
+  margin: var(--calcite-spacing-md) 0;
+}
+
+.metrics-progress calcite-progress {
+  --calcite-progress-fill-color: var(--calcite-color-status-success);
+  --calcite-progress-track-color: var(--calcite-color-status-danger);
+}
+
+.metrics-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--calcite-spacing-md);
+  margin-bottom: var(--calcite-spacing-md);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-xs);
+  font-size: var(--calcite-font-size--1);
+  color: var(--calcite-color-text-2);
+}
+
+.legend-item[data-status="online"] calcite-icon {
+  color: var(--calcite-color-status-success);
+}
+
+.legend-item[data-status="offline"] calcite-icon {
+  color: var(--calcite-color-status-danger);
+}
+
+.health-status-card {
+  --calcite-card-background-color: var(--calcite-color-foreground-2);
+  --calcite-card-border-color: var(--calcite-color-border-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--calcite-spacing-sm);
+}
+
+.health-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-xs);
+}
+
+.health-label {
+  font-size: var(--calcite-font-size--1);
+  font-weight: var(--calcite-font-weight-medium);
+  color: var(--calcite-color-text-2);
+  text-transform: capitalize;
+}
+
+.recent-activity {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-xs);
+  font-size: var(--calcite-font-size--1);
+  color: var(--calcite-color-text-3);
+}
+
+.recent-activity calcite-icon {
+  color: var(--calcite-color-text-3);
+}
+
+/* Power Outage Stats - Calcite Design System Aligned */
+.power-company-card {
+  --calcite-card-background-color: var(--calcite-color-foreground-1);
+  --calcite-card-border-color: var(--calcite-color-border-2);
+  --calcite-card-shadow: var(--calcite-shadow-0);
+  margin-bottom: var(--calcite-spacing-sm);
+  transition: var(--calcite-animation-timing) ease-in-out;
+  transition-property: transform, box-shadow;
+}
+
+.power-company-card:hover {
+  transform: translateY(-1px);
+  --calcite-card-shadow: var(--calcite-shadow-1);
+  box-shadow: var(--calcite-shadow-1);
+}
+
+.power-company-card[data-company="apco"] {
+  --calcite-card-border-color: rgb(30, 95, 175);
+  border-left: 4px solid rgb(30, 95, 175);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-1) 0%,
+    rgba(30, 95, 175, 0.06) 100%
+  );
+}
+
+.power-company-card[data-company="tombigbee"] {
+  --calcite-card-border-color: rgb(74, 124, 89);
+  border-left: 4px solid rgb(74, 124, 89);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-1) 0%,
+    rgba(74, 124, 89, 0.06) 100%
+  );
+}
+
+.power-company-card[data-company="apco"]:hover {
+  border-left-color: rgba(30, 95, 175, 0.9);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-1) 0%,
+    rgba(30, 95, 175, 0.1) 100%
+  );
+  box-shadow: 0 4px 12px rgba(30, 95, 175, 0.15);
+}
+
+.power-company-card[data-company="tombigbee"]:hover {
+  border-left-color: rgba(74, 124, 89, 0.9);
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-1) 0%,
+    rgba(74, 124, 89, 0.1) 100%
+  );
+  box-shadow: 0 4px 12px rgba(74, 124, 89, 0.15);
+}
+
+.company-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--calcite-spacing-md);
+}
+
+.company-info {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-sm);
+  flex: 1;
+}
+
+.company-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.company-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calcite-spacing-xs);
+}
+
+.company-name {
+  font-size: var(--calcite-font-size-0);
+  font-weight: var(--calcite-font-weight-medium);
+  color: var(--calcite-color-text-1);
+}
+
+.customers-affected {
+  font-size: var(--calcite-font-size--1);
+  color: var(--calcite-color-text-3);
+}
+
+.company-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-md);
+}
+
+.outage-counter {
+  text-align: center;
+  padding: var(--calcite-spacing-xs);
+}
+
+.counter-value {
+  font-size: var(--calcite-font-size-2);
+  font-weight: var(--calcite-font-weight-bold);
+  font-family: var(--calcite-font-family-monospace);
+  line-height: var(--calcite-line-height-tight);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced counter colors based on company */
+.power-company-card[data-company="apco"] .counter-value {
+  color: rgb(30, 95, 175);
+  background: linear-gradient(
+    135deg,
+    rgb(30, 95, 175) 0%,
+    rgba(30, 95, 175, 0.8) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.power-company-card[data-company="tombigbee"] .counter-value {
+  color: rgb(74, 124, 89);
+  background: linear-gradient(
+    135deg,
+    rgb(74, 124, 89) 0%,
+    rgba(74, 124, 89, 0.8) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.counter-label {
+  font-size: var(--calcite-font-size--1);
+  color: var(--calcite-color-text-2);
+  text-transform: uppercase;
+  letter-spacing: var(--calcite-letter-spacing-wide);
+  font-weight: var(--calcite-font-weight-medium);
+}
+
+/* Mobile adjustments for power outage stats */
+@media (max-width: 768px) {
+  .company-header {
+    padding: var(--calcite-spacing-sm);
+  }
+
+  .company-logo {
+    width: 20px;
+    height: 20px;
+  }
+
+  .company-actions {
+    gap: var(--calcite-spacing-sm);
+  }
+
+  .counter-value {
+    font-size: var(--calcite-font-size-1);
+  }
+}

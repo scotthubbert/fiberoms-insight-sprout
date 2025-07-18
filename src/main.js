@@ -5416,160 +5416,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
 
-  // Debug CalciteUI components before starting the app
-  await debugCalciteUIComponents();
-
   // Start the main application
   window.app = new Application();
 
-  // Expose debug functions globally for testing - more robust for production
-  window.testVehicleList = function () {
-    try {
-      console.log('🚛 Global testVehicleList called');
-      if (window.app && window.app.services && window.app.services.layerPanel) {
-        window.app.services.layerPanel.testVehicleList();
-        return 'Test vehicle list called successfully';
-      } else {
-        console.log('🚛 Layer panel not available. Available services:',
-          window.app?.services ? Object.keys(window.app.services) : 'none');
-        return 'Layer panel not available';
-      }
-    } catch (error) {
-      console.error('🚛 Error in testVehicleList:', error);
-      return `Error: ${error.message}`;
-    }
-  };
 
 
 
-  // Quick CalciteUI verification command for production
-  window.verifyCalciteUI = function () {
-    const components = ['calcite-list', 'calcite-list-item', 'calcite-icon', 'calcite-button'];
-    const results = {};
 
-    console.log('🔍 CalciteUI Production Verification:');
-    components.forEach(component => {
-      const isRegistered = !!customElements.get(component);
-      results[component] = isRegistered;
-      console.log(`${isRegistered ? '✅' : '❌'} ${component}: ${isRegistered ? 'registered' : 'NOT registered'}`);
-    });
-
-    return results;
-  };
-
-  // Simple production-friendly debug function
-  window.debugVehicleList = function () {
-    try {
-      console.log('🚛 === Vehicle Debug Info ===');
-
-      // Basic environment check
-      const env = {
-        isDev: import.meta.env.DEV,
-        isProd: import.meta.env.PROD,
-        mode: import.meta.env.MODE,
-        origin: window.location.origin,
-        pathname: window.location.pathname
-      };
-      console.log('Environment:', env);
-
-      // Check critical objects
-      const objects = {
-        app: !!window.app,
-        layerManager: !!window.app?.services?.layerManager,
-        layerPanel: !!window.app?.services?.layerPanel,
-        geotabService: !!window.geotabService
-      };
-      console.log('Global objects:', objects);
-
-      // Check DOM elements
-      const elements = ['vehicle-list', 'vehicle-list-loading', 'vehicle-list-empty', 'vehicle-list-block'];
-      elements.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          console.log(`${id}:`, {
-            exists: true,
-            hidden: el.hidden,
-            display: getComputedStyle(el).display,
-            children: el.children.length,
-            classes: el.className
-          });
-        } else {
-          console.log(`${id}: NOT FOUND`);
-        }
-      });
-
-      // Check vehicle layers
-      if (window.app?.services?.layerManager) {
-        const layers = ['fiber-trucks', 'electric-trucks'];
-        layers.forEach(layerId => {
-          const layer = window.app.services.layerManager.getLayer(layerId);
-          console.log(`${layerId} layer:`, {
-            exists: !!layer,
-            hasSource: !!layer?.source,
-            itemCount: layer?.source?.items?.length || 0,
-            visible: layer?.visible,
-            type: layer?.type
-          });
-        });
-      }
-
-      // Check GeotabService configuration
-      try {
-        import('./services/GeotabService.js').then(module => {
-          const geotabService = module.geotabService;
-          console.log('GeotabService status:', geotabService.getStatus());
-          console.log('GeotabService lastTruckData:', geotabService.lastTruckData);
-        });
-      } catch (error) {
-        console.log('GeotabService import error:', error.message);
-      }
-
-      return 'Debug completed - check console for details';
-
-    } catch (error) {
-      console.error('🚛 Error in debugVehicleList:', error);
-      return `Debug error: ${error.message}`;
-    }
-  };
-
-  // Function to enable vehicle layers for testing
-  window.enableVehicleLayers = function () {
-    console.log('🚛 Enabling vehicle layers...');
-    if (window.app?.services?.layerManager) {
-      try {
-        window.app.services.layerManager.toggleLayerVisibility('fiber-trucks', true);
-        window.app.services.layerManager.toggleLayerVisibility('electric-trucks', true);
-        console.log('✅ Vehicle layers enabled');
-        return 'Vehicle layers enabled successfully';
-      } catch (error) {
-        console.error('❌ Failed to enable vehicle layers:', error);
-        return `Error: ${error.message}`;
-      }
-    } else {
-      console.log('❌ LayerManager not available');
-      return 'LayerManager not available';
-    }
-  };
-
-  // Force load vehicle list - production debugging
-  window.forceLoadVehicleList = function () {
-    try {
-      console.log('🚛 Force loading vehicle list...');
-
-      if (window.app?.services?.layerPanel) {
-        // Call the loadVehicleList method directly
-        window.app.services.layerPanel.loadVehicleList();
-        console.log('✅ Vehicle list loading initiated');
-        return 'Vehicle list loading initiated';
-      } else {
-        console.log('❌ Layer panel not available');
-        return 'Layer panel not available';
-      }
-    } catch (error) {
-      console.error('❌ Error forcing vehicle list load:', error);
-      return `Error: ${error.message}`;
-    }
-  };
 
   // Check GeotabService configuration specifically for production
   window.checkGeotabConfig = function () {
@@ -6160,7 +6013,6 @@ async function debugCalciteUIComponents() {
   return componentStatus;
 }
 
-// Add this to be called when the app loads
-window.debugCalciteUI = debugCalciteUIComponents;
+
 
 

@@ -262,64 +262,55 @@ const createNodeSitePopup = () => ({
 
                         // Create metrics display
                         const metricsDiv = document.createElement('div');
+                        metricsDiv.className = 'node-site-metrics';
                         metricsDiv.innerHTML = `
-                             <div style="background: var(--calcite-color-foreground-1); border: 1px solid var(--calcite-color-border-2); margin: 0;">
-                                 <div style="background: var(--calcite-color-foreground-2); border-bottom: 1px solid var(--calcite-color-border-2); padding: 12px 16px;">
-                                     <div style="font-weight: 600; font-size: 14px; color: var(--calcite-color-text-1); display: flex; align-items: center;">
-                                         <calcite-icon icon="graph-time-series" scale="s" style="margin-right: 8px; color: var(--calcite-color-text-2);"></calcite-icon>
-                                         Subscriber Metrics
-                                     </div>
+                             <calcite-card class="node-metrics-card">
+                                 <div class="metrics-header">
+                                     <calcite-icon icon="graph-time-series" scale="s"></calcite-icon>
+                                     <span class="metrics-title">Subscriber Metrics</span>
                                  </div>
                                  
-                                 <div style="padding: 16px; background: var(--calcite-color-foreground-1);">
-                                     <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
-                                         <div style="text-align: center; flex: 1;">
-                                             <div style="font-size: 20px; font-weight: 600; color: var(--calcite-color-status-success); line-height: 1.2;">
-                                                 ${metrics.onlineSubscribers}
-                                             </div>
-                                             <div style="font-size: 12px; color: var(--calcite-color-text-3); margin-top: 4px;">Online</div>
+                                 <div class="metrics-content">
+                                     <div class="metrics-counters">
+                                         <div class="metric-item" data-status="online">
+                                             <div class="metric-value">${metrics.onlineSubscribers}</div>
+                                             <div class="metric-label">Online</div>
                                          </div>
-                                         <div style="text-align: center; flex: 1;">
-                                             <div style="font-size: 20px; font-weight: 600; color: var(--calcite-color-status-danger); line-height: 1.2;">
-                                                 ${metrics.offlineSubscribers}
-                                             </div>
-                                             <div style="font-size: 12px; color: var(--calcite-color-text-3); margin-top: 4px;">Offline</div>
+                                         <div class="metric-item" data-status="offline">
+                                             <div class="metric-value">${metrics.offlineSubscribers}</div>
+                                             <div class="metric-label">Offline</div>
                                          </div>
-                                         <div style="text-align: center; flex: 1;">
-                                             <div style="font-size: 20px; font-weight: 600; color: var(--calcite-color-text-1); line-height: 1.2;">
-                                                 ${metrics.totalSubscribers}
-                                             </div>
-                                             <div style="font-size: 12px; color: var(--calcite-color-text-3); margin-top: 4px;">Total</div>
+                                         <div class="metric-item" data-status="total">
+                                             <div class="metric-value">${metrics.totalSubscribers}</div>
+                                             <div class="metric-label">Total</div>
                                          </div>
                                      </div>
                                      
-                                     <div style="background: var(--calcite-color-border-2); height: 4px; margin: 16px 0; overflow: hidden; border-radius: 2px;">
-                                         <div style="background: var(--calcite-color-status-success); height: 100%; width: ${metrics.onlinePercentage}%; float: left;"></div>
-                                         <div style="background: var(--calcite-color-status-danger); height: 100%; width: ${metrics.offlinePercentage}%; float: left;"></div>
+                                     <div class="metrics-progress">
+                                         <calcite-progress type="determinate" value="${metrics.onlinePercentage}" text="${metrics.onlinePercentage}% Online"></calcite-progress>
                                      </div>
                                      
-                                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--calcite-color-text-2); margin-bottom: 16px;">
-                                         <span style="display: flex; align-items: center;">
-                                             <span style="color: var(--calcite-color-status-success); margin-right: 4px;">●</span>
-                                             ${metrics.onlinePercentage}% Online
-                                         </span>
-                                         <span style="display: flex; align-items: center;">
-                                             <span style="color: var(--calcite-color-status-danger); margin-right: 4px;">●</span>
-                                             ${metrics.offlinePercentage}% Offline
-                                         </span>
+                                     <div class="metrics-legend">
+                                         <div class="legend-item" data-status="online">
+                                             <calcite-icon icon="circle-filled" scale="s"></calcite-icon>
+                                             <span>${metrics.onlinePercentage}% Online</span>
+                                         </div>
+                                         <div class="legend-item" data-status="offline">
+                                             <calcite-icon icon="circle-filled" scale="s"></calcite-icon>
+                                             <span>${metrics.offlinePercentage}% Offline</span>
+                                         </div>
                                      </div>
                                      
-                                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--calcite-color-foreground-2); border: 1px solid var(--calcite-color-border-2); border-radius: 4px;">
-                                         <div style="display: flex; align-items: center;">
-                                             <div style="width: 8px; height: 8px; background: ${metrics.healthColor}; margin-right: 8px; border-radius: 50%;"></div>
-                                             <span style="font-size: 12px; text-transform: capitalize; color: var(--calcite-color-text-2); font-weight: 500;">
-                                                 ${metrics.healthStatus}
-                                             </span>
+                                     <calcite-card class="health-status-card" data-health="${metrics.healthStatus}">
+                                         <div class="health-indicator">
+                                             <calcite-icon icon="circle-filled" scale="s" style="color: ${metrics.healthColor}"></calcite-icon>
+                                             <span class="health-label">${metrics.healthStatus}</span>
                                          </div>
-                                         <div style="font-size: 12px; color: var(--calcite-color-text-3);">
-                                             ${metrics.recentActivity} recent updates
+                                         <div class="recent-activity">
+                                             <calcite-icon icon="clock" scale="s"></calcite-icon>
+                                             <span>${metrics.recentActivity} recent updates</span>
                                          </div>
-                                     </div>
+                                     </calcite-card>
                                      
                                      ${metrics.ta5kNodes && metrics.ta5kNodes.length > 1 ? `
                                          <div style="margin-top: 16px; border: 1px solid var(--calcite-color-border-2); background: var(--calcite-color-foreground-2); border-radius: 4px; overflow: hidden;">
