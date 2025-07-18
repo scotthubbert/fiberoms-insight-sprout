@@ -36,11 +36,11 @@ export class RainViewerService {
      */
     async initialize() {
         try {
-            console.log('🌧️ Initializing RainViewer service...');
+            log.info('🌧️ Initializing RainViewer service...');
             const data = await this.fetchRadarData();
 
             if (data) {
-                console.log('✅ RainViewer service initialized successfully');
+                log.info('✅ RainViewer service initialized successfully');
                 return true;
             } else {
                 console.warn('⚠️ RainViewer service initialized with limited functionality (API unavailable)');
@@ -96,7 +96,7 @@ export class RainViewerService {
             }
 
             this.radarData = data;
-            console.log('✅ RainViewer data loaded successfully');
+            log.info('✅ RainViewer data loaded successfully');
             return this.radarData;
 
         } catch (error) {

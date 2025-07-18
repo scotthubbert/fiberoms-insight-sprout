@@ -622,7 +622,7 @@ class LayerPanel {
   }
 
   async loadSimpleVehicleList() {
-    console.log('🚛 Loading simple vehicle list...');
+    log.info('🚛 Loading simple vehicle list...');
     const vehiclesList = document.getElementById('vehicle-list');
     if (!vehiclesList) {
       console.error('🚛 vehicle-list element not found');
@@ -639,7 +639,7 @@ class LayerPanel {
 
       // Get vehicle data from layers or GeotabService
       const allVehicles = await this.getVehicleData();
-      console.log('🚛 Retrieved vehicles:', allVehicles.length);
+      log.info('🚛 Retrieved vehicles:', allVehicles.length);
 
       if (allVehicles.length === 0) {
         // Show empty state
@@ -655,7 +655,7 @@ class LayerPanel {
         emptyItem.appendChild(infoIcon);
 
         vehiclesList.appendChild(emptyItem);
-        console.log('🚛 Showing empty state');
+        log.info('🚛 Showing empty state');
         return;
       }
 
@@ -685,13 +685,13 @@ class LayerPanel {
           });
 
           vehiclesList.appendChild(listItem);
-          console.log(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
+          log.info(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
         } catch (vehicleError) {
           console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
         }
       });
 
-      console.log('🚛 Vehicle list populated successfully');
+      log.info('🚛 Vehicle list populated successfully');
 
     } catch (error) {
       console.error('🚛 Error loading vehicle list:', error);
@@ -1066,14 +1066,19 @@ class LayerPanel {
     });
   }
 
-  // DEBUG: Force test the vehicle list with real cached data
+  // Development testing function for vehicle list - disabled in production
   async testVehicleList() {
-    console.log('🚛 DEBUG: Testing vehicle list with real cached data...');
+    if (!isDevelopment) {
+      log.warn('🚛 testVehicleList: Development function disabled in production');
+      return;
+    }
+
+    log.info('🚛 DEBUG: Testing vehicle list with real cached data...');
 
     try {
       const geotabModule = await import('./services/GeotabService.js');
       const cachedData = geotabModule.geotabService.lastTruckData;
-      console.log('🚛 DEBUG: Raw cached data:', cachedData);
+      log.info('🚛 DEBUG: Raw cached data:', cachedData);
 
       if (cachedData && (cachedData.fiber?.length > 0 || cachedData.electric?.length > 0)) {
         const testVehicles = [];
@@ -1100,26 +1105,11 @@ class LayerPanel {
           });
         }
 
-        console.log('🚛 DEBUG: Processed vehicles for display:', testVehicles.length);
+        log.info('🚛 DEBUG: Processed vehicles for display:', testVehicles.length);
         await this.displayVehicleList(testVehicles);
       } else {
-        console.log('🚛 DEBUG: No cached data available, using simple mock data');
-        const mockVehicles = [
-          {
-            id: 'test-1',
-            name: 'Test Vehicle 1',
-            latitude: 32.3617,
-            longitude: -86.2792,
-            installer: 'TestUser',
-            speed: 0,
-            is_driving: false,
-            last_updated: new Date().toISOString(),
-            communication_status: 'online',
-            type: 'Fiber',
-            typeIcon: 'car'
-          }
-        ];
-        await this.displayVehicleList(mockVehicles);
+        log.info('🚛 DEBUG: No cached data available - no vehicle data to display');
+        // Remove mock vehicle fallback - not appropriate for production
       }
     } catch (error) {
       console.error('🚛 DEBUG: Error in testVehicleList:', error);
@@ -5539,7 +5529,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // Enhanced production debug function for vehicle list issues
+  // Enhanced debug function for vehicle list issues
   window.debugVehicleListProduction = async function () {
     console.log('🚛 === PRODUCTION VEHICLE LIST DEBUG ===');
 
@@ -5684,13 +5674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       vehicleList.style.visibility = 'visible';
       vehicleList.style.opacity = '1';
 
-      // Create test content if empty
-      if (vehicleList.children.length === 0) {
-        const testItem = document.createElement('calcite-list-item');
-        testItem.setAttribute('label', 'Test Vehicle');
-        testItem.setAttribute('description', 'This is a test vehicle item');
-        vehicleList.appendChild(testItem);
-      }
+      // Note: No test content creation for production builds
 
       console.log('Force visibility applied to vehicle list');
     }
@@ -5718,19 +5702,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const testList = document.createElement('calcite-list');
       testList.setAttribute('selection-mode', 'none');
 
-      // Create test items
-      for (let i = 0; i < 3; i++) {
-        const listItem = document.createElement('calcite-list-item');
-        listItem.setAttribute('label', `Test Item ${i + 1}`);
-        listItem.setAttribute('description', `Test description ${i + 1}`);
-
-        const icon = document.createElement('calcite-icon');
-        icon.setAttribute('icon', 'circle');
-        icon.setAttribute('slot', 'content-start');
-        listItem.appendChild(icon);
-
-        testList.appendChild(listItem);
-      }
+      // Note: Test items removed to prevent mock data in production
 
       testContainer.appendChild(testList);
       document.body.appendChild(testContainer);
@@ -5879,13 +5851,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       vehicleListContent.style.setProperty('opacity', '1', 'important');
     }
 
-    // Add some test content if empty
-    if (vehicleList.children.length === 0) {
-      const testItem = document.createElement('calcite-list-item');
-      testItem.setAttribute('label', 'Force Fix Test');
-      testItem.setAttribute('description', 'Vehicle list visibility has been force-fixed');
-      vehicleList.appendChild(testItem);
-    }
+    // Note: Test content removed to prevent mock data in production
 
     // Force height calculation if needed
     setTimeout(() => {
@@ -6015,7 +5981,7 @@ async function debugCalciteUIComponents() {
   }, 1000);
 
   return componentStatus;
-}
+};
 
 
 

@@ -26,25 +26,31 @@ export function getGeotabConfig() {
         retryDelay: TRUCK_LAYER_DEFAULTS.retryDelay
     };
 
-    // Always log configuration status for debugging
-    console.log('🚛 GeotabConfig Configuration Check:');
-    console.log('Username:', config.username ? 'Set ✅' : 'Missing ❌');
-    console.log('Password:', config.password ? 'Set ✅' : 'Missing ❌');
-    console.log('Database:', config.database ? 'Set ✅' : 'Missing ❌');
-    console.log('Enabled:', config.enabled ? 'Yes ✅' : 'No ❌');
-    console.log('Refresh Interval:', config.refreshInterval + 'ms');
-    console.log('Timeout:', config.timeout + 'ms');
-    console.log('Max Retries:', config.maxRetries);
-    console.log('Retry Delay:', config.retryDelay + 'ms');
-    console.log('Environment:', import.meta.env.MODE);
+    // Log configuration status (production-appropriate for diagnostics)
+    if (isDevelopment) {
+        console.log('🚛 GeotabConfig Configuration Check:');
+        console.log('Username:', config.username ? 'Set ✅' : 'Missing ❌');
+        console.log('Password:', config.password ? 'Set ✅' : 'Missing ❌');
+        console.log('Database:', config.database ? 'Set ✅' : 'Missing ❌');
+        console.log('Enabled:', config.enabled ? 'Yes ✅' : 'No ❌');
+        console.log('Refresh Interval:', config.refreshInterval + 'ms');
+        console.log('Timeout:', config.timeout + 'ms');
+        console.log('Max Retries:', config.maxRetries);
+        console.log('Retry Delay:', config.retryDelay + 'ms');
+        console.log('Environment:', import.meta.env.MODE);
+    } else {
+        // Production: Only log if there are configuration issues
+        if (config.enabled && (!config.username || !config.password || !config.database)) {
+            console.warn('🚛 GeotabConfig: Missing required credentials - service will be disabled');
+        }
+    }
 
-    // Additional debugging for production
-    if (!isDevelopment) {
-        console.log('🚛 Production Environment Variables Check:');
-        console.log('VITE_GEOTAB_ENABLED:', import.meta.env.VITE_GEOTAB_ENABLED);
-        console.log('VITE_GEOTAB_USERNAME length:', import.meta.env.VITE_GEOTAB_USERNAME?.length || 0);
-        console.log('VITE_GEOTAB_PASSWORD length:', import.meta.env.VITE_GEOTAB_PASSWORD?.length || 0);
-        console.log('VITE_GEOTAB_DATABASE length:', import.meta.env.VITE_GEOTAB_DATABASE?.length || 0);
+    // Production environment validation (only log if there are issues)
+    if (!isDevelopment && config.enabled) {
+        const hasCredentials = config.username && config.password && config.database;
+        if (!hasCredentials) {
+            console.warn('🚛 Production GeotabConfig: Environment variables not properly configured');
+        }
     }
 
     // Validate configuration

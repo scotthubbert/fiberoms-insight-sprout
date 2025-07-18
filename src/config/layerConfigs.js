@@ -62,13 +62,18 @@ const createOnlineRenderer = () => ({
     ]
 });
 
-// Clustering configuration for offline subscribers
+// Clustering configuration for offline subscribers - optimized for production
 const createOfflineClusterConfig = () => ({
     type: 'cluster',
     clusterRadius: '60px',
+    // Performance: Set min/max size for better rendering performance
+    clusterMinSize: '12px',
+    clusterMaxSize: '54px',
+    // Disable clustering at high zoom levels where individual features are more useful
+    maxScale: 50000,
     popupTemplate: {
         title: 'Offline Subscribers Cluster',
-        content: 'This cluster represents {cluster_count} offline subscribers in this area.',
+        content: 'This cluster represents <b>{cluster_count}</b> offline subscribers in this area.',
         fieldInfos: [
             {
                 fieldName: 'cluster_count',
@@ -79,15 +84,32 @@ const createOfflineClusterConfig = () => ({
             }
         ]
     },
-    symbol: {
-        type: 'simple-marker',
-        style: 'circle',
-        color: [220, 38, 38, 0.8],
-        size: '20px',
-        outline: {
-            color: [220, 38, 38, 1],
-            width: 2
-        }
+    // Use a renderer with size visual variable for dynamic sizing based on outage count
+    renderer: {
+        type: 'simple',
+        symbol: {
+            type: 'simple-marker',
+            style: 'circle',
+            color: [220, 38, 38, 0.8],
+            outline: {
+                color: [220, 38, 38, 1],
+                width: 2
+            }
+        },
+        visualVariables: [
+            {
+                type: 'size',
+                field: 'cluster_count',
+                stops: [
+                    { value: 1, size: '12px' },      // Single offline subscriber
+                    { value: 5, size: '18px' },      // Small cluster
+                    { value: 10, size: '24px' },     // Medium cluster
+                    { value: 25, size: '32px' },     // Large cluster
+                    { value: 50, size: '42px' },     // Very large cluster
+                    { value: 100, size: '54px' }     // Massive cluster
+                ]
+            }
+        ]
     },
     labelingInfo: [
         {
@@ -102,7 +124,9 @@ const createOfflineClusterConfig = () => ({
                     weight: 'bold',
                     family: 'Noto Sans',
                     size: '12px'
-                }
+                },
+                haloColor: [0, 0, 0, 0.8],
+                haloSize: 1
             },
             labelPlacement: 'center-center'
         }
