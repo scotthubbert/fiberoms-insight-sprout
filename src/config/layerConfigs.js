@@ -286,6 +286,17 @@ const createNodeSitePopup = () => ({
                                          </div>
                                      </div>
                                      
+                                     <div class="service-type-counters" style="margin-top: 16px;">
+                                         <div class="service-type-item" data-type="residential">
+                                             <div class="service-type-value">${metrics.residentialCount}</div>
+                                             <div class="service-type-label">Residential</div>
+                                         </div>
+                                         <div class="service-type-item" data-type="business">
+                                             <div class="service-type-value">${metrics.businessCount}</div>
+                                             <div class="service-type-label">Business</div>
+                                         </div>
+                                     </div>
+                                     
                                      <div class="metrics-progress">
                                          <calcite-progress type="determinate" value="${metrics.onlinePercentage}" text="${metrics.onlinePercentage}% Online"></calcite-progress>
                                      </div>
@@ -323,9 +334,15 @@ const createNodeSitePopup = () => ({
                                              <div style="padding: 12px;">
                                                  ${Object.entries(metrics.ta5kBreakdown || {})
                                     .map(([ta5k, data]) => `
-                                                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-1); border-radius: 2px; border: 1px solid var(--calcite-color-border-3);">
-                                                             <span style="color: var(--calcite-color-text-1); font-weight: 500;">${ta5k}</span>
-                                                             <span style="color: var(--calcite-color-text-3); font-family: monospace;">${data.total} (${data.online} online, ${data.offline} offline)</span>
+                                                         <div style="font-size: 11px; margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-1); border-radius: 2px; border: 1px solid var(--calcite-color-border-3);">
+                                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                                 <span style="color: var(--calcite-color-text-1); font-weight: 500;">${ta5k}</span>
+                                                                 <span style="color: var(--calcite-color-text-3); font-family: monospace;">${data.total} total</span>
+                                                             </div>
+                                                             <div style="display: flex; justify-content: space-between; color: var(--calcite-color-text-3); font-family: monospace; font-size: 10px;">
+                                                                 <span>${data.online} online, ${data.offline} offline</span>
+                                                                 <span>${data.residential} residential, ${data.business} business</span>
+                                                             </div>
                                                          </div>
                                                      `).join('')}
                                              </div>

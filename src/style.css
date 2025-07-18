@@ -2649,6 +2649,96 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   color: var(--calcite-color-text-2);
 }
 
+/* Service Type Counters */
+.service-type-counters {
+  display: flex;
+  gap: var(--calcite-spacing-sm);
+  margin-bottom: var(--calcite-spacing-md);
+}
+
+.service-type-item {
+  flex: 1;
+  text-align: center;
+  padding: var(--calcite-spacing-sm);
+  border-radius: var(--calcite-border-radius);
+  background: var(--calcite-color-foreground-2);
+  border: 1px solid var(--calcite-color-border-3);
+  position: relative;
+  overflow: hidden;
+}
+
+.service-type-item[data-type="residential"] {
+  border-color: var(--calcite-color-info);
+  border-width: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-2) 0%,
+    rgba(59, 130, 246, 0.08) 100%
+  );
+}
+
+.service-type-item[data-type="business"] {
+  border-color: var(--calcite-color-warning);
+  border-width: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--calcite-color-foreground-2) 0%,
+    rgba(245, 158, 11, 0.08) 100%
+  );
+}
+
+.service-type-item[data-type="residential"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-info) 0%,
+    rgba(59, 130, 246, 0.6) 100%
+  );
+}
+
+.service-type-item[data-type="business"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--calcite-color-warning) 0%,
+    rgba(245, 158, 11, 0.6) 100%
+  );
+}
+
+.service-type-value {
+  font-size: var(--calcite-font-size-2);
+  font-weight: var(--calcite-font-weight-bold);
+  font-family: var(--calcite-font-family-monospace);
+  line-height: var(--calcite-line-height-tight);
+  margin-bottom: var(--calcite-spacing-xs);
+}
+
+.service-type-item[data-type="residential"] .service-type-value {
+  color: var(--calcite-color-info);
+}
+
+.service-type-item[data-type="business"] .service-type-value {
+  color: var(--calcite-color-warning);
+}
+
+.service-type-label {
+  font-size: var(--calcite-font-size--1);
+  color: var(--calcite-color-text-3);
+  text-transform: uppercase;
+  letter-spacing: var(--calcite-letter-spacing-wide);
+  font-weight: var(--calcite-font-weight-medium);
+}
+
 .legend-item[data-status="online"] calcite-icon {
   color: var(--calcite-color-status-success);
 }

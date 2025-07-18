@@ -361,13 +361,10 @@ export class PopupManager {
 
         try {
             // Show loading indicator
-            const loadingToast = this.showToast('🔄 Refreshing metrics...', 'info');
+            const loadingToast = this.showLoadingToast('Refreshing metrics...', nodeSiteName);
 
             // Import the service dynamically
             const { nodeSiteMetricsService } = await import('./NodeSiteMetricsService.js');
-
-            // Invalidate cache for this node site
-            nodeSiteMetricsService.invalidateCache(nodeSiteName);
 
             // Refresh the popup by closing and reopening it
             const geometry = selectedFeature.geometry;
@@ -385,32 +382,70 @@ export class PopupManager {
                     loadingToast.parentNode.removeChild(loadingToast);
                 }
 
-                this.showToast('✅ Metrics refreshed successfully', 'success');
+                this.showSuccessToast('Metrics refreshed successfully', nodeSiteName);
             }, 100);
 
         } catch (error) {
             console.error('Error refreshing metrics:', error);
-            this.showToast('❌ Failed to refresh metrics', 'error');
+            this.showErrorToast('Failed to refresh metrics', error.message);
         }
     }
 
-    // Helper method to show toast notifications
-    showToast(message, type = 'info') {
+    // Loading toast with spinner
+    showLoadingToast(message, nodeSiteName) {
         const toast = document.createElement('calcite-notice');
-        toast.setAttribute('kind', type);
+        toast.setAttribute('kind', 'brand');
         toast.setAttribute('open', 'true');
-        toast.setAttribute('auto-close', 'true');
-        toast.setAttribute('auto-close-duration', '3000');
+        toast.setAttribute('icon', 'refresh');
         toast.style.cssText = `
             position: fixed;
-            top: 20px;
+            top: 80px;
             right: 20px;
             z-index: 10000;
-            max-width: 300px;
+            max-width: 320px;
+            box-shadow: var(--calcite-shadow-2);
         `;
 
         toast.innerHTML = `
             <div slot="title">${message}</div>
+            <div slot="message">
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                    <calcite-loader inline scale="s"></calcite-loader>
+                    <span style="font-size: var(--calcite-font-size--1); color: var(--calcite-color-text-2);">
+                        ${nodeSiteName}
+                    </span>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+        return toast;
+    }
+
+    // Success toast with checkmark
+    showSuccessToast(message, nodeSiteName) {
+        const toast = document.createElement('calcite-notice');
+        toast.setAttribute('kind', 'positive');
+        toast.setAttribute('open', 'true');
+        toast.setAttribute('icon', 'check-circle');
+        toast.setAttribute('auto-close', 'true');
+        toast.setAttribute('auto-close-duration', '3000');
+        toast.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 10000;
+            max-width: 320px;
+            box-shadow: var(--calcite-shadow-2);
+        `;
+
+        toast.innerHTML = `
+            <div slot="title">${message}</div>
+            <div slot="message">
+                <span style="font-size: var(--calcite-font-size--1); color: var(--calcite-color-text-2);">
+                    ${nodeSiteName}
+                </span>
+            </div>
         `;
 
         document.body.appendChild(toast);
@@ -421,6 +456,44 @@ export class PopupManager {
                 toast.parentNode.removeChild(toast);
             }
         }, 3000);
+
+        return toast;
+    }
+
+    // Error toast with warning icon
+    showErrorToast(message, details = '') {
+        const toast = document.createElement('calcite-notice');
+        toast.setAttribute('kind', 'danger');
+        toast.setAttribute('open', 'true');
+        toast.setAttribute('icon', 'exclamation-mark-triangle');
+        toast.setAttribute('auto-close', 'true');
+        toast.setAttribute('auto-close-duration', '5000');
+        toast.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 10000;
+            max-width: 320px;
+            box-shadow: var(--calcite-shadow-2);
+        `;
+
+        toast.innerHTML = `
+            <div slot="title">${message}</div>
+            ${details ? `<div slot="message">
+                <span style="font-size: var(--calcite-font-size--1); color: var(--calcite-color-text-2);">
+                    ${details}
+                </span>
+            </div>` : ''}
+        `;
+
+        document.body.appendChild(toast);
+
+        // Auto-remove after duration
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 5000);
 
         return toast;
     }

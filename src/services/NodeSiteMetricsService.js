@@ -9,59 +9,45 @@ const log = {
 };
 
 /**
- * NodeSiteMetricsService - Fetches and caches subscriber metrics for node sites
+ * NodeSiteMetricsService - Fetches subscriber metrics for node sites
  * 
  * This service is designed to be scalable and extensible for future metrics.
- * It uses caching to avoid repeated database queries and provides a clean API
- * for fetching various metrics related to node sites.
+ * It provides a clean API for fetching various metrics related to node sites
+ * with fresh data from the database on every request.
  */
 export class NodeSiteMetricsService {
     constructor() {
-        this.cache = new Map();
-        this.cacheExpiry = new Map();
-        this.CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-        this.inProgressRequests = new Map(); // Prevent duplicate requests
+        this.inProgressRequests = new Map(); // Prevent duplicate simultaneous requests
     }
-
-
 
     /**
      * Get comprehensive metrics for a node site
      * @param {string} nodeSiteName - The name of the node site
-     * @returns {Promise<Object>} - Metrics object with online/offline counts and other data
+     * @returns {Promise<Object>} Metrics object with subscriber counts, service types, and health data
+     *   - { nodeSiteName, totalSubscribers, onlineSubscribers, offlineSubscribers, unknownSubscribers, residentialCount, businessCount, onlinePercentage, offlinePercentage, healthStatus, healthColor, recentActivity, ta5kNodes, ta5kBreakdown, lastUpdated, rawData }
      */
     async getNodeSiteMetrics(nodeSiteName) {
         if (!nodeSiteName) {
             throw new Error('Node site name is required');
         }
 
-        // Use original node site name for caching
-        const cacheKey = `node_metrics_${nodeSiteName}`;
+        const requestKey = `node_metrics_${nodeSiteName}`;
 
-        // Check cache first
-        if (this.isCacheValid(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        // Check if request is already in progress
-        if (this.inProgressRequests.has(cacheKey)) {
-            return this.inProgressRequests.get(cacheKey);
+        // Check if request is already in progress to prevent duplicate simultaneous requests
+        if (this.inProgressRequests.has(requestKey)) {
+            return this.inProgressRequests.get(requestKey);
         }
 
         // Create new request
         const request = this.fetchNodeSiteMetrics(nodeSiteName);
-        this.inProgressRequests.set(cacheKey, request);
+        this.inProgressRequests.set(requestKey, request);
 
         try {
             const metrics = await request;
-
-            // Cache the result
-            this.setCache(cacheKey, metrics);
-
             return metrics;
         } finally {
             // Clean up in-progress request
-            this.inProgressRequests.delete(cacheKey);
+            this.inProgressRequests.delete(requestKey);
         }
     }
 
@@ -116,7 +102,7 @@ export class NodeSiteMetricsService {
             // Query database for all TA5K values (single or multiple)
             const { data: subscribers, error } = await supabase
                 .from('mfs')
-                .select('status, account, name, service_address, last_update, ta5k')
+                .select('status, account, name, service_address, last_update, ta5k, service_type')
                 .in('ta5k', ta5kValues);
 
             if (error) {
@@ -149,6 +135,18 @@ export class NodeSiteMetricsService {
         const onlineSubscribers = subscribers.filter(sub => sub.status === 'Online').length;
         const offlineSubscribers = subscribers.filter(sub => sub.status === 'Offline').length;
         const unknownSubscribers = subscribers.filter(sub => !sub.status || sub.status === 'Unknown').length;
+
+        // Service type counts (handles "RESIDENTIAL INTERNET" and "BUSINESS INTERNET" from database)
+        const residentialCount = subscribers.filter(sub =>
+            sub.service_type &&
+            typeof sub.service_type === 'string' &&
+            sub.service_type.toLowerCase().trim().includes('residential')
+        ).length;
+        const businessCount = subscribers.filter(sub =>
+            sub.service_type &&
+            typeof sub.service_type === 'string' &&
+            sub.service_type.toLowerCase().trim().includes('business')
+        ).length;
 
         // Calculate percentages
         const onlinePercentage = totalSubscribers > 0 ? Math.round((onlineSubscribers / totalSubscribers) * 100) : 0;
@@ -188,7 +186,17 @@ export class NodeSiteMetricsService {
                 ta5kBreakdown[ta5k] = {
                     total: ta5kSubscribers.length,
                     online: ta5kSubscribers.filter(sub => sub.status === 'Online').length,
-                    offline: ta5kSubscribers.filter(sub => sub.status === 'Offline').length
+                    offline: ta5kSubscribers.filter(sub => sub.status === 'Offline').length,
+                    residential: ta5kSubscribers.filter(sub =>
+                        sub.service_type &&
+                        typeof sub.service_type === 'string' &&
+                        sub.service_type.toLowerCase().trim().includes('residential')
+                    ).length,
+                    business: ta5kSubscribers.filter(sub =>
+                        sub.service_type &&
+                        typeof sub.service_type === 'string' &&
+                        sub.service_type.toLowerCase().trim().includes('business')
+                    ).length
                 };
             });
         }
@@ -199,6 +207,8 @@ export class NodeSiteMetricsService {
             onlineSubscribers,
             offlineSubscribers,
             unknownSubscribers,
+            residentialCount,
+            businessCount,
             onlinePercentage,
             offlinePercentage,
             healthStatus,
@@ -242,62 +252,6 @@ export class NodeSiteMetricsService {
         });
 
         return metricsMap;
-    }
-
-    /**
-     * Invalidate cache for a specific node site or all sites
-     * @param {string} nodeSiteName - Optional specific node site name
-     */
-    invalidateCache(nodeSiteName = null) {
-        if (nodeSiteName) {
-            const cacheKey = `node_metrics_${nodeSiteName}`;
-            this.cache.delete(cacheKey);
-            this.cacheExpiry.delete(cacheKey);
-        } else {
-            // Clear all node site metrics cache
-            for (const [key] of this.cache) {
-                if (key.startsWith('node_metrics_')) {
-                    this.cache.delete(key);
-                    this.cacheExpiry.delete(key);
-                }
-            }
-        }
-    }
-
-    /**
-     * Check if cached data is still valid
-     * @param {string} key - Cache key
-     * @returns {boolean} - Whether cache is valid
-     */
-    isCacheValid(key) {
-        const expiry = this.cacheExpiry.get(key);
-        return expiry && Date.now() < expiry;
-    }
-
-    /**
-     * Set cache with expiry
-     * @param {string} key - Cache key
-     * @param {*} data - Data to cache
-     */
-    setCache(key, data) {
-        this.cache.set(key, data);
-        this.cacheExpiry.set(key, Date.now() + this.CACHE_DURATION);
-    }
-
-    /**
-     * Get cache statistics for monitoring
-     * @returns {Object} - Cache statistics
-     */
-    getCacheStats() {
-        const totalEntries = this.cache.size;
-        const validEntries = Array.from(this.cacheExpiry.entries())
-            .filter(([_, expiry]) => Date.now() < expiry).length;
-
-        return {
-            totalEntries,
-            validEntries,
-            hitRate: totalEntries > 0 ? Math.round((validEntries / totalEntries) * 100) : 0
-        };
     }
 }
 
