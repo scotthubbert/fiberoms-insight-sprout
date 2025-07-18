@@ -288,18 +288,14 @@
 
           <!-- Power Outages Content -->
           <div id="power-outages-content" hidden>
-            <calcite-block heading="Power Outages" collapsible expanded>
-              <calcite-icon slot="icon" icon="camera-flash-off"></calcite-icon>
+            <!-- Power Outage Statistics -->
+            <power-outage-stats id="power-outage-stats"></power-outage-stats>
 
-              <!-- Power Outage Statistics -->
-              <power-outage-stats id="power-outage-stats"></power-outage-stats>
-
-              <div class="block-actions">
-                <calcite-button id="refresh-power-outages" icon-start="refresh" scale="s" width="full">
-                  Refresh Power Outages
-                </calcite-button>
-              </div>
-            </calcite-block>
+            <div class="block-actions">
+              <calcite-button id="refresh-power-outages" icon-start="refresh" scale="s" width="full">
+                Refresh Power Outages
+              </calcite-button>
+            </div>
           </div>
 
           <!-- Network Infrastructure Content -->
