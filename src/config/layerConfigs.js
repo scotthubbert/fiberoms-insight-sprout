@@ -229,7 +229,7 @@ const createNodeSiteRenderer = () => ({
     symbol: {
         type: 'simple-marker',
         style: 'diamond',
-        color: [255, 165, 0, 0.8], // Orange color for network infrastructure
+        color: [255, 165, 0, 0.8], // Orange color for Network
         size: 12,
         outline: {
             color: [255, 165, 0, 1],
@@ -1569,6 +1569,17 @@ export const layerConfigs = {
         visible: false,
         zOrder: 130,
         dataServiceMethod: () => subscriberDataService.getElectricTrucks()
+    },
+
+    // Weather Radar Layer (RainViewer)
+    rainViewerRadar: {
+        id: 'rainviewer-radar',
+        title: 'Weather Radar',
+        layerType: 'WebTileLayer',
+        visible: false,
+        zOrder: -10, // Below all basemap layers
+        // This layer is created dynamically by RainViewerService
+        // No dataServiceMethod needed - handled by service
     }
 
     // Additional layers can be added here as needed

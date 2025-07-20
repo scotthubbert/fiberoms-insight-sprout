@@ -1,6 +1,14 @@
 // RainViewerService.js - Single Responsibility: RainViewer API integration
 import WebTileLayer from '@arcgis/core/layers/WebTileLayer';
 
+// Production logging utility
+const isDevelopment = import.meta.env.DEV;
+const log = {
+    info: (...args) => isDevelopment && console.log(...args),
+    warn: (...args) => console.warn(...args),
+    error: (...args) => console.error(...args)
+};
+
 export class RainViewerService {
     constructor() {
         this.apiUrl = 'https://api.rainviewer.com/public/weather-maps.json';
