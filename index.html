@@ -117,16 +117,14 @@
         <calcite-action-bar slot="action-bar" expanded>
           <calcite-action-group>
             <calcite-action id="layers-action" text="Subscribers" icon="users" active text-enabled></calcite-action>
-            <calcite-action id="osp-action" text="OSP (Outside Plant)" icon="utility-network"
-              text-enabled></calcite-action>
+            <calcite-action id="osp-action" text="OSP" icon="utility-network" text-enabled></calcite-action>
             <calcite-action id="vehicles-action" text="Vehicles" icon="car" text-enabled></calcite-action>
             <calcite-action id="power-outages-action" text="Power Outages" icon="camera-flash-off"
               text-enabled></calcite-action>
           </calcite-action-group>
           <calcite-action-group>
 
-            <calcite-action id="network-parent-action" text="Network Infrastructure" icon="linkChart"
-              text-enabled></calcite-action>
+            <calcite-action id="network-parent-action" text="Network" icon="linkChart" text-enabled></calcite-action>
             <calcite-action id="tools-action" text="Tools" icon="apps" text-enabled></calcite-action>
           </calcite-action-group>
           <calcite-action id="info-action" text="Info" icon="information" slot="bottom-actions"
@@ -217,7 +215,7 @@
 
           <!-- OSP Content -->
           <div id="osp-content" hidden>
-            <calcite-block heading="OSP (Outside Plant)" collapsible expanded>
+            <calcite-block heading="OSP" collapsible expanded>
               <calcite-icon slot="icon" icon="utility-network"></calcite-icon>
 
               <calcite-list selection-mode="none">
@@ -292,7 +290,7 @@
             <power-outage-stats id="power-outage-stats"></power-outage-stats>
           </div>
 
-          <!-- Network Infrastructure Content -->
+          <!-- Network Content -->
           <div id="network-parent-content" hidden>
             <calcite-block heading="Node Sites" collapsible expanded>
               <calcite-icon slot="icon" icon="layers"></calcite-icon>
@@ -577,14 +575,14 @@
           aria-label="Close"></calcite-button>
       </div>
       <div slot="content">
-        <calcite-block heading="Network Infrastructure" expanded>
+        <calcite-block heading="Network" expanded>
           <calcite-list-item label="Node Sites" description="Network node locations" class="layer-toggle-item">
             <calcite-icon slot="content-start" icon="diamond" style="color: rgb(255, 165, 0);"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
         </calcite-block>
 
-        <calcite-block heading="OSP (Outside Plant)" expanded>
+        <calcite-block heading="OSP" expanded>
           <calcite-list-item label="FSA Boundaries" description="Service area boundaries" class="layer-toggle-item">
             <calcite-icon slot="content-start" icon="polygon" style="color: rgb(30, 144, 255);"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
