@@ -308,11 +308,18 @@ export class PowerOutageStatsComponent extends HTMLElement {
             hour12: true
         });
 
-        // Combine all outages and sort by customer count (highest first)
+        // Combine all outages, filter out resolved outages (0 customers), and sort by customer count (highest first)
         const allOutages = [
             ...this.outagesData.apco.map(o => ({ ...o, company: 'APCo' })),
             ...this.outagesData.tombigbee.map(o => ({ ...o, company: 'Tombigbee' }))
-        ].sort((a, b) => (b.customers_affected || 0) - (a.customers_affected || 0));
+        ]
+            .filter(outage => (outage.customers_affected || 0) > 0) // Filter out resolved outages
+            .sort((a, b) => (b.customers_affected || 0) - (a.customers_affected || 0));
+
+        // Count filtered outages for display purposes
+        const filteredApcoCount = this.outagesData.apco.filter(o => (o.customers_affected || 0) === 0).length;
+        const filteredTombigbeeCount = this.outagesData.tombigbee.filter(o => (o.customers_affected || 0) === 0).length;
+        const totalFiltered = filteredApcoCount + filteredTombigbeeCount;
 
         statsContent.innerHTML = `
             <!-- Static Summary Section -->
@@ -324,10 +331,19 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 </div>
             </div>
 
+            <!-- Refresh Button -->
+            <div class="refresh-section" style="margin: 12px 0; flex-shrink: 0;">
+                <calcite-button id="refresh-power-outages" icon-start="refresh" scale="s" width="full">
+                    Refresh Power Outages
+                </calcite-button>
+            </div>
+
             <!-- Scrollable Outages List -->
-            <div class="outages-list-container" style="border-top: 1px solid var(--calcite-color-border-2); padding-top: 12px; flex: 1; display: flex; flex-direction: column;">
+            <div class="outages-list-container" style="border-top: 1px solid var(--calcite-color-border-2); padding-top: 12px; flex: 1; display: flex; flex-direction: column; min-height: 0;">
                 <div style="font-size: 12px; font-weight: 600; color: var(--calcite-color-text-2); margin-bottom: 8px; text-transform: uppercase;">
-                    Active Outages (${allOutages.length})
+                    Active Outages (${allOutages.length})${totalFiltered > 0 ?
+                ` <span style="font-size: 10px; color: var(--calcite-color-text-3); font-weight: normal;">(${totalFiltered} resolved hidden)</span>` :
+                ''}
                 </div>
                 <calcite-list class="outages-list" style="flex: 1; overflow-y: auto; overflow-x: hidden; border: 1px solid var(--calcite-color-border-2); border-radius: var(--calcite-border-radius); background: var(--calcite-color-background);">
                     ${allOutages.length > 0 ?
@@ -462,6 +478,42 @@ export class PowerOutageStatsComponent extends HTMLElement {
             });
         });
 
+        // Refresh button event listener
+        const refreshButton = this.querySelector('#refresh-power-outages');
+        if (refreshButton) {
+            // Remove existing listeners to prevent duplicates
+            const newRefreshButton = refreshButton.cloneNode(true);
+            refreshButton.parentNode.replaceChild(newRefreshButton, refreshButton);
+
+            newRefreshButton.addEventListener('click', async () => {
+                log.info('⚡ Manual power outage refresh triggered');
+                newRefreshButton.setAttribute('loading', '');
+
+                try {
+                    // Set global flag to skip notifications during manual refresh
+                    window._isManualRefresh = true;
+
+                    // Clear cache for power outage data
+                    const subscriberDataService = await import('../dataService.js').then(m => m.subscriberDataService);
+                    subscriberDataService.refreshData('outages');
+
+                    // Update power outage stats without notification
+                    await this.updateStats(true); // Skip notification
+
+                    // Trigger polling manager update if available
+                    if (window.app?.pollingManager) {
+                        await window.app.pollingManager.performUpdate('power-outages');
+                    }
+                } catch (error) {
+                    log.error('Failed to refresh outage data:', error);
+                } finally {
+                    newRefreshButton.removeAttribute('loading');
+                    // Clear manual refresh flag
+                    window._isManualRefresh = false;
+                }
+            });
+        }
+
         // Power company toggle switches
         setTimeout(() => {
             const toggleSwitches = this.querySelectorAll('.power-company-toggle');
@@ -508,20 +560,10 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }
 
         try {
-            // Find the outage to determine if it's a polygon for better zoom level
-            let isPolygon = false;
-            const allOutages = [...this.outagesData.apco, ...this.outagesData.tombigbee];
-            const outage = allOutages.find(o => o.outage_id === outageId);
-
-            // Check if this outage has polygon characteristics
-            if (outage && outage.area_description && outage.area_description.toLowerCase().includes('area')) {
-                isPolygon = true;
-            }
-
-            // Fly to the outage location with appropriate zoom
+            // Use consistent zoom level 15 for both APCo and Tombigbee outages
             await window.mapView.goTo({
                 center: [lng, lat],
-                zoom: isPolygon ? 12 : 15
+                zoom: 15
             });
 
             // Find and show popup for the outage
