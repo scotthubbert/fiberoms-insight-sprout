@@ -178,7 +178,7 @@ window.addEventListener('error', event => {
 // Basemap configuration for theme management
 const BASEMAP_CONFIG = {
   light: {
-    primary: 'topo-vector',
+    primary: 'navigation-3d',
     alternate: 'hybrid'
   },
   dark: {
