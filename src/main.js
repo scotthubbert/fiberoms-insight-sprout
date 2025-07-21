@@ -4252,6 +4252,14 @@ class Application {
         await this.handleCSVExport(mobileExportBtn, 'offline');
       });
     }
+
+    // TA5K Node Reports export button
+    const ta5kReportsBtn = document.getElementById('export-ta5k-reports-btn');
+    if (ta5kReportsBtn) {
+      ta5kReportsBtn.addEventListener('click', async () => {
+        await this.handleCSVExport(ta5kReportsBtn, 'ta5k-reports');
+      });
+    }
   }
 
   /**
@@ -4273,6 +4281,8 @@ class Application {
 
       if (exportType === 'all') {
         await CSVExportService.exportAllSubscribers();
+      } else if (exportType === 'ta5k-reports') {
+        await CSVExportService.exportTA5KNodeReports();
       } else {
         await CSVExportService.exportOfflineSubscribers();
       }
@@ -4283,7 +4293,12 @@ class Application {
       button.setAttribute('kind', 'success');
       button.disabled = false;
 
-      this.showNotification('success', 'CSV downloaded successfully', 3000);
+      let successMessage = 'CSV downloaded successfully';
+      if (exportType === 'ta5k-reports') {
+        successMessage = 'TA5K node reports downloaded successfully';
+      }
+
+      this.showNotification('success', successMessage, 3000);
 
       setTimeout(() => {
         this.resetCSVButton(button, originalText, originalIcon);

@@ -8,6 +8,136 @@ import { subscriberDataService } from '../dataService.js';
 export class CSVExportService {
 
     /**
+     * Export TA5K node reports with higher-level metrics
+     * @returns {Promise<boolean>} - Success status
+     */
+    static async exportTA5KNodeReports() {
+        try {
+            // Import NodeSiteMetricsService dynamically
+            const { NodeSiteMetricsService } = await import('../services/NodeSiteMetricsService.js');
+            const nodeMetricsService = new NodeSiteMetricsService();
+
+            // Get all node sites to extract node names
+            const nodeSitesData = await subscriberDataService.getNodeSites();
+
+            if (!nodeSitesData?.features || nodeSitesData.features.length === 0) {
+                throw new Error('No node sites found to generate reports');
+            }
+
+            // Extract node site names from the features
+            const nodeSiteNames = nodeSitesData.features
+                .map(feature => feature.properties?.Name || feature.attributes?.Name)
+                .filter(name => name && name.trim() !== '');
+
+            if (nodeSiteNames.length === 0) {
+                throw new Error('No valid node site names found');
+            }
+
+            console.log(`📊 Generating reports for ${nodeSiteNames.length} TA5K node sites`);
+
+            // Get metrics for all node sites
+            const allMetrics = await nodeMetricsService.getMultipleNodeSiteMetrics(nodeSiteNames);
+
+            // Format data for CSV export
+            const reportData = [];
+
+            // Process each node site
+            for (const [nodeSiteName, metrics] of Object.entries(allMetrics)) {
+                if (metrics.error) {
+                    // Include error entries with basic info
+                    reportData.push({
+                        'Node Site': nodeSiteName,
+                        'Status': 'ERROR',
+                        'Error Message': metrics.error,
+                        'Total Subscribers': 0,
+                        'Online Subscribers': 0,
+                        'Offline Subscribers': 0,
+                        'Unknown Status': 0,
+                        'Online Percentage': 0,
+                        'Offline Percentage': 0,
+                        'Residential Count': 0,
+                        'Business Count': 0,
+                        'Health Status': 'No Data',
+                        'Recent Activity (24h)': 0,
+                        'TA5K Nodes': '',
+                        'Multi-Node Site': 'No',
+                        'TA5K Breakdown': '',
+                        'Last Updated': new Date().toLocaleString()
+                    });
+                    continue;
+                }
+
+                // Process TA5K breakdown for multi-node sites
+                let ta5kBreakdownText = '';
+                if (metrics.ta5kBreakdown && Object.keys(metrics.ta5kBreakdown).length > 0) {
+                    const breakdownParts = [];
+                    for (const [ta5k, data] of Object.entries(metrics.ta5kBreakdown)) {
+                        breakdownParts.push(`${ta5k}: ${data.total} total (${data.online} online, ${data.offline} offline, ${data.residential} res, ${data.business} bus)`);
+                    }
+                    ta5kBreakdownText = breakdownParts.join('; ');
+                }
+
+                reportData.push({
+                    'Node Site': metrics.nodeSiteName || nodeSiteName,
+                    'Status': 'OK',
+                    'Error Message': '',
+                    'Total Subscribers': metrics.totalSubscribers || 0,
+                    'Online Subscribers': metrics.onlineSubscribers || 0,
+                    'Offline Subscribers': metrics.offlineSubscribers || 0,
+                    'Unknown Status': metrics.unknownSubscribers || 0,
+                    'Online Percentage': metrics.onlinePercentage || 0,
+                    'Offline Percentage': metrics.offlinePercentage || 0,
+                    'Residential Count': metrics.residentialCount || 0,
+                    'Business Count': metrics.businessCount || 0,
+                    'Health Status': metrics.healthStatus || 'Unknown',
+                    'Recent Activity (24h)': metrics.recentActivity || 0,
+                    'TA5K Nodes': (metrics.ta5kNodes || []).join(', '),
+                    'Multi-Node Site': (metrics.ta5kNodes && metrics.ta5kNodes.length > 1) ? 'Yes' : 'No',
+                    'TA5K Breakdown': ta5kBreakdownText,
+                    'Last Updated': metrics.lastUpdated ? new Date(metrics.lastUpdated).toLocaleString() : new Date().toLocaleString()
+                });
+            }
+
+            // Sort by total subscribers descending, then by node site name
+            reportData.sort((a, b) => {
+                if (b['Total Subscribers'] !== a['Total Subscribers']) {
+                    return b['Total Subscribers'] - a['Total Subscribers'];
+                }
+                return a['Node Site'].localeCompare(b['Node Site']);
+            });
+
+            const headers = [
+                'Node Site',
+                'Status',
+                'Error Message',
+                'Total Subscribers',
+                'Online Subscribers',
+                'Offline Subscribers',
+                'Unknown Status',
+                'Online Percentage',
+                'Offline Percentage',
+                'Residential Count',
+                'Business Count',
+                'Health Status',
+                'Recent Activity (24h)',
+                'TA5K Nodes',
+                'Multi-Node Site',
+                'TA5K Breakdown',
+                'Last Updated'
+            ];
+
+            await this.exportToCSV(reportData, headers, 'ta5k_node_reports');
+
+            console.log(`✅ TA5K node reports exported successfully: ${reportData.length} nodes`);
+            return true;
+
+        } catch (error) {
+            console.error('TA5K node reports export failed:', error);
+            throw error;
+        }
+    }
+
+    /**
  * Export offline subscribers to CSV
  * @returns {Promise<boolean>} - Success status
  */

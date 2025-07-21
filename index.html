@@ -147,7 +147,7 @@
                   </div>
                   <div slot="title" id="online-count-display">--</div>
                 </calcite-card>
-                
+
                 <calcite-card class="status-card status-card-offline">
                   <div slot="subtitle" class="status-offline">
                     <calcite-icon icon="circle" scale="s"></calcite-icon>
@@ -296,6 +296,16 @@
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
               </calcite-list>
+            </calcite-block>
+
+            <calcite-block heading="Reports" collapsible expanded>
+              <calcite-icon slot="icon" icon="report"></calcite-icon>
+              <div class="actions-container">
+                <calcite-button id="export-ta5k-reports-btn" icon-start="file-report" scale="s" width="full"
+                  appearance="outline">
+                  Export TA5K Node Reports
+                </calcite-button>
+              </div>
             </calcite-block>
             <calcite-block heading="Network Map" collapsible expanded>
               <calcite-icon slot="icon" icon="map"></calcite-icon>
