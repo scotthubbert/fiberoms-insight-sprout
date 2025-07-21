@@ -633,8 +633,8 @@ const createFSARenderer = () => ({
     `,
     defaultSymbol: {
         type: "simple-fill",
-        color: [170, 170, 170, 0.4], // Default gray
-        outline: { color: [170, 170, 170, 0.8], width: 1 }
+        color: [170, 170, 170, 0.2], // Default gray
+        outline: { color: [170, 170, 170, 1.0], width: 2 }
     },
     uniqueValueInfos: [
         // Fayette-specific areas
@@ -642,8 +642,8 @@ const createFSARenderer = () => ({
             value: "FAY-C3",
             symbol: {
                 type: "simple-fill",
-                color: [255, 20, 147, 0.4], // Deep pink
-                outline: { color: [255, 20, 147, 0.8], width: 1 }
+                color: [255, 20, 147, 0.2], // Deep pink
+                outline: { color: [255, 20, 147, 1.0], width: 2 }
             },
             label: "Fayette C3"
         },
@@ -651,8 +651,8 @@ const createFSARenderer = () => ({
             value: "FAY-C2",
             symbol: {
                 type: "simple-fill",
-                color: [65, 105, 225, 0.4], // Royal blue
-                outline: { color: [65, 105, 225, 0.8], width: 1 }
+                color: [65, 105, 225, 0.2], // Royal blue
+                outline: { color: [65, 105, 225, 1.0], width: 2 }
             },
             label: "Fayette C2"
         },
@@ -660,8 +660,8 @@ const createFSARenderer = () => ({
             value: "FAY-C1",
             symbol: {
                 type: "simple-fill",
-                color: [255, 69, 0, 0.4], // Orange red
-                outline: { color: [255, 69, 0, 0.8], width: 1 }
+                color: [255, 69, 0, 0.2], // Orange red
+                outline: { color: [255, 69, 0, 1.0], width: 2 }
             },
             label: "Fayette C1"
         },
@@ -669,8 +669,8 @@ const createFSARenderer = () => ({
             value: "FAY-H",
             symbol: {
                 type: "simple-fill",
-                color: [50, 205, 50, 0.4], // Lime green
-                outline: { color: [50, 205, 50, 0.8], width: 1 }
+                color: [50, 205, 50, 0.2], // Lime green
+                outline: { color: [50, 205, 50, 1.0], width: 2 }
             },
             label: "Fayette H"
         },
@@ -678,8 +678,8 @@ const createFSARenderer = () => ({
             value: "FAYE",
             symbol: {
                 type: "simple-fill",
-                color: [148, 0, 211, 0.4], // Dark violet
-                outline: { color: [148, 0, 211, 0.8], width: 1 }
+                color: [148, 0, 211, 0.2], // Dark violet
+                outline: { color: [148, 0, 211, 1.0], width: 2 }
             },
             label: "Fayette E"
         },
@@ -688,8 +688,8 @@ const createFSARenderer = () => ({
             value: "BRC",
             symbol: {
                 type: "simple-fill",
-                color: [255, 65, 54, 0.4], // Bright red
-                outline: { color: [255, 65, 54, 0.8], width: 1 }
+                color: [255, 65, 54, 0.2], // Bright red
+                outline: { color: [255, 65, 54, 1.0], width: 2 }
             },
             label: "BRC"
         },
@@ -697,8 +697,8 @@ const createFSARenderer = () => ({
             value: "BCK",
             symbol: {
                 type: "simple-fill",
-                color: [0, 116, 217, 0.4], // Strong blue
-                outline: { color: [0, 116, 217, 0.8], width: 1 }
+                color: [0, 116, 217, 0.2], // Strong blue
+                outline: { color: [0, 116, 217, 1.0], width: 2 }
             },
             label: "BCK"
         },
@@ -706,8 +706,8 @@ const createFSARenderer = () => ({
             value: "WNG",
             symbol: {
                 type: "simple-fill",
-                color: [46, 204, 64, 0.4], // Bright green
-                outline: { color: [46, 204, 64, 0.8], width: 1 }
+                color: [46, 204, 64, 0.2], // Bright green
+                outline: { color: [46, 204, 64, 1.0], width: 2 }
             },
             label: "WNG"
         },
@@ -715,8 +715,8 @@ const createFSARenderer = () => ({
             value: "HAM",
             symbol: {
                 type: "simple-fill",
-                color: [255, 215, 0, 0.4], // Gold
-                outline: { color: [255, 215, 0, 0.8], width: 1 }
+                color: [255, 215, 0, 0.2], // Gold
+                outline: { color: [255, 215, 0, 1.0], width: 2 }
             },
             label: "HAM"
         },
@@ -724,8 +724,8 @@ const createFSARenderer = () => ({
             value: "HAV",
             symbol: {
                 type: "simple-fill",
-                color: [255, 133, 27, 0.4], // Bright orange
-                outline: { color: [255, 133, 27, 0.8], width: 1 }
+                color: [255, 133, 27, 0.2], // Bright orange
+                outline: { color: [255, 133, 27, 1.0], width: 2 }
             },
             label: "HAV"
         },
@@ -733,8 +733,8 @@ const createFSARenderer = () => ({
             value: "BRY",
             symbol: {
                 type: "simple-fill",
-                color: [139, 0, 139, 0.4], // Dark magenta  
-                outline: { color: [139, 0, 139, 0.8], width: 1 }
+                color: [139, 0, 139, 0.2], // Dark magenta
+                outline: { color: [139, 0, 139, 1.0], width: 2 }
             },
             label: "BRY"
         },
@@ -742,8 +742,8 @@ const createFSARenderer = () => ({
             value: "SPP",
             symbol: {
                 type: "simple-fill",
-                color: [32, 178, 170, 0.4], // Light sea green
-                outline: { color: [32, 178, 170, 0.8], width: 1 }
+                color: [32, 178, 170, 0.2], // Light sea green
+                outline: { color: [32, 178, 170, 1.0], width: 2 }
             },
             label: "SPP"
         },
@@ -751,8 +751,8 @@ const createFSARenderer = () => ({
             value: "VRN",
             symbol: {
                 type: "simple-fill",
-                color: [205, 133, 63, 0.4], // Peru (brownish)
-                outline: { color: [205, 133, 63, 0.8], width: 1 }
+                color: [205, 133, 63, 0.2], // Peru (brownish)
+                outline: { color: [205, 133, 63, 1.0], width: 2 }
             },
             label: "VRN"
         },
@@ -760,8 +760,8 @@ const createFSARenderer = () => ({
             value: "VIN",
             symbol: {
                 type: "simple-fill",
-                color: [107, 91, 149, 0.4], // Purple-gray
-                outline: { color: [107, 91, 149, 0.8], width: 1 }
+                color: [107, 91, 149, 0.2], // Purple-gray
+                outline: { color: [107, 91, 149, 1.0], width: 2 }
             },
             label: "VIN"
         },
@@ -769,8 +769,8 @@ const createFSARenderer = () => ({
             value: "WAN",
             symbol: {
                 type: "simple-fill",
-                color: [0, 107, 84, 0.4], // Deep green
-                outline: { color: [0, 107, 84, 0.8], width: 1 }
+                color: [0, 107, 84, 0.2], // Deep green
+                outline: { color: [0, 107, 84, 1.0], width: 2 }
             },
             label: "WAN"
         },
@@ -778,8 +778,8 @@ const createFSARenderer = () => ({
             value: "BEN",
             symbol: {
                 type: "simple-fill",
-                color: [139, 0, 0, 0.4], // Dark red
-                outline: { color: [139, 0, 0, 0.8], width: 1 }
+                color: [139, 0, 0, 0.2], // Dark red
+                outline: { color: [139, 0, 0, 1.0], width: 2 }
             },
             label: "BEN"
         },
@@ -787,8 +787,8 @@ const createFSARenderer = () => ({
             value: "RBN",
             symbol: {
                 type: "simple-fill",
-                color: [70, 130, 180, 0.4], // Steel blue
-                outline: { color: [70, 130, 180, 0.8], width: 1 }
+                color: [70, 130, 180, 0.2], // Steel blue
+                outline: { color: [70, 130, 180, 1.0], width: 2 }
             },
             label: "RBN"
         },
@@ -796,8 +796,8 @@ const createFSARenderer = () => ({
             value: "WIN",
             symbol: {
                 type: "simple-fill",
-                color: [255, 105, 180, 0.4], // Hot pink
-                outline: { color: [255, 105, 180, 0.8], width: 1 }
+                color: [255, 105, 180, 0.2], // Hot pink
+                outline: { color: [255, 105, 180, 1.0], width: 2 }
             },
             label: "WIN"
         },
@@ -805,8 +805,8 @@ const createFSARenderer = () => ({
             value: "NAV",
             symbol: {
                 type: "simple-fill",
-                color: [0, 191, 255, 0.4], // Deep sky blue
-                outline: { color: [0, 191, 255, 0.8], width: 1 }
+                color: [0, 191, 255, 0.2], // Deep sky blue
+                outline: { color: [0, 191, 255, 1.0], width: 2 }
             },
             label: "NAV"
         },
@@ -814,8 +814,8 @@ const createFSARenderer = () => ({
             value: "DBS",
             symbol: {
                 type: "simple-fill",
-                color: [153, 50, 204, 0.4], // Dark orchid
-                outline: { color: [153, 50, 204, 0.8], width: 1 }
+                color: [153, 50, 204, 0.2], // Dark orchid
+                outline: { color: [153, 50, 204, 1.0], width: 2 }
             },
             label: "DBS"
         },
@@ -823,8 +823,8 @@ const createFSARenderer = () => ({
             value: "CBH",
             symbol: {
                 type: "simple-fill",
-                color: [255, 127, 80, 0.4], // Coral
-                outline: { color: [255, 127, 80, 0.8], width: 1 }
+                color: [255, 127, 80, 0.2], // Coral
+                outline: { color: [255, 127, 80, 1.0], width: 2 }
             },
             label: "CBH"
         },
@@ -832,8 +832,8 @@ const createFSARenderer = () => ({
             value: "RUS",
             symbol: {
                 type: "simple-fill",
-                color: [178, 34, 34, 0.4], // Fire brick
-                outline: { color: [178, 34, 34, 0.8], width: 1 }
+                color: [178, 34, 34, 0.2], // Fire brick
+                outline: { color: [178, 34, 34, 1.0], width: 2 }
             },
             label: "RUS"
         },
@@ -841,8 +841,8 @@ const createFSARenderer = () => ({
             value: "BE",
             symbol: {
                 type: "simple-fill",
-                color: [72, 61, 139, 0.4], // Dark slate blue
-                outline: { color: [72, 61, 139, 0.8], width: 1 }
+                color: [72, 61, 139, 0.2], // Dark slate blue
+                outline: { color: [72, 61, 139, 1.0], width: 2 }
             },
             label: "BE"
         },
@@ -850,8 +850,8 @@ const createFSARenderer = () => ({
             value: "WA",
             symbol: {
                 type: "simple-fill",
-                color: [34, 139, 34, 0.4], // Forest green
-                outline: { color: [34, 139, 34, 0.8], width: 1 }
+                color: [34, 139, 34, 0.2], // Forest green
+                outline: { color: [34, 139, 34, 1.0], width: 2 }
             },
             label: "WA"
         },
@@ -859,8 +859,8 @@ const createFSARenderer = () => ({
             value: "RB",
             symbol: {
                 type: "simple-fill",
-                color: [218, 165, 32, 0.4], // Goldenrod
-                outline: { color: [218, 165, 32, 0.8], width: 1 }
+                color: [218, 165, 32, 0.2], // Goldenrod
+                outline: { color: [218, 165, 32, 1.0], width: 2 }
             },
             label: "RB"
         }
@@ -1311,8 +1311,8 @@ const createTruckRenderer = (truckType) => {
                 type: "color",
                 field: "is_driving",
                 stops: [
-                    { value: false, color: [...color.slice(0, 3), 0.6] }, // Stopped - more transparent
-                    { value: true, color: color } // Moving - full opacity
+                    { value: false, color: [...color.slice(0, 3), 0.6] }, // Stopped
+                    { value: true, color: color } // Moving
                 ]
             },
             {
