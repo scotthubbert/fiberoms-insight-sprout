@@ -139,25 +139,21 @@
             <calcite-block heading="Network Status" collapsible expanded>
               <calcite-icon slot="icon" icon="users"></calcite-icon>
 
-              <div class="subscriber-stats-container" style="margin-bottom: 16px;">
-                <calcite-card class="subscriber-stat-card" data-status="online">
-                  <div class="stat-icon">
-                    <calcite-icon icon="circle-filled" scale="s"
-                      style="color: var(--calcite-color-status-success);"></calcite-icon>
+              <div class="network-cards">
+                <calcite-card class="status-card status-card-online">
+                  <div slot="subtitle" class="status-online">
+                    <calcite-icon icon="circle" scale="s"></calcite-icon>
+                    <span>Online</span>
                   </div>
-                  <div class="stat-label">Online</div>
-                  <div class="stat-value" id="online-count-display">--</div>
-                  <div class="stat-subtext">subscribers</div>
+                  <div slot="title" id="online-count-display">--</div>
                 </calcite-card>
-
-                <calcite-card class="subscriber-stat-card" data-status="offline">
-                  <div class="stat-icon">
-                    <calcite-icon icon="circle-filled" scale="s"
-                      style="color: var(--calcite-color-status-danger);"></calcite-icon>
+                
+                <calcite-card class="status-card status-card-offline">
+                  <div slot="subtitle" class="status-offline">
+                    <calcite-icon icon="circle" scale="s"></calcite-icon>
+                    <span>Offline</span>
                   </div>
-                  <div class="stat-label">Offline</div>
-                  <div class="stat-value" id="offline-count-display">--</div>
-                  <div class="stat-subtext">subscribers</div>
+                  <div slot="title" id="offline-count-display">--</div>
                 </calcite-card>
               </div>
 

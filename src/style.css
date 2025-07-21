@@ -1319,194 +1319,60 @@ calcite-autocomplete-item:focus {
   }
 }
 
-/* Subscriber Statistics Cards - Calcite Design System Aligned */
-.subscriber-stats-container {
+/* Network Status Cards - Simplified Calcite Design */
+.network-cards {
   display: flex;
-  gap: var(--calcite-spacing-sm);
+  gap: var(--calcite-spacing-md);
   margin-bottom: var(--calcite-spacing-md);
 }
 
-.subscriber-stat-card {
+.status-card {
   flex: 1;
-  --calcite-card-border-color: var(--calcite-color-border-2);
-  --calcite-card-background-color: var(--calcite-color-foreground-1);
-  --calcite-card-shadow: var(--calcite-shadow-0);
-  text-align: center;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--calcite-spacing-md);
-  border-radius: var(--calcite-border-radius);
-  border: 1px solid var(--calcite-color-border-2);
-  background: var(--calcite-color-foreground-1);
-  transition: var(--calcite-animation-timing) ease-in-out;
-  transition-property: transform, box-shadow, border-color;
+  --calcite-card-padding: var(--calcite-spacing-md);
+  --calcite-card-shadow: none;
+  border: 1px solid var(--calcite-color-border-3);
 }
 
-.subscriber-stat-card:hover {
-  transform: translateY(-1px);
+.status-card:hover {
   --calcite-card-shadow: var(--calcite-shadow-1);
-  box-shadow: var(--calcite-shadow-1);
 }
 
-/* Status-specific styling using Calcite semantic colors with enhanced visual appeal */
-.subscriber-stat-card[data-status="online"] {
-  --calcite-card-border-color: var(--calcite-color-status-success);
-  border-color: var(--calcite-color-status-success);
-  border-width: 2px;
-  background: linear-gradient(
-    135deg,
-    var(--calcite-color-foreground-1) 0%,
-    rgba(34, 197, 94, 0.08) 100%
-  );
-  position: relative;
-  overflow: hidden;
-}
-
-.subscriber-stat-card[data-status="offline"] {
-  --calcite-card-border-color: var(--calcite-color-status-danger);
-  border-color: var(--calcite-color-status-danger);
-  border-width: 2px;
-  background: linear-gradient(
-    135deg,
-    var(--calcite-color-foreground-1) 0%,
-    rgba(239, 68, 68, 0.08) 100%
-  );
-  position: relative;
-  overflow: hidden;
-}
-
-.subscriber-stat-card[data-status="online"]:hover {
-  --calcite-card-shadow: 0 8px 16px rgba(34, 197, 94, 0.25);
-  box-shadow: var(--calcite-card-shadow);
-  border-color: rgba(34, 197, 94, 0.8);
-  background: linear-gradient(
-    135deg,
-    var(--calcite-color-foreground-1) 0%,
-    rgba(34, 197, 94, 0.12) 100%
-  );
-  transform: translateY(-2px);
-}
-
-.subscriber-stat-card[data-status="offline"]:hover {
-  --calcite-card-shadow: 0 8px 16px rgba(239, 68, 68, 0.25);
-  box-shadow: var(--calcite-card-shadow);
-  border-color: rgba(239, 68, 68, 0.8);
-  background: linear-gradient(
-    135deg,
-    var(--calcite-color-foreground-1) 0%,
-    rgba(239, 68, 68, 0.12) 100%
-  );
-  transform: translateY(-2px);
-}
-
-/* Add subtle accent line at the top */
-.subscriber-stat-card[data-status="online"]::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--calcite-color-status-success) 0%,
-    rgba(34, 197, 94, 0.6) 100%
-  );
-  border-radius: var(--calcite-border-radius) var(--calcite-border-radius) 0 0;
-}
-
-.subscriber-stat-card[data-status="offline"]::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--calcite-color-status-danger) 0%,
-    rgba(239, 68, 68, 0.6) 100%
-  );
-  border-radius: var(--calcite-border-radius) var(--calcite-border-radius) 0 0;
-}
-
-.stat-icon {
+.status-card [slot="subtitle"] {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin-bottom: var(--calcite-spacing-xs);
-  width: 100%;
-}
-
-.stat-label {
+  gap: var(--calcite-spacing-xs);
   font-size: var(--calcite-font-size--1);
   font-weight: var(--calcite-font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--calcite-letter-spacing-wide);
-  margin: 0 0 var(--calcite-spacing-xs) 0;
-  text-align: center;
-  width: 100%;
-  color: var(--calcite-color-text-2);
 }
 
-/* Status-specific label colors */
-.subscriber-stat-card[data-status="online"] .stat-label {
-  color: var(--calcite-color-status-success);
-  font-weight: var(--calcite-font-weight-bold);
-}
-
-.subscriber-stat-card[data-status="offline"] .stat-label {
-  color: var(--calcite-color-status-danger);
-  font-weight: var(--calcite-font-weight-bold);
-}
-
-.stat-value {
+.status-card [slot="title"] {
   font-size: var(--calcite-font-size-3);
   font-weight: var(--calcite-font-weight-bold);
-  margin-bottom: var(--calcite-spacing-xs);
-  line-height: var(--calcite-line-height-tight);
-  text-align: center;
-  width: 100%;
   font-family: var(--calcite-font-family-monospace);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  line-height: var(--calcite-line-height-tight);
 }
 
-/* Enhanced stat value colors */
-.subscriber-stat-card[data-status="online"] .stat-value {
+.status-online {
   color: var(--calcite-color-status-success);
-  background: linear-gradient(
-    135deg,
-    var(--calcite-color-status-success) 0%,
-    rgba(34, 197, 94, 0.8) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
-.subscriber-stat-card[data-status="offline"] .stat-value {
+.status-offline {
   color: var(--calcite-color-status-danger);
-  background: linear-gradient(
-    135deg,
-    var(--calcite-color-status-danger) 0%,
-    rgba(239, 68, 68, 0.8) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
-.stat-subtext {
-  font-size: var(--calcite-font-size--1);
-  color: var(--calcite-color-text-3);
-  font-weight: var(--calcite-font-weight-normal);
-  margin: 0;
-  text-align: center;
-  width: 100%;
+/* Color the numbers to match their status */
+.status-card-online [slot="title"] {
+  color: var(--calcite-color-status-success);
+  font-weight: var(--calcite-font-weight-bold);
 }
+
+.status-card-offline [slot="title"] {
+  color: var(--calcite-color-status-danger);
+  font-weight: var(--calcite-font-weight-bold);
+}
+
 
 /* Actions container styling */
 .actions-container {
@@ -1773,17 +1639,13 @@ calcite-list-item[style*="cursor: pointer"]:active {
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
-  .subscriber-stats-container {
+  .network-cards {
     flex-direction: column;
-    gap: var(--calcite-spacing-xs);
+    gap: var(--calcite-spacing-sm);
   }
 
-  .subscriber-stat-card {
-    padding: var(--calcite-spacing-sm);
-  }
-
-  .stat-value {
-    font-size: var(--calcite-font-size-1);
+  .status-card [slot="title"] {
+    font-size: var(--calcite-font-size-2);
   }
 }
 
