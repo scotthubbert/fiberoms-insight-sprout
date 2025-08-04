@@ -190,9 +190,11 @@ const BASEMAP_CONFIG = {
 // Theme Manager - Single Responsibility Principle
 class ThemeManager {
   constructor() {
-    this.userPreference = localStorage.getItem('theme');
-    this.hasUserPreference = this.userPreference !== null;
-    this.currentTheme = this.hasUserPreference ? this.userPreference : this.getSystemPreference();
+    // Clean up any existing stored theme preferences
+    localStorage.removeItem('theme');
+
+    // Always follow system preference - no stored user preferences
+    this.currentTheme = this.getSystemPreference();
     this.init();
   }
 
@@ -208,15 +210,13 @@ class ThemeManager {
       this.applyTheme(this.currentTheme);
       this.themeToggle.addEventListener('click', () => this.toggleTheme());
 
-      // Listen for system theme changes
+      // Always listen for system theme changes
       if (window.matchMedia) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         mediaQuery.addEventListener('change', (e) => {
-          if (!this.hasUserPreference) {
-            const newTheme = e.matches ? 'dark' : 'light';
-            this.currentTheme = newTheme;
-            this.applyTheme(newTheme);
-          }
+          const newTheme = e.matches ? 'dark' : 'light';
+          this.currentTheme = newTheme;
+          this.applyTheme(newTheme);
         });
       }
     }
@@ -276,17 +276,15 @@ class ThemeManager {
   }
 
   toggleTheme() {
+    // Temporarily toggle theme - will revert to system preference when system changes or page refreshes
     this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
     this.applyTheme(this.currentTheme);
-    localStorage.setItem('theme', this.currentTheme);
-    this.userPreference = this.currentTheme;
-    this.hasUserPreference = true;
   }
 
   updateToggleIcon(theme) {
     const icon = theme === 'dark' ? 'brightness' : 'moon';
     const baseLabel = `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`;
-    const statusLabel = this.hasUserPreference ? ' (manual)' : ' (following system)';
+    const statusLabel = ' (following system)';
 
     this.themeToggle.setAttribute('icon-start', icon);
     this.themeToggle.setAttribute('aria-label', baseLabel);
