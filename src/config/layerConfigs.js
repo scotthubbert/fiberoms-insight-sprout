@@ -1019,28 +1019,28 @@ const createMSTTerminalRenderer = () => ({
     }
 });
 
-// MST Terminal labeling configuration - only show labels when zoomed in
+// MST Terminal labeling configuration - enhanced for better visibility
 const createMSTTerminalLabeling = () => [
     {
         symbol: {
             type: 'text',
-            color: [255, 255, 255],
+            color: [255, 255, 255], // White text for high contrast
             font: {
                 family: 'Segoe UI, Arial, sans-serif',
-                size: 10,
+                size: 12, // Increased from 10px for better readability
                 weight: 'bold'
             },
-            backgroundColor: [0, 191, 255, 0.9],
-            borderLineColor: [255, 255, 255, 1],
-            borderLineSize: 1,
-            haloColor: [0, 0, 0, 0.8],
-            haloSize: 1
+            backgroundColor: [25, 25, 25, 0.95], // Dark background for better contrast
+            borderLineColor: [0, 191, 255, 1], // Blue border to match point color
+            borderLineSize: 2, // Increased border width for better definition
+            haloColor: [0, 0, 0, 1], // Stronger halo for text separation
+            haloSize: 2 // Increased halo size for better visibility
         },
         labelPlacement: 'above-center',
         labelExpressionInfo: {
             expression: '$feature.STRUCTURE_'
         },
-        deconflictionStrategy: 'static',
+        deconflictionStrategy: 'dynamic', // Changed from static for better label positioning
         repeatLabel: false,
         removeDuplicateLabels: true,
         minScale: 6000,  // Only show labels when very zoomed in
