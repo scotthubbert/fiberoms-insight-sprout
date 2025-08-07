@@ -27,6 +27,7 @@ export class LayerManager {
         // Layer z-order configuration
         this.zOrder = {
             rainViewerRadar: -10,
+            'county-boundaries': 1,
             'fsa-boundaries': 5,
             'apco-outages': 8,
             'tombigbee-outages': 8,
@@ -62,6 +63,11 @@ export class LayerManager {
 
     // Create GeoJSON layer (existing functionality)
     async createGeoJSONLayer(layerConfig) {
+        // Check if this is a URL-based layer
+        if (layerConfig.dataUrl) {
+            return this.createGeoJSONLayerFromUrl(layerConfig);
+        }
+
         // Use the data directly if provided, otherwise fetch it
         let data;
         if (layerConfig.dataSource?.features) {
@@ -125,6 +131,34 @@ export class LayerManager {
         }
 
         return layer;
+    }
+
+    // Create GeoJSON layer from URL
+    async createGeoJSONLayerFromUrl(layerConfig) {
+        try {
+            const layer = new GeoJSONLayer({
+                id: layerConfig.id,
+                url: layerConfig.dataUrl,
+                renderer: layerConfig.renderer,
+                popupTemplate: layerConfig.popupTemplate,
+                featureReduction: layerConfig.featureReduction,
+                fields: layerConfig.fields, // Explicit field definitions to prevent inference warnings
+                listMode: layerConfig.visible ? 'show' : 'hide',
+                visible: layerConfig.visible !== undefined ? layerConfig.visible : true,
+                labelingInfo: layerConfig.labelingInfo || [],
+                minScale: layerConfig.minScale || 0, // Apply scale-dependent visibility
+                maxScale: layerConfig.maxScale || 0  // 0 means no limit
+            });
+
+            this.layers.set(layerConfig.id, layer);
+            this.layerConfigs.set(layerConfig.id, layerConfig);
+
+            log.info(`✅ Created URL-based GeoJSON layer: ${layerConfig.id}`);
+            return layer;
+        } catch (error) {
+            log.error(`Failed to create URL-based GeoJSON layer ${layerConfig.id}:`, error);
+            return null;
+        }
     }
 
     // Create power outage layer using GraphicsLayer for mixed geometry support

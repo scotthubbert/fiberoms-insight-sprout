@@ -280,6 +280,7 @@ export class MapController {
     getLayerZOrder(layerId) {
         const zOrderMap = {
             'rainviewer-radar': -10,
+            'county-boundaries': 1,
             'fsa-boundaries': 5, // Below all point layers
             'online-subscribers': 10,
             'main-line-old': 28, // Below current main line

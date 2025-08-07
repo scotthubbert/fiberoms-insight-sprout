@@ -1679,6 +1679,32 @@ export const layerConfigs = {
         dataServiceMethod: () => subscriberDataService.getElectricTrucks()
     },
 
+    // County Boundaries Layer
+    countyBoundaries: {
+        id: 'county-boundaries',
+        title: 'County Boundaries',
+        layerType: 'GeoJSONLayer',
+        dataUrl: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/ff-counties.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL2ZmLWNvdW50aWVzLmdlb2pzb24iLCJpYXQiOjE3NTQ2MDE0MjMsImV4cCI6MjA2OTk2MTQyM30.P54FAVDLIkRcXGEhFKUXEUUjYpca-hVxcVj-AlU4PGA',
+        renderer: {
+            type: 'simple',
+            symbol: {
+                type: 'simple-fill',
+                style: 'none', // No fill, just outline
+                outline: {
+                    color: [128, 128, 128, 0.8], // Gray outline
+                    width: 1.5
+                }
+            }
+        },
+        popupTemplate: {
+            title: 'County Boundary',
+            content: 'County boundary information'
+        },
+        visible: true, // Load by default
+        zOrder: 1, // Above basemap, below most other layers
+        fields: [] // Will be inferred from GeoJSON
+    },
+
     // Weather Radar Layer (RainViewer)
     rainViewerRadar: {
         id: 'rainviewer-radar',

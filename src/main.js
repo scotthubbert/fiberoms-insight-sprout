@@ -3854,6 +3854,26 @@ class Application {
 
   async initializeInfrastructureLayers() {
     try {
+      // Create County Boundaries layer first (lowest z-order)
+      const countyBoundariesConfig = getLayerConfig('countyBoundaries');
+      if (countyBoundariesConfig) {
+        loadingIndicator.showLoading('county-boundaries', 'County Boundaries');
+        try {
+          const layer = await this.services.layerManager.createLayer(countyBoundariesConfig);
+          if (layer) {
+            layer.visible = countyBoundariesConfig.visible; // Use config default (true)
+            this.services.mapController.addLayer(layer, countyBoundariesConfig.zOrder);
+            loadingIndicator.showNetwork('county-boundaries', 'County Boundaries');
+            log.info('✅ County Boundaries layer initialized');
+          } else {
+            loadingIndicator.showError('county-boundaries', 'County Boundaries', 'Failed to create layer');
+          }
+        } catch (error) {
+          log.error('Failed to initialize County Boundaries layer:', error);
+          loadingIndicator.showError('county-boundaries', 'County Boundaries', 'Failed to load');
+        }
+      }
+
       // Create Node Sites layer
       const nodeSitesConfig = getLayerConfig('nodeSites');
       if (nodeSitesConfig) {
