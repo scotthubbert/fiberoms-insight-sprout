@@ -105,7 +105,9 @@ export class LayerManager {
             fields: layerConfig.fields, // Explicit field definitions to prevent inference warnings
             listMode: layerConfig.visible ? 'show' : 'hide',
             visible: layerConfig.visible !== undefined ? layerConfig.visible : true,
-            labelingInfo: layerConfig.labelingInfo || []
+            labelingInfo: layerConfig.labelingInfo || [],
+            minScale: layerConfig.minScale || 0, // Apply scale-dependent visibility
+            maxScale: layerConfig.maxScale || 0  // 0 means no limit
         });
 
         this.layers.set(layerConfig.id, layer);

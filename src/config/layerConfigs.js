@@ -1019,6 +1019,35 @@ const createMSTTerminalRenderer = () => ({
     }
 });
 
+// MST Terminal labeling configuration - only show labels when zoomed in
+const createMSTTerminalLabeling = () => [
+    {
+        symbol: {
+            type: 'text',
+            color: [255, 255, 255],
+            font: {
+                family: 'Segoe UI, Arial, sans-serif',
+                size: 10,
+                weight: 'bold'
+            },
+            backgroundColor: [0, 191, 255, 0.9],
+            borderLineColor: [255, 255, 255, 1],
+            borderLineSize: 1,
+            haloColor: [0, 0, 0, 0.8],
+            haloSize: 1
+        },
+        labelPlacement: 'above-center',
+        labelExpressionInfo: {
+            expression: '$feature.STRUCTURE_'
+        },
+        deconflictionStrategy: 'static',
+        repeatLabel: false,
+        removeDuplicateLabels: true,
+        minScale: 6000,  // Only show labels when very zoomed in
+        maxScale: 0
+    }
+];
+
 const createSplitterRenderer = () => ({
     type: 'simple',
     symbol: {
@@ -1123,19 +1152,84 @@ const createMainLineOldPopup = () => ({
 });
 
 const createMSTTerminalPopup = () => ({
-    title: 'MST Terminal: {Name}',
+    title: 'MST Terminal: {STRUCTURE_}',
     content: [
         {
-            type: 'fields',
-            fieldInfos: [
-                { fieldName: 'Name', label: 'Terminal Name', visible: true },
-                { fieldName: 'Type', label: 'Terminal Type', visible: true },
-                { fieldName: 'Status', label: 'Status', visible: true },
-                { fieldName: 'Capacity', label: 'Port Capacity', visible: true }
-            ]
+            type: 'custom',
+            outFields: ['*'],
+            creator: function (feature) {
+                const attributes = feature.graphic.attributes;
+
+                // Create container for popup content
+                const container = document.createElement('div');
+                container.style.cssText = 'padding: 0; font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;';
+
+                // Field configuration with null handling
+                const fieldsConfig = [
+                    { fieldName: 'CLLI', label: 'CLLI Code' },
+                    { fieldName: 'STRUCTURE_', label: 'Structure ID' },
+                    { fieldName: 'EQUIP_FRAB', label: 'Equipment FRAB' },
+                    { fieldName: 'MODELNUMBE', label: 'Model Number' },
+                    { fieldName: 'LOCID', label: 'Location ID' },
+                    { fieldName: 'OUTPUTPORT', label: 'Output Ports' },
+                    { fieldName: 'GPSLATITUD', label: 'GPS Latitude', format: { places: 8 } },
+                    { fieldName: 'GPSLONGITU', label: 'GPS Longitude', format: { places: 8 } }
+                ];
+
+                // Create fields table
+                const table = document.createElement('table');
+                table.style.cssText = 'width: 100%; border-collapse: collapse; font-size: 14px;';
+
+                fieldsConfig.forEach(field => {
+                    const row = document.createElement('tr');
+                    row.style.cssText = 'border-bottom: 1px solid var(--calcite-color-border-3);';
+
+                    const labelCell = document.createElement('td');
+                    labelCell.style.cssText = 'padding: 8px 12px; font-weight: 600; color: var(--calcite-color-text-2); width: 40%; vertical-align: top;';
+                    labelCell.textContent = field.label;
+
+                    const valueCell = document.createElement('td');
+                    valueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1); word-break: break-word;';
+
+                    const value = attributes[field.fieldName];
+
+                    if (value === null || value === undefined || value === '') {
+                        valueCell.innerHTML = '<span style="color: var(--calcite-color-text-3); font-style: italic;">Not Available in Dataset</span>';
+                    } else {
+                        let displayValue = value.toString();
+
+                        // Apply formatting if specified
+                        if (field.format && field.format.places && !isNaN(value)) {
+                            displayValue = parseFloat(value).toFixed(field.format.places);
+                        }
+
+                        valueCell.textContent = displayValue;
+                    }
+
+                    row.appendChild(labelCell);
+                    row.appendChild(valueCell);
+                    table.appendChild(row);
+                });
+
+                container.appendChild(table);
+
+                // Add data source note
+                const noteDiv = document.createElement('div');
+                noteDiv.style.cssText = 'margin-top: 12px; padding: 8px; background: var(--calcite-color-foreground-2); border-radius: 4px; font-size: 12px; color: var(--calcite-color-text-3); border-left: 3px solid var(--calcite-color-brand);';
+                noteDiv.innerHTML = '<strong>Note:</strong> Fields showing "Not Available in Dataset" indicate the information was not provided in the source data, not a system error.';
+                container.appendChild(noteDiv);
+
+                return container;
+            }
         }
     ],
     actions: [
+        {
+            id: 'copy-info',
+            title: 'Copy Terminal Info',
+            icon: 'duplicate',
+            type: 'button'
+        },
         {
             id: 'directions',
             title: 'Get Directions',
@@ -1255,10 +1349,14 @@ const createMainLineOldFields = () => [
 ];
 
 const createMSTTerminalFields = () => [
-    { name: 'Name', type: 'string', alias: 'Terminal Name' },
-    { name: 'Type', type: 'string', alias: 'Terminal Type' },
-    { name: 'Status', type: 'string', alias: 'Status' },
-    { name: 'Capacity', type: 'integer', alias: 'Port Capacity' }
+    { name: 'CLLI', type: 'string', alias: 'CLLI Code' },
+    { name: 'STRUCTURE_', type: 'string', alias: 'Structure ID' },
+    { name: 'EQUIP_FRAB', type: 'string', alias: 'Equipment FRAB' },
+    { name: 'MODELNUMBE', type: 'string', alias: 'Model Number' },
+    { name: 'LOCID', type: 'string', alias: 'Location ID' },
+    { name: 'GPSLATITUD', type: 'double', alias: 'GPS Latitude' },
+    { name: 'GPSLONGITU', type: 'double', alias: 'GPS Longitude' },
+    { name: 'OUTPUTPORT', type: 'integer', alias: 'Output Ports' }
 ];
 
 const createSplitterFields = () => [
@@ -1505,8 +1603,12 @@ export const layerConfigs = {
         renderer: createMSTTerminalRenderer(),
         popupTemplate: createMSTTerminalPopup(),
         fields: createMSTTerminalFields(),
+        labelingInfo: createMSTTerminalLabeling(),
         visible: false,
         zOrder: 50,
+        // Only show when zoomed in past zoom level 15 (street level)
+        minScale: 24000,  // Hide when zoomed out beyond this scale
+        maxScale: 0,      // No limit on zooming in
         dataServiceMethod: () => subscriberDataService.getMSTTerminals()
     },
 
@@ -1519,6 +1621,9 @@ export const layerConfigs = {
         fields: createSplitterFields(),
         visible: false,
         zOrder: 60,
+        // Only show when zoomed in past zoom level 15 (street level)
+        minScale: 24000,  // Hide when zoomed out beyond this scale
+        maxScale: 0,      // No limit on zooming in
         dataServiceMethod: () => subscriberDataService.getSplitters()
     },
 
@@ -1531,6 +1636,9 @@ export const layerConfigs = {
         fields: createClosureFields(),
         visible: false,
         zOrder: 40,
+        // Only show when zoomed in past zoom level 16 (closer street level)
+        minScale: 12000,  // Hide when zoomed out beyond this scale
+        maxScale: 0,      // No limit on zooming in
         dataServiceMethod: () => subscriberDataService.getClosures()
     },
 

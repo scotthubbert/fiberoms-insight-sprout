@@ -165,9 +165,9 @@ export class PopupManager {
                             const label = labelCell.textContent.trim();
                             const value = valueCell.textContent.trim();
 
-                            // Include all values, even empty ones (show as "N/A" or empty)
+                            // Include all values, with clear messaging for missing data
                             if (label && label !== value) {
-                                const displayValue = value || 'N/A';
+                                const displayValue = value || 'Not Available in Dataset';
                                 data.push(`${label}: ${displayValue}`);
                                 foundFields = true;
                             }
@@ -205,18 +205,61 @@ export class PopupManager {
                         { attr: 'county', label: 'County' }
                     ];
 
-                    subscriberFields.forEach(field => {
-                        const value = attrs[field.attr];
-                        if (value !== undefined && value !== null) {
-                            const displayValue = value.toString().trim() || 'N/A';
-                            data.push(`${field.label}: ${displayValue}`);
+                    // Add MST Terminal fields from the popup configuration
+                    const mstTerminalFields = [
+                        { attr: 'CLLI', label: 'CLLI Code' },
+                        { attr: 'STRUCTURE_', label: 'Structure ID' },
+                        { attr: 'EQUIP_FRAB', label: 'Equipment FRAB' },
+                        { attr: 'MODELNUMBE', label: 'Model Number' },
+                        { attr: 'LOCID', label: 'Location ID' },
+                        { attr: 'OUTPUTPORT', label: 'Output Ports' },
+                        { attr: 'GPSLATITUD', label: 'GPS Latitude' },
+                        { attr: 'GPSLONGITU', label: 'GPS Longitude' }
+                    ];
+
+                    // Add Node Site fields
+                    const nodeSiteFields = [
+                        { attr: 'Name', label: 'Site Name' }
+                    ];
+
+                    // Add Splitter fields  
+                    const splitterFields = [
+                        { attr: 'STRUCTURE_', label: 'Structure ID' },
+                        { attr: 'CLLI', label: 'CLLI Code' },
+                        { attr: 'EQUIP_FRAB', label: 'Equipment FRAB' },
+                        { attr: 'OUTPUTPORT', label: 'Output Port Count' }
+                    ];
+
+                    // Determine which field set to use based on available attributes
+                    let fieldsToUse = subscriberFields;
+                    if (attrs.CLLI || attrs.STRUCTURE_ || attrs.MODELNUMBE) {
+                        if (attrs.MODELNUMBE && attrs.MODELNUMBE.includes('MST')) {
+                            fieldsToUse = mstTerminalFields;
+                        } else {
+                            fieldsToUse = splitterFields;
                         }
+                    } else if (attrs.Name && !attrs.account) {
+                        fieldsToUse = nodeSiteFields;
+                    }
+
+                    fieldsToUse.forEach(field => {
+                        const value = attrs[field.attr];
+                        let displayValue;
+
+                        if (value === null || value === undefined || value === '') {
+                            displayValue = 'Not Available in Dataset';
+                        } else {
+                            displayValue = value.toString().trim() || 'Not Available in Dataset';
+                        }
+
+                        data.push(`${field.label}: ${displayValue}`);
                     });
                 }
             }
 
-            // Add timestamp
+            // Add timestamp and data note
             data.push(`\nCopied: ${new Date().toLocaleString()}`);
+            data.push(`Note: "Not Available in Dataset" indicates information not provided in source data, not a system error.`);
 
             // Add coordinates if available
             const graphic = this.view.popup?.selectedFeature;
