@@ -1,15 +1,7 @@
 // MapController.js - Single Responsibility: Map initialization only
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
 import Extent from '@arcgis/core/geometry/Extent';
-
-// Service area configuration - centralized for easy updates
-const SERVICE_AREA_BOUNDS = {
-    xmin: -88.3319638467807,   // Western bound (SW longitude)
-    ymin: 33.440523708494564,  // Southern bound (SW latitude)
-    xmax: -87.35488507018964,  // Eastern bound (NE longitude)
-    ymax: 34.73445506886154,   // Northern bound (NE latitude)
-    spatialReference: { wkid: 4326 } // WGS84
-};
+import { getServiceAreaBounds, getCurrentServiceArea } from '../config/searchConfig.js';
 
 export class MapController {
     constructor(layerManager, themeManager) {
@@ -53,12 +45,20 @@ export class MapController {
 
     // Pre-calculate service area bounds and center (called before map initialization)
     prepareServiceAreaBounds() {
-        this.calculatedExtent = new Extent(SERVICE_AREA_BOUNDS);
+        const serviceAreaBounds = getServiceAreaBounds();
+        const serviceArea = getCurrentServiceArea();
 
-        // Calculate center point for reference
-        const centerLng = (SERVICE_AREA_BOUNDS.xmin + SERVICE_AREA_BOUNDS.xmax) / 2;
-        const centerLat = (SERVICE_AREA_BOUNDS.ymin + SERVICE_AREA_BOUNDS.ymax) / 2;
-        this.calculatedCenter = [centerLng, centerLat];
+        if (serviceAreaBounds) {
+            this.calculatedExtent = new Extent(serviceAreaBounds);
+            // Calculate center point for reference
+            const centerLng = (serviceAreaBounds.xmin + serviceAreaBounds.xmax) / 2;
+            const centerLat = (serviceAreaBounds.ymin + serviceAreaBounds.ymax) / 2;
+            this.calculatedCenter = [centerLng, centerLat];
+        } else {
+            // Use configured center for global deployments
+            this.calculatedCenter = [serviceArea.center.longitude, serviceArea.center.latitude];
+            this.calculatedExtent = null; // No bounds constraint
+        }
     }
 
     // Apply service area bounds after map is fully ready
@@ -68,50 +68,78 @@ export class MapController {
             return;
         }
 
-        if (!this.calculatedExtent) {
-            console.warn('MapController: Calculated extent not available, preparing bounds');
+        // Prepare bounds if not already done
+        if (this.calculatedExtent === undefined) {
             this.prepareServiceAreaBounds();
-            if (!this.calculatedExtent) {
-                console.error('MapController: Failed to prepare service area bounds');
-                return;
-            }
         }
 
-        // Set constraints first
-        this.view.constraints = {
-            snapToZoom: false,  // Smooth zoom per CLAUDE.md performance requirements
-            geometry: this.calculatedExtent  // Constrain navigation to service area
-        };
+        const serviceArea = getCurrentServiceArea();
 
-        // Set initial extent with immediate positioning
-        this.view.goTo(this.calculatedExtent, {
-            animate: false,
-            duration: 0
-        }).catch(error => {
-            console.error('MapController: Failed to apply service area bounds via goTo, using fallback:', error);
-            // Fallback: set extent directly
-            try {
-                this.view.extent = this.calculatedExtent;
-            } catch (fallbackError) {
-                console.error('MapController: Extent fallback also failed:', fallbackError);
-            }
-        });
+        if (this.calculatedExtent) {
+            // Apply geographic bounds for regional deployments
+            this.view.constraints = {
+                snapToZoom: false,  // Smooth zoom per CLAUDE.md performance requirements
+                geometry: this.calculatedExtent  // Constrain navigation to service area
+            };
+
+            // Set initial extent with immediate positioning
+            this.view.goTo(this.calculatedExtent, {
+                animate: false,
+                duration: 0
+            }).catch(error => {
+                console.error('MapController: Failed to apply service area bounds via goTo, using fallback:', error);
+                // Fallback: set extent directly
+                try {
+                    this.view.extent = this.calculatedExtent;
+                } catch (fallbackError) {
+                    console.error('MapController: Extent fallback also failed:', fallbackError);
+                }
+            });
+            console.info(`✅ Map constrained to ${serviceArea.name}`);
+        } else {
+            // Global deployment - no geographic constraints, just center the view
+            this.view.constraints = {
+                snapToZoom: false  // Smooth zoom per CLAUDE.md performance requirements
+                // No geometry constraint for global deployments
+            };
+
+            // Center on configured location
+            this.view.goTo({
+                center: this.calculatedCenter,
+                zoom: 4  // Continental view for global deployments
+            }, {
+                animate: false,
+                duration: 0
+            }).catch(error => {
+                console.error('MapController: Failed to center global view:', error);
+            });
+            console.info(`✅ Map configured for ${serviceArea.name} (global deployment)`);
+        }
     }
 
-    // Configure home button to use service area bounds
+    // Configure home button to use service area bounds or center
     configureHomeButton() {
-        if (!this.view || !this.calculatedExtent) {
-            console.warn('MapController: Cannot configure home button - view or extent not available');
+        if (!this.view) {
+            console.warn('MapController: Cannot configure home button - view not available');
             return;
         }
 
         try {
             // Import required ArcGIS classes
             import('@arcgis/core/Viewpoint').then(({ default: Viewpoint }) => {
-                // Create a viewpoint from our calculated extent
-                const homeViewpoint = new Viewpoint({
-                    targetGeometry: this.calculatedExtent
-                });
+                // Create a viewpoint from our calculated extent or center
+                let homeViewpoint;
+                if (this.calculatedExtent) {
+                    homeViewpoint = new Viewpoint({
+                        targetGeometry: this.calculatedExtent
+                    });
+                } else {
+                    // For global deployments, use center point and zoom level
+                    homeViewpoint = new Viewpoint({
+                        center: this.calculatedCenter,
+                        scale: 50000000  // Continental scale for global deployments
+                    });
+                }
 
                 // Method 1: Try to find and configure the home widget in the view UI
                 const homeWidget = this.view.ui.find('arcgis-home');

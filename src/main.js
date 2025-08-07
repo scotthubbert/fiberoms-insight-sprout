@@ -13,6 +13,7 @@ import { PopupManager } from './services/PopupManager.js';
 import { RainViewerService } from './services/RainViewerService.js';
 import { subscriberDataService, pollingManager } from './dataService.js';
 import { layerConfigs, getLayerConfig, getAllLayerIds } from './config/layerConfigs.js';
+import { getCurrentServiceArea, getServiceAreaBounds, getSearchSettings } from './config/searchConfig.js';
 import { geotabService } from './services/GeotabService.js';
 import { CSVExportService } from './utils/csvExport.js';
 import * as clipboardUtils from './utils/clipboardUtils.js';
@@ -3659,6 +3660,9 @@ class Application {
       this.services.popupManager.initialize(this.services.mapController.view);
     }
 
+    // Configure search widget with Alabama bounds for local results preference
+    this.configureSearchWidget();
+
     // Final refresh to ensure all layers render properly after initialization
     setTimeout(() => {
       if (this.services.mapController.view) {
@@ -3688,6 +3692,71 @@ class Application {
 
     // Initialize GeotabService but don't start polling yet (only when truck layers are enabled)
     this.initializeGeotabService();
+  }
+
+  configureSearchWidget() {
+    // Configure ArcGIS search widget with service area bounds for local results preference
+    const searchWidget = document.querySelector('arcgis-search');
+    if (!searchWidget || !this.services.mapController.view) {
+      console.warn('Search widget or map view not available for configuration');
+      return;
+    }
+
+    // Get current service area configuration
+    const serviceArea = getCurrentServiceArea();
+    const bounds = getServiceAreaBounds();
+    const searchSettings = getSearchSettings();
+
+    try {
+      // Configure search widget attributes from configuration
+      if (searchSettings.placeholder) {
+        searchWidget.setAttribute('placeholder', searchSettings.placeholder);
+      }
+
+      // Function to apply bounds to search sources
+      const applyBoundsToSources = () => {
+        if (searchWidget.widget && searchWidget.widget.allSources) {
+          searchWidget.widget.allSources.forEach(source => {
+            if (bounds) {
+              // Apply geographic bounds for local results preference
+              if (source.filter) {
+                source.filter.geometry = {
+                  type: 'extent',
+                  ...bounds
+                };
+              } else {
+                source.filter = {
+                  geometry: {
+                    type: 'extent',
+                    ...bounds
+                  }
+                };
+              }
+            } else {
+              // Remove geographic constraints for global search
+              if (source.filter && source.filter.geometry) {
+                delete source.filter.geometry;
+              }
+            }
+          });
+
+          const boundsInfo = bounds
+            ? `${serviceArea.name} bounds for local results preference`
+            : 'global search (no geographic constraints)';
+          console.info(`✅ Search widget configured with ${boundsInfo}`);
+        }
+      };
+
+      // Wait for the search widget to be ready
+      searchWidget.addEventListener('arcgisReady', applyBoundsToSources);
+
+      // If the widget is already ready, configure it immediately
+      if (searchWidget.widget && searchWidget.widget.allSources) {
+        applyBoundsToSources();
+      }
+    } catch (error) {
+      console.error(`Failed to configure search widget with ${serviceArea.name} bounds:`, error);
+    }
   }
 
   async initializeSubscriberLayers() {

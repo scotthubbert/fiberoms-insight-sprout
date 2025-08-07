@@ -414,7 +414,9 @@
       <!-- Main Content Area -->
       <div class="map-container">
         <arcgis-map id="map" basemap="navigation-3d" theme="light">
-          <arcgis-search position="top-left" theme="light"></arcgis-search>
+          <arcgis-search position="top-left" theme="light" include-default-sources="true" max-results="8"
+            min-characters="3" search-all-enabled="false" placeholder="Search addresses, places...">
+          </arcgis-search>
           <arcgis-track position="top-left" theme="light"></arcgis-track>
           <arcgis-home position="top-left" theme="light"></arcgis-home>
           <arcgis-locate position="top-left" theme="light"></arcgis-locate>
