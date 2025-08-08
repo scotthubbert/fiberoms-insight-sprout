@@ -442,7 +442,7 @@ export class PopupManager {
         toast.setAttribute('icon', 'refresh');
         toast.style.cssText = `
             position: fixed;
-            top: 80px;
+            top: 120px;
             right: 20px;
             z-index: 10000;
             max-width: 320px;
@@ -475,7 +475,7 @@ export class PopupManager {
         toast.setAttribute('auto-close-duration', '3000');
         toast.style.cssText = `
             position: fixed;
-            top: 80px;
+            top: 120px;
             right: 20px;
             z-index: 10000;
             max-width: 320px;
@@ -513,7 +513,7 @@ export class PopupManager {
         toast.setAttribute('auto-close-duration', '5000');
         toast.style.cssText = `
             position: fixed;
-            top: 80px;
+            top: 120px;
             right: 20px;
             z-index: 10000;
             max-width: 320px;

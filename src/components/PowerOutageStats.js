@@ -51,6 +51,11 @@ export class PowerOutageStatsComponent extends HTMLElement {
             apco: null,
             tombigbee: null
         };
+        // Track individual outages by ID for specific notifications
+        this.lastKnownOutages = {
+            apco: new Set(),
+            tombigbee: new Set()
+        };
     }
 
     /**
@@ -242,25 +247,32 @@ export class PowerOutageStatsComponent extends HTMLElement {
             const currentApcoCount = this.outagesData.apco.length;
             const currentTombigbeeCount = this.outagesData.tombigbee.length;
 
-            // Show notification for data changes (production-ready)
-            if (!skipNotification &&
-                !this.isInitialLoad &&
-                this.lastKnownCounts.apco !== null &&
-                this.lastKnownCounts.tombigbee !== null &&
-                (this.lastKnownCounts.apco !== currentApcoCount ||
-                    this.lastKnownCounts.tombigbee !== currentTombigbeeCount)) {
+            // Track individual outages for specific notifications
+            const currentApcoOutages = new Set(this.outagesData.apco.map(o => o.outage_id).filter(id => id));
+            const currentTombigbeeOutages = new Set(this.outagesData.tombigbee.map(o => o.outage_id).filter(id => id));
 
-                this.showUpdateToast(
-                    this.lastKnownCounts.apco,
-                    currentApcoCount,
-                    this.lastKnownCounts.tombigbee,
-                    currentTombigbeeCount
+            // Show notification for specific outage changes (new/removed outages only)
+            if (!skipNotification && !this.isInitialLoad) {
+                this.checkAndNotifyOutageChanges(
+                    'APCo',
+                    this.lastKnownOutages.apco,
+                    currentApcoOutages,
+                    this.outagesData.apco
+                );
+
+                this.checkAndNotifyOutageChanges(
+                    'Tombigbee',
+                    this.lastKnownOutages.tombigbee,
+                    currentTombigbeeOutages,
+                    this.outagesData.tombigbee
                 );
             }
 
-            // Update stored counts
+            // Update stored counts and outage sets
             this.lastKnownCounts.apco = currentApcoCount;
             this.lastKnownCounts.tombigbee = currentTombigbeeCount;
+            this.lastKnownOutages.apco = new Set(currentApcoOutages);
+            this.lastKnownOutages.tombigbee = new Set(currentTombigbeeOutages);
             this.isInitialLoad = false;
 
             this.renderStats();
@@ -616,13 +628,159 @@ export class PowerOutageStatsComponent extends HTMLElement {
     }
 
     /**
-     * Show update notification toast for outage changes
+     * Check for specific outage changes and notify users
+     * Only notifies for new outages or resolved outages
+     * @param {string} company - Company name ('APCo' or 'Tombigbee')
+     * @param {Set} previousOutages - Set of previous outage IDs
+     * @param {Set} currentOutages - Set of current outage IDs
+     * @param {Array} currentOutageData - Array of current outage objects
+     * @private
+     */
+    checkAndNotifyOutageChanges(company, previousOutages, currentOutages, currentOutageData) {
+        // Find new outages
+        const newOutages = [...currentOutages].filter(id => !previousOutages.has(id));
+
+        // Find resolved outages
+        const resolvedOutages = [...previousOutages].filter(id => !currentOutages.has(id));
+
+        // Only notify if there are actual new or resolved outages
+        if (newOutages.length > 0 || resolvedOutages.length > 0) {
+            this.showSpecificOutageNotification(company, newOutages, resolvedOutages, currentOutageData);
+        }
+    }
+
+    /**
+     * Show specific notification for new or resolved outages
+     * Production-ready user feedback system with detailed outage information
+     * @param {string} company - Company name ('APCo' or 'Tombigbee')
+     * @param {Array} newOutages - Array of new outage IDs
+     * @param {Array} resolvedOutages - Array of resolved outage IDs
+     * @param {Array} currentOutageData - Array of current outage objects
+     * @private
+     */
+    showSpecificOutageNotification(company, newOutages, resolvedOutages, currentOutageData) {
+        // Remove any existing notice
+        const existingNotice = document.querySelector('#outage-update-notice');
+        if (existingNotice) {
+            existingNotice.remove();
+        }
+
+        const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Tombigbee Electric';
+        let title = '';
+        let message = '';
+        let kind = 'info';
+
+        // Build notification content
+        const notifications = [];
+
+        if (newOutages.length > 0) {
+            kind = 'warning'; // New outages are concerning
+
+            if (newOutages.length === 1) {
+                // Single new outage - show specific details
+                const outage = currentOutageData.find(o => o.outage_id === newOutages[0]);
+                if (outage) {
+                    const customersAffected = outage.customers_affected || 0;
+                    const area = outage.area_description || 'Area';
+                    notifications.push(`New ${companyFullName} outage: ${customersAffected.toLocaleString()} customers affected in ${area}`);
+                } else {
+                    notifications.push(`New ${companyFullName} outage reported`);
+                }
+            } else {
+                // Multiple new outages - show summary
+                const totalCustomers = newOutages.reduce((sum, id) => {
+                    const outage = currentOutageData.find(o => o.outage_id === id);
+                    return sum + (outage?.customers_affected || 0);
+                }, 0);
+                notifications.push(`${newOutages.length} new ${companyFullName} outages affecting ${totalCustomers.toLocaleString()} customers`);
+            }
+        }
+
+        if (resolvedOutages.length > 0) {
+            if (kind !== 'warning') {
+                kind = 'success'; // Resolved outages are good news
+            }
+
+            if (resolvedOutages.length === 1) {
+                notifications.push(`${companyFullName} outage resolved`);
+            } else {
+                notifications.push(`${resolvedOutages.length} ${companyFullName} outages resolved`);
+            }
+        }
+
+        // Set title and message
+        if (newOutages.length > 0 && resolvedOutages.length > 0) {
+            title = 'Power Outage Updates';
+        } else if (newOutages.length > 0) {
+            title = 'New Power Outage';
+        } else {
+            title = 'Power Outage Resolved';
+        }
+
+        message = notifications.join('. ');
+
+        // Create notice container if it doesn't exist
+        let noticeContainer = document.querySelector('#notice-container');
+        if (!noticeContainer) {
+            noticeContainer = document.createElement('div');
+            noticeContainer.id = 'notice-container';
+            noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
+            document.body.appendChild(noticeContainer);
+        }
+
+        // Create notice
+        const notice = document.createElement('calcite-notice');
+        notice.id = 'outage-update-notice';
+        notice.setAttribute('open', '');
+        notice.setAttribute('kind', kind);
+        notice.setAttribute('closable', '');
+        notice.setAttribute('icon', 'flash');
+        notice.setAttribute('width', 'auto');
+
+        const titleDiv = document.createElement('div');
+        titleDiv.slot = 'title';
+        titleDiv.textContent = title;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.slot = 'message';
+        messageDiv.textContent = message;
+
+        notice.appendChild(titleDiv);
+        notice.appendChild(messageDiv);
+
+        noticeContainer.appendChild(notice);
+
+        // Listen for close event
+        notice.addEventListener('calciteNoticeClose', () => {
+            notice.remove();
+            if (noticeContainer.children.length === 0) {
+                noticeContainer.remove();
+            }
+        });
+
+        // Auto-remove after 8 seconds (longer for more detailed messages)
+        setTimeout(() => {
+            if (document.body.contains(notice)) {
+                notice.setAttribute('open', 'false');
+                setTimeout(() => {
+                    notice.remove();
+                    if (noticeContainer.children.length === 0) {
+                        noticeContainer.remove();
+                    }
+                }, 300);
+            }
+        }, 8000);
+    }
+
+    /**
+     * Show update notification toast for outage changes (DEPRECATED - kept for backward compatibility)
      * Production-ready user feedback system
      * @param {number} prevApco - Previous APCo outage count
      * @param {number} currApco - Current APCo outage count
      * @param {number} prevTombigbee - Previous Tombigbee outage count
      * @param {number} currTombigbee - Current Tombigbee outage count
      * @private
+     * @deprecated Use checkAndNotifyOutageChanges instead for specific outage tracking
      */
     showUpdateToast(prevApco, currApco, prevTombigbee, currTombigbee) {
         // Remove any existing notice

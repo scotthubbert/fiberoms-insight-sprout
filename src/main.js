@@ -605,7 +605,19 @@ class LayerPanel {
       }
 
       // Show success notification
-      this.showVehicleNotification('Vehicle locations refreshed successfully', 'success');
+      // Get updated vehicle counts for specific message
+      const geotabLayer = this.services.layerManager.getLayer('geotab-vehicles');
+      const truckLayer = this.services.layerManager.getLayer('trucks');
+
+      let vehicleCount = 0;
+      if (geotabLayer?.graphics?.items) vehicleCount += geotabLayer.graphics.items.length;
+      if (truckLayer?.graphics?.items) vehicleCount += truckLayer.graphics.items.length;
+
+      const message = vehicleCount > 0
+        ? `${vehicleCount.toLocaleString()} vehicle locations updated`
+        : 'Vehicle locations refreshed (no active vehicles)';
+
+      this.showVehicleNotification(message, 'success');
 
     } catch (error) {
       console.error('Failed to refresh vehicles:', error);
@@ -5050,7 +5062,7 @@ class Application {
     }
   }
 
-  // Show toast notification for subscriber updates
+  // Show enhanced notification for subscriber updates
   showSubscriberUpdateToast(prevOffline, currOffline, prevOnline, currOnline) {
     console.log('showSubscriberUpdateToast called with:', { prevOffline, currOffline, prevOnline, currOnline });
 
@@ -5067,36 +5079,70 @@ class Application {
     const totalCurrent = currOffline + currOnline;
     const totalChange = totalCurrent - totalPrevious;
 
+    // Build specific, contextual message
+    let title = '';
     let message = '';
-    const changes = [];
-
-    // Build message based on changes
-    if (offlineChange !== 0) {
-      const changeText = offlineChange > 0 ? `+${offlineChange}` : `${offlineChange}`;
-      changes.push(`Offline: ${changeText}`);
-    }
-
-    if (onlineChange !== 0) {
-      const changeText = onlineChange > 0 ? `+${onlineChange}` : `${onlineChange}`;
-      changes.push(`Online: ${changeText}`);
-    }
-
-    if (totalChange !== 0) {
-      const totalText = totalChange > 0 ? `+${totalChange}` : `${totalChange}`;
-      changes.push(`Total: ${totalText}`);
-    }
-
-    message = changes.join(', ');
-
-    // Determine notice type based on changes
     let kind = 'info';
-    if (offlineChange > 0) {
-      kind = 'warning'; // More offline is concerning
-    } else if (offlineChange < 0) {
-      kind = 'success'; // Less offline is good
+
+    // Determine primary change type and create specific messages
+    if (offlineChange > 0 && onlineChange <= 0) {
+      // More subscribers went offline
+      kind = 'warning';
+      title = 'Subscribers Offline';
+      if (offlineChange === 1) {
+        message = `1 subscriber went offline (${currOffline.toLocaleString()} total offline)`;
+      } else {
+        message = `${offlineChange.toLocaleString()} subscribers went offline (${currOffline.toLocaleString()} total offline)`;
+      }
+      if (onlineChange < 0) {
+        message += `. ${Math.abs(onlineChange).toLocaleString()} fewer online subscribers`;
+      }
+    } else if (offlineChange < 0 && onlineChange >= 0) {
+      // Subscribers came back online
+      kind = 'success';
+      title = 'Subscribers Restored';
+      const restored = Math.abs(offlineChange);
+      if (restored === 1) {
+        message = `1 subscriber restored to service (${currOffline.toLocaleString()} still offline)`;
+      } else {
+        message = `${restored.toLocaleString()} subscribers restored to service (${currOffline.toLocaleString()} still offline)`;
+      }
+      if (onlineChange > 0) {
+        message += `. ${onlineChange.toLocaleString()} more online subscribers`;
+      }
+    } else if (offlineChange > 0 && onlineChange > 0) {
+      // Mixed changes - both offline and online increased
+      kind = 'info';
+      title = 'Network Activity';
+      message = `${offlineChange.toLocaleString()} subscribers went offline, ${onlineChange.toLocaleString()} new subscribers online`;
+    } else if (offlineChange < 0 && onlineChange < 0) {
+      // Both decreased - subscribers left the network
+      kind = 'info';
+      title = 'Subscriber Changes';
+      const offlineRestored = Math.abs(offlineChange);
+      const onlineReduced = Math.abs(onlineChange);
+      message = `${offlineRestored.toLocaleString()} subscribers restored, ${onlineReduced.toLocaleString()} subscribers disconnected`;
+    } else if (totalChange !== 0) {
+      // Net change in total subscribers
+      kind = totalChange > 0 ? 'info' : 'info';
+      title = totalChange > 0 ? 'New Subscribers' : 'Subscriber Changes';
+      if (totalChange > 0) {
+        message = `${totalChange.toLocaleString()} new subscribers added to network (${totalCurrent.toLocaleString()} total)`;
+      } else {
+        message = `${Math.abs(totalChange).toLocaleString()} subscribers removed from network (${totalCurrent.toLocaleString()} total)`;
+      }
+    } else {
+      // Offsetting changes - no net change but status changes occurred
+      kind = 'info';
+      title = 'Service Status Changes';
+      if (offlineChange > 0) {
+        message = `${offlineChange.toLocaleString()} subscribers changed status (${currOffline.toLocaleString()} offline, ${currOnline.toLocaleString()} online)`;
+      } else {
+        message = `Subscriber status updates (${currOffline.toLocaleString()} offline, ${currOnline.toLocaleString()} online)`;
+      }
     }
 
-    console.log('Creating notice with message:', message, 'kind:', kind);
+    console.log('Creating enhanced notice with message:', message, 'kind:', kind);
 
     // Create notice container if it doesn't exist
     let noticeContainer = document.querySelector('#notice-container');
@@ -5107,7 +5153,7 @@ class Application {
       document.body.appendChild(noticeContainer);
     }
 
-    // Create notice
+    // Create notice with enhanced styling
     const notice = document.createElement('calcite-notice');
     notice.id = 'subscriber-update-notice';
     notice.setAttribute('open', '');
@@ -5118,7 +5164,7 @@ class Application {
 
     const titleDiv = document.createElement('div');
     titleDiv.slot = 'title';
-    titleDiv.textContent = 'Subscriber Update';
+    titleDiv.textContent = title;
 
     const messageDiv = document.createElement('div');
     messageDiv.slot = 'message';
@@ -5288,44 +5334,76 @@ class PWAInstaller {
   }
 
   showUpdateNotification() {
-    // Check if toast already exists
-    if (document.querySelector('#update-toast')) {
+    // Check if notification already exists
+    if (document.querySelector('#pwa-update-notice')) {
       return;
     }
 
-    // Create a toast notification for updates
-    const toast = document.createElement('calcite-toast');
-    toast.id = 'update-toast';
-    toast.setAttribute('open', '');
-    toast.setAttribute('kind', 'info');
-    toast.setAttribute('placement', 'top');
+    // Use the same notification system as other components
+    let noticeContainer = document.querySelector('#notice-container');
+    if (!noticeContainer) {
+      noticeContainer = document.createElement('div');
+      noticeContainer.id = 'notice-container';
+      noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
+      document.body.appendChild(noticeContainer);
+    }
 
-    // Create button programmatically to handle click properly
+    // Create notice using same system as other notifications
+    const notice = document.createElement('calcite-notice');
+    notice.id = 'pwa-update-notice';
+    notice.setAttribute('open', '');
+    notice.setAttribute('kind', 'brand');
+    notice.setAttribute('closable', '');
+    notice.setAttribute('icon', 'refresh');
+    notice.setAttribute('width', 'auto');
+
+    const titleDiv = document.createElement('div');
+    titleDiv.slot = 'title';
+    titleDiv.textContent = 'App Update Available';
+
+    const messageDiv = document.createElement('div');
+    messageDiv.slot = 'message';
+    messageDiv.textContent = 'A new version of the app is available. Refresh to get the latest features and improvements.';
+
     const refreshButton = document.createElement('calcite-button');
-    refreshButton.slot = 'action';
-    refreshButton.appearance = 'outline';
+    refreshButton.slot = 'actions-end';
+    refreshButton.setAttribute('appearance', 'solid');
+    refreshButton.setAttribute('scale', 's');
     refreshButton.textContent = 'Refresh Now';
     refreshButton.onclick = () => {
-      // Remove toast immediately
-      toast.remove();
-      // Then reload
+      notice.remove();
+      if (noticeContainer.children.length === 0) {
+        noticeContainer.remove();
+      }
       window.location.reload(true);
     };
 
-    toast.innerHTML = `
-      <div slot="title">Update Available</div>
-      <div slot="message">A new version of the app is available. Refresh to get the latest features.</div>
-    `;
-    toast.appendChild(refreshButton);
+    notice.appendChild(titleDiv);
+    notice.appendChild(messageDiv);
+    notice.appendChild(refreshButton);
 
-    document.body.appendChild(toast);
+    noticeContainer.appendChild(notice);
 
-    // Auto-remove toast after 10 seconds
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        toast.remove();
+    // Listen for close event
+    notice.addEventListener('calciteNoticeClose', () => {
+      notice.remove();
+      if (noticeContainer.children.length === 0) {
+        noticeContainer.remove();
       }
-    }, 10000);
+    });
+
+    // Auto-remove after 15 seconds (longer for important updates)
+    setTimeout(() => {
+      if (document.body.contains(notice)) {
+        notice.setAttribute('open', 'false');
+        setTimeout(() => {
+          notice.remove();
+          if (noticeContainer.children.length === 0) {
+            noticeContainer.remove();
+          }
+        }, 300);
+      }
+    }, 15000);
   }
 
   // Method to force update
