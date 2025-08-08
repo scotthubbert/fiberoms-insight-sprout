@@ -84,11 +84,11 @@ export class GeotabService {
         if (now > this.rateLimitResetTime) {
             this.isRateLimited = false;
             this.rateLimitResetTime = 0;
-            console.log('✅ Rate limit expired, ready for new API calls');
+            log.info('✅ Rate limit expired, ready for new API calls');
             // Try to re-authenticate after rate limit expires
             if (!this.isAuthenticated) {
                 setTimeout(() => {
-                    console.log('🔄 Attempting re-authentication after rate limit expiry');
+                    log.info('🔄 Attempting re-authentication after rate limit expiry');
                     this.initialize();
                 }, 1000); // Small delay to avoid immediate retry
             }

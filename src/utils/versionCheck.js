@@ -7,7 +7,7 @@ export function initVersionCheck() {
   // Store current build info on load
   storeBuildInfo();
 
-  // Log build info in development
+  // Only log build info in development
   if (import.meta.env.DEV) {
     console.log('Build Info:', buildInfo);
   }
@@ -66,6 +66,7 @@ async function checkVersion(isInitialLoad = false) {
 
       // Check if hash has changed (new deployment)
       if (storedHash !== currentHash) {
+        // Log version changes in development only
         if (import.meta.env.DEV) {
           console.log('New version detected:', currentHash, 'was:', storedHash);
         }

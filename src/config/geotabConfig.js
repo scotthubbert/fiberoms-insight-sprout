@@ -28,16 +28,16 @@ export function getGeotabConfig() {
 
     // Log configuration status (production-appropriate for diagnostics)
     if (isDevelopment) {
-        console.log('🚛 GeotabConfig Configuration Check:');
-        console.log('Username:', config.username ? 'Set ✅' : 'Missing ❌');
-        console.log('Password:', config.password ? 'Set ✅' : 'Missing ❌');
-        console.log('Database:', config.database ? 'Set ✅' : 'Missing ❌');
-        console.log('Enabled:', config.enabled ? 'Yes ✅' : 'No ❌');
-        console.log('Refresh Interval:', config.refreshInterval + 'ms');
-        console.log('Timeout:', config.timeout + 'ms');
-        console.log('Max Retries:', config.maxRetries);
-        console.log('Retry Delay:', config.retryDelay + 'ms');
-        console.log('Environment:', import.meta.env.MODE);
+        log.info('🚛 GeotabConfig Configuration Check:');
+        log.info('Username:', config.username ? 'Set ✅' : 'Missing ❌');
+        log.info('Password:', config.password ? 'Set ✅' : 'Missing ❌');
+        log.info('Database:', config.database ? 'Set ✅' : 'Missing ❌');
+        log.info('Enabled:', config.enabled ? 'Yes ✅' : 'No ❌');
+        log.info('Refresh Interval:', config.refreshInterval + 'ms');
+        log.info('Timeout:', config.timeout + 'ms');
+        log.info('Max Retries:', config.maxRetries);
+        log.info('Retry Delay:', config.retryDelay + 'ms');
+        log.info('Environment:', import.meta.env.MODE);
     } else {
         // Production: Only log if there are configuration issues
         if (config.enabled && (!config.username || !config.password || !config.database)) {

@@ -1373,7 +1373,6 @@ calcite-autocomplete-item:focus {
   font-weight: var(--calcite-font-weight-bold);
 }
 
-
 /* Actions container styling */
 .actions-container {
   display: flex;
@@ -2819,4 +2818,131 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   .counter-value {
     font-size: var(--calcite-font-size-1);
   }
+}
+
+/* Inline styles moved from HTML for better maintainability */
+
+/* Noscript fallback styling */
+.noscript-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 20px;
+  text-align: center;
+  font-family: system-ui;
+}
+
+/* Icon spacing and colors */
+.clock-icon {
+  margin-right: 4px;
+}
+
+.status-icon-success {
+  color: var(--calcite-color-status-success);
+}
+
+.status-icon-danger {
+  color: var(--calcite-color-status-danger);
+}
+
+.info-icon {
+  color: var(--calcite-color-info);
+}
+
+.text-secondary {
+  color: var(--calcite-color-text-2);
+}
+
+.text-monospace {
+  font-family: monospace;
+  color: var(--calcite-color-text-2);
+}
+
+/* Action group spacing */
+.action-group-spaced {
+  margin-top: 12px;
+}
+
+.simple-vehicle-list-spaced {
+  margin-top: 12px;
+}
+
+/* PRTG container styling */
+.prtg-warning-container {
+  padding: 1rem;
+  text-align: center;
+}
+
+.prtg-button-primary {
+  margin-top: 1rem;
+}
+
+.prtg-button-secondary {
+  margin-top: 0.5rem;
+}
+
+.prtg-iframe-hidden {
+  display: none;
+}
+
+/* Cache status container */
+.cache-status-container {
+  padding: 12px;
+}
+
+.cache-details-spaced {
+  margin-top: 12px;
+}
+
+.cache-buttons-container {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.app-info-container {
+  padding: 12px;
+}
+
+/* Layer icon colors */
+.icon-polygon-blue {
+  color: rgb(30, 144, 255);
+}
+
+.icon-line-brown {
+  color: rgb(165, 42, 42);
+}
+
+.icon-line-gray {
+  color: rgb(105, 105, 105);
+}
+
+.icon-circle-cyan {
+  color: rgb(0, 191, 255);
+}
+
+.icon-line-indigo {
+  color: rgb(75, 0, 130);
+}
+
+.icon-diamond-purple {
+  color: rgb(128, 0, 128);
+}
+
+.icon-square-orange {
+  color: rgb(255, 140, 0);
+}
+
+.icon-flash-green {
+  color: rgb(74, 124, 89);
+}
+
+.icon-car-blue {
+  color: rgb(30, 95, 175);
+}
+
+.icon-diamond-gold {
+  color: rgb(255, 165, 0);
 }

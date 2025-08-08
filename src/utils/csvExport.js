@@ -33,7 +33,10 @@ export class CSVExportService {
                 throw new Error('No valid node site names found');
             }
 
-            console.log(`📊 Generating reports for ${nodeSiteNames.length} TA5K node sites`);
+            // Production-safe logging for report generation
+            if (import.meta.env.DEV) {
+                console.log(`📊 Generating reports for ${nodeSiteNames.length} TA5K node sites`);
+            }
 
             // Get metrics for all node sites
             const allMetrics = await nodeMetricsService.getMultipleNodeSiteMetrics(nodeSiteNames);
@@ -128,7 +131,10 @@ export class CSVExportService {
 
             await this.exportToCSV(reportData, headers, 'ta5k_node_reports');
 
-            console.log(`✅ TA5K node reports exported successfully: ${reportData.length} nodes`);
+            // Production-safe logging for successful export
+            if (import.meta.env.DEV) {
+                console.log(`✅ TA5K node reports exported successfully: ${reportData.length} nodes`);
+            }
             return true;
 
         } catch (error) {

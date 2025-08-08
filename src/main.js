@@ -76,20 +76,6 @@ import '@esri/calcite-components/dist/components/calcite-dropdown-group';
 import '@esri/calcite-components/dist/components/calcite-dropdown-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
 
-// Set Calcite assets path - simplified approach
-const assetsPath = import.meta.env.PROD
-  ? '/calcite/assets'
-  : '/node_modules/@esri/calcite-components/dist/calcite/assets';
-
-console.log('🎨 Setting CalciteUI asset path:', assetsPath);
-setAssetPath(assetsPath);
-
-// Simplified CalciteUI initialization - all assets are now copied
-console.log('✅ CalciteUI components loaded with bulk import and complete asset copying');
-
-// Setup icon fallback handling
-setupCalciteIconFallback();
-
 // Production logging utility
 const isDevelopment = import.meta.env.DEV;
 const log = {
@@ -97,6 +83,20 @@ const log = {
   warn: (...args) => console.warn(...args),
   error: (...args) => console.error(...args)
 };
+
+// Set Calcite assets path - simplified approach
+const assetsPath = import.meta.env.PROD
+  ? '/calcite/assets'
+  : '/node_modules/@esri/calcite-components/dist/calcite/assets';
+
+log.info('🎨 Setting CalciteUI asset path:', assetsPath);
+setAssetPath(assetsPath);
+
+// Simplified CalciteUI initialization - all assets are now copied
+log.info('✅ CalciteUI components loaded with bulk import and complete asset copying');
+
+// Setup icon fallback handling
+setupCalciteIconFallback();
 
 // Global error handler for cache errors to prevent app crashes
 window.addEventListener('unhandledrejection', event => {
@@ -818,10 +818,10 @@ class LayerPanel {
     this.currentVehicleData = allVehicles;
 
     if (allVehicles.length === 0) {
-      console.log('🚛 No vehicles found, hiding vehicle list');
+      log.info('🚛 No vehicles found, hiding vehicle list');
       if (simpleVehicleListBlock) simpleVehicleListBlock.hidden = true;
     } else {
-      console.log('🚛 Showing vehicle list with vehicles:', allVehicles.length);
+      log.info('🚛 Showing vehicle list with vehicles:', allVehicles.length);
 
       // Show the vehicle list container
       if (simpleVehicleListBlock) {
@@ -832,7 +832,7 @@ class LayerPanel {
       // Enhanced visibility restoration for production
       if (vehicleList) {
         this.forceVehicleListVisibility(vehicleList);
-        console.log('🚛 Vehicle list visibility forced');
+        log.info('🚛 Vehicle list visibility forced');
       }
 
       // Force CalciteUI components to render properly
@@ -872,13 +872,13 @@ class LayerPanel {
           });
 
           vehicleList.appendChild(listItem);
-          console.log(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
+          log.info(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
         } catch (vehicleError) {
           console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
         }
       });
 
-      console.log('🚛 Vehicle list populated successfully');
+      log.info('🚛 Vehicle list populated successfully');
     }
   }
 
@@ -911,7 +911,7 @@ class LayerPanel {
       const computedStyle = window.getComputedStyle(vehicleList);
       const currentHeight = parseFloat(computedStyle.height);
 
-      console.log('🚛 Vehicle list height check:', {
+      log.info('🚛 Vehicle list height check:', {
         height: computedStyle.height,
         display: computedStyle.display,
         visibility: computedStyle.visibility,
@@ -985,7 +985,7 @@ class LayerPanel {
   async forceCalciteListRendering(vehicleList) {
     if (!vehicleList) return;
 
-    console.log('🚛 Forcing CalciteUI components to render properly...');
+    log.info('🚛 Forcing CalciteUI components to render properly...');
 
     // Force the container to be visible
     const container = document.getElementById('simple-vehicle-list');
@@ -1028,7 +1028,7 @@ class LayerPanel {
       const rect = vehicleList.getBoundingClientRect();
       const computedStyle = window.getComputedStyle(vehicleList);
 
-      console.log('🚛 After forced rendering:', {
+      log.info('🚛 After forced rendering:', {
         height: rect.height,
         width: rect.width,
         display: computedStyle.display,
@@ -1038,7 +1038,7 @@ class LayerPanel {
 
       // If still not visible, apply nuclear option
       if (rect.height === 0 || computedStyle.visibility === 'hidden') {
-        console.log('🚛 Applying nuclear CalciteUI visibility fix...');
+        log.info('🚛 Applying nuclear CalciteUI visibility fix...');
         vehicleList.style.cssText = `
           visibility: visible !important;
           display: block !important;
@@ -1116,7 +1116,7 @@ class LayerPanel {
   }
 
   async populateVehicleList(vehicles) {
-    console.log('🚛 populateVehicleList called with vehicles:', vehicles?.length || 0);
+    log.info('🚛 populateVehicleList called with vehicles:', vehicles?.length || 0);
     const vehicleList = document.getElementById('vehicle-list');
     if (!vehicleList) {
       console.error('🚛 Vehicle list element not found!');
@@ -1129,7 +1129,7 @@ class LayerPanel {
     }
 
     // Debug visibility
-    console.log('🚛 Vehicle list visibility before:', {
+    log.info('🚛 Vehicle list visibility before:', {
       hidden: vehicleList.hidden,
       display: window.getComputedStyle(vehicleList).display,
       visibility: window.getComputedStyle(vehicleList).visibility,
@@ -1250,7 +1250,12 @@ class LayerPanel {
       }
     });
 
-    console.log('🚛 populateVehicleList completed, total items added:', vehicles.length);
+    log.info('🚛 populateVehicleList completed, total items added:', vehicles.length);
+
+    // Enable filtering after data is loaded to prevent filter errors
+    if (vehicles.length > 0) {
+      vehicleList.setAttribute('filter-enabled', '');
+    }
 
     // Force CalciteUI list to be visible after populating
     // This is a workaround for CalciteUI visibility issue in production
@@ -1276,7 +1281,7 @@ class LayerPanel {
     });
 
     // Debug visibility after
-    console.log('🚛 Vehicle list visibility after:', {
+    log.info('🚛 Vehicle list visibility after:', {
       hidden: vehicleList.hidden,
       display: window.getComputedStyle(vehicleList).display,
       visibility: window.getComputedStyle(vehicleList).visibility,

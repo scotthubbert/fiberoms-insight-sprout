@@ -11,7 +11,6 @@
 
   <!-- Security Headers -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-XSS-Protection" content="1; mode=block">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
@@ -60,8 +59,7 @@
   <link rel="manifest" href="/manifest.json">
 
   <!-- Performance Optimization -->
-  <link rel="preload" href="/src/main.js" as="script" crossorigin>
-  <link rel="preload" href="/src/style.css" as="style">
+  <!-- Preloading handled automatically by Vite -->
   <link rel="dns-prefetch" href="//fonts.googleapis.com">
   <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 
@@ -75,8 +73,7 @@
 <body>
   <!-- No JavaScript Fallback -->
   <noscript>
-    <div
-      style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; text-align: center; font-family: system-ui;">
+    <div class="noscript-fallback">
       <h1>JavaScript Required</h1>
       <p>This application requires JavaScript to function properly. Please enable JavaScript in your browser settings
         and reload the page.</p>
@@ -158,7 +155,7 @@
               <!-- Last Updated Info -->
               <calcite-notice scale="s" width="full" kind="info">
                 <div slot="message">
-                  <calcite-icon icon="clock" style="margin-right: 4px;"></calcite-icon>
+                  <calcite-icon icon="clock" class="clock-icon"></calcite-icon>
                   <span id="last-updated-display">Last updated: --</span>
                 </div>
               </calcite-notice>
@@ -170,14 +167,12 @@
 
               <calcite-list selection-mode="none">
                 <calcite-list-item label="Online Subscribers" description="Show connected subscribers on map">
-                  <calcite-icon slot="content-start" icon="circle-filled"
-                    style="color: var(--calcite-color-status-success);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="circle" class="status-icon-success"></calcite-icon>
                   <calcite-switch slot="content-end" id="online-subscribers-switch"></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="Offline Subscribers" description="Show disconnected subscribers on map">
-                  <calcite-icon slot="content-start" icon="circle-filled"
-                    style="color: var(--calcite-color-status-danger);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="circle" class="status-icon-danger"></calcite-icon>
                   <calcite-switch slot="content-end" id="offline-subscribers-switch" checked></calcite-switch>
                 </calcite-list-item>
               </calcite-list>
@@ -192,7 +187,7 @@
                   Refresh Data
                 </calcite-button>
 
-                <div class="action-group" style="margin-top: 12px;">
+                <div class="action-group action-group-spaced">
                   <calcite-button id="desktop-export-offline-csv-btn" icon-start="download" scale="s" width="full"
                     appearance="outline">
                     Export Offline Subscribers
@@ -214,37 +209,37 @@
 
               <calcite-list selection-mode="none">
                 <calcite-list-item label="FSA Boundaries" description="Service area boundaries">
-                  <calcite-icon slot="content-start" icon="polygon" style="color: rgb(30, 144, 255);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="polygon" class="icon-polygon-blue"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="Main Line Fiber" description="Primary fiber routes">
-                  <calcite-icon slot="content-start" icon="line" style="color: rgb(165, 42, 42);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="line" class="icon-line-brown"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="Main Line Old" description="Legacy fiber infrastructure">
-                  <calcite-icon slot="content-start" icon="line" style="color: rgb(105, 105, 105);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="line" class="icon-line-gray"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="MST Terminals" description="Multi-service terminals">
-                  <calcite-icon slot="content-start" icon="circle" style="color: rgb(0, 191, 255);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="circle" class="icon-circle-cyan"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="MST Fiber" description="MST fiber connections">
-                  <calcite-icon slot="content-start" icon="line" style="color: rgb(75, 0, 130);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="line" class="icon-line-indigo"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="Splitters" description="Optical splitters">
-                  <calcite-icon slot="content-start" icon="diamond" style="color: rgb(128, 0, 128);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="diamond" class="icon-diamond-purple"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="Closures" description="Fiber splice closures">
-                  <calcite-icon slot="content-start" icon="square" style="color: rgb(255, 140, 0);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="square" class="icon-square-orange"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
               </calcite-list>
@@ -258,20 +253,20 @@
 
               <calcite-list selection-mode="none">
                 <calcite-list-item label="Electric Trucks" description="Track electric maintenance fleet">
-                  <calcite-icon slot="content-start" icon="flash" style="color: rgb(74, 124, 89);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="flash" class="icon-flash-green"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="Fiber Trucks" description="Track fiber installation fleet">
-                  <calcite-icon slot="content-start" icon="car" style="color: rgb(30, 95, 175);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="car" class="icon-car-blue"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
               </calcite-list>
             </calcite-block>
 
             <!-- Simple Vehicle List -->
-            <div id="simple-vehicle-list" style="margin-top: 12px;">
-              <calcite-list id="vehicle-list" selection-mode="none" filter-enabled
+            <div id="simple-vehicle-list" class="simple-vehicle-list-spaced">
+              <calcite-list id="vehicle-list" selection-mode="none"
                 filter-placeholder="Filter vehicles by name or driver">
                 <!-- Vehicle items will be populated here -->
               </calcite-list>
@@ -290,7 +285,7 @@
               <calcite-icon slot="icon" icon="layers"></calcite-icon>
               <calcite-list selection-mode="none">
                 <calcite-list-item label="Node Sites" description="Network node locations">
-                  <calcite-icon slot="content-start" icon="diamond" style="color: rgb(255, 165, 0);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="diamond" class="icon-diamond-gold"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
               </calcite-list>
@@ -308,21 +303,21 @@
             <calcite-block heading="Network Map" collapsible expanded>
               <calcite-icon slot="icon" icon="map"></calcite-icon>
               <div id="prtg-container">
-                <div id="prtg-warning" style="padding: 1rem; text-align: center;">
+                <div id="prtg-warning" class="prtg-warning-container">
                   <calcite-notice open kind="warning" icon="exclamation-mark-triangle">
                     <div slot="title">PRTG Connection</div>
                     <div slot="message">
                       To view the PRTG network map, you must first accept the security certificate from the server.
                     </div>
                   </calcite-notice>
-                  <calcite-button id="open-prtg" style="margin-top: 1rem;" width="full">
+                  <calcite-button id="open-prtg" class="prtg-button-primary" width="full">
                     Accept Certificate
                   </calcite-button>
-                  <calcite-button id="reload-prtg" style="margin-top: 0.5rem;" width="full" appearance="outline">
+                  <calcite-button id="reload-prtg" class="prtg-button-secondary" width="full" appearance="outline">
                     Reload Frame
                   </calcite-button>
                 </div>
-                <iframe id="prtg-iframe" width="100%" height="750" frameborder="0" style="display: none;"
+                <iframe id="prtg-iframe" width="100%" height="750" frameborder="0" class="prtg-iframe-hidden"
                   src="about:blank">
                 </iframe>
               </div>
@@ -335,8 +330,7 @@
             <calcite-block heading="Weather Overlays" collapsible expanded>
               <calcite-list selection-mode="none">
                 <calcite-list-item label="Weather Radar" description="Live weather overlay from RainViewer">
-                  <calcite-icon slot="content-start" icon="rain"
-                    style="color: var(--calcite-color-info);"></calcite-icon>
+                  <calcite-icon slot="content-start" icon="rain" class="info-icon"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
               </calcite-list>
@@ -351,15 +345,15 @@
                 Measurements</calcite-button>
             </calcite-block>
             <calcite-block heading="Offline Data Cache" collapsible expanded>
-              <div id="cache-status" style="padding: 12px;">
+              <div id="cache-status" class="cache-status-container">
                 <calcite-list selection-mode="none">
                   <calcite-list-item label="Cache Status" description="Loading cache information...">
                     <calcite-icon slot="content-start" icon="data"></calcite-icon>
-                    <span slot="content-end" id="cache-size-text" style="color: var(--calcite-color-text-2);">--</span>
+                    <span slot="content-end" id="cache-size-text" class="text-secondary">--</span>
                   </calcite-list-item>
                 </calcite-list>
-                <div id="cache-details" style="margin-top: 12px;"></div>
-                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <div id="cache-details" class="cache-details-spaced"></div>
+                <div class="cache-buttons-container">
                   <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s"
                     id="refresh-cache-btn">Refresh Cache Info</calcite-button>
                   <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s"
@@ -372,22 +366,19 @@
           <!-- Info Content -->
           <div id="info-content" hidden>
             <calcite-block heading="App Details" expanded>
-              <div id="app-info" style="padding: 12px;">
+              <div id="app-info" class="app-info-container">
                 <calcite-list selection-mode="none">
                   <calcite-list-item label="Build Version" id="build-version-item">
                     <calcite-icon slot="content-start" icon="code"></calcite-icon>
-                    <span slot="content-end" id="build-version-text"
-                      style="font-family: monospace; color: var(--calcite-color-text-2);">Loading...</span>
+                    <span slot="content-end" id="build-version-text" class="text-monospace">Loading...</span>
                   </calcite-list-item>
                   <calcite-list-item label="Last Updated" id="build-date-item">
                     <calcite-icon slot="content-start" icon="clock"></calcite-icon>
-                    <span slot="content-end" id="build-date-text"
-                      style="color: var(--calcite-color-text-2);">Loading...</span>
+                    <span slot="content-end" id="build-date-text" class="text-secondary">Loading...</span>
                   </calcite-list-item>
                   <calcite-list-item label="Environment" id="environment-item">
                     <calcite-icon slot="content-start" icon="globe"></calcite-icon>
-                    <span slot="content-end" id="environment-text"
-                      style="color: var(--calcite-color-text-2);">Loading...</span>
+                    <span slot="content-end" id="environment-text" class="text-secondary">Loading...</span>
                   </calcite-list-item>
                 </calcite-list>
               </div>
@@ -552,15 +543,13 @@
       <div slot="content">
         <calcite-block heading="Subscriber Status" expanded>
           <calcite-list-item label="Online Subscribers" description="Show active subscribers" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="circle"
-              style="color: var(--calcite-color-status-success);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="circle" class="status-icon-success"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="Offline Subscribers" description="Show disconnected subscribers"
             class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="circle"
-              style="color: var(--calcite-color-status-danger);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="circle" class="status-icon-danger"></calcite-icon>
             <calcite-switch slot="content-end" checked></calcite-switch>
           </calcite-list-item>
         </calcite-block>
@@ -583,44 +572,44 @@
       <div slot="content">
         <calcite-block heading="Network" expanded>
           <calcite-list-item label="Node Sites" description="Network node locations" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="diamond" style="color: rgb(255, 165, 0);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="diamond" class="icon-diamond-gold"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
         </calcite-block>
 
         <calcite-block heading="OSP" expanded>
           <calcite-list-item label="FSA Boundaries" description="Service area boundaries" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="polygon" style="color: rgb(30, 144, 255);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="polygon" class="icon-polygon-blue"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="Main Line Fiber" description="Primary fiber routes" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="line" style="color: rgb(165, 42, 42);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="line" class="icon-line-brown"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="Main Line Old" description="Legacy fiber infrastructure" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="line" style="color: rgb(105, 105, 105);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="line" class="icon-line-gray"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="MST Terminals" description="Multi-service terminals" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="circle" style="color: rgb(0, 191, 255);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="circle" class="icon-circle-cyan"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="MST Fiber" description="MST fiber connections" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="line" style="color: rgb(75, 0, 130);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="line" class="icon-line-indigo"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="Splitters" description="Optical splitters" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="diamond" style="color: rgb(128, 0, 128);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="diamond" class="icon-diamond-purple"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="Closures" description="Fiber splice closures" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="square" style="color: rgb(255, 140, 0);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="square" class="icon-square-orange"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
         </calcite-block>
@@ -630,8 +619,7 @@
         <calcite-block heading="Fiber Outages" expanded>
           <calcite-list-item label="Fiber Network Outages" description="Current fiber outages"
             class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="exclamationMarkTriangle"
-              style="color: var(--calcite-color-status-danger);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="exclamationMarkTriangle" class="status-icon-danger"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
         </calcite-block>
@@ -653,13 +641,13 @@
         <calcite-block heading="Vehicle Tracking" expanded>
           <calcite-list-item label="Electric Trucks" description="Track electric maintenance fleet"
             class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="flash" style="color: rgb(74, 124, 89);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="flash" class="icon-flash-green"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
           <calcite-list-item label="Fiber Trucks" description="Track fiber installation fleet"
             class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="car" style="color: rgb(30, 95, 175);"></calcite-icon>
+            <calcite-icon slot="content-start" icon="car" class="icon-car-blue"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
         </calcite-block>
@@ -695,7 +683,7 @@
           <calcite-list selection-mode="none">
             <calcite-list-item label="Weather Radar" description="Live weather overlay from RainViewer"
               class="layer-toggle-item">
-              <calcite-icon slot="content-start" icon="rain" style="color: var(--calcite-color-info);"></calcite-icon>
+              <calcite-icon slot="content-start" icon="rain" class="info-icon"></calcite-icon>
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>
@@ -704,16 +692,15 @@
 
 
         <calcite-block heading="Offline Data Cache" expanded>
-          <div id="mobile-cache-status" style="padding: 12px;">
+          <div id="mobile-cache-status" class="cache-status-container">
             <calcite-list selection-mode="none">
               <calcite-list-item label="Cache Status" description="Loading cache information...">
                 <calcite-icon slot="content-start" icon="data"></calcite-icon>
-                <span slot="content-end" id="mobile-cache-size-text"
-                  style="color: var(--calcite-color-text-2);">--</span>
+                <span slot="content-end" id="mobile-cache-size-text" class="text-secondary">--</span>
               </calcite-list-item>
             </calcite-list>
-            <div id="mobile-cache-details" style="margin-top: 12px;"></div>
-            <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <div id="mobile-cache-details" class="cache-details-spaced"></div>
+            <div class="cache-buttons-container">
               <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s"
                 id="mobile-refresh-cache-btn">Refresh Cache</calcite-button>
               <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s"
@@ -723,22 +710,19 @@
         </calcite-block>
 
         <calcite-block heading="App Details" expanded>
-          <div id="mobile-app-info" style="padding: 12px;">
+          <div id="mobile-app-info" class="app-info-container">
             <calcite-list selection-mode="none">
               <calcite-list-item label="Build Version" id="mobile-build-version-item">
                 <calcite-icon slot="content-start" icon="code"></calcite-icon>
-                <span slot="content-end" id="mobile-build-version-text"
-                  style="font-family: monospace; color: var(--calcite-color-text-2);">Loading...</span>
+                <span slot="content-end" id="mobile-build-version-text" class="text-monospace">Loading...</span>
               </calcite-list-item>
               <calcite-list-item label="Last Updated" id="mobile-build-date-item">
                 <calcite-icon slot="content-start" icon="clock"></calcite-icon>
-                <span slot="content-end" id="mobile-build-date-text"
-                  style="color: var(--calcite-color-text-2);">Loading...</span>
+                <span slot="content-end" id="mobile-build-date-text" class="text-secondary">Loading...</span>
               </calcite-list-item>
               <calcite-list-item label="Environment" id="mobile-environment-item">
                 <calcite-icon slot="content-start" icon="globe"></calcite-icon>
-                <span slot="content-end" id="mobile-environment-text"
-                  style="color: var(--calcite-color-text-2);">Loading...</span>
+                <span slot="content-end" id="mobile-environment-text" class="text-secondary">Loading...</span>
               </calcite-list-item>
             </calcite-list>
           </div>

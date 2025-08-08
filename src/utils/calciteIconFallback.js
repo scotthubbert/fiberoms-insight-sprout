@@ -28,6 +28,8 @@ export function setupCalciteIconFallback() {
         'camera-flash-on': 'flash',
         'cameraFlashOn': 'flash',
         'flashOn': 'flash',
+        'circle-filled': 'circle',
+        'circleFilled': 'circle',
         'lightning': 'flash',
         'loading': 'spinner',
         'database': 'data',
