@@ -1,6 +1,6 @@
 // main.js - SOLID-compliant application entry point following CLAUDE.md principles
 // FiberOMS Insight PWA - Mobile-first fiber network management application
-// Features: Search functionality, recent searches, layer management, theme switching
+// Features: Search functionality, layer management, theme switching
 
 // Configure ArcGIS intl
 import * as intl from '@arcgis/core/intl';
@@ -2073,10 +2073,7 @@ class MobileTabBar {
     const mobileSearchDialog = document.getElementById('mobile-search-sheet');
     if (mobileSearchDialog) {
       mobileSearchDialog.addEventListener('calciteDialogOpen', () => {
-        // Refresh recent searches when dialog opens
-        if (window.app?.services?.headerSearch) {
-          window.app.services.headerSearch.updateRecentSearchesUI();
-        }
+
       });
 
     }
@@ -2521,7 +2518,7 @@ class DashboardManager {
 
 // Header Search Manager - Single Responsibility Principle
 // Manages search functionality across desktop and mobile interfaces
-// Includes recent searches functionality with localStorage persistence
+// Manages search functionality across desktop and mobile interfaces
 class HeaderSearch {
   constructor() {
     this.searchInput = document.getElementById('header-search');
@@ -2532,132 +2529,10 @@ class HeaderSearch {
     this.desktopSearchTimeout = null;
     this.currentResults = [];
     this.currentIndicatorGraphics = null;
-    // Recent searches functionality
-    this.recentSearches = [];
-    this.maxRecentSearches = 5;
+
   }
 
-  // Recent searches management
-  loadRecentSearches() {
-    try {
-      const stored = localStorage.getItem('fiberoms-recent-searches');
-      this.recentSearches = stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      log.warn('Failed to load recent searches:', error);
-      this.recentSearches = [];
-    }
-  }
 
-  saveRecentSearches() {
-    try {
-      localStorage.setItem('fiberoms-recent-searches', JSON.stringify(this.recentSearches));
-    } catch (error) {
-      log.warn('Failed to save recent searches:', error);
-    }
-  }
-
-  addToRecentSearches(result) {
-    if (!result || !result.customer_name) return;
-
-    // Create a recent search entry
-    const recentEntry = {
-      id: result.id,
-      customer_name: result.customer_name,
-      customer_number: result.customer_number,
-      address: result.address,
-      city: result.city,
-      state: result.state,
-      zip: result.zip,
-      latitude: result.latitude,
-      longitude: result.longitude,
-      status: result.status,
-      timestamp: Date.now()
-    };
-
-    // Remove existing entry with same ID if it exists
-    this.recentSearches = this.recentSearches.filter(item => item.id !== result.id);
-
-    // Add to beginning of array
-    this.recentSearches.unshift(recentEntry);
-
-    // Keep only the most recent searches
-    if (this.recentSearches.length > this.maxRecentSearches) {
-      this.recentSearches = this.recentSearches.slice(0, this.maxRecentSearches);
-    }
-
-    this.saveRecentSearches();
-    this.updateRecentSearchesUI();
-  }
-
-  updateRecentSearchesUI() {
-    const recentSearchesList = document.querySelector('#mobile-search-sheet .recent-searches-list');
-    if (!recentSearchesList) return;
-
-    // Clear existing items
-    recentSearchesList.innerHTML = '';
-
-    if (this.recentSearches.length === 0) {
-      // Show empty state
-      const emptyItem = document.createElement('calcite-list-item');
-      emptyItem.setAttribute('label', 'No recent searches');
-      emptyItem.setAttribute('description', 'Your recent searches will appear here');
-      emptyItem.innerHTML = '<calcite-icon slot="content-start" icon="information"></calcite-icon>';
-      recentSearchesList.appendChild(emptyItem);
-      return;
-    }
-
-    // Add recent search items
-    this.recentSearches.forEach(recentItem => {
-      const listItem = document.createElement('calcite-list-item');
-      listItem.setAttribute('label', recentItem.customer_name || 'Unnamed Customer');
-      listItem.setAttribute('description', this.formatEnhancedDescription(recentItem));
-
-      const statusColor = recentItem.status === 'Online' ? 'success' : 'danger';
-      listItem.innerHTML = `
-        <calcite-icon slot="content-start" icon="clock" style="color: var(--calcite-color-text-3);"></calcite-icon>
-        <calcite-icon slot="content-end" icon="person" style="color: var(--calcite-color-status-${statusColor}); margin-right: 8px;"></calcite-icon>
-        <calcite-action slot="actions-end" icon="arrowRight"></calcite-action>
-      `;
-
-      // Store result data and add click handler
-      listItem._resultData = recentItem;
-      listItem.addEventListener('click', () => {
-        this.handleRecentSearchSelection(recentItem);
-      });
-
-      recentSearchesList.appendChild(listItem);
-    });
-  }
-
-  handleRecentSearchSelection(result) {
-    // Clear the mobile search input
-    if (this.mobileSearchInput) {
-      this.mobileSearchInput.value = '';
-    }
-
-    // Clear mobile search results
-    this.clearMobileSearchResults();
-
-    // Close the mobile search dialog
-    const mobileDialog = document.getElementById('mobile-search-sheet');
-    if (mobileDialog) {
-      mobileDialog.open = false;
-    }
-
-    // Close any open mobile panels
-    if (window.app?.services?.mobileTabBar) {
-      window.app.services.mobileTabBar.closeCurrentPanel();
-    }
-
-    // Navigate to result
-    this.navigateToResult(result);
-  }
-
-  clearRecentSearches() {
-    this.recentSearches = [];
-    localStorage.removeItem('fiberoms-recent-searches');
-    this.updateRecentSearchesUI();
-  }
 
   async init() {
     if (!this.searchInput && !this.mobileSearchInput && !this.desktopSearchInput) return;
@@ -2666,9 +2541,7 @@ class HeaderSearch {
     await customElements.whenDefined('calcite-autocomplete-item');
     await customElements.whenDefined('calcite-input');
 
-    // Load recent searches
-    this.loadRecentSearches();
-    this.updateRecentSearchesUI();
+
 
     this.setupEventListeners();
   }
@@ -2905,8 +2778,7 @@ class HeaderSearch {
     const resultData = selectedItem._resultData;
 
     if (resultData) {
-      // Add to recent searches
-      this.addToRecentSearches(resultData);
+
 
       this.navigateToResult(resultData);
 
@@ -3174,7 +3046,7 @@ class HeaderSearch {
   fallbackPopup(result, point) {
     // Simple fallback popup
     window.mapView.openPopup({
-      title: `Search Result: ${result.customer_name}`,
+      title: `${result.customer_name}`,
       content: `
         <div class="search-result-popup">
           <p><strong>Customer:</strong> ${result.customer_name || 'Unknown'}</p>
@@ -3263,7 +3135,7 @@ class HeaderSearch {
       clearTimeout(this.mobileSearchTimeout);
     }
 
-    // If search field is completely cleared, clear search results only (keep recent searches)
+    // If search field is completely cleared, clear search results
     if (!searchTerm || searchTerm.trim() === '') {
       this.clearMobileSearchResults();
       return;
@@ -3338,8 +3210,7 @@ class HeaderSearch {
   }
 
   handleMobileSearchSelection(result) {
-    // Add to recent searches
-    this.addToRecentSearches(result);
+
 
     // Clear the mobile search input
     if (this.mobileSearchInput) {
@@ -3381,9 +3252,8 @@ class HeaderSearch {
         const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
 
         if (searchResult.results && searchResult.results.length > 0) {
-          // Directly navigate to first result and add to recent searches
+          // Directly navigate to first result
           const firstResult = searchResult.results[0];
-          this.addToRecentSearches(firstResult);
 
           // Clear the mobile search input
           if (this.mobileSearchInput) {
@@ -3434,16 +3304,10 @@ class HeaderSearch {
       resultsBlock.setAttribute('expanded', '');
       resultsBlock.hidden = true; // Hidden by default
 
-      // Find the right place to insert it (after the Quick Search block, before Recent Searches)
+      // Insert the results block into the search dialog
       const content = searchSheet.querySelector('[slot="content"]');
       if (content) {
-        const recentSearchesBlock = content.querySelector('calcite-block[heading="Recent Searches"]');
-        if (recentSearchesBlock) {
-          content.insertBefore(resultsBlock, recentSearchesBlock);
-        } else {
-          // Fallback: append to content
-          content.appendChild(resultsBlock);
-        }
+        content.appendChild(resultsBlock);
       }
     }
 
@@ -3468,7 +3332,7 @@ class HeaderSearch {
   }
 
   clearMobileSearchResults() {
-    // Clear search results (not recent searches)
+    // Clear search results
     const resultsContainer = document.querySelector('#mobile-search-sheet .mobile-search-results-list');
     if (resultsContainer) {
       resultsContainer.innerHTML = '';
@@ -3548,8 +3412,7 @@ class HeaderSearch {
     this.clearSearchResults();
     this.clearMobileSearchResults();
 
-    // Clear recent searches array (but keep localStorage for persistence)
-    this.recentSearches = [];
+
   }
 }
 
