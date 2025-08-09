@@ -4456,12 +4456,26 @@ class Application {
   }
 
   /**
+   * Check if the current device is mobile
+   * @returns {boolean} True if mobile device
+   */
+  isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      window.innerWidth <= 768;
+  }
+
+  /**
    * Show notification to user
    * @param {string} type - Notification type ('success', 'error', 'warning', 'info')
    * @param {string} message - Notification message
    * @param {number} duration - How long to show the notification in milliseconds
    */
   showNotification(type, message, duration = 5000) {
+    // Skip notifications on mobile devices
+    if (this.isMobileDevice()) {
+      console.log(`📱 Mobile notification skipped: ${type} - ${message}`);
+      return;
+    }
     const notification = document.createElement('calcite-notice');
     notification.setAttribute('kind', type);
     notification.setAttribute('width', 'auto');
