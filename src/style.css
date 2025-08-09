@@ -277,8 +277,8 @@ calcite-modal.mobile-only calcite-button + calcite-button {
 
   /* Add blur to scrim */
   calcite-dialog.mobile-only[open]::part(scrim) {
-    backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
 
   /* Ensure primary slot is visible */
@@ -484,35 +484,47 @@ calcite-dialog.mobile-only [slot="content"] {
 
 /* Let me delete these duplicate styles since we already have mobile dialog styles above */
 
+/* Mobile Map Overlay for Outage Count */
+#mobile-outage-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  pointer-events: none; /* Allow map interaction underneath */
+  display: none; /* Hidden by default, shown on mobile */
+}
+
+#mobile-metrics-chip {
+  --calcite-chip-border-color: transparent;
+  --calcite-chip-text-color: var(--calcite-color-status-danger);
+  --calcite-chip-background-color: rgba(255, 255, 255, 0.95);
+  font-family: var(--calcite-font-family-monospace);
+  font-weight: var(--calcite-font-weight-bold);
+  text-align: center;
+  border-width: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  pointer-events: auto; /* Allow clicking on the chip itself */
+}
+
+#mobile-metrics-chip span {
+  font-family: inherit;
+  font-size: var(--calcite-font-size-4);
+  font-weight: inherit;
+  line-height: 1;
+}
+
 /* Mobile-specific adjustments */
 @media (max-width: 768px) {
-  /* More compact unified header on mobile */
+  /* Hide the entire header on mobile */
   calcite-navigation.unified-header {
-    --calcite-navigation-height: 64px;
-    min-height: 64px;
-    max-height: 64px;
-    background: var(--calcite-color-foreground-1);
-    border-bottom: 1px solid var(--calcite-color-border-1);
-  }
-
-  /* Hide app logo/name on mobile */
-  calcite-navigation.unified-header calcite-navigation-logo {
     display: none !important;
   }
 
-  calcite-navigation.unified-header calcite-button {
-    --calcite-button-scale: s;
-    --calcite-button-padding-x: var(--calcite-spacing-xs);
-    --calcite-button-padding-y: var(--calcite-spacing-xs);
-  }
-
-  /* Hide search section and navigation actions on mobile - only show offline counter */
-  .search-section {
-    display: none !important;
-  }
-
-  .navigation-actions {
-    display: none !important;
+  /* Show mobile overlay */
+  #mobile-outage-overlay {
+    display: block !important;
   }
 
   /* Hide ArcGIS search widget on mobile */
@@ -520,28 +532,9 @@ calcite-dialog.mobile-only [slot="content"] {
     display: none !important;
   }
 
-  /* Center the metrics section on mobile since it's the only visible element */
-  .navigation-content-center {
-    justify-content: center;
-    align-items: center;
-    padding: var(--calcite-spacing-md);
-    height: 100%;
-  }
-
-  .metrics-section {
-    align-self: center;
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .inline-metric {
-    --calcite-chip-scale: s;
-  }
-
-  /* Adjust map to account for header and bottom navigation */
+  /* Expand map to full height minus bottom navigation */
   .map-container {
-    height: calc(100% - 64px); /* Account for bottom nav height */
+    height: calc(100vh - 64px); /* Full height minus bottom nav */
     margin-bottom: 0;
   }
 
@@ -555,6 +548,14 @@ calcite-dialog.mobile-only [slot="content"] {
 
   arcgis-map {
     height: 100%;
+  }
+
+  /* Adjust mobile dialogs to account for no header */
+  calcite-dialog.mobile-only[open] {
+    top: 0 !important;
+    bottom: 64px !important; /* Only account for bottom tab bar */
+    height: calc(100vh - 64px) !important;
+    max-height: calc(100vh - 64px) !important;
   }
 }
 

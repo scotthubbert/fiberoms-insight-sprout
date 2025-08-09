@@ -2079,6 +2079,7 @@ class MobileTabBar {
     this.setupCloseButtons();
     this.setupMobileSearchDialogListeners();
     this.setupMobileCacheManagement();
+    this.setupMobileMetricsChip();
   }
 
   setupMobileSearchDialogListeners() {
@@ -2103,6 +2104,22 @@ class MobileTabBar {
       clearBtn.addEventListener('click', async () => {
         if (confirm('Are you sure you want to clear all cached OSP data? This will require re-downloading all data on next use.')) {
           await this.clearMobileCache();
+        }
+      });
+    }
+  }
+
+  setupMobileMetricsChip() {
+    const mobileMetricsChip = document.getElementById('mobile-metrics-chip');
+    if (mobileMetricsChip) {
+      mobileMetricsChip.addEventListener('click', () => {
+        // Open the mobile power outages dialog
+        const powerDialog = document.getElementById('mobile-power-sheet');
+        if (powerDialog) {
+          this.closeCurrentPanel(); // Close any open panels first
+          powerDialog.open = true;
+          this.currentDialog = powerDialog;
+          this.closeButton.classList.add('show');
         }
       });
     }
@@ -2478,6 +2495,12 @@ class DashboardManager {
         const alertText = count > 0 ? `${count} New` : '0 New';
         alertCountElement.textContent = alertText;
       }
+    }
+
+    // Update mobile overlay counter
+    const mobileOfflineCountElement = document.getElementById('mobile-offline-count');
+    if (mobileOfflineCountElement) {
+      mobileOfflineCountElement.textContent = count.toString();
     }
   }
 

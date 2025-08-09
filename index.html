@@ -108,6 +108,13 @@
         </div>
       </calcite-navigation>
 
+      <!-- Mobile Map Overlay for Outage Count -->
+      <div id="mobile-outage-overlay" class="mobile-only">
+        <calcite-chip scale="l" appearance="outline" id="mobile-metrics-chip">
+          <span id="mobile-offline-count">0</span>
+        </calcite-chip>
+      </div>
+
       <!-- Side Panel - Desktop Only -->
       <calcite-shell-panel slot="panel-start" id="shell-panel-start" position="start" display-mode="dock"
         width-scale="m" class="desktop-only">
