@@ -2078,7 +2078,6 @@ class MobileTabBar {
 
     this.setupCloseButtons();
     this.setupMobileSearchDialogListeners();
-    this.setupMobileCacheManagement();
     this.setupMobileMetricsChip();
   }
 
@@ -2089,23 +2088,6 @@ class MobileTabBar {
 
       });
 
-    }
-  }
-
-  setupMobileCacheManagement() {
-    const refreshBtn = document.getElementById('mobile-refresh-cache-btn');
-    const clearBtn = document.getElementById('mobile-clear-cache-btn');
-
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', () => this.updateMobileCacheStatus());
-    }
-
-    if (clearBtn) {
-      clearBtn.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to clear all cached OSP data? This will require re-downloading all data on next use.')) {
-          await this.clearMobileCache();
-        }
-      });
     }
   }
 
@@ -2247,77 +2229,9 @@ class MobileTabBar {
   }
 
   initializeMobileOtherTab() {
-    // Update cache status and build info when other tab is opened
-    this.updateMobileCacheStatus();
+    // Update build info when other tab is opened
     this.updateMobileBuildInfo();
     this.setupMobileResourceLinks();
-  }
-
-  async updateMobileCacheStatus() {
-    try {
-      const { cacheService } = await import('./services/CacheService.js');
-      const stats = await cacheService.getCacheStats();
-
-      const cacheDetailsDiv = document.getElementById('mobile-cache-details');
-      const cacheSizeText = document.getElementById('mobile-cache-size-text');
-
-      if (stats.length === 0) {
-        cacheSizeText.textContent = 'Empty';
-        cacheDetailsDiv.innerHTML = '<p style="color: var(--calcite-color-text-3); font-size: 13px;">No cached data</p>';
-        return;
-      }
-
-      // Calculate total size
-      const totalFeatures = stats.reduce((sum, stat) => sum + stat.size, 0);
-      cacheSizeText.textContent = `${totalFeatures} features`;
-
-      // Build details HTML
-      const detailsHTML = stats.map(stat => `
-        <div style="margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-2); border-radius: 4px;">
-          <div style="font-weight: 500; font-size: 13px;">${this.formatDataType(stat.dataType)}</div>
-          <div style="font-size: 12px; color: var(--calcite-color-text-2);">
-            ${stat.size} features • Cached ${stat.age} ago • ${stat.expires}
-          </div>
-        </div>
-      `).join('');
-
-      cacheDetailsDiv.innerHTML = detailsHTML;
-    } catch (error) {
-      console.error('Failed to get mobile cache status:', error);
-    }
-  }
-
-  async clearMobileCache() {
-    try {
-      const { cacheService } = await import('./services/CacheService.js');
-      await cacheService.clearAllCache();
-      await this.updateMobileCacheStatus();
-
-      // Show success notification
-      const noticeContainer = document.querySelector('#notice-container') || document.body;
-      const notice = document.createElement('calcite-notice');
-      notice.setAttribute('open', '');
-      notice.setAttribute('kind', 'success');
-      notice.setAttribute('closable', '');
-      notice.setAttribute('icon', 'check-circle');
-
-      const titleDiv = document.createElement('div');
-      titleDiv.slot = 'title';
-      titleDiv.textContent = 'Cache Cleared';
-
-      const messageDiv = document.createElement('div');
-      messageDiv.slot = 'message';
-      messageDiv.textContent = 'All OSP data cache has been cleared successfully.';
-
-      notice.appendChild(titleDiv);
-      notice.appendChild(messageDiv);
-      noticeContainer.appendChild(notice);
-
-      // Auto-remove after 3 seconds
-      setTimeout(() => notice.remove(), 3000);
-    } catch (error) {
-      console.error('Failed to clear mobile cache:', error);
-    }
   }
 
   updateMobileBuildInfo() {
@@ -2358,21 +2272,6 @@ class MobileTabBar {
         window.open('https://github.com/your-org/fiberoms-insight-pwa/issues', '_blank');
       });
     }
-  }
-
-  formatDataType(dataType) {
-    const mapping = {
-      'fsa': 'FSA Boundaries',
-      'mainFiber': 'Main Line Fiber',
-      'mainOld': 'Main Line Old',
-      'mstFiber': 'MST Fiber',
-      'mstTerminals': 'MST Terminals',
-      'closures': 'Closures',
-      'splitters': 'Splitters',
-      'nodeSites': 'Node Sites'
-    };
-
-    return mapping[dataType] || dataType;
   }
 
   closeCurrentPanel() {

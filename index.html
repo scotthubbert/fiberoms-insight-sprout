@@ -627,11 +627,6 @@
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
         </calcite-block>
-
-        <calcite-block heading="Tools" expanded>
-          <calcite-button width="full" icon-start="rain" appearance="outline" id="mobile-radar-toggle">Weather
-            Radar</calcite-button>
-        </calcite-block>
       </div>
     </calcite-dialog>
 
@@ -691,26 +686,6 @@
               <calcite-switch slot="content-end"></calcite-switch>
             </calcite-list-item>
           </calcite-list>
-        </calcite-block>
-
-
-
-        <calcite-block heading="Offline Data Cache" expanded>
-          <div id="mobile-cache-status" class="cache-status-container">
-            <calcite-list selection-mode="none">
-              <calcite-list-item label="Cache Status" description="Loading cache information...">
-                <calcite-icon slot="content-start" icon="data"></calcite-icon>
-                <span slot="content-end" id="mobile-cache-size-text" class="text-secondary">--</span>
-              </calcite-list-item>
-            </calcite-list>
-            <div id="mobile-cache-details" class="cache-details-spaced"></div>
-            <div class="cache-buttons-container">
-              <calcite-button width="full" appearance="outline" icon-start="refresh" scale="s"
-                id="mobile-refresh-cache-btn">Refresh Cache</calcite-button>
-              <calcite-button width="full" appearance="outline-fill" kind="danger" icon-start="trash" scale="s"
-                id="mobile-clear-cache-btn">Clear Cache</calcite-button>
-            </div>
-          </div>
         </calcite-block>
 
         <calcite-block heading="App Details" expanded>
