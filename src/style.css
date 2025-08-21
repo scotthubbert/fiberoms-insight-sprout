@@ -849,46 +849,70 @@ calcite-autocomplete {
    SOLUTION: iOS Safari auto-zooms when focusing on input fields with font-size < 16px.
    This causes the page to zoom in but often doesn't zoom back out, creating UX issues.
    
-   APPROACH 1 (Current): Set all input font-sizes to 16px+ (accessibility-friendly)
-   APPROACH 2 (Alternative): Add 'maximum-scale=1.0' to viewport meta tag (less accessible)
+   APPROACH 1: Set all input font-sizes to 16px+ (accessibility-friendly)
+   APPROACH 2: Add 'maximum-scale=1.0' to viewport meta tag (complete prevention)
    
-   Current implementation prevents zoom while maintaining accessibility compliance.
+   Current implementation uses BOTH approaches for maximum reliability.
 */
 @media (max-width: 768px) {
+  /* Calcite Design System inputs */
   calcite-input,
   calcite-autocomplete,
   calcite-input input,
-  calcite-autocomplete input {
+  calcite-autocomplete input,
+  calcite-combobox,
+  calcite-combobox input,
+  calcite-text-area,
+  calcite-text-area textarea {
     font-size: 16px !important; /* Prevents mobile browser zoom on input focus */
     --calcite-input-font-size: 16px !important;
+    --calcite-font-size-0: 16px !important; /* Override Calcite variables */
   }
 
-  /* Ensure mobile search input has proper font size */
+  /* Specific search inputs */
   #mobile-search-input,
   #header-search,
-  #desktop-search {
+  #desktop-search,
+  .header-search-input {
     font-size: 16px !important;
     --calcite-input-font-size: 16px !important;
   }
 
-  /* Comprehensive coverage for all search inputs including ArcGIS widgets */
+  /* ArcGIS Map SDK inputs */
   arcgis-search,
   arcgis-search input,
   arcgis-search calcite-input,
   arcgis-search calcite-autocomplete,
-  calcite-combobox input,
   .esri-search input,
   .esri-search__input,
-  .esri-widget input {
+  .esri-widget input,
+  .esri-widget textarea,
+  .esri-widget select {
     font-size: 16px !important; /* Prevents iOS auto-zoom */
     --calcite-input-font-size: 16px !important;
   }
 
-  /* Global fallback for any input/textarea elements */
+  /* Global fallback for any input/textarea/select elements */
   input,
   textarea,
-  select {
+  select,
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="password"],
+  input[type="number"] {
     font-size: 16px !important; /* Prevents iOS Safari auto-zoom on any input focus */
+    -webkit-text-size-adjust: 100%; /* Prevent text scaling */
+    text-size-adjust: 100%; /* Prevent text scaling */
+  }
+
+  /* Ensure all shadow DOM inputs are covered */
+  * input,
+  * textarea,
+  * select {
+    font-size: 16px !important;
   }
 }
 
