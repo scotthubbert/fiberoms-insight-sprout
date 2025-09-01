@@ -173,12 +173,12 @@ export default defineConfig({
           },
           {
             urlPattern: /^https:\/\/basemaps\.arcgis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
+            handler: 'CacheFirst',
             options: {
               cacheName: 'arcgis-basemap-cache',
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 3 // 3 days
+                maxEntries: 5000,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
               },
               cacheableResponse: {
                 statuses: [0, 200]
