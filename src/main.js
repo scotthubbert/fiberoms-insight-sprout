@@ -17,6 +17,8 @@ import { getCurrentServiceArea, getServiceAreaBounds, getSearchSettings } from '
 import { geotabService } from './services/GeotabService.js';
 import { CSVExportService } from './utils/csvExport.js';
 import * as clipboardUtils from './utils/clipboardUtils.js';
+import { ThemeManager as ImportedThemeManager } from './ui/ThemeManager.js';
+import { PollingService } from './services/PollingService.js';
 
 // Import components
 import './components/PowerOutageStats.js';
@@ -75,6 +77,11 @@ import '@esri/calcite-components/dist/components/calcite-dropdown';
 import '@esri/calcite-components/dist/components/calcite-dropdown-group';
 import '@esri/calcite-components/dist/components/calcite-dropdown-item';
 import { setAssetPath } from '@esri/calcite-components/dist/components';
+import { PWAInstaller as ImportedPWAInstaller } from './core/PWAInstaller.js';
+import { HeaderSearch as ImportedHeaderSearch } from './ui/HeaderSearch.js';
+import { DashboardManager as ImportedDashboardManager } from './ui/DashboardManager.js';
+import { MobileTabBar as ImportedMobileTabBar } from './ui/MobileTabBar.js';
+import { LayerPanel as ImportedLayerPanel } from './ui/LayerPanel.js';
 
 // Production logging utility
 const isDevelopment = import.meta.env.DEV;
@@ -176,882 +183,716 @@ window.addEventListener('error', event => {
   }
 });
 
-// Basemap configuration for theme management
-const BASEMAP_CONFIG = {
-  light: {
-    primary: 'streets',
-    alternate: 'hybrid'
-  },
-  dark: {
-    primary: 'streets-night-vector',
-    alternate: 'hybrid'
-  }
-};
+// ThemeManager moved to ./ui/ThemeManager.js
 
-// Theme Manager - Single Responsibility Principle
-class ThemeManager {
-  constructor() {
-    // Clean up any existing stored theme preferences
-    localStorage.removeItem('theme');
+// Polling Service - Single Responsibility Principle (disabled for Phase 1)
+// PollingService moved to ./services/PollingService.js
 
-    // Always follow system preference - no stored user preferences
-    this.currentTheme = this.getSystemPreference();
-    this.init();
-  }
+// Layer Panel Manager - Single Responsibility Principle
+// LayerPanel moved to ./ui/LayerPanel.js
+/*
+constructor() {
+  this.shellPanel = document.getElementById('shell-panel-start');
+  this.panel = document.getElementById('panel-content');
 
-  getSystemPreference() {
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
+  // Get all actions
+  this.actions = this.shellPanel?.querySelectorAll('calcite-action');
+
+  // Content sections
+  this.layersContent = document.getElementById('layers-content');
+  this.ospContent = document.getElementById('osp-content');
+  this.vehiclesContent = document.getElementById('vehicles-content');
+  this.powerOutagesContent = document.getElementById('power-outages-content');
+  this.searchContent = document.getElementById('search-content');
+  this.networkParentContent = document.getElementById('network-parent-content');
+  this.toolsContent = document.getElementById('tools-content');
+  this.infoContent = document.getElementById('info-content');
+
+  // Initialize state
+  this.currentVehicleData = [];
+
+  this.init();
+}
 
   async init() {
-    await customElements.whenDefined('calcite-button');
-    this.themeToggle = document.getElementById('theme-toggle');
+  await customElements.whenDefined('calcite-shell-panel');
+  await customElements.whenDefined('calcite-action');
+  await customElements.whenDefined('calcite-panel');
 
-    if (this.themeToggle) {
-      this.applyTheme(this.currentTheme);
-      this.themeToggle.addEventListener('click', () => this.toggleTheme());
+  this.setupActionBarNavigation();
+  this.setupCacheManagement();
+  this.setupPrtgIframe();
 
-      // Always listen for system theme changes
-      if (window.matchMedia) {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        mediaQuery.addEventListener('change', (e) => {
-          const newTheme = e.matches ? 'dark' : 'light';
-          this.currentTheme = newTheme;
-          this.applyTheme(newTheme);
-        });
+  // Show layers content by default
+  this.showContent('layers');
+}
+
+setupActionBarNavigation() {
+  // Set up action click handlers following the Calcite example pattern
+  this.actions?.forEach(action => {
+    action.addEventListener('click', (event) => {
+      const actionId = action.id;
+
+      // Map action IDs to content names
+      const contentMap = {
+        'layers-action': 'layers',
+        'osp-action': 'osp',
+        'vehicles-action': 'vehicles',
+        'power-outages-action': 'power-outages',
+        'search-action': 'search',
+        'network-parent-action': 'network-parent',
+        'tools-action': 'tools',
+        'info-action': 'info'
+      };
+
+      const contentName = contentMap[actionId];
+
+      if (contentName) {
+        // Update all action states
+        this.actions.forEach(a => a.active = false);
+        action.active = true;
+
+        // Update panel heading
+        if (this.panel) {
+          this.panel.heading = action.text;
+        }
+
+        // Show appropriate content
+        this.showContent(contentName);
+      }
+    });
+  });
+}
+
+showContent(contentName) {
+  // Hide all content sections
+  if (this.layersContent) this.layersContent.hidden = true;
+  if (this.ospContent) this.ospContent.hidden = true;
+  if (this.vehiclesContent) this.vehiclesContent.hidden = true;
+  if (this.powerOutagesContent) this.powerOutagesContent.hidden = true;
+  if (this.searchContent) this.searchContent.hidden = true;
+  if (this.networkParentContent) this.networkParentContent.hidden = true;
+  if (this.toolsContent) this.toolsContent.hidden = true;
+  if (this.infoContent) this.infoContent.hidden = true;
+
+  // Show selected content
+  switch (contentName) {
+    case 'layers':
+      if (this.layersContent) {
+        this.layersContent.hidden = false;
+        this.layersContent.style.display = '';
+      }
+      break;
+    case 'osp':
+      if (this.ospContent) {
+        this.ospContent.hidden = false;
+        this.ospContent.style.display = '';
+      }
+      break;
+    case 'vehicles':
+      if (this.vehiclesContent) {
+        this.vehiclesContent.hidden = false;
+        this.vehiclesContent.style.display = '';
+      }
+      this.updateVehicleStatus();
+      this.loadSimpleVehicleList();
+      break;
+    case 'power-outages':
+      if (this.powerOutagesContent) {
+        this.powerOutagesContent.hidden = false;
+        this.powerOutagesContent.style.display = '';
+      }
+      break;
+    case 'search':
+      if (this.searchContent) {
+        this.searchContent.hidden = false;
+        this.searchContent.style.display = '';
+      }
+      break;
+    case 'network-parent':
+      if (this.networkParentContent) {
+        this.networkParentContent.hidden = false;
+        this.networkParentContent.style.display = '';
+      }
+      break;
+    case 'tools':
+      if (this.toolsContent) {
+        this.toolsContent.hidden = false;
+        this.toolsContent.style.display = '';
+      }
+      this.updateCacheStatus();
+      break;
+    case 'info':
+      if (this.infoContent) {
+        this.infoContent.hidden = false;
+        this.infoContent.style.display = '';
+      }
+      this.updateBuildInfo();
+      break;
+  }
+}
+
+updateVehicleStatus() {
+  // Update the GeotabService status in the vehicles panel
+  this.updateGeotabStatus();
+  this.setupVehicleButtons();
+}
+
+  async updateGeotabStatus() {
+  try {
+    const { geotabService } = await import('./services/GeotabService.js');
+    const status = geotabService.getStatus();
+
+    const statusChip = document.getElementById('geotab-status-chip');
+    if (statusChip) {
+      if (status.enabled && status.authenticated) {
+        statusChip.textContent = 'Connected';
+        statusChip.kind = 'success';
+      } else if (status.enabled && !status.authenticated) {
+        statusChip.textContent = 'Connecting...';
+        statusChip.kind = 'info';
+      } else {
+        statusChip.textContent = 'Disabled';
+        statusChip.kind = 'neutral';
       }
     }
-  }
-
-  applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    this.updateToggleIcon(theme);
-
-    const isDark = theme === 'dark';
-    document.body.classList.toggle('calcite-mode-dark', isDark);
-
-    // Toggle ArcGIS theme stylesheets (official Esri pattern)
-    const lightStylesheet = document.getElementById('esri-theme-light');
-    const darkStylesheet = document.getElementById('esri-theme-dark');
-
-    if (lightStylesheet && darkStylesheet) {
-      lightStylesheet.disabled = isDark;
-      darkStylesheet.disabled = !isDark;
-    }
-
-    // Update ArcGIS map components theme
-    const mapElement = document.getElementById('map');
-    if (mapElement) {
-      mapElement.setAttribute('theme', theme);
-      const themeBasemaps = BASEMAP_CONFIG[theme];
-      mapElement.setAttribute('basemap', themeBasemaps.primary);
-
-      const basemapToggle = mapElement.querySelector('arcgis-basemap-toggle');
-      if (basemapToggle) {
-        basemapToggle.setAttribute('next-basemap', themeBasemaps.alternate);
-      }
-
-      const widgets = mapElement.querySelectorAll('arcgis-search, arcgis-zoom, arcgis-home, arcgis-locate, arcgis-basemap-toggle, arcgis-basemap-gallery, arcgis-expand, arcgis-track, arcgis-fullscreen');
-      widgets.forEach(widget => {
-        widget.setAttribute('theme', theme);
-      });
-
-      // Apply theme to Esri widgets with delay
-      setTimeout(() => {
-        const esriElements = document.querySelectorAll('.esri-widget, .esri-search, .esri-popup, .esri-ui, .esri-view-surface');
-        esriElements.forEach(element => {
-          element.classList.toggle('calcite-mode-dark', isDark);
-          element.classList.toggle('calcite-mode-light', !isDark);
-        });
-      }, 100);
-    }
-
-    if (window.mapView) {
-      this.applyThemeToView(window.mapView);
-    }
-
-    // Update RainViewer layer for theme change
-    if (window.app?.services?.rainViewerService) {
-      window.app.services.rainViewerService.updateTheme();
-    }
-  }
-
-  toggleTheme() {
-    // Temporarily toggle theme - will revert to system preference when system changes or page refreshes
-    this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
-    this.applyTheme(this.currentTheme);
-  }
-
-  updateToggleIcon(theme) {
-    const icon = theme === 'dark' ? 'brightness' : 'moon';
-    const baseLabel = `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`;
-    const statusLabel = ' (following system)';
-
-    this.themeToggle.setAttribute('icon-start', icon);
-    this.themeToggle.setAttribute('aria-label', baseLabel);
-    this.themeToggle.setAttribute('title', baseLabel + statusLabel);
-  }
-
-  applyThemeToView(view) {
-    if (!view) return;
-
-    const isDark = this.currentTheme === 'dark';
-
-    if (view.container) {
-      view.container.classList.toggle('calcite-mode-dark', isDark);
-      view.container.classList.toggle('calcite-mode-light', !isDark);
-    }
-
-    if (view.popup?.container) {
-      view.popup.container.classList.toggle('calcite-mode-dark', isDark);
-      view.popup.container.classList.toggle('calcite-mode-light', !isDark);
+  } catch (error) {
+    console.error('Failed to update GeotabService status:', error);
+    const statusChip = document.getElementById('geotab-status-chip');
+    if (statusChip) {
+      statusChip.textContent = 'Error';
+      statusChip.kind = 'danger';
     }
   }
 }
 
-// Polling Service - Single Responsibility Principle (disabled for Phase 1)
-class PollingService {
-  constructor(layerManager) {
-    this.layerManager = layerManager;
-    this.pollingTimers = {};
-    this.pollingIntervals = {
-      offlineSubscribers: 30000,  // 30 seconds for critical offline data
-      onlineSubscribers: 300000,  // 5 minutes for online data
-      vehicles: 10000,            // 10 seconds for real-time vehicle tracking
-      outages: 60000              // 1 minute for outage data
-    };
-
-    window.addEventListener('beforeunload', () => this.cleanup());
+setupVehicleButtons() {
+  // Set up refresh vehicles button
+  const refreshBtn = document.getElementById('refresh-vehicles');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      await this.refreshVehicles();
+      // Also refresh the simple vehicle list
+      await this.loadSimpleVehicleList();
+    });
   }
 
-  startPolling(layerName) {
-    // Polling disabled for Phase 1 - will implement in Phase 2
+  // Set up vehicle layer toggle listeners
+  this.setupVehicleLayerToggles();
+}
+
+setupVehicleLayerToggles() {
+  // Listen for vehicle layer toggle changes and refresh the list
+  const vehicleToggles = document.querySelectorAll('#vehicles-content calcite-checkbox');
+  vehicleToggles.forEach(toggle => {
+    toggle.addEventListener('calciteCheckboxChange', async () => {
+      // Small delay to allow layer changes to process
+      setTimeout(() => {
+        this.loadSimpleVehicleList();
+      }, 100);
+    });
+  });
+}
+
+  async refreshVehicles() {
+  try {
+    const { geotabService } = await import('./services/GeotabService.js');
+
+    // Show loading indicator
+    const refreshBtn = document.getElementById('refresh-vehicles');
+    if (refreshBtn) {
+      refreshBtn.loading = true;
+      refreshBtn.disabled = true;
+    }
+
+    // Refresh vehicle data and get the actual truck data
+    const truckData = await geotabService.getTruckData();
+
+    // Update status
+    this.updateGeotabStatus();
+
+    // Update layer data with the actual truck data if available
+    if (window.app?.services?.layerManager && truckData) {
+      // Convert truck data to GeoJSON format for layer updates
+      if (truckData.electric && truckData.electric.length > 0) {
+        const electricGeoJSON = {
+          type: "FeatureCollection",
+          features: truckData.electric.map(truck => ({
+            type: "Feature",
+            properties: truck,
+            geometry: {
+              type: "Point",
+              coordinates: [truck.longitude, truck.latitude]
+            }
+          }))
+        };
+        await window.app.services.layerManager.updateLayerData('electric-trucks', electricGeoJSON);
+      }
+
+      if (truckData.fiber && truckData.fiber.length > 0) {
+        const fiberGeoJSON = {
+          type: "FeatureCollection",
+          features: truckData.fiber.map(truck => ({
+            type: "Feature",
+            properties: truck,
+            geometry: {
+              type: "Point",
+              coordinates: [truck.longitude, truck.latitude]
+            }
+          }))
+        };
+        await window.app.services.layerManager.updateLayerData('fiber-trucks', fiberGeoJSON);
+      }
+    }
+
+    // Show success notification
+    // Get updated vehicle counts for specific message
+    const geotabLayer = this.services.layerManager.getLayer('geotab-vehicles');
+    const truckLayer = this.services.layerManager.getLayer('trucks');
+
+    let vehicleCount = 0;
+    if (geotabLayer?.graphics?.items) vehicleCount += geotabLayer.graphics.items.length;
+    if (truckLayer?.graphics?.items) vehicleCount += truckLayer.graphics.items.length;
+
+    const message = vehicleCount > 0
+      ? `${vehicleCount.toLocaleString()} vehicle locations updated`
+      : 'Vehicle locations refreshed (no active vehicles)';
+
+    this.showVehicleNotification(message, 'success');
+
+  } catch (error) {
+    console.error('Failed to refresh vehicles:', error);
+    this.showVehicleNotification('Failed to refresh vehicle locations', 'danger');
+  } finally {
+    // Reset button state
+    const refreshBtn = document.getElementById('refresh-vehicles');
+    if (refreshBtn) {
+      refreshBtn.loading = false;
+      refreshBtn.disabled = false;
+    }
+  }
+}
+
+  async loadSimpleVehicleList() {
+  log.info('🚛 Loading simple vehicle list...');
+  const vehiclesList = document.getElementById('vehicle-list');
+  if (!vehiclesList) {
+    console.error('🚛 vehicle-list element not found');
     return;
   }
 
-  stopPolling(layerName) {
-    if (this.pollingTimers[layerName]) {
-      clearInterval(this.pollingTimers[layerName]);
-      delete this.pollingTimers[layerName];
-    }
-  }
+  // Clear existing vehicles
+  vehiclesList.innerHTML = '';
 
-  async updateLayerData(layerName) {
-    // Delegate to LayerManager
-    return this.layerManager.updateLayerData(layerName);
-  }
+  try {
+    // Wait for CalciteUI components to be ready
+    await customElements.whenDefined('calcite-list-item');
+    await customElements.whenDefined('calcite-icon');
 
-  cleanup() {
-    Object.keys(this.pollingTimers).forEach(layerName => {
-      this.stopPolling(layerName);
-    });
-  }
-}
+    // Get vehicle data from layers or GeotabService
+    const allVehicles = await this.getVehicleData();
+    log.info('🚛 Retrieved vehicles:', allVehicles.length);
 
-// Layer Panel Manager - Single Responsibility Principle
-class LayerPanel {
-  constructor() {
-    this.shellPanel = document.getElementById('shell-panel-start');
-    this.panel = document.getElementById('panel-content');
+    if (allVehicles.length === 0) {
+      // Show empty state
+      const emptyItem = document.createElement('calcite-list-item');
+      emptyItem.setAttribute('label', 'No vehicles available');
+      emptyItem.setAttribute('description', 'Enable Electric or Fiber truck layers to see vehicles');
+      emptyItem.disabled = true;
 
-    // Get all actions
-    this.actions = this.shellPanel?.querySelectorAll('calcite-action');
+      const infoIcon = document.createElement('calcite-icon');
+      infoIcon.slot = 'content-start';
+      infoIcon.icon = 'information';
+      infoIcon.style.color = 'var(--calcite-color-text-3)';
+      emptyItem.appendChild(infoIcon);
 
-    // Content sections
-    this.layersContent = document.getElementById('layers-content');
-    this.ospContent = document.getElementById('osp-content');
-    this.vehiclesContent = document.getElementById('vehicles-content');
-    this.powerOutagesContent = document.getElementById('power-outages-content');
-    this.searchContent = document.getElementById('search-content');
-    this.networkParentContent = document.getElementById('network-parent-content');
-    this.toolsContent = document.getElementById('tools-content');
-    this.infoContent = document.getElementById('info-content');
-
-    // Initialize state
-    this.currentVehicleData = [];
-
-    this.init();
-  }
-
-  async init() {
-    await customElements.whenDefined('calcite-shell-panel');
-    await customElements.whenDefined('calcite-action');
-    await customElements.whenDefined('calcite-panel');
-
-    this.setupActionBarNavigation();
-    this.setupCacheManagement();
-    this.setupPrtgIframe();
-
-    // Show layers content by default
-    this.showContent('layers');
-  }
-
-  setupActionBarNavigation() {
-    // Set up action click handlers following the Calcite example pattern
-    this.actions?.forEach(action => {
-      action.addEventListener('click', (event) => {
-        const actionId = action.id;
-
-        // Map action IDs to content names
-        const contentMap = {
-          'layers-action': 'layers',
-          'osp-action': 'osp',
-          'vehicles-action': 'vehicles',
-          'power-outages-action': 'power-outages',
-          'search-action': 'search',
-          'network-parent-action': 'network-parent',
-          'tools-action': 'tools',
-          'info-action': 'info'
-        };
-
-        const contentName = contentMap[actionId];
-
-        if (contentName) {
-          // Update all action states
-          this.actions.forEach(a => a.active = false);
-          action.active = true;
-
-          // Update panel heading
-          if (this.panel) {
-            this.panel.heading = action.text;
-          }
-
-          // Show appropriate content
-          this.showContent(contentName);
-        }
-      });
-    });
-  }
-
-  showContent(contentName) {
-    // Hide all content sections
-    if (this.layersContent) this.layersContent.hidden = true;
-    if (this.ospContent) this.ospContent.hidden = true;
-    if (this.vehiclesContent) this.vehiclesContent.hidden = true;
-    if (this.powerOutagesContent) this.powerOutagesContent.hidden = true;
-    if (this.searchContent) this.searchContent.hidden = true;
-    if (this.networkParentContent) this.networkParentContent.hidden = true;
-    if (this.toolsContent) this.toolsContent.hidden = true;
-    if (this.infoContent) this.infoContent.hidden = true;
-
-    // Show selected content
-    switch (contentName) {
-      case 'layers':
-        if (this.layersContent) {
-          this.layersContent.hidden = false;
-          this.layersContent.style.display = '';
-        }
-        break;
-      case 'osp':
-        if (this.ospContent) {
-          this.ospContent.hidden = false;
-          this.ospContent.style.display = '';
-        }
-        break;
-      case 'vehicles':
-        if (this.vehiclesContent) {
-          this.vehiclesContent.hidden = false;
-          this.vehiclesContent.style.display = '';
-        }
-        this.updateVehicleStatus();
-        this.loadSimpleVehicleList();
-        break;
-      case 'power-outages':
-        if (this.powerOutagesContent) {
-          this.powerOutagesContent.hidden = false;
-          this.powerOutagesContent.style.display = '';
-        }
-        break;
-      case 'search':
-        if (this.searchContent) {
-          this.searchContent.hidden = false;
-          this.searchContent.style.display = '';
-        }
-        break;
-      case 'network-parent':
-        if (this.networkParentContent) {
-          this.networkParentContent.hidden = false;
-          this.networkParentContent.style.display = '';
-        }
-        break;
-      case 'tools':
-        if (this.toolsContent) {
-          this.toolsContent.hidden = false;
-          this.toolsContent.style.display = '';
-        }
-        this.updateCacheStatus();
-        break;
-      case 'info':
-        if (this.infoContent) {
-          this.infoContent.hidden = false;
-          this.infoContent.style.display = '';
-        }
-        this.updateBuildInfo();
-        break;
-    }
-  }
-
-  updateVehicleStatus() {
-    // Update the GeotabService status in the vehicles panel
-    this.updateGeotabStatus();
-    this.setupVehicleButtons();
-  }
-
-  async updateGeotabStatus() {
-    try {
-      const { geotabService } = await import('./services/GeotabService.js');
-      const status = geotabService.getStatus();
-
-      const statusChip = document.getElementById('geotab-status-chip');
-      if (statusChip) {
-        if (status.enabled && status.authenticated) {
-          statusChip.textContent = 'Connected';
-          statusChip.kind = 'success';
-        } else if (status.enabled && !status.authenticated) {
-          statusChip.textContent = 'Connecting...';
-          statusChip.kind = 'info';
-        } else {
-          statusChip.textContent = 'Disabled';
-          statusChip.kind = 'neutral';
-        }
-      }
-    } catch (error) {
-      console.error('Failed to update GeotabService status:', error);
-      const statusChip = document.getElementById('geotab-status-chip');
-      if (statusChip) {
-        statusChip.textContent = 'Error';
-        statusChip.kind = 'danger';
-      }
-    }
-  }
-
-  setupVehicleButtons() {
-    // Set up refresh vehicles button
-    const refreshBtn = document.getElementById('refresh-vehicles');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', async () => {
-        await this.refreshVehicles();
-        // Also refresh the simple vehicle list
-        await this.loadSimpleVehicleList();
-      });
-    }
-
-    // Set up vehicle layer toggle listeners
-    this.setupVehicleLayerToggles();
-  }
-
-  setupVehicleLayerToggles() {
-    // Listen for vehicle layer toggle changes and refresh the list
-    const vehicleToggles = document.querySelectorAll('#vehicles-content calcite-checkbox');
-    vehicleToggles.forEach(toggle => {
-      toggle.addEventListener('calciteCheckboxChange', async () => {
-        // Small delay to allow layer changes to process
-        setTimeout(() => {
-          this.loadSimpleVehicleList();
-        }, 100);
-      });
-    });
-  }
-
-  async refreshVehicles() {
-    try {
-      const { geotabService } = await import('./services/GeotabService.js');
-
-      // Show loading indicator
-      const refreshBtn = document.getElementById('refresh-vehicles');
-      if (refreshBtn) {
-        refreshBtn.loading = true;
-        refreshBtn.disabled = true;
-      }
-
-      // Refresh vehicle data and get the actual truck data
-      const truckData = await geotabService.getTruckData();
-
-      // Update status
-      this.updateGeotabStatus();
-
-      // Update layer data with the actual truck data if available
-      if (window.app?.services?.layerManager && truckData) {
-        // Convert truck data to GeoJSON format for layer updates
-        if (truckData.electric && truckData.electric.length > 0) {
-          const electricGeoJSON = {
-            type: "FeatureCollection",
-            features: truckData.electric.map(truck => ({
-              type: "Feature",
-              properties: truck,
-              geometry: {
-                type: "Point",
-                coordinates: [truck.longitude, truck.latitude]
-              }
-            }))
-          };
-          await window.app.services.layerManager.updateLayerData('electric-trucks', electricGeoJSON);
-        }
-
-        if (truckData.fiber && truckData.fiber.length > 0) {
-          const fiberGeoJSON = {
-            type: "FeatureCollection",
-            features: truckData.fiber.map(truck => ({
-              type: "Feature",
-              properties: truck,
-              geometry: {
-                type: "Point",
-                coordinates: [truck.longitude, truck.latitude]
-              }
-            }))
-          };
-          await window.app.services.layerManager.updateLayerData('fiber-trucks', fiberGeoJSON);
-        }
-      }
-
-      // Show success notification
-      // Get updated vehicle counts for specific message
-      const geotabLayer = this.services.layerManager.getLayer('geotab-vehicles');
-      const truckLayer = this.services.layerManager.getLayer('trucks');
-
-      let vehicleCount = 0;
-      if (geotabLayer?.graphics?.items) vehicleCount += geotabLayer.graphics.items.length;
-      if (truckLayer?.graphics?.items) vehicleCount += truckLayer.graphics.items.length;
-
-      const message = vehicleCount > 0
-        ? `${vehicleCount.toLocaleString()} vehicle locations updated`
-        : 'Vehicle locations refreshed (no active vehicles)';
-
-      this.showVehicleNotification(message, 'success');
-
-    } catch (error) {
-      console.error('Failed to refresh vehicles:', error);
-      this.showVehicleNotification('Failed to refresh vehicle locations', 'danger');
-    } finally {
-      // Reset button state
-      const refreshBtn = document.getElementById('refresh-vehicles');
-      if (refreshBtn) {
-        refreshBtn.loading = false;
-        refreshBtn.disabled = false;
-      }
-    }
-  }
-
-  async loadSimpleVehicleList() {
-    log.info('🚛 Loading simple vehicle list...');
-    const vehiclesList = document.getElementById('vehicle-list');
-    if (!vehiclesList) {
-      console.error('🚛 vehicle-list element not found');
+      vehiclesList.appendChild(emptyItem);
+      log.info('🚛 Showing empty state');
       return;
     }
 
-    // Clear existing vehicles
-    vehiclesList.innerHTML = '';
+    // Populate the simple list
+    allVehicles.forEach((vehicle, index) => {
+      try {
+        const listItem = document.createElement('calcite-list-item');
 
-    try {
-      // Wait for CalciteUI components to be ready
-      await customElements.whenDefined('calcite-list-item');
-      await customElements.whenDefined('calcite-icon');
+        // Safely set attributes with fallbacks
+        const vehicleName = (vehicle.name && String(vehicle.name).trim()) || `${vehicle.type || 'Unknown'} Truck`;
+        const installer = (vehicle.installer && String(vehicle.installer).trim()) || 'Unknown';
 
-      // Get vehicle data from layers or GeotabService
-      const allVehicles = await this.getVehicleData();
-      log.info('🚛 Retrieved vehicles:', allVehicles.length);
+        listItem.setAttribute('label', vehicleName);
+        listItem.setAttribute('description', installer);
 
-      if (allVehicles.length === 0) {
-        // Show empty state
-        const emptyItem = document.createElement('calcite-list-item');
-        emptyItem.setAttribute('label', 'No vehicles available');
-        emptyItem.setAttribute('description', 'Enable Electric or Fiber truck layers to see vehicles');
-        emptyItem.disabled = true;
+        // Add type icon
+        const typeIcon = document.createElement('calcite-icon');
+        typeIcon.slot = 'content-start';
+        typeIcon.icon = vehicle.type === 'Electric' ? 'flash' : 'car';
+        typeIcon.style.color = vehicle.type === 'Electric' ? 'var(--calcite-color-status-success)' : 'var(--calcite-color-brand)';
+        listItem.appendChild(typeIcon);
 
-        const infoIcon = document.createElement('calcite-icon');
-        infoIcon.slot = 'content-start';
-        infoIcon.icon = 'information';
-        infoIcon.style.color = 'var(--calcite-color-text-3)';
-        emptyItem.appendChild(infoIcon);
+        // Add click handler to zoom to vehicle
+        listItem.style.cursor = 'pointer';
+        listItem.addEventListener('click', () => {
+          this.zoomToVehicle(vehicle);
+        });
 
-        vehiclesList.appendChild(emptyItem);
-        log.info('🚛 Showing empty state');
-        return;
+        vehiclesList.appendChild(listItem);
+        log.info(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
+      } catch (vehicleError) {
+        console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
       }
+    });
 
-      // Populate the simple list
-      allVehicles.forEach((vehicle, index) => {
-        try {
-          const listItem = document.createElement('calcite-list-item');
+    log.info('🚛 Vehicle list populated successfully');
 
-          // Safely set attributes with fallbacks
-          const vehicleName = (vehicle.name && String(vehicle.name).trim()) || `${vehicle.type || 'Unknown'} Truck`;
-          const installer = (vehicle.installer && String(vehicle.installer).trim()) || 'Unknown';
+  } catch (error) {
+    console.error('🚛 Error loading vehicle list:', error);
+    // Show error state
+    const errorItem = document.createElement('calcite-list-item');
+    errorItem.setAttribute('label', 'Error Loading Vehicles');
+    errorItem.setAttribute('description', error.message || 'Unable to load vehicle data');
+    errorItem.disabled = true;
 
-          listItem.setAttribute('label', vehicleName);
-          listItem.setAttribute('description', installer);
+    const errorIcon = document.createElement('calcite-icon');
+    errorIcon.slot = 'content-start';
+    errorIcon.icon = 'exclamation-mark-triangle';
+    errorIcon.style.color = 'var(--calcite-color-status-danger)';
+    errorItem.appendChild(errorIcon);
 
-          // Add type icon
-          const typeIcon = document.createElement('calcite-icon');
-          typeIcon.slot = 'content-start';
-          typeIcon.icon = vehicle.type === 'Electric' ? 'flash' : 'car';
-          typeIcon.style.color = vehicle.type === 'Electric' ? 'var(--calcite-color-status-success)' : 'var(--calcite-color-brand)';
-          listItem.appendChild(typeIcon);
-
-          // Add click handler to zoom to vehicle
-          listItem.style.cursor = 'pointer';
-          listItem.addEventListener('click', () => {
-            this.zoomToVehicle(vehicle);
-          });
-
-          vehiclesList.appendChild(listItem);
-          log.info(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
-        } catch (vehicleError) {
-          console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
-        }
-      });
-
-      log.info('🚛 Vehicle list populated successfully');
-
-    } catch (error) {
-      console.error('🚛 Error loading vehicle list:', error);
-      // Show error state
-      const errorItem = document.createElement('calcite-list-item');
-      errorItem.setAttribute('label', 'Error Loading Vehicles');
-      errorItem.setAttribute('description', error.message || 'Unable to load vehicle data');
-      errorItem.disabled = true;
-
-      const errorIcon = document.createElement('calcite-icon');
-      errorIcon.slot = 'content-start';
-      errorIcon.icon = 'exclamation-mark-triangle';
-      errorIcon.style.color = 'var(--calcite-color-status-danger)';
-      errorItem.appendChild(errorIcon);
-
-      vehiclesList.appendChild(errorItem);
-    }
+    vehiclesList.appendChild(errorItem);
   }
+}
 
   async getVehicleData() {
-    const allVehicles = [];
+  const allVehicles = [];
 
-    try {
-      // Get layer manager
-      const layerManager = window.app?.layerManager || window.app?.services?.layerManager || window.layerManager;
+  try {
+    // Get layer manager
+    const layerManager = window.app?.layerManager || window.app?.services?.layerManager || window.layerManager;
 
-      if (layerManager) {
-        // Get data from fiber trucks layer
-        const fiberLayer = layerManager.getLayer('fiber-trucks');
-        if (fiberLayer && fiberLayer.source && fiberLayer.source.items.length > 0) {
-          fiberLayer.source.items.forEach(graphic => {
-            const attrs = graphic.attributes || {};
-            const geometry = graphic.geometry || {};
+    if (layerManager) {
+      // Get data from fiber trucks layer
+      const fiberLayer = layerManager.getLayer('fiber-trucks');
+      if (fiberLayer && fiberLayer.source && fiberLayer.source.items.length > 0) {
+        fiberLayer.source.items.forEach(graphic => {
+          const attrs = graphic.attributes || {};
+          const geometry = graphic.geometry || {};
 
-            if (attrs.id && (geometry.latitude || geometry.y)) {
-              allVehicles.push({
-                id: attrs.id,
-                name: attrs.name || 'Fiber Truck',
-                latitude: geometry.latitude || geometry.y,
-                longitude: geometry.longitude || geometry.x,
-                installer: attrs.installer || attrs.name?.split(' ')?.slice(-1)[0] || 'Unknown',
-                type: 'Fiber'
-              });
-            }
-          });
-        }
-
-        // Get data from electric trucks layer
-        const electricLayer = layerManager.getLayer('electric-trucks');
-        if (electricLayer && electricLayer.source && electricLayer.source.items.length > 0) {
-          electricLayer.source.items.forEach(graphic => {
-            const attrs = graphic.attributes || {};
-            const geometry = graphic.geometry || {};
-
-            if (attrs.id && (geometry.latitude || geometry.y)) {
-              allVehicles.push({
-                id: attrs.id,
-                name: attrs.name || 'Electric Truck',
-                latitude: geometry.latitude || geometry.y,
-                longitude: geometry.longitude || geometry.x,
-                installer: attrs.installer || attrs.name?.split(' ')?.slice(-1)[0] || 'Unknown',
-                type: 'Electric'
-              });
-            }
-          });
-        }
-      }
-
-      // If no data from layers, try GeotabService
-      if (allVehicles.length === 0) {
-        const geotabModule = await import('./services/GeotabService.js');
-        const geotabService = geotabModule.geotabService;
-
-        if (geotabService?.lastTruckData) {
-          const cachedData = geotabService.lastTruckData;
-
-          if (cachedData.fiber?.length > 0) {
-            cachedData.fiber.forEach(truck => {
-              allVehicles.push({
-                ...truck,
-                type: 'Fiber',
-                installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
-              });
+          if (attrs.id && (geometry.latitude || geometry.y)) {
+            allVehicles.push({
+              id: attrs.id,
+              name: attrs.name || 'Fiber Truck',
+              latitude: geometry.latitude || geometry.y,
+              longitude: geometry.longitude || geometry.x,
+              installer: attrs.installer || attrs.name?.split(' ')?.slice(-1)[0] || 'Unknown',
+              type: 'Fiber'
             });
           }
-
-          if (cachedData.electric?.length > 0) {
-            cachedData.electric.forEach(truck => {
-              allVehicles.push({
-                ...truck,
-                type: 'Electric',
-                installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
-              });
-            });
-          }
-        }
+        });
       }
 
-    } catch (error) {
-      console.error('Error getting vehicle data:', error);
+      // Get data from electric trucks layer
+      const electricLayer = layerManager.getLayer('electric-trucks');
+      if (electricLayer && electricLayer.source && electricLayer.source.items.length > 0) {
+        electricLayer.source.items.forEach(graphic => {
+          const attrs = graphic.attributes || {};
+          const geometry = graphic.geometry || {};
+
+          if (attrs.id && (geometry.latitude || geometry.y)) {
+            allVehicles.push({
+              id: attrs.id,
+              name: attrs.name || 'Electric Truck',
+              latitude: geometry.latitude || geometry.y,
+              longitude: geometry.longitude || geometry.x,
+              installer: attrs.installer || attrs.name?.split(' ')?.slice(-1)[0] || 'Unknown',
+              type: 'Electric'
+            });
+          }
+        });
+      }
     }
 
-    return allVehicles;
+    // If no data from layers, try GeotabService
+    if (allVehicles.length === 0) {
+      const geotabModule = await import('./services/GeotabService.js');
+      const geotabService = geotabModule.geotabService;
+
+      if (geotabService?.lastTruckData) {
+        const cachedData = geotabService.lastTruckData;
+
+        if (cachedData.fiber?.length > 0) {
+          cachedData.fiber.forEach(truck => {
+            allVehicles.push({
+              ...truck,
+              type: 'Fiber',
+              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+            });
+          });
+        }
+
+        if (cachedData.electric?.length > 0) {
+          cachedData.electric.forEach(truck => {
+            allVehicles.push({
+              ...truck,
+              type: 'Electric',
+              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+            });
+          });
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error('Error getting vehicle data:', error);
   }
+
+  return allVehicles;
+}
 
 
 
   async displayVehicleList(allVehicles) {
-    console.log('🚛 displayVehicleList called with', allVehicles.length, 'vehicles');
+  console.log('🚛 displayVehicleList called with', allVehicles.length, 'vehicles');
 
-    const simpleVehicleListBlock = document.getElementById('simple-vehicle-list');
-    const vehicleList = document.getElementById('vehicle-list');
+  const simpleVehicleListBlock = document.getElementById('simple-vehicle-list');
+  const vehicleList = document.getElementById('vehicle-list');
 
-    console.log('🚛 DOM elements found:', {
-      simpleVehicleListBlock: !!simpleVehicleListBlock,
-      vehicleList: !!vehicleList
-    });
+  console.log('🚛 DOM elements found:', {
+    simpleVehicleListBlock: !!simpleVehicleListBlock,
+    vehicleList: !!vehicleList
+  });
 
-    if (!vehicleList) {
-      console.error('🚛 Vehicle list block element not found!');
-      return;
-    }
-
-    // Store for filtering
-    this.currentVehicleData = allVehicles;
-
-    if (allVehicles.length === 0) {
-      log.info('🚛 No vehicles found, hiding vehicle list');
-      if (simpleVehicleListBlock) simpleVehicleListBlock.hidden = true;
-    } else {
-      log.info('🚛 Showing vehicle list with vehicles:', allVehicles.length);
-
-      // Show the vehicle list container
-      if (simpleVehicleListBlock) {
-        simpleVehicleListBlock.hidden = false;
-        simpleVehicleListBlock.style.display = '';
-      }
-
-      // Enhanced visibility restoration for production
-      if (vehicleList) {
-        this.forceVehicleListVisibility(vehicleList);
-        log.info('🚛 Vehicle list visibility forced');
-      }
-
-      // Force CalciteUI components to render properly
-      await this.forceCalciteListRendering(vehicleList);
-
-      // Use the robust approach that avoids CalciteUI errors
-      vehicleList.innerHTML = '';
-
-      // Wait for CalciteUI components to be ready
-      await customElements.whenDefined('calcite-list-item');
-      await customElements.whenDefined('calcite-icon');
-
-      // Populate using a robust approach
-      allVehicles.forEach((vehicle, index) => {
-        try {
-          // Create list item with defensive programming
-          const listItem = document.createElement('calcite-list-item');
-
-          // Sanitize and validate text values to prevent CalciteUI errors
-          const rawName = vehicle.name || vehicle.description || `${vehicle.type || 'Vehicle'} ${vehicle.id || index + 1}`;
-          const vehicleName = String(rawName).replace(/[^\w\s\-\.]/g, '').trim() || `Vehicle ${index + 1}`;
-
-          const rawInstaller = vehicle.installer || vehicle.operator || '';
-          const installer = String(rawInstaller).replace(/[^\w\s\-\.]/g, '').trim() || 'Unassigned';
-
-          // Set attributes safely with sanitized values
-          listItem.label = vehicleName;
-          listItem.description = installer;
-
-          // Set icon property instead of creating child element
-          listItem.icon = vehicle.type === 'Electric' ? 'flash' : 'car';
-
-          // Add click handler to zoom to vehicle
-          listItem.style.cursor = 'pointer';
-          listItem.addEventListener('click', () => {
-            this.zoomToVehicle(vehicle);
-          });
-
-          vehicleList.appendChild(listItem);
-          log.info(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
-        } catch (vehicleError) {
-          console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
-        }
-      });
-
-      log.info('🚛 Vehicle list populated successfully');
-    }
+  if (!vehicleList) {
+    console.error('🚛 Vehicle list block element not found!');
+    return;
   }
 
-  // Enhanced visibility restoration for production CalciteUI issues
-  forceVehicleListVisibility(vehicleList) {
-    // Multiple approaches to ensure visibility in production
-    vehicleList.hidden = false;
-    vehicleList.removeAttribute('hidden');
+  // Store for filtering
+  this.currentVehicleData = allVehicles;
 
-    // Force CSS properties
-    vehicleList.style.display = 'block';
-    vehicleList.style.visibility = 'visible';
-    vehicleList.style.opacity = '1';
-    vehicleList.style.position = 'static';
-    vehicleList.style.height = 'auto';
-    vehicleList.style.maxHeight = 'none';
-    vehicleList.style.overflow = 'visible';
+  if (allVehicles.length === 0) {
+    log.info('🚛 No vehicles found, hiding vehicle list');
+    if (simpleVehicleListBlock) simpleVehicleListBlock.hidden = true;
+  } else {
+    log.info('🚛 Showing vehicle list with vehicles:', allVehicles.length);
 
-    // Force parent container visibility
-    const parentContainer = vehicleList.closest('#vehicle-list-content');
-    if (parentContainer) {
-      parentContainer.style.display = 'block';
-      parentContainer.style.visibility = 'visible';
-      parentContainer.style.opacity = '1';
+    // Show the vehicle list container
+    if (simpleVehicleListBlock) {
+      simpleVehicleListBlock.hidden = false;
+      simpleVehicleListBlock.style.display = '';
     }
 
-    // Force CalciteUI internal visibility and height calculation
-    requestAnimationFrame(() => {
-      // First, check if height is the issue (common in production CalciteUI)
-      const computedStyle = window.getComputedStyle(vehicleList);
-      const currentHeight = parseFloat(computedStyle.height);
+    // Enhanced visibility restoration for production
+    if (vehicleList) {
+      this.forceVehicleListVisibility(vehicleList);
+      log.info('🚛 Vehicle list visibility forced');
+    }
 
-      log.info('🚛 Vehicle list height check:', {
-        height: computedStyle.height,
-        display: computedStyle.display,
-        visibility: computedStyle.visibility,
-        childCount: vehicleList.children.length
-      });
+    // Force CalciteUI components to render properly
+    await this.forceCalciteListRendering(vehicleList);
 
-      // If height is 0 but we have children, force CalciteUI height recalculation
-      if (currentHeight === 0 && vehicleList.children.length > 0) {
-        console.warn('🚛 Vehicle list height is 0px despite having content - forcing height recalculation');
+    // Use the robust approach that avoids CalciteUI errors
+    vehicleList.innerHTML = '';
 
-        // Force CalciteUI to recalculate internal dimensions
-        vehicleList.style.height = 'auto';
-        vehicleList.style.minHeight = 'min-content';
+    // Wait for CalciteUI components to be ready
+    await customElements.whenDefined('calcite-list-item');
+    await customElements.whenDefined('calcite-icon');
 
-        // Trigger multiple reflows to force CalciteUI recalculation
-        vehicleList.offsetHeight;
-        vehicleList.getBoundingClientRect();
+    // Populate using a robust approach
+    allVehicles.forEach((vehicle, index) => {
+      try {
+        // Create list item with defensive programming
+        const listItem = document.createElement('calcite-list-item');
 
-        // Force CalciteUI internal update if component has update methods
-        if (typeof vehicleList.requestUpdate === 'function') {
-          vehicleList.requestUpdate();
-        }
+        // Sanitize and validate text values to prevent CalciteUI errors
+        const rawName = vehicle.name || vehicle.description || `${vehicle.type || 'Vehicle'} ${vehicle.id || index + 1}`;
+        const vehicleName = String(rawName).replace(/[^\w\s\-\.]/g, '').trim() || `Vehicle ${index + 1}`;
 
-        // Force all child list items to be visible and have proper height
-        Array.from(vehicleList.children).forEach((child, index) => {
-          if (child.tagName === 'CALCITE-LIST-ITEM') {
-            child.style.display = 'flex';
-            child.style.visibility = 'visible';
-            child.style.minHeight = '56px'; // Standard CalciteUI list item height
-            child.style.height = 'auto';
+        const rawInstaller = vehicle.installer || vehicle.operator || '';
+        const installer = String(rawInstaller).replace(/[^\w\s\-\.]/g, '').trim() || 'Unassigned';
 
-            // Trigger reflow for each item
-            child.offsetHeight;
+        // Set attributes safely with sanitized values
+        listItem.label = vehicleName;
+        listItem.description = installer;
 
-            // Force CalciteUI list item update
-            if (typeof child.requestUpdate === 'function') {
-              child.requestUpdate();
-            }
-          }
+        // Set icon property instead of creating child element
+        listItem.icon = vehicle.type === 'Electric' ? 'flash' : 'car';
+
+        // Add click handler to zoom to vehicle
+        listItem.style.cursor = 'pointer';
+        listItem.addEventListener('click', () => {
+          this.zoomToVehicle(vehicle);
         });
 
-        // Final height override if still 0
-        setTimeout(() => {
-          const finalHeight = parseFloat(window.getComputedStyle(vehicleList).height);
-          if (finalHeight === 0 && vehicleList.children.length > 0) {
-            console.warn('🚛 Final height override - calculating manual height');
-            const itemCount = vehicleList.children.length;
-            const estimatedHeight = itemCount * 56; // 56px per item (standard CalciteUI)
-            vehicleList.style.height = `${estimatedHeight}px`;
-            vehicleList.style.minHeight = `${estimatedHeight}px`;
-          }
-        }, 100);
-      }
-
-      // Reset some properties to let CalciteUI manage them
-      vehicleList.style.removeProperty('visibility');
-      vehicleList.style.removeProperty('display');
-      vehicleList.style.removeProperty('opacity');
-
-      // Final visibility check
-      if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
-        console.warn('🚛 Vehicle list still hidden after force visibility - applying final override');
-        vehicleList.style.display = 'block !important';
-        vehicleList.style.visibility = 'visible !important';
-        vehicleList.style.opacity = '1 !important';
+        vehicleList.appendChild(listItem);
+        log.info(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
+      } catch (vehicleError) {
+        console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
       }
     });
+
+    log.info('🚛 Vehicle list populated successfully');
   }
+}
+
+// Enhanced visibility restoration for production CalciteUI issues
+forceVehicleListVisibility(vehicleList) {
+  // Multiple approaches to ensure visibility in production
+  vehicleList.hidden = false;
+  vehicleList.removeAttribute('hidden');
+
+  // Force CSS properties
+  vehicleList.style.display = 'block';
+  vehicleList.style.visibility = 'visible';
+  vehicleList.style.opacity = '1';
+  vehicleList.style.position = 'static';
+  vehicleList.style.height = 'auto';
+  vehicleList.style.maxHeight = 'none';
+  vehicleList.style.overflow = 'visible';
+
+  // Force parent container visibility
+  const parentContainer = vehicleList.closest('#vehicle-list-content');
+  if (parentContainer) {
+    parentContainer.style.display = 'block';
+    parentContainer.style.visibility = 'visible';
+    parentContainer.style.opacity = '1';
+  }
+
+  // Force CalciteUI internal visibility and height calculation
+  requestAnimationFrame(() => {
+    // First, check if height is the issue (common in production CalciteUI)
+    const computedStyle = window.getComputedStyle(vehicleList);
+    const currentHeight = parseFloat(computedStyle.height);
+
+    log.info('🚛 Vehicle list height check:', {
+      height: computedStyle.height,
+      display: computedStyle.display,
+      visibility: computedStyle.visibility,
+      childCount: vehicleList.children.length
+    });
+
+    // If height is 0 but we have children, force CalciteUI height recalculation
+    if (currentHeight === 0 && vehicleList.children.length > 0) {
+      console.warn('🚛 Vehicle list height is 0px despite having content - forcing height recalculation');
+
+      // Force CalciteUI to recalculate internal dimensions
+      vehicleList.style.height = 'auto';
+      vehicleList.style.minHeight = 'min-content';
+
+      // Trigger multiple reflows to force CalciteUI recalculation
+      vehicleList.offsetHeight;
+      vehicleList.getBoundingClientRect();
+
+      // Force CalciteUI internal update if component has update methods
+      if (typeof vehicleList.requestUpdate === 'function') {
+        vehicleList.requestUpdate();
+      }
+
+      // Force all child list items to be visible and have proper height
+      Array.from(vehicleList.children).forEach((child, index) => {
+        if (child.tagName === 'CALCITE-LIST-ITEM') {
+          child.style.display = 'flex';
+          child.style.visibility = 'visible';
+          child.style.minHeight = '56px'; // Standard CalciteUI list item height
+          child.style.height = 'auto';
+
+          // Trigger reflow for each item
+          child.offsetHeight;
+
+          // Force CalciteUI list item update
+          if (typeof child.requestUpdate === 'function') {
+            child.requestUpdate();
+          }
+        }
+      });
+
+      // Final height override if still 0
+      setTimeout(() => {
+        const finalHeight = parseFloat(window.getComputedStyle(vehicleList).height);
+        if (finalHeight === 0 && vehicleList.children.length > 0) {
+          console.warn('🚛 Final height override - calculating manual height');
+          const itemCount = vehicleList.children.length;
+          const estimatedHeight = itemCount * 56; // 56px per item (standard CalciteUI)
+          vehicleList.style.height = `${estimatedHeight}px`;
+          vehicleList.style.minHeight = `${estimatedHeight}px`;
+        }
+      }, 100);
+    }
+
+    // Reset some properties to let CalciteUI manage them
+    vehicleList.style.removeProperty('visibility');
+    vehicleList.style.removeProperty('display');
+    vehicleList.style.removeProperty('opacity');
+
+    // Final visibility check
+    if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+      console.warn('🚛 Vehicle list still hidden after force visibility - applying final override');
+      vehicleList.style.display = 'block !important';
+      vehicleList.style.visibility = 'visible !important';
+      vehicleList.style.opacity = '1 !important';
+    }
+  });
+}
 
   // Force CalciteUI components to render their Shadow DOM properly
   async forceCalciteListRendering(vehicleList) {
-    if (!vehicleList) return;
+  if (!vehicleList) return;
 
-    log.info('🚛 Forcing CalciteUI components to render properly...');
+  log.info('🚛 Forcing CalciteUI components to render properly...');
 
-    // Force the container to be visible
-    const container = document.getElementById('simple-vehicle-list');
-    if (container) {
-      container.style.visibility = 'visible';
-      container.style.display = 'flex';
-      container.style.minHeight = '200px';
+  // Force the container to be visible
+  const container = document.getElementById('simple-vehicle-list');
+  if (container) {
+    container.style.visibility = 'visible';
+    container.style.display = 'flex';
+    container.style.minHeight = '200px';
+  }
+
+  // Force the list to be visible and have dimensions
+  vehicleList.style.visibility = 'visible';
+  vehicleList.style.display = 'block';
+  vehicleList.style.minHeight = '150px';
+  vehicleList.style.height = 'auto';
+
+  // Force list items to render
+  const items = Array.from(vehicleList.children);
+  items.forEach((item, index) => {
+    item.style.visibility = 'visible';
+    item.style.display = 'block';
+    item.style.minHeight = '48px';
+    item.style.height = 'auto';
+
+    // Force CalciteUI component to update if method exists
+    if (typeof item.requestUpdate === 'function') {
+      item.requestUpdate();
     }
+  });
 
-    // Force the list to be visible and have dimensions
-    vehicleList.style.visibility = 'visible';
-    vehicleList.style.display = 'block';
-    vehicleList.style.minHeight = '150px';
-    vehicleList.style.height = 'auto';
+  // Force the main list component to update
+  if (typeof vehicleList.requestUpdate === 'function') {
+    vehicleList.requestUpdate();
+  }
 
-    // Force list items to render
-    const items = Array.from(vehicleList.children);
-    items.forEach((item, index) => {
-      item.style.visibility = 'visible';
-      item.style.display = 'block';
-      item.style.minHeight = '48px';
-      item.style.height = 'auto';
+  // Wait a moment for CalciteUI to process
+  await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Force CalciteUI component to update if method exists
-      if (typeof item.requestUpdate === 'function') {
-        item.requestUpdate();
-      }
+  // Final check and force rendering
+  requestAnimationFrame(() => {
+    const rect = vehicleList.getBoundingClientRect();
+    const computedStyle = window.getComputedStyle(vehicleList);
+
+    log.info('🚛 After forced rendering:', {
+      height: rect.height,
+      width: rect.width,
+      display: computedStyle.display,
+      visibility: computedStyle.visibility,
+      childCount: vehicleList.children.length
     });
 
-    // Force the main list component to update
-    if (typeof vehicleList.requestUpdate === 'function') {
-      vehicleList.requestUpdate();
-    }
-
-    // Wait a moment for CalciteUI to process
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    // Final check and force rendering
-    requestAnimationFrame(() => {
-      const rect = vehicleList.getBoundingClientRect();
-      const computedStyle = window.getComputedStyle(vehicleList);
-
-      log.info('🚛 After forced rendering:', {
-        height: rect.height,
-        width: rect.width,
-        display: computedStyle.display,
-        visibility: computedStyle.visibility,
-        childCount: vehicleList.children.length
-      });
-
-      // If still not visible, apply nuclear option
-      if (rect.height === 0 || computedStyle.visibility === 'hidden') {
-        log.info('🚛 Applying nuclear CalciteUI visibility fix...');
-        vehicleList.style.cssText = `
+    // If still not visible, apply nuclear option
+    if (rect.height === 0 || computedStyle.visibility === 'hidden') {
+      log.info('🚛 Applying nuclear CalciteUI visibility fix...');
+      vehicleList.style.cssText = `
           visibility: visible !important;
           display: block !important;
           min-height: 150px !important;
@@ -1063,594 +904,594 @@ class LayerPanel {
           background: var(--calcite-color-background) !important;
         `;
 
-        // Force each item to be visible
-        items.forEach(item => {
-          item.style.cssText = `
+      // Force each item to be visible
+      items.forEach(item => {
+        item.style.cssText = `
             visibility: visible !important;
             display: block !important;
             min-height: 48px !important;
             height: auto !important;
             opacity: 1 !important;
           `;
-        });
-      }
-    });
-  }
+      });
+    }
+  });
+}
 
   // Development testing function for vehicle list - disabled in production
   async testVehicleList() {
-    if (!isDevelopment) {
-      log.warn('🚛 testVehicleList: Development function disabled in production');
-      return;
-    }
-
-    log.info('🚛 DEBUG: Testing vehicle list with real cached data...');
-
-    try {
-      const geotabModule = await import('./services/GeotabService.js');
-      const cachedData = geotabModule.geotabService.lastTruckData;
-      log.info('🚛 DEBUG: Raw cached data:', cachedData);
-
-      if (cachedData && (cachedData.fiber?.length > 0 || cachedData.electric?.length > 0)) {
-        const testVehicles = [];
-
-        if (cachedData.fiber?.length > 0) {
-          cachedData.fiber.forEach(truck => {
-            testVehicles.push({
-              ...truck,
-              type: 'Fiber',
-              typeIcon: 'car',
-              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
-            });
-          });
-        }
-
-        if (cachedData.electric?.length > 0) {
-          cachedData.electric.forEach(truck => {
-            testVehicles.push({
-              ...truck,
-              type: 'Electric',
-              typeIcon: 'flash',
-              installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
-            });
-          });
-        }
-
-        log.info('🚛 DEBUG: Processed vehicles for display:', testVehicles.length);
-        await this.displayVehicleList(testVehicles);
-      } else {
-        log.info('🚛 DEBUG: No cached data available - no vehicle data to display');
-        // Remove mock vehicle fallback - not appropriate for production
-      }
-    } catch (error) {
-      console.error('🚛 DEBUG: Error in testVehicleList:', error);
-    }
+  if (!isDevelopment) {
+    log.warn('🚛 testVehicleList: Development function disabled in production');
+    return;
   }
+
+  log.info('🚛 DEBUG: Testing vehicle list with real cached data...');
+
+  try {
+    const geotabModule = await import('./services/GeotabService.js');
+    const cachedData = geotabModule.geotabService.lastTruckData;
+    log.info('🚛 DEBUG: Raw cached data:', cachedData);
+
+    if (cachedData && (cachedData.fiber?.length > 0 || cachedData.electric?.length > 0)) {
+      const testVehicles = [];
+
+      if (cachedData.fiber?.length > 0) {
+        cachedData.fiber.forEach(truck => {
+          testVehicles.push({
+            ...truck,
+            type: 'Fiber',
+            typeIcon: 'car',
+            installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+          });
+        });
+      }
+
+      if (cachedData.electric?.length > 0) {
+        cachedData.electric.forEach(truck => {
+          testVehicles.push({
+            ...truck,
+            type: 'Electric',
+            typeIcon: 'flash',
+            installer: truck.installer || truck.name?.split(' ')?.slice(-1)[0] || 'Unknown'
+          });
+        });
+      }
+
+      log.info('🚛 DEBUG: Processed vehicles for display:', testVehicles.length);
+      await this.displayVehicleList(testVehicles);
+    } else {
+      log.info('🚛 DEBUG: No cached data available - no vehicle data to display');
+      // Remove mock vehicle fallback - not appropriate for production
+    }
+  } catch (error) {
+    console.error('🚛 DEBUG: Error in testVehicleList:', error);
+  }
+}
 
   async populateVehicleList(vehicles) {
-    log.info('🚛 populateVehicleList called with vehicles:', vehicles?.length || 0);
-    const vehicleList = document.getElementById('vehicle-list');
-    if (!vehicleList) {
-      console.error('🚛 Vehicle list element not found!');
-      return;
-    }
-
-    // Wait for CalciteUI list component to be ready
-    if (customElements.get('calcite-list')) {
-      await customElements.whenDefined('calcite-list');
-    }
-
-    // Debug visibility
-    log.info('🚛 Vehicle list visibility before:', {
-      hidden: vehicleList.hidden,
-      display: window.getComputedStyle(vehicleList).display,
-      visibility: window.getComputedStyle(vehicleList).visibility,
-      opacity: window.getComputedStyle(vehicleList).opacity,
-      height: window.getComputedStyle(vehicleList).height
-    });
-
-    // Validate vehicles array
-    if (!Array.isArray(vehicles)) {
-      console.error('🚛 Invalid vehicles data - not an array:', typeof vehicles);
-      return;
-    }
-
-    // Clear existing items
-    vehicleList.innerHTML = '';
-
-    vehicles.forEach((vehicle, index) => {
-      try {
-        // Validate vehicle data to prevent CalciteUI errors
-        if (!vehicle || typeof vehicle !== 'object') {
-          console.warn('🚛 Skipping invalid vehicle data at index', index, vehicle);
-          return;
-        }
-
-        // Ensure CalciteUI is loaded before creating components
-        if (!customElements.get('calcite-list-item')) {
-          console.error('🚛 CalciteUI components not yet defined');
-          return;
-        }
-
-        const listItem = document.createElement('calcite-list-item');
-
-        // Format vehicle name with strict validation for CalciteUI
-        const vehicleName = (vehicle.name && typeof vehicle.name === 'string' && vehicle.name.trim().length > 0)
-          ? vehicle.name.trim()
-          : `${vehicle.type || 'Unknown'} Truck`;
-
-        const installer = (vehicle.installer && typeof vehicle.installer === 'string' && vehicle.installer.trim().length > 0)
-          ? vehicle.installer.trim()
-          : 'Unknown';
-
-        const status = this.getVehicleStatus(vehicle);
-        const safeStatus = (status && typeof status === 'string' && status.trim().length > 0)
-          ? status.trim()
-          : 'Unknown';
-
-        // Ensure all attributes are non-empty strings to prevent CalciteUI errors
-        // CalciteUI components expect proper string values, not undefined/null
-        const safeLabel = String(vehicleName || 'Vehicle').trim();
-        const safeDescription = String(`${installer} • ${safeStatus}`).trim();
-
-        // Use properties instead of setAttribute for CalciteUI components
-        // This is the recommended approach and avoids internal CalciteUI processing errors
-        listItem.label = safeLabel || 'Vehicle';
-        listItem.description = safeDescription || 'Vehicle Information';
-
-        // Add vehicle type icon with strict validation
-        const typeIcon = document.createElement('calcite-icon');
-        typeIcon.slot = 'content-start';
-        const iconName = (vehicle.typeIcon && typeof vehicle.typeIcon === 'string' && vehicle.typeIcon.trim().length > 0)
-          ? vehicle.typeIcon.trim()
-          : 'car'; // Default icon
-
-        // Use properties for CalciteUI icon component
-        typeIcon.icon = iconName || 'car';
-        typeIcon.className = 'vehicle-type-icon';
-        listItem.appendChild(typeIcon);
-
-        // Add status indicator using properties
-        const statusIcon = document.createElement('calcite-icon');
-        statusIcon.slot = 'content-end';
-        statusIcon.scale = 's';
-
-        // Safe status class name generation - ensure replace is called on a valid string
-        let safeStatusForClass = 'unknown';
-        try {
-          const statusStr = String(safeStatus || 'unknown');
-          if (statusStr && typeof statusStr.replace === 'function') {
-            safeStatusForClass = statusStr.toLowerCase().replace(/[^a-z]/g, '');
-          }
-        } catch (err) {
-          console.warn('🚛 Error processing status class:', err);
-        }
-        statusIcon.className = `vehicle-status-${safeStatusForClass}`;
-
-        // Determine status icon based on safe status
-        let statusIconName = 'circle';
-        if (safeStatus === 'Online') {
-          statusIconName = 'circle-filled';
-        } else if (safeStatus === 'Idle') {
-          statusIconName = 'circle-filled';
-        }
-
-        // Use property for status icon
-        statusIcon.icon = statusIconName || 'circle';
-        listItem.appendChild(statusIcon);
-
-        listItem.addEventListener('click', () => {
-          this.zoomToVehicle(vehicle);
-        });
-
-        // Safely append to the list
-        try {
-          vehicleList.appendChild(listItem);
-        } catch (error) {
-          console.error('🚛 Error appending list item:', error);
-        }
-
-      } catch (error) {
-        // Log error details but continue processing other vehicles
-        console.error('🚛 Error creating list item for vehicle', index, ':', error);
-        console.error('🚛 Vehicle data:', vehicle);
-
-        // If CalciteUI error, try to provide more context
-        if (error.message && error.message.includes('replace')) {
-          console.error('🚛 CalciteUI string processing error - likely an undefined value passed to component');
-        }
-      }
-    });
-
-    log.info('🚛 populateVehicleList completed, total items added:', vehicles.length);
-
-    // Enable filtering after data is loaded to prevent filter errors
-    if (vehicles.length > 0) {
-      vehicleList.setAttribute('filter-enabled', '');
-    }
-
-    // Force CalciteUI list to be visible after populating
-    // This is a workaround for CalciteUI visibility issue in production
-    // The issue is that CalciteUI sometimes doesn't properly handle visibility
-    // when the list is initially hidden and then populated
-    requestAnimationFrame(() => {
-      if (vehicleList && vehicleList.children.length > 0) {
-        // Reset all visibility-related styles
-        vehicleList.style.removeProperty('visibility');
-        vehicleList.style.removeProperty('display');
-        vehicleList.style.removeProperty('opacity');
-
-        // Force CalciteUI to recalculate layout
-        vehicleList.offsetHeight; // Trigger reflow
-
-        // Ensure the list container is also visible
-        const listContainer = vehicleList.closest('#vehicle-list-content > div');
-        if (listContainer) {
-          listContainer.style.removeProperty('visibility');
-          listContainer.style.removeProperty('display');
-        }
-      }
-    });
-
-    // Debug visibility after
-    log.info('🚛 Vehicle list visibility after:', {
-      hidden: vehicleList.hidden,
-      display: window.getComputedStyle(vehicleList).display,
-      visibility: window.getComputedStyle(vehicleList).visibility,
-      opacity: window.getComputedStyle(vehicleList).opacity,
-      height: window.getComputedStyle(vehicleList).height,
-      childCount: vehicleList.children.length
-    });
+  log.info('🚛 populateVehicleList called with vehicles:', vehicles?.length || 0);
+  const vehicleList = document.getElementById('vehicle-list');
+  if (!vehicleList) {
+    console.error('🚛 Vehicle list element not found!');
+    return;
   }
 
-  getVehicleStatus(vehicle) {
+  // Wait for CalciteUI list component to be ready
+  if (customElements.get('calcite-list')) {
+    await customElements.whenDefined('calcite-list');
+  }
+
+  // Debug visibility
+  log.info('🚛 Vehicle list visibility before:', {
+    hidden: vehicleList.hidden,
+    display: window.getComputedStyle(vehicleList).display,
+    visibility: window.getComputedStyle(vehicleList).visibility,
+    opacity: window.getComputedStyle(vehicleList).opacity,
+    height: window.getComputedStyle(vehicleList).height
+  });
+
+  // Validate vehicles array
+  if (!Array.isArray(vehicles)) {
+    console.error('🚛 Invalid vehicles data - not an array:', typeof vehicles);
+    return;
+  }
+
+  // Clear existing items
+  vehicleList.innerHTML = '';
+
+  vehicles.forEach((vehicle, index) => {
     try {
+      // Validate vehicle data to prevent CalciteUI errors
       if (!vehicle || typeof vehicle !== 'object') {
-        return 'Unknown';
+        console.warn('🚛 Skipping invalid vehicle data at index', index, vehicle);
+        return;
       }
 
-      // Ensure communication_status is a valid string
-      const commStatus = vehicle.communication_status;
-      if (!commStatus || typeof commStatus !== 'string' || commStatus.toLowerCase() === 'offline') {
-        return 'Offline';
+      // Ensure CalciteUI is loaded before creating components
+      if (!customElements.get('calcite-list-item')) {
+        console.error('🚛 CalciteUI components not yet defined');
+        return;
       }
 
-      // Check driving status with proper validation
-      const isDriving = vehicle.is_driving === true || vehicle.is_driving === 'true';
-      const speed = typeof vehicle.speed === 'number' ? vehicle.speed : 0;
+      const listItem = document.createElement('calcite-list-item');
 
-      if (isDriving || speed > 5) {
-        return 'Online';
+      // Format vehicle name with strict validation for CalciteUI
+      const vehicleName = (vehicle.name && typeof vehicle.name === 'string' && vehicle.name.trim().length > 0)
+        ? vehicle.name.trim()
+        : `${vehicle.type || 'Unknown'} Truck`;
+
+      const installer = (vehicle.installer && typeof vehicle.installer === 'string' && vehicle.installer.trim().length > 0)
+        ? vehicle.installer.trim()
+        : 'Unknown';
+
+      const status = this.getVehicleStatus(vehicle);
+      const safeStatus = (status && typeof status === 'string' && status.trim().length > 0)
+        ? status.trim()
+        : 'Unknown';
+
+      // Ensure all attributes are non-empty strings to prevent CalciteUI errors
+      // CalciteUI components expect proper string values, not undefined/null
+      const safeLabel = String(vehicleName || 'Vehicle').trim();
+      const safeDescription = String(`${installer} • ${safeStatus}`).trim();
+
+      // Use properties instead of setAttribute for CalciteUI components
+      // This is the recommended approach and avoids internal CalciteUI processing errors
+      listItem.label = safeLabel || 'Vehicle';
+      listItem.description = safeDescription || 'Vehicle Information';
+
+      // Add vehicle type icon with strict validation
+      const typeIcon = document.createElement('calcite-icon');
+      typeIcon.slot = 'content-start';
+      const iconName = (vehicle.typeIcon && typeof vehicle.typeIcon === 'string' && vehicle.typeIcon.trim().length > 0)
+        ? vehicle.typeIcon.trim()
+        : 'car'; // Default icon
+
+      // Use properties for CalciteUI icon component
+      typeIcon.icon = iconName || 'car';
+      typeIcon.className = 'vehicle-type-icon';
+      listItem.appendChild(typeIcon);
+
+      // Add status indicator using properties
+      const statusIcon = document.createElement('calcite-icon');
+      statusIcon.slot = 'content-end';
+      statusIcon.scale = 's';
+
+      // Safe status class name generation - ensure replace is called on a valid string
+      let safeStatusForClass = 'unknown';
+      try {
+        const statusStr = String(safeStatus || 'unknown');
+        if (statusStr && typeof statusStr.replace === 'function') {
+          safeStatusForClass = statusStr.toLowerCase().replace(/[^a-z]/g, '');
+        }
+      } catch (err) {
+        console.warn('🚛 Error processing status class:', err);
+      }
+      statusIcon.className = `vehicle-status-${safeStatusForClass}`;
+
+      // Determine status icon based on safe status
+      let statusIconName = 'circle';
+      if (safeStatus === 'Online') {
+        statusIconName = 'circle-filled';
+      } else if (safeStatus === 'Idle') {
+        statusIconName = 'circle-filled';
       }
 
-      return 'Idle';
+      // Use property for status icon
+      statusIcon.icon = statusIconName || 'circle';
+      listItem.appendChild(statusIcon);
+
+      listItem.addEventListener('click', () => {
+        this.zoomToVehicle(vehicle);
+      });
+
+      // Safely append to the list
+      try {
+        vehicleList.appendChild(listItem);
+      } catch (error) {
+        console.error('🚛 Error appending list item:', error);
+      }
+
     } catch (error) {
-      console.error('🚛 Error determining vehicle status:', error);
+      // Log error details but continue processing other vehicles
+      console.error('🚛 Error creating list item for vehicle', index, ':', error);
+      console.error('🚛 Vehicle data:', vehicle);
+
+      // If CalciteUI error, try to provide more context
+      if (error.message && error.message.includes('replace')) {
+        console.error('🚛 CalciteUI string processing error - likely an undefined value passed to component');
+      }
+    }
+  });
+
+  log.info('🚛 populateVehicleList completed, total items added:', vehicles.length);
+
+  // Enable filtering after data is loaded to prevent filter errors
+  if (vehicles.length > 0) {
+    vehicleList.setAttribute('filter-enabled', '');
+  }
+
+  // Force CalciteUI list to be visible after populating
+  // This is a workaround for CalciteUI visibility issue in production
+  // The issue is that CalciteUI sometimes doesn't properly handle visibility
+  // when the list is initially hidden and then populated
+  requestAnimationFrame(() => {
+    if (vehicleList && vehicleList.children.length > 0) {
+      // Reset all visibility-related styles
+      vehicleList.style.removeProperty('visibility');
+      vehicleList.style.removeProperty('display');
+      vehicleList.style.removeProperty('opacity');
+
+      // Force CalciteUI to recalculate layout
+      vehicleList.offsetHeight; // Trigger reflow
+
+      // Ensure the list container is also visible
+      const listContainer = vehicleList.closest('#vehicle-list-content > div');
+      if (listContainer) {
+        listContainer.style.removeProperty('visibility');
+        listContainer.style.removeProperty('display');
+      }
+    }
+  });
+
+  // Debug visibility after
+  log.info('🚛 Vehicle list visibility after:', {
+    hidden: vehicleList.hidden,
+    display: window.getComputedStyle(vehicleList).display,
+    visibility: window.getComputedStyle(vehicleList).visibility,
+    opacity: window.getComputedStyle(vehicleList).opacity,
+    height: window.getComputedStyle(vehicleList).height,
+    childCount: vehicleList.children.length
+  });
+}
+
+getVehicleStatus(vehicle) {
+  try {
+    if (!vehicle || typeof vehicle !== 'object') {
       return 'Unknown';
     }
+
+    // Ensure communication_status is a valid string
+    const commStatus = vehicle.communication_status;
+    if (!commStatus || typeof commStatus !== 'string' || commStatus.toLowerCase() === 'offline') {
+      return 'Offline';
+    }
+
+    // Check driving status with proper validation
+    const isDriving = vehicle.is_driving === true || vehicle.is_driving === 'true';
+    const speed = typeof vehicle.speed === 'number' ? vehicle.speed : 0;
+
+    if (isDriving || speed > 5) {
+      return 'Online';
+    }
+
+    return 'Idle';
+  } catch (error) {
+    console.error('🚛 Error determining vehicle status:', error);
+    return 'Unknown';
   }
+}
 
   async zoomToVehicle(vehicle) {
-    try {
-      const { geotabService } = await import('./services/GeotabService.js');
-      let currentVehicle = vehicle;
-      let dataSource = 'layer';
+  try {
+    const { geotabService } = await import('./services/GeotabService.js');
+    let currentVehicle = vehicle;
+    let dataSource = 'layer';
 
-      if (geotabService?.lastTruckData && vehicle.id) {
-        const allTrucks = [
-          ...(geotabService.lastTruckData.fiber || []),
-          ...(geotabService.lastTruckData.electric || [])
-        ];
+    if (geotabService?.lastTruckData && vehicle.id) {
+      const allTrucks = [
+        ...(geotabService.lastTruckData.fiber || []),
+        ...(geotabService.lastTruckData.electric || [])
+      ];
 
-        const freshVehicleData = allTrucks.find(truck => truck.id === vehicle.id);
+      const freshVehicleData = allTrucks.find(truck => truck.id === vehicle.id);
 
-        if (freshVehicleData && freshVehicleData.latitude && freshVehicleData.longitude) {
-          currentVehicle = freshVehicleData;
-          dataSource = 'api';
-        }
+      if (freshVehicleData && freshVehicleData.latitude && freshVehicleData.longitude) {
+        currentVehicle = freshVehicleData;
+        dataSource = 'api';
       }
-
-      if (!currentVehicle.latitude || !currentVehicle.longitude) {
-        this.showVehicleNotification('Location not available for this vehicle', 'warning');
-        return;
-      }
-
-      const mapView = window.mapView;
-      if (!mapView) {
-        this.showVehicleNotification('Map not available', 'danger');
-        return;
-      }
-
-      import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
-        const point = new Point({
-          longitude: currentVehicle.longitude,
-          latitude: currentVehicle.latitude,
-          spatialReference: { wkid: 4326 }
-        });
-
-        mapView.goTo({
-          target: point,
-          zoom: 16
-        }).then(() => {
-          const vehicleName = currentVehicle.name || `${currentVehicle.type} Truck`;
-          const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
-          this.showVehicleNotification(`Zoomed to ${vehicleName} (${dataAge})`, 'success');
-        }).catch(error => {
-          console.error('Failed to zoom to vehicle:', error);
-          this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
-        });
-      });
-
-    } catch (error) {
-      console.error('Error in zoomToVehicle:', error);
-      this.showVehicleNotification('Failed to get vehicle location', 'danger');
-    }
-  }
-
-  setupVehicleListEventListeners() {
-    // Prevent duplicate event listeners
-    if (this.vehicleListListenersSetup) return;
-    this.vehicleListListenersSetup = true;
-
-    console.log('🚛 Setting up vehicle list event listeners...');
-
-    // Add listener for vehicle list block expansion
-    const vehicleListBlock = document.getElementById('vehicle-list-block');
-    if (vehicleListBlock) {
-      // Listen for both the standard event and attribute changes
-      vehicleListBlock.addEventListener('calciteBlockToggle', async (e) => {
-        console.log('🚛 Vehicle list block toggled, expanded:', e.target.expanded);
-        if (e.target.expanded) {
-          await this.loadVehicleList();
-        }
-      });
-
-      // Also observe attribute changes as a fallback
-      let isLoadingFromObserver = false;
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach(async (mutation) => {
-          if (mutation.attributeName === 'expanded' && vehicleListBlock.hasAttribute('expanded') && !isLoadingFromObserver && !this.isLoadingVehicleList) {
-            isLoadingFromObserver = true;
-            console.log('🚛 Vehicle list block expanded via attribute change');
-            await this.loadVehicleList();
-            isLoadingFromObserver = false;
-          }
-        });
-      });
-      observer.observe(vehicleListBlock, { attributes: true });
-      console.log('🚛 Vehicle list block listeners added');
     }
 
-    // Search functionality
-    const searchInput = document.getElementById('vehicle-search');
-    if (searchInput) {
-      searchInput.addEventListener('calciteInputInput', (e) => {
-        console.log('🚛 Search input changed:', e.target.value);
-        this.filterVehicleList(e.target.value);
-      });
-      console.log('🚛 Search input listener added');
-    } else {
-      console.log('🚛 Search input not found');
+    if (!currentVehicle.latitude || !currentVehicle.longitude) {
+      this.showVehicleNotification('Location not available for this vehicle', 'warning');
+      return;
     }
 
-    // Add refresh button listener
-    const refreshBtn = document.getElementById('refresh-vehicle-list');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', async () => {
-        console.log('🚛 Refresh button clicked');
-        await this.loadVehicleList();
-      });
-      console.log('🚛 Refresh button listener added');
+    const mapView = window.mapView;
+    if (!mapView) {
+      this.showVehicleNotification('Map not available', 'danger');
+      return;
     }
-  }
 
-  filterVehicleList(searchTerm) {
-    if (!this.currentVehicleData) return;
+    import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
+      const point = new Point({
+        longitude: currentVehicle.longitude,
+        latitude: currentVehicle.latitude,
+        spatialReference: { wkid: 4326 }
+      });
 
-    const filtered = this.currentVehicleData.filter(vehicle => {
-      const name = (vehicle.name || '').toLowerCase();
-      const installer = (vehicle.installer || '').toLowerCase();
-      const type = (vehicle.type || '').toLowerCase();
-      const search = searchTerm.toLowerCase();
-
-      return name.includes(search) ||
-        installer.includes(search) ||
-        type.includes(search);
+      mapView.goTo({
+        target: point,
+        zoom: 16
+      }).then(() => {
+        const vehicleName = currentVehicle.name || `${currentVehicle.type} Truck`;
+        const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
+        this.showVehicleNotification(`Zoomed to ${vehicleName} (${dataAge})`, 'success');
+      }).catch(error => {
+        console.error('Failed to zoom to vehicle:', error);
+        this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
+      });
     });
 
-    this.populateVehicleList(filtered);
-
-    // Update count
-    const vehicleCount = document.getElementById('vehicle-count');
-    if (vehicleCount) {
-      vehicleCount.textContent = `${filtered.length} vehicles ${searchTerm ? '(filtered)' : ''}`;
-    }
+  } catch (error) {
+    console.error('Error in zoomToVehicle:', error);
+    this.showVehicleNotification('Failed to get vehicle location', 'danger');
   }
+}
+
+setupVehicleListEventListeners() {
+  // Prevent duplicate event listeners
+  if (this.vehicleListListenersSetup) return;
+  this.vehicleListListenersSetup = true;
+
+  console.log('🚛 Setting up vehicle list event listeners...');
+
+  // Add listener for vehicle list block expansion
+  const vehicleListBlock = document.getElementById('vehicle-list-block');
+  if (vehicleListBlock) {
+    // Listen for both the standard event and attribute changes
+    vehicleListBlock.addEventListener('calciteBlockToggle', async (e) => {
+      console.log('🚛 Vehicle list block toggled, expanded:', e.target.expanded);
+      if (e.target.expanded) {
+        await this.loadVehicleList();
+      }
+    });
+
+    // Also observe attribute changes as a fallback
+    let isLoadingFromObserver = false;
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(async (mutation) => {
+        if (mutation.attributeName === 'expanded' && vehicleListBlock.hasAttribute('expanded') && !isLoadingFromObserver && !this.isLoadingVehicleList) {
+          isLoadingFromObserver = true;
+          console.log('🚛 Vehicle list block expanded via attribute change');
+          await this.loadVehicleList();
+          isLoadingFromObserver = false;
+        }
+      });
+    });
+    observer.observe(vehicleListBlock, { attributes: true });
+    console.log('🚛 Vehicle list block listeners added');
+  }
+
+  // Search functionality
+  const searchInput = document.getElementById('vehicle-search');
+  if (searchInput) {
+    searchInput.addEventListener('calciteInputInput', (e) => {
+      console.log('🚛 Search input changed:', e.target.value);
+      this.filterVehicleList(e.target.value);
+    });
+    console.log('🚛 Search input listener added');
+  } else {
+    console.log('🚛 Search input not found');
+  }
+
+  // Add refresh button listener
+  const refreshBtn = document.getElementById('refresh-vehicle-list');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      console.log('🚛 Refresh button clicked');
+      await this.loadVehicleList();
+    });
+    console.log('🚛 Refresh button listener added');
+  }
+}
+
+filterVehicleList(searchTerm) {
+  if (!this.currentVehicleData) return;
+
+  const filtered = this.currentVehicleData.filter(vehicle => {
+    const name = (vehicle.name || '').toLowerCase();
+    const installer = (vehicle.installer || '').toLowerCase();
+    const type = (vehicle.type || '').toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    return name.includes(search) ||
+      installer.includes(search) ||
+      type.includes(search);
+  });
+
+  this.populateVehicleList(filtered);
+
+  // Update count
+  const vehicleCount = document.getElementById('vehicle-count');
+  if (vehicleCount) {
+    vehicleCount.textContent = `${filtered.length} vehicles ${searchTerm ? '(filtered)' : ''}`;
+  }
+}
 
   async loadTruckTableData() {
-    console.log('🚛 loadTruckTableData called');
+  console.log('🚛 loadTruckTableData called');
 
-    const loadingDiv = document.getElementById('truck-table-loading');
-    const emptyDiv = document.getElementById('truck-table-empty');
-    const tableContainer = document.querySelector('.truck-table-container');
-    const truckCountSpan = document.getElementById('truck-count');
-    const lastUpdatedSpan = document.getElementById('truck-last-updated');
+  const loadingDiv = document.getElementById('truck-table-loading');
+  const emptyDiv = document.getElementById('truck-table-empty');
+  const tableContainer = document.querySelector('.truck-table-container');
+  const truckCountSpan = document.getElementById('truck-count');
+  const lastUpdatedSpan = document.getElementById('truck-last-updated');
 
-    console.log('🚛 UI elements found:', {
-      loadingDiv: !!loadingDiv,
-      emptyDiv: !!emptyDiv,
-      tableContainer: !!tableContainer,
-      truckCountSpan: !!truckCountSpan,
-      lastUpdatedSpan: !!lastUpdatedSpan
-    });
+  console.log('🚛 UI elements found:', {
+    loadingDiv: !!loadingDiv,
+    emptyDiv: !!emptyDiv,
+    tableContainer: !!tableContainer,
+    truckCountSpan: !!truckCountSpan,
+    lastUpdatedSpan: !!lastUpdatedSpan
+  });
 
-    // Show loading state
-    console.log('🚛 Setting loading state, elements found:', {
-      loadingDiv: !!loadingDiv,
-      emptyDiv: !!emptyDiv,
-      tableContainer: !!tableContainer
-    });
-    console.log('🚛 Element IDs being searched:', {
-      loadingId: 'truck-table-loading',
-      emptyId: 'truck-table-empty',
-      containerClass: '.truck-table-container'
-    });
+  // Show loading state
+  console.log('🚛 Setting loading state, elements found:', {
+    loadingDiv: !!loadingDiv,
+    emptyDiv: !!emptyDiv,
+    tableContainer: !!tableContainer
+  });
+  console.log('🚛 Element IDs being searched:', {
+    loadingId: 'truck-table-loading',
+    emptyId: 'truck-table-empty',
+    containerClass: '.truck-table-container'
+  });
 
-    // Debug: Check what's actually in the modal DOM
-    const modal = document.getElementById('truck-table-modal');
-    if (modal) {
-      const allDivs = modal.querySelectorAll('div');
-      console.log('🚛 All divs in modal:', Array.from(allDivs).map(div => ({
-        id: div.id,
-        className: div.className,
-        hidden: div.hidden,
-        style: div.style.cssText
+  // Debug: Check what's actually in the modal DOM
+  const modal = document.getElementById('truck-table-modal');
+  if (modal) {
+    const allDivs = modal.querySelectorAll('div');
+    console.log('🚛 All divs in modal:', Array.from(allDivs).map(div => ({
+      id: div.id,
+      className: div.className,
+      hidden: div.hidden,
+      style: div.style.cssText
+    })));
+  }
+
+  if (loadingDiv) {
+    loadingDiv.hidden = false;
+    console.log('🚛 Showing loading - loadingDiv.hidden:', loadingDiv.hidden);
+  } else {
+    console.error('🚛 Loading div not found!');
+  }
+
+  if (emptyDiv) {
+    emptyDiv.hidden = true;
+    console.log('🚛 Hiding empty state initially - emptyDiv.hidden:', emptyDiv.hidden);
+  } else {
+    console.error('🚛 Empty div not found!');
+  }
+
+  if (tableContainer) {
+    tableContainer.style.display = 'none';
+    console.log('🚛 Hiding table container initially - display:', tableContainer.style.display);
+  } else {
+    console.error('🚛 Table container not found!');
+  }
+
+  try {
+    console.log('🚛 Importing GeotabService');
+    const { geotabService } = await import('./services/GeotabService.js');
+    console.log('🚛 Getting truck data');
+    const truckData = await geotabService.getTruckData();
+    console.log('🚛 Truck data received:', truckData);
+
+    // Combine all trucks into a single array
+    const allTrucks = [];
+
+    if (truckData.fiber && truckData.fiber.length > 0) {
+      allTrucks.push(...truckData.fiber.map(truck => ({
+        ...truck,
+        type: 'fiber',
+        typeIcon: 'car'
       })));
     }
 
+    if (truckData.electric && truckData.electric.length > 0) {
+      allTrucks.push(...truckData.electric.map(truck => ({
+        ...truck,
+        type: 'electric',
+        typeIcon: 'flash'
+      })));
+    }
+
+    // Store for filtering/sorting
+    this.currentTruckData = allTrucks;
+    console.log('🚛 Total trucks combined:', allTrucks.length);
+
+    // Hide loading
+    console.log('🚛 Before hiding loading - loadingDiv.hidden:', loadingDiv?.hidden);
     if (loadingDiv) {
-      loadingDiv.hidden = false;
-      console.log('🚛 Showing loading - loadingDiv.hidden:', loadingDiv.hidden);
-    } else {
-      console.error('🚛 Loading div not found!');
+      loadingDiv.hidden = true;
+      console.log('🚛 After hiding loading - loadingDiv.hidden:', loadingDiv.hidden);
     }
 
-    if (emptyDiv) {
-      emptyDiv.hidden = true;
-      console.log('🚛 Hiding empty state initially - emptyDiv.hidden:', emptyDiv.hidden);
-    } else {
-      console.error('🚛 Empty div not found!');
-    }
+    console.log('🚛 About to check truck count. allTrucks.length:', allTrucks.length);
+    console.log('🚛 allTrucks sample:', allTrucks.slice(0, 2));
 
-    if (tableContainer) {
-      tableContainer.style.display = 'none';
-      console.log('🚛 Hiding table container initially - display:', tableContainer.style.display);
-    } else {
-      console.error('🚛 Table container not found!');
-    }
-
-    try {
-      console.log('🚛 Importing GeotabService');
-      const { geotabService } = await import('./services/GeotabService.js');
-      console.log('🚛 Getting truck data');
-      const truckData = await geotabService.getTruckData();
-      console.log('🚛 Truck data received:', truckData);
-
-      // Combine all trucks into a single array
-      const allTrucks = [];
-
-      if (truckData.fiber && truckData.fiber.length > 0) {
-        allTrucks.push(...truckData.fiber.map(truck => ({
-          ...truck,
-          type: 'fiber',
-          typeIcon: 'car'
-        })));
-      }
-
-      if (truckData.electric && truckData.electric.length > 0) {
-        allTrucks.push(...truckData.electric.map(truck => ({
-          ...truck,
-          type: 'electric',
-          typeIcon: 'flash'
-        })));
-      }
-
-      // Store for filtering/sorting
-      this.currentTruckData = allTrucks;
-      console.log('🚛 Total trucks combined:', allTrucks.length);
-
-      // Hide loading
-      console.log('🚛 Before hiding loading - loadingDiv.hidden:', loadingDiv?.hidden);
-      if (loadingDiv) {
-        loadingDiv.hidden = true;
-        console.log('🚛 After hiding loading - loadingDiv.hidden:', loadingDiv.hidden);
-      }
-
-      console.log('🚛 About to check truck count. allTrucks.length:', allTrucks.length);
-      console.log('🚛 allTrucks sample:', allTrucks.slice(0, 2));
-
-      if (allTrucks.length === 0) {
-        console.log('🚛 No trucks found, showing empty state');
-        // Show empty state
-        if (emptyDiv) {
-          emptyDiv.hidden = false;
-          console.log('🚛 Showing empty state - emptyDiv.hidden:', emptyDiv.hidden);
-        }
-        if (tableContainer) {
-          tableContainer.style.display = 'none';
-          console.log('🚛 Hiding table container');
-        }
-      } else {
-        console.log('🚛 Showing table with trucks:', allTrucks.length);
-        // Show table
-        if (emptyDiv) {
-          emptyDiv.hidden = true;
-          console.log('🚛 Hiding empty state - emptyDiv.hidden:', emptyDiv.hidden);
-        }
-        if (tableContainer) {
-          tableContainer.style.display = 'block';
-          console.log('🚛 Showing table container - display:', tableContainer.style.display);
-
-          // Debug table container
-          console.log('🚛 Table container styles after display block:', {
-            display: window.getComputedStyle(tableContainer).display,
-            height: window.getComputedStyle(tableContainer).height,
-            maxHeight: window.getComputedStyle(tableContainer).maxHeight,
-            overflow: window.getComputedStyle(tableContainer).overflow,
-            overflowY: window.getComputedStyle(tableContainer).overflowY,
-            scrollHeight: tableContainer.scrollHeight,
-            clientHeight: tableContainer.clientHeight
-          });
-        }
-
-        // Populate table
-        console.log('🚛 Calling populateTruckTable');
-        this.populateTruckTable(allTrucks);
-      }
-
-      // Update footer
-      if (truckCountSpan) {
-        truckCountSpan.textContent = `${allTrucks.length} truck${allTrucks.length !== 1 ? 's' : ''}`;
-      }
-      if (lastUpdatedSpan) {
-        lastUpdatedSpan.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-      }
-
-    } catch (error) {
-      console.error('Failed to load truck data:', error);
-
-      // Hide loading and show empty state with error
-      if (loadingDiv) loadingDiv.hidden = true;
+    if (allTrucks.length === 0) {
+      console.log('🚛 No trucks found, showing empty state');
+      // Show empty state
       if (emptyDiv) {
         emptyDiv.hidden = false;
-        const emptyTitle = emptyDiv.querySelector('h4');
-        const emptyText = emptyDiv.querySelector('p');
-        if (emptyTitle) emptyTitle.textContent = 'Error loading trucks';
-        if (emptyText) emptyText.textContent = 'Failed to fetch vehicle data from MyGeotab.';
+        console.log('🚛 Showing empty state - emptyDiv.hidden:', emptyDiv.hidden);
       }
-      if (tableContainer) tableContainer.style.display = 'none';
+      if (tableContainer) {
+        tableContainer.style.display = 'none';
+        console.log('🚛 Hiding table container');
+      }
+    } else {
+      console.log('🚛 Showing table with trucks:', allTrucks.length);
+      // Show table
+      if (emptyDiv) {
+        emptyDiv.hidden = true;
+        console.log('🚛 Hiding empty state - emptyDiv.hidden:', emptyDiv.hidden);
+      }
+      if (tableContainer) {
+        tableContainer.style.display = 'block';
+        console.log('🚛 Showing table container - display:', tableContainer.style.display);
+
+        // Debug table container
+        console.log('🚛 Table container styles after display block:', {
+          display: window.getComputedStyle(tableContainer).display,
+          height: window.getComputedStyle(tableContainer).height,
+          maxHeight: window.getComputedStyle(tableContainer).maxHeight,
+          overflow: window.getComputedStyle(tableContainer).overflow,
+          overflowY: window.getComputedStyle(tableContainer).overflowY,
+          scrollHeight: tableContainer.scrollHeight,
+          clientHeight: tableContainer.clientHeight
+        });
+      }
+
+      // Populate table
+      console.log('🚛 Calling populateTruckTable');
+      this.populateTruckTable(allTrucks);
     }
+
+    // Update footer
+    if (truckCountSpan) {
+      truckCountSpan.textContent = `${allTrucks.length} truck${allTrucks.length !== 1 ? 's' : ''}`;
+    }
+    if (lastUpdatedSpan) {
+      lastUpdatedSpan.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+    }
+
+  } catch (error) {
+    console.error('Failed to load truck data:', error);
+
+    // Hide loading and show empty state with error
+    if (loadingDiv) loadingDiv.hidden = true;
+    if (emptyDiv) {
+      emptyDiv.hidden = false;
+      const emptyTitle = emptyDiv.querySelector('h4');
+      const emptyText = emptyDiv.querySelector('p');
+      if (emptyTitle) emptyTitle.textContent = 'Error loading trucks';
+      if (emptyText) emptyText.textContent = 'Failed to fetch vehicle data from MyGeotab.';
+    }
+    if (tableContainer) tableContainer.style.display = 'none';
+  }
+}
+
+populateTruckTable(trucks) {
+  console.log('🚛 populateTruckTable called with trucks:', trucks.length);
+  const tbody = document.getElementById('truck-table-body');
+  console.log('🚛 Table body found:', !!tbody);
+  if (!tbody) {
+    console.error('🚛 Table body not found!');
+    return;
   }
 
-  populateTruckTable(trucks) {
-    console.log('🚛 populateTruckTable called with trucks:', trucks.length);
-    const tbody = document.getElementById('truck-table-body');
-    console.log('🚛 Table body found:', !!tbody);
-    if (!tbody) {
-      console.error('🚛 Table body not found!');
-      return;
-    }
+  tbody.innerHTML = ''; // Clear existing rows
+  console.log('🚛 Creating rows for trucks');
 
-    tbody.innerHTML = ''; // Clear existing rows
-    console.log('🚛 Creating rows for trucks');
+  trucks.forEach((truck, index) => {
+    console.log(`🚛 Creating row ${index + 1} for truck:`, truck.name || truck.id);
+    const row = document.createElement('tr');
 
-    trucks.forEach((truck, index) => {
-      console.log(`🚛 Creating row ${index + 1} for truck:`, truck.name || truck.id);
-      const row = document.createElement('tr');
-
-      // Zoom column
-      const zoomCell = document.createElement('td');
-      zoomCell.innerHTML = `
+    // Zoom column
+    const zoomCell = document.createElement('td');
+    zoomCell.innerHTML = `
         <calcite-icon 
           icon="zoom-to-object" 
           scale="m" 
@@ -1662,307 +1503,307 @@ class LayerPanel {
         </calcite-icon>
       `;
 
-      // Add click handler for zoom
-      const zoomIcon = zoomCell.querySelector('.truck-zoom-btn');
-      if (zoomIcon) {
-        zoomIcon.addEventListener('click', () => {
-          this.zoomToTruck(truck);
-        });
-      }
+    // Add click handler for zoom
+    const zoomIcon = zoomCell.querySelector('.truck-zoom-btn');
+    if (zoomIcon) {
+      zoomIcon.addEventListener('click', () => {
+        this.zoomToTruck(truck);
+      });
+    }
 
-      // Truck name column
-      const nameCell = document.createElement('td');
-      nameCell.innerHTML = `
+    // Truck name column
+    const nameCell = document.createElement('td');
+    nameCell.innerHTML = `
         <div class="truck-name-cell">
           <calcite-icon icon="${truck.typeIcon}" scale="s" class="truck-type-icon"></calcite-icon>
           <span>${this.formatTruckName(truck)}</span>
         </div>
       `;
 
-      // Installer column
-      const installerCell = document.createElement('td');
-      installerCell.textContent = truck.installer || truck.driver || 'Unknown';
+    // Installer column
+    const installerCell = document.createElement('td');
+    installerCell.textContent = truck.installer || truck.driver || 'Unknown';
 
-      // Status column
-      const statusCell = document.createElement('td');
-      const status = this.getTruckStatus(truck);
-      statusCell.innerHTML = `<span class="truck-status-${status.toLowerCase()}">${status}</span>`;
+    // Status column
+    const statusCell = document.createElement('td');
+    const status = this.getTruckStatus(truck);
+    statusCell.innerHTML = `<span class="truck-status-${status.toLowerCase()}">${status}</span>`;
 
-      // Location column
-      const locationCell = document.createElement('td');
-      locationCell.textContent = this.formatTruckLocation(truck);
+    // Location column
+    const locationCell = document.createElement('td');
+    locationCell.textContent = this.formatTruckLocation(truck);
 
-      // Add cells to row
-      row.appendChild(zoomCell);
-      row.appendChild(nameCell);
-      row.appendChild(installerCell);
-      row.appendChild(statusCell);
-      row.appendChild(locationCell);
+    // Add cells to row
+    row.appendChild(zoomCell);
+    row.appendChild(nameCell);
+    row.appendChild(installerCell);
+    row.appendChild(statusCell);
+    row.appendChild(locationCell);
 
-      tbody.appendChild(row);
-    });
+    tbody.appendChild(row);
+  });
 
-    console.log('🚛 populateTruckTable completed, total rows added:', trucks.length);
+  console.log('🚛 populateTruckTable completed, total rows added:', trucks.length);
 
-    // Additional debugging
-    console.log('🚛 Table body children count:', tbody.children.length);
-    console.log('🚛 Table body innerHTML length:', tbody.innerHTML.length);
-    console.log('🚛 First few table rows:', Array.from(tbody.children).slice(0, 3).map(row => row.innerHTML.substring(0, 100)));
+  // Additional debugging
+  console.log('🚛 Table body children count:', tbody.children.length);
+  console.log('🚛 Table body innerHTML length:', tbody.innerHTML.length);
+  console.log('🚛 First few table rows:', Array.from(tbody.children).slice(0, 3).map(row => row.innerHTML.substring(0, 100)));
 
-    // Check if there are any CSS issues with table rows
-    setTimeout(() => {
-      const allRows = tbody.querySelectorAll('tr');
-      console.log('🚛 Total TR elements found:', allRows.length);
-      console.log('🚛 Visible rows check:', Array.from(allRows).slice(0, 5).map(row => ({
-        display: window.getComputedStyle(row).display,
-        height: window.getComputedStyle(row).height,
-        visibility: window.getComputedStyle(row).visibility
-      })));
-    }, 100);
+  // Check if there are any CSS issues with table rows
+  setTimeout(() => {
+    const allRows = tbody.querySelectorAll('tr');
+    console.log('🚛 Total TR elements found:', allRows.length);
+    console.log('🚛 Visible rows check:', Array.from(allRows).slice(0, 5).map(row => ({
+      display: window.getComputedStyle(row).display,
+      height: window.getComputedStyle(row).height,
+      visibility: window.getComputedStyle(row).visibility
+    })));
+  }, 100);
+}
+
+formatTruckName(truck) {
+  if (truck.name) {
+    return truck.name;
   }
 
-  formatTruckName(truck) {
-    if (truck.name) {
-      return truck.name;
-    }
+  // Create a name from truck data
+  const type = truck.type === 'fiber' ? 'Fiber' : 'Electric';
+  const installer = truck.installer || truck.driver || '';
+  const shortInstaller = installer.split(' ')[0]; // First name only
 
-    // Create a name from truck data
-    const type = truck.type === 'fiber' ? 'Fiber' : 'Electric';
-    const installer = truck.installer || truck.driver || '';
-    const shortInstaller = installer.split(' ')[0]; // First name only
+  return `${type} Truck${shortInstaller ? ` (${shortInstaller})` : ''}`;
+}
 
-    return `${type} Truck${shortInstaller ? ` (${shortInstaller})` : ''}`;
+getTruckStatus(truck) {
+  if (!truck.communication_status || truck.communication_status === 'offline') {
+    return 'Offline';
   }
 
-  getTruckStatus(truck) {
-    if (!truck.communication_status || truck.communication_status === 'offline') {
-      return 'Offline';
-    }
-
-    if (truck.is_driving || (truck.speed && truck.speed > 5)) {
-      return 'Online';
-    }
-
-    return 'Idle';
+  if (truck.is_driving || (truck.speed && truck.speed > 5)) {
+    return 'Online';
   }
 
-  formatTruckLocation(truck) {
-    if (truck.address) {
-      return truck.address;
-    }
+  return 'Idle';
+}
 
-    // Format coordinates if no address
-    if (truck.latitude && truck.longitude) {
-      return `${truck.latitude.toFixed(4)}, ${truck.longitude.toFixed(4)}`;
-    }
-
-    return 'Location unknown';
+formatTruckLocation(truck) {
+  if (truck.address) {
+    return truck.address;
   }
+
+  // Format coordinates if no address
+  if (truck.latitude && truck.longitude) {
+    return `${truck.latitude.toFixed(4)}, ${truck.longitude.toFixed(4)}`;
+  }
+
+  return 'Location unknown';
+}
 
   async zoomToTruck(truck) {
-    try {
-      const { geotabService } = await import('./services/GeotabService.js');
-      let currentTruck = truck;
-      let dataSource = 'layer';
+  try {
+    const { geotabService } = await import('./services/GeotabService.js');
+    let currentTruck = truck;
+    let dataSource = 'layer';
 
-      if (geotabService?.lastTruckData && truck.id) {
-        const allTrucks = [
-          ...(geotabService.lastTruckData.fiber || []),
-          ...(geotabService.lastTruckData.electric || [])
-        ];
+    if (geotabService?.lastTruckData && truck.id) {
+      const allTrucks = [
+        ...(geotabService.lastTruckData.fiber || []),
+        ...(geotabService.lastTruckData.electric || [])
+      ];
 
-        const freshTruckData = allTrucks.find(t => t.id === truck.id);
+      const freshTruckData = allTrucks.find(t => t.id === truck.id);
 
-        if (freshTruckData && freshTruckData.latitude && freshTruckData.longitude) {
-          currentTruck = freshTruckData;
-          dataSource = 'api';
+      if (freshTruckData && freshTruckData.latitude && freshTruckData.longitude) {
+        currentTruck = freshTruckData;
+        dataSource = 'api';
+      }
+    }
+
+    if (!currentTruck.latitude || !currentTruck.longitude) {
+      this.showVehicleNotification('Location not available for this vehicle', 'warning');
+      return;
+    }
+
+    const mapView = window.mapView;
+    if (!mapView) {
+      this.showVehicleNotification('Map not available', 'danger');
+      return;
+    }
+
+    import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
+      const point = new Point({
+        longitude: currentTruck.longitude,
+        latitude: currentTruck.latitude,
+        spatialReference: { wkid: 4326 }
+      });
+
+      mapView.goTo({
+        target: point,
+        zoom: 16
+      }).then(() => {
+        const modal = document.getElementById('truck-table-modal');
+        if (modal) {
+          modal.open = false;
         }
-      }
 
-      if (!currentTruck.latitude || !currentTruck.longitude) {
-        this.showVehicleNotification('Location not available for this vehicle', 'warning');
-        return;
-      }
-
-      const mapView = window.mapView;
-      if (!mapView) {
-        this.showVehicleNotification('Map not available', 'danger');
-        return;
-      }
-
-      import('@arcgis/core/geometry/Point').then(({ default: Point }) => {
-        const point = new Point({
-          longitude: currentTruck.longitude,
-          latitude: currentTruck.latitude,
-          spatialReference: { wkid: 4326 }
-        });
-
-        mapView.goTo({
-          target: point,
-          zoom: 16
-        }).then(() => {
-          const modal = document.getElementById('truck-table-modal');
-          if (modal) {
-            modal.open = false;
-          }
-
-          const truckName = this.formatTruckName(currentTruck);
-          const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
-          this.showVehicleNotification(`Zoomed to ${truckName} (${dataAge})`, 'success');
-        }).catch(error => {
-          console.error('Failed to zoom to truck:', error);
-          this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
-        });
+        const truckName = this.formatTruckName(currentTruck);
+        const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
+        this.showVehicleNotification(`Zoomed to ${truckName} (${dataAge})`, 'success');
+      }).catch(error => {
+        console.error('Failed to zoom to truck:', error);
+        this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
       });
-
-    } catch (error) {
-      console.error('Error in zoomToTruck:', error);
-      this.showVehicleNotification('Failed to get vehicle location', 'danger');
-    }
-  }
-
-  filterTruckTable(searchTerm) {
-    if (!this.currentTruckData) return;
-
-    const filtered = this.currentTruckData.filter(truck => {
-      const name = this.formatTruckName(truck).toLowerCase();
-      const installer = (truck.installer || truck.driver || '').toLowerCase();
-      const location = this.formatTruckLocation(truck).toLowerCase();
-      const search = searchTerm.toLowerCase();
-
-      return name.includes(search) ||
-        installer.includes(search) ||
-        location.includes(search);
     });
 
-    this.populateTruckTable(filtered);
+  } catch (error) {
+    console.error('Error in zoomToTruck:', error);
+    this.showVehicleNotification('Failed to get vehicle location', 'danger');
+  }
+}
 
-    // Update count
-    const truckCountSpan = document.getElementById('truck-count');
-    if (truckCountSpan) {
-      truckCountSpan.textContent = `${filtered.length} truck${filtered.length !== 1 ? 's' : ''} ${searchTerm ? '(filtered)' : ''}`;
+filterTruckTable(searchTerm) {
+  if (!this.currentTruckData) return;
+
+  const filtered = this.currentTruckData.filter(truck => {
+    const name = this.formatTruckName(truck).toLowerCase();
+    const installer = (truck.installer || truck.driver || '').toLowerCase();
+    const location = this.formatTruckLocation(truck).toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    return name.includes(search) ||
+      installer.includes(search) ||
+      location.includes(search);
+  });
+
+  this.populateTruckTable(filtered);
+
+  // Update count
+  const truckCountSpan = document.getElementById('truck-count');
+  if (truckCountSpan) {
+    truckCountSpan.textContent = `${filtered.length} truck${filtered.length !== 1 ? 's' : ''} ${searchTerm ? '(filtered)' : ''}`;
+  }
+}
+
+sortTruckTable(sortBy) {
+  if (!this.currentTruckData) return;
+
+  const sorted = [...this.currentTruckData].sort((a, b) => {
+    switch (sortBy) {
+      case 'name':
+        return this.formatTruckName(a).localeCompare(this.formatTruckName(b));
+      case 'installer':
+        const installerA = a.installer || a.driver || '';
+        const installerB = b.installer || b.driver || '';
+        return installerA.localeCompare(installerB);
+      case 'type':
+        return a.type.localeCompare(b.type);
+      case 'status':
+        return this.getTruckStatus(a).localeCompare(this.getTruckStatus(b));
+      default:
+        return 0;
     }
+  });
+
+  this.populateTruckTable(sorted);
+}
+
+showVehicleNotification(message, kind = 'info') {
+  const noticeContainer = document.querySelector('#notice-container') || document.body;
+  const notice = document.createElement('calcite-notice');
+  notice.setAttribute('open', '');
+  notice.setAttribute('kind', kind);
+  notice.setAttribute('closable', '');
+  notice.setAttribute('icon', kind === 'success' ? 'check-circle' :
+    kind === 'danger' ? 'exclamation-mark-triangle' : 'information');
+
+  const messageDiv = document.createElement('div');
+  messageDiv.slot = 'message';
+  messageDiv.textContent = message;
+
+  notice.appendChild(messageDiv);
+  noticeContainer.appendChild(notice);
+
+  // Auto-remove after 3 seconds
+  setTimeout(() => notice.remove(), 3000);
+}
+
+updateBuildInfo() {
+  // Import build info dynamically to avoid circular dependencies
+  import('./utils/buildInfo.js').then(({ getFormattedBuildInfo }) => {
+    const info = getFormattedBuildInfo();
+
+    const buildVersionElement = document.getElementById('build-version-text');
+    const buildDateElement = document.getElementById('build-date-text');
+    const environmentElement = document.getElementById('environment-text');
+
+    if (buildVersionElement) {
+      buildVersionElement.textContent = info.displayVersion;
+    }
+
+    if (buildDateElement) {
+      buildDateElement.textContent = info.buildDate;
+    }
+
+    if (environmentElement) {
+      environmentElement.textContent = info.environment.charAt(0).toUpperCase() + info.environment.slice(1);
+    }
+  });
+
+  // Set up resource links
+  const docsLink = document.getElementById('docs-link');
+  const issueLink = document.getElementById('issue-link');
+
+  if (docsLink) {
+    docsLink.addEventListener('click', () => {
+      window.open('https://github.com/your-org/fiberoms-insight-pwa/wiki', '_blank');
+    });
   }
 
-  sortTruckTable(sortBy) {
-    if (!this.currentTruckData) return;
+  if (issueLink) {
+    issueLink.addEventListener('click', () => {
+      window.open('https://github.com/your-org/fiberoms-insight-pwa/issues', '_blank');
+    });
+  }
+}
 
-    const sorted = [...this.currentTruckData].sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return this.formatTruckName(a).localeCompare(this.formatTruckName(b));
-        case 'installer':
-          const installerA = a.installer || a.driver || '';
-          const installerB = b.installer || b.driver || '';
-          return installerA.localeCompare(installerB);
-        case 'type':
-          return a.type.localeCompare(b.type);
-        case 'status':
-          return this.getTruckStatus(a).localeCompare(this.getTruckStatus(b));
-        default:
-          return 0;
+setupCacheManagement() {
+  const refreshBtn = document.getElementById('refresh-cache-btn');
+  const clearBtn = document.getElementById('clear-cache-btn');
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => this.updateCacheStatus());
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to clear all cached OSP data? This will require re-downloading all data on next use.')) {
+        await this.clearCache();
       }
     });
-
-    this.populateTruckTable(sorted);
   }
-
-  showVehicleNotification(message, kind = 'info') {
-    const noticeContainer = document.querySelector('#notice-container') || document.body;
-    const notice = document.createElement('calcite-notice');
-    notice.setAttribute('open', '');
-    notice.setAttribute('kind', kind);
-    notice.setAttribute('closable', '');
-    notice.setAttribute('icon', kind === 'success' ? 'check-circle' :
-      kind === 'danger' ? 'exclamation-mark-triangle' : 'information');
-
-    const messageDiv = document.createElement('div');
-    messageDiv.slot = 'message';
-    messageDiv.textContent = message;
-
-    notice.appendChild(messageDiv);
-    noticeContainer.appendChild(notice);
-
-    // Auto-remove after 3 seconds
-    setTimeout(() => notice.remove(), 3000);
-  }
-
-  updateBuildInfo() {
-    // Import build info dynamically to avoid circular dependencies
-    import('./utils/buildInfo.js').then(({ getFormattedBuildInfo }) => {
-      const info = getFormattedBuildInfo();
-
-      const buildVersionElement = document.getElementById('build-version-text');
-      const buildDateElement = document.getElementById('build-date-text');
-      const environmentElement = document.getElementById('environment-text');
-
-      if (buildVersionElement) {
-        buildVersionElement.textContent = info.displayVersion;
-      }
-
-      if (buildDateElement) {
-        buildDateElement.textContent = info.buildDate;
-      }
-
-      if (environmentElement) {
-        environmentElement.textContent = info.environment.charAt(0).toUpperCase() + info.environment.slice(1);
-      }
-    });
-
-    // Set up resource links
-    const docsLink = document.getElementById('docs-link');
-    const issueLink = document.getElementById('issue-link');
-
-    if (docsLink) {
-      docsLink.addEventListener('click', () => {
-        window.open('https://github.com/your-org/fiberoms-insight-pwa/wiki', '_blank');
-      });
-    }
-
-    if (issueLink) {
-      issueLink.addEventListener('click', () => {
-        window.open('https://github.com/your-org/fiberoms-insight-pwa/issues', '_blank');
-      });
-    }
-  }
-
-  setupCacheManagement() {
-    const refreshBtn = document.getElementById('refresh-cache-btn');
-    const clearBtn = document.getElementById('clear-cache-btn');
-
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', () => this.updateCacheStatus());
-    }
-
-    if (clearBtn) {
-      clearBtn.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to clear all cached OSP data? This will require re-downloading all data on next use.')) {
-          await this.clearCache();
-        }
-      });
-    }
-  }
+}
 
   async updateCacheStatus() {
-    try {
-      const { cacheService } = await import('./services/CacheService.js');
-      const stats = await cacheService.getCacheStats();
+  try {
+    const { cacheService } = await import('./services/CacheService.js');
+    const stats = await cacheService.getCacheStats();
 
-      const cacheDetailsDiv = document.getElementById('cache-details');
-      const cacheSizeText = document.getElementById('cache-size-text');
+    const cacheDetailsDiv = document.getElementById('cache-details');
+    const cacheSizeText = document.getElementById('cache-size-text');
 
-      if (stats.length === 0) {
-        cacheSizeText.textContent = 'Empty';
-        cacheDetailsDiv.innerHTML = '<p style="color: var(--calcite-color-text-3); font-size: 13px;">No cached data</p>';
-        return;
-      }
+    if (stats.length === 0) {
+      cacheSizeText.textContent = 'Empty';
+      cacheDetailsDiv.innerHTML = '<p style="color: var(--calcite-color-text-3); font-size: 13px;">No cached data</p>';
+      return;
+    }
 
-      // Calculate total size
-      const totalFeatures = stats.reduce((sum, stat) => sum + stat.size, 0);
-      cacheSizeText.textContent = `${totalFeatures} features`;
+    // Calculate total size
+    const totalFeatures = stats.reduce((sum, stat) => sum + stat.size, 0);
+    cacheSizeText.textContent = `${totalFeatures} features`;
 
-      // Build details HTML
-      const detailsHTML = stats.map(stat => `
+    // Build details HTML
+    const detailsHTML = stats.map(stat => `
         <div style="margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-2); border-radius: 4px;">
           <div style="font-weight: 500; font-size: 13px;">${this.formatDataType(stat.dataType)}</div>
           <div style="font-size: 12px; color: var(--calcite-color-text-2);">
@@ -1971,1384 +1812,90 @@ class LayerPanel {
         </div>
       `).join('');
 
-      cacheDetailsDiv.innerHTML = detailsHTML;
-    } catch (error) {
-      console.error('Failed to get cache status:', error);
-    }
+    cacheDetailsDiv.innerHTML = detailsHTML;
+  } catch (error) {
+    console.error('Failed to get cache status:', error);
   }
+}
 
-  formatDataType(dataType) {
-    const names = {
-      'fsa': 'FSA Boundaries',
-      'mainFiber': 'Main Line Fiber',
-      'mainOld': 'Main Line (Old)',
-      'mstFiber': 'MST Fiber',
-      'mstTerminals': 'MST Terminals',
-      'closures': 'Closures',
-      'splitters': 'Splitters',
-      'nodeSites': 'Node Sites'
-    };
-    return names[dataType] || dataType;
-  }
+formatDataType(dataType) {
+  const names = {
+    'fsa': 'FSA Boundaries',
+    'mainFiber': 'Main Line Fiber',
+    'mainOld': 'Main Line (Old)',
+    'mstFiber': 'MST Fiber',
+    'mstTerminals': 'MST Terminals',
+    'closures': 'Closures',
+    'splitters': 'Splitters',
+    'nodeSites': 'Node Sites'
+  };
+  return names[dataType] || dataType;
+}
 
   async clearCache() {
-    try {
-      const { cacheService } = await import('./services/CacheService.js');
-      await cacheService.clearAllCache();
-      await this.updateCacheStatus();
+  try {
+    const { cacheService } = await import('./services/CacheService.js');
+    await cacheService.clearAllCache();
+    await this.updateCacheStatus();
 
-      // Show success notification
-      const noticeContainer = document.querySelector('#notice-container') || document.body;
-      const notice = document.createElement('calcite-notice');
-      notice.setAttribute('open', '');
-      notice.setAttribute('kind', 'success');
-      notice.setAttribute('closable', '');
-      notice.setAttribute('icon', 'check-circle');
+    // Show success notification
+    const noticeContainer = document.querySelector('#notice-container') || document.body;
+    const notice = document.createElement('calcite-notice');
+    notice.setAttribute('open', '');
+    notice.setAttribute('kind', 'success');
+    notice.setAttribute('closable', '');
+    notice.setAttribute('icon', 'check-circle');
 
-      const titleDiv = document.createElement('div');
-      titleDiv.slot = 'title';
-      titleDiv.textContent = 'Cache Cleared';
+    const titleDiv = document.createElement('div');
+    titleDiv.slot = 'title';
+    titleDiv.textContent = 'Cache Cleared';
 
-      const messageDiv = document.createElement('div');
-      messageDiv.slot = 'message';
-      messageDiv.textContent = 'All OSP data cache has been cleared successfully.';
+    const messageDiv = document.createElement('div');
+    messageDiv.slot = 'message';
+    messageDiv.textContent = 'All OSP data cache has been cleared successfully.';
 
-      notice.appendChild(titleDiv);
-      notice.appendChild(messageDiv);
-      noticeContainer.appendChild(notice);
+    notice.appendChild(titleDiv);
+    notice.appendChild(messageDiv);
+    noticeContainer.appendChild(notice);
 
-      // Auto-remove after 3 seconds
-      setTimeout(() => notice.remove(), 3000);
-    } catch (error) {
-      console.error('Failed to clear cache:', error);
-    }
-  }
-
-  setupPrtgIframe() {
-    const openPrtgBtn = document.getElementById('open-prtg');
-    const reloadPrtgBtn = document.getElementById('reload-prtg');
-    const prtgIframe = document.getElementById('prtg-iframe');
-    const prtgWarning = document.getElementById('prtg-warning');
-
-    const prtgUrl = 'https://139.60.151.250/public/mapshow.htm?id=11824&mapid=1314418B-78B5-4F47-94B1-C2E2DA6EC55A';
-
-    if (openPrtgBtn) {
-      openPrtgBtn.addEventListener('click', () => {
-        window.open(prtgUrl, '_blank');
-      });
-    }
-
-    if (reloadPrtgBtn) {
-      reloadPrtgBtn.addEventListener('click', () => {
-        if (prtgIframe && prtgWarning) {
-          prtgIframe.src = prtgUrl;
-          prtgIframe.style.display = 'block';
-          prtgWarning.style.display = 'none';
-        }
-      });
-    }
+    // Auto-remove after 3 seconds
+    setTimeout(() => notice.remove(), 3000);
+  } catch (error) {
+    console.error('Failed to clear cache:', error);
   }
 }
 
-// Mobile Tab Bar Manager - Single Responsibility Principle
-class MobileTabBar {
-  constructor() {
-    this.tabBar = document.getElementById('mobile-tab-bar');
-    this.closeButton = document.getElementById('mobile-close-button');
-    this.currentDialog = null;
-  }
+setupPrtgIframe() {
+  const openPrtgBtn = document.getElementById('open-prtg');
+  const reloadPrtgBtn = document.getElementById('reload-prtg');
+  const prtgIframe = document.getElementById('prtg-iframe');
+  const prtgWarning = document.getElementById('prtg-warning');
 
-  async init() {
-    await customElements.whenDefined('calcite-segmented-control');
-    this.setupEventListeners();
-  }
+  const prtgUrl = 'https://139.60.151.250/public/mapshow.htm?id=11824&mapid=1314418B-78B5-4F47-94B1-C2E2DA6EC55A';
 
-  setupEventListeners() {
-    if (this.tabBar) {
-      this.tabBar.addEventListener('calciteSegmentedControlChange', (e) => {
-        this.handleTabSelection(e.target.selectedItem.value);
-      });
-    }
-
-    if (this.closeButton) {
-      this.closeButton.addEventListener('click', () => {
-        this.closeCurrentPanel();
-      });
-    }
-
-    this.setupCloseButtons();
-    this.setupMobileSearchDialogListeners();
-    this.setupMobileMetricsChip();
-  }
-
-  setupMobileSearchDialogListeners() {
-    const mobileSearchDialog = document.getElementById('mobile-search-sheet');
-    if (mobileSearchDialog) {
-      mobileSearchDialog.addEventListener('calciteDialogOpen', () => {
-
-      });
-
-    }
-  }
-
-  setupMobileMetricsChip() {
-    const mobileMetricsChip = document.getElementById('mobile-metrics-chip');
-    if (mobileMetricsChip) {
-      mobileMetricsChip.addEventListener('click', () => {
-        // Open the mobile power outages dialog
-        const powerDialog = document.getElementById('mobile-power-sheet');
-        if (powerDialog) {
-          this.closeCurrentPanel(); // Close any open panels first
-          powerDialog.open = true;
-          this.currentDialog = powerDialog;
-          this.closeButton.classList.add('show');
-        }
-      });
-    }
-  }
-
-  async handleTabSelection(tabValue) {
-    this.closeCurrentPanel();
-
-    const dialogId = `mobile-${tabValue}-sheet`;
-    const dialog = document.getElementById(dialogId);
-
-    if (dialog) {
-      // Ensure CalciteUI components are properly initialized before opening
-      try {
-        // Wait for critical CalciteUI components with timeout
-        await Promise.race([
-          Promise.all([
-            customElements.whenDefined('calcite-dialog'),
-            customElements.whenDefined('calcite-switch'),
-            customElements.whenDefined('calcite-list-item'),
-            customElements.whenDefined('calcite-list'),
-            customElements.whenDefined('calcite-block')
-          ]),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('CalciteUI timeout')), 2000))
-        ]);
-
-        dialog.open = true;
-        this.currentDialog = dialog;
-        this.closeButton.classList.add('show');
-
-        // Initialize functionality for specific tabs
-        if (tabValue === 'other') {
-          this.initializeMobileOtherTab();
-        } else if (tabValue === 'subscribers') {
-          await this.initializeMobileSubscribersTab();
-        }
-      } catch (error) {
-        console.warn('⚠️ CalciteUI components not ready, but proceeding with dialog open:', error);
-        // Still try to open the dialog - force it open regardless of component state
-        dialog.open = true;
-        this.currentDialog = dialog;
-        this.closeButton.classList.add('show');
-
-        // Force subscriber initialization even if CalciteUI failed
-        if (tabValue === 'subscribers') {
-          await this.forceInitializeMobileSubscribersTab();
-        }
-      }
-    }
-  }
-
-  async initializeMobileSubscribersTab() {
-    try {
-      // Ensure subscriber switches are properly initialized
-      const subscriberDialog = document.getElementById('mobile-subscribers-sheet');
-      if (subscriberDialog) {
-        // Wait a bit for components to fully render
-        await new Promise(resolve => setTimeout(resolve, 150));
-
-        const switches = subscriberDialog.querySelectorAll('calcite-switch');
-        const listItems = subscriberDialog.querySelectorAll('calcite-list-item');
-
-        // Ensure all elements are visible and functional
-        switches.forEach(switchEl => {
-          switchEl.style.display = 'block';
-          switchEl.style.visibility = 'visible';
-          switchEl.style.opacity = '1';
-        });
-
-        listItems.forEach(item => {
-          item.style.display = 'block';
-          item.style.visibility = 'visible';
-          item.style.opacity = '1';
-        });
-
-        console.log('✅ Mobile subscriber tab initialized successfully');
-      }
-    } catch (error) {
-      console.warn('⚠️ Failed to initialize mobile subscribers tab:', error);
-      await this.forceInitializeMobileSubscribersTab();
-    }
-  }
-
-  async forceInitializeMobileSubscribersTab() {
-    // Fallback initialization that works even if CalciteUI components fail
-    const subscriberDialog = document.getElementById('mobile-subscribers-sheet');
-    if (subscriberDialog) {
-      // Force all content to be visible with inline styles
-      const content = subscriberDialog.querySelector('[slot="content"]');
-      if (content) {
-        content.style.display = 'block';
-        content.style.visibility = 'visible';
-        content.style.opacity = '1';
-        content.style.padding = '16px';
-
-        // Force all child elements to be visible
-        const allElements = content.querySelectorAll('*');
-        allElements.forEach(el => {
-          el.style.display = el.style.display || 'block';
-          el.style.visibility = 'visible';
-          el.style.opacity = '1';
-        });
-
-        // Special handling for list items
-        const listItems = content.querySelectorAll('calcite-list-item');
-        listItems.forEach(item => {
-          item.style.minHeight = '56px';
-          item.style.padding = '12px';
-          item.style.borderBottom = '1px solid #e0e0e0';
-          item.style.display = 'flex';
-          item.style.alignItems = 'center';
-        });
-
-        // Special handling for switches
-        const switches = content.querySelectorAll('calcite-switch');
-        switches.forEach(switchEl => {
-          switchEl.style.display = 'inline-block';
-          switchEl.style.minWidth = '44px';
-          switchEl.style.minHeight = '24px';
-        });
-
-        console.log('🔧 Force-initialized mobile subscriber dialog');
-      }
-    }
-  }
-
-  initializeMobileOtherTab() {
-    // Update build info when other tab is opened
-    this.updateMobileBuildInfo();
-    this.setupMobileResourceLinks();
-  }
-
-  updateMobileBuildInfo() {
-    // Import build info dynamically to avoid circular dependencies
-    import('./utils/buildInfo.js').then(({ getFormattedBuildInfo }) => {
-      const info = getFormattedBuildInfo();
-
-      const buildVersionElement = document.getElementById('mobile-build-version-text');
-      const buildDateElement = document.getElementById('mobile-build-date-text');
-      const environmentElement = document.getElementById('mobile-environment-text');
-
-      if (buildVersionElement) {
-        buildVersionElement.textContent = info.displayVersion;
-      }
-
-      if (buildDateElement) {
-        buildDateElement.textContent = info.buildDate;
-      }
-
-      if (environmentElement) {
-        environmentElement.textContent = info.environment.charAt(0).toUpperCase() + info.environment.slice(1);
-      }
+  if (openPrtgBtn) {
+    openPrtgBtn.addEventListener('click', () => {
+      window.open(prtgUrl, '_blank');
     });
   }
 
-  setupMobileResourceLinks() {
-    const docsLink = document.getElementById('mobile-docs-link');
-    const issueLink = document.getElementById('mobile-issue-link');
-
-    if (docsLink) {
-      docsLink.addEventListener('click', () => {
-        window.open('https://github.com/your-org/fiberoms-insight-pwa/wiki', '_blank');
-      });
-    }
-
-    if (issueLink) {
-      issueLink.addEventListener('click', () => {
-        window.open('https://github.com/your-org/fiberoms-insight-pwa/issues', '_blank');
-      });
-    }
-  }
-
-  closeCurrentPanel() {
-    if (this.currentDialog) {
-      this.currentDialog.open = false;
-      this.currentDialog = null;
-    }
-    this.closeButton.classList.remove('show');
-
-    if (this.tabBar) {
-      this.tabBar.selectedItem = null;
-    }
-  }
-
-  setupCloseButtons() {
-    const closeButtons = document.querySelectorAll('.dialog-close-btn');
-    closeButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        this.closeCurrentPanel();
-      });
+  if (reloadPrtgBtn) {
+    reloadPrtgBtn.addEventListener('click', () => {
+      if (prtgIframe && prtgWarning) {
+        prtgIframe.src = prtgUrl;
+        prtgIframe.style.display = 'block';
+        prtgWarning.style.display = 'none';
+      }
     });
-  }
-
-  recoverMobileUI() {
-    // Recovery method to restore mobile UI functionality after CalciteUI errors
-    try {
-      console.log('🔧 Recovering mobile UI after component failures...');
-
-      // Ensure all mobile dialogs are properly configured
-      const dialogs = document.querySelectorAll('.mobile-only calcite-dialog');
-      dialogs.forEach(dialog => {
-        if (dialog) {
-          dialog.style.display = 'block';
-          dialog.style.visibility = 'visible';
-
-          // Ensure content is visible
-          const content = dialog.querySelector('[slot="content"]');
-          if (content) {
-            content.style.display = 'block';
-            content.style.visibility = 'visible';
-            content.style.opacity = '1';
-          }
-        }
-      });
-
-      // Special recovery for subscriber dialog
-      const subscriberDialog = document.getElementById('mobile-subscribers-sheet');
-      if (subscriberDialog) {
-        this.forceInitializeMobileSubscribersTab();
-      }
-
-      // Ensure tab bar is functional
-      const tabBar = document.getElementById('mobile-tab-bar');
-      if (tabBar) {
-        tabBar.style.display = 'block';
-        tabBar.style.visibility = 'visible';
-        tabBar.style.opacity = '1';
-      }
-
-      console.log('✅ Mobile UI recovery completed');
-    } catch (error) {
-      console.warn('⚠️ Mobile UI recovery failed:', error);
-    }
   }
 }
-
-// Dashboard Manager - Single Responsibility Principle
-class DashboardManager {
-  constructor() {
-    this.refreshButton = null;
-    this.lastUpdated = null;
-  }
-
-  async init() {
-    await customElements.whenDefined('calcite-button');
-    await customElements.whenDefined('calcite-chip');
-    this.setupEventListeners();
-  }
-
-  setupEventListeners() {
-    this.refreshButton = document.getElementById('refresh-dashboard');
-    if (this.refreshButton) {
-      this.refreshButton.addEventListener('click', () => this.refreshDashboard());
-    }
-  }
-
-  updateLastUpdatedTime() {
-    this.lastUpdated = new Date();
-  }
-
-  async updateDashboard() {
-    try {
-      // Import data service dynamically to avoid circular imports
-      const { subscriberDataService } = await import('./dataService.js');
-
-      // Get subscriber summary with offline count
-      const summary = await subscriberDataService.getSubscribersSummary();
-
-      // Update the offline count display
-      this.updateOfflineCount(summary.offline || 0);
-
-    } catch (error) {
-      log.error('Failed to update dashboard:', error);
-      // Show 0 if there's an error to prevent showing stale data
-      this.updateOfflineCount(0);
-    }
-
-    // Update the timestamp
-    this.updateLastUpdatedTime();
-  }
-
-  updateOfflineCount(count) {
-    const offlineCountElement = document.getElementById('offline-count');
-    if (offlineCountElement) {
-      offlineCountElement.textContent = count.toString();
-
-      // Update alert count in popover
-      const alertCountElement = document.getElementById('alert-count');
-      if (alertCountElement) {
-        const alertText = count > 0 ? `${count} New` : '0 New';
-        alertCountElement.textContent = alertText;
-      }
-    }
-
-    // Update mobile overlay counter
-    const mobileOfflineCountElement = document.getElementById('mobile-offline-count');
-    if (mobileOfflineCountElement) {
-      mobileOfflineCountElement.textContent = count.toString();
-    }
-  }
-
-  async refreshDashboard() {
-    // Add loading state to refresh button
-    if (this.refreshButton) {
-      this.refreshButton.setAttribute('loading', '');
-    }
-
-    try {
-      // Set global flag to skip notifications during manual refresh
-      window._isManualRefresh = true;
-
-      // Clear any existing loading notifications
-      loadingIndicator.clearConsolidated();
-
-      // Clear cache to ensure fresh data
-      subscriberDataService.clearCache();
-
-      // Use consolidated update method to prevent duplicate fetches
-      if (window.app && window.app.updateSubscriberStatistics) {
-        await window.app.updateSubscriberStatistics();
-      }
-
-      // Also refresh power outage stats without notification
-      const powerStats = document.querySelector('power-outage-stats');
-      if (powerStats && typeof powerStats.updateStats === 'function') {
-        await powerStats.updateStats(true); // Skip notification
-      }
-
-      // Simulate brief loading for user feedback
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-    } catch (error) {
-      log.error('Error refreshing dashboard:', error);
-    } finally {
-      // Force clear all loading indicators regardless of completion state
-      loadingIndicator.clearConsolidated();
-      loadingIndicator.clear(); // Clear any individual notices too
-
-      // Remove loading state
-      if (this.refreshButton) {
-        this.refreshButton.removeAttribute('loading');
-      }
-      // Clear manual refresh flag
-      window._isManualRefresh = false;
-    }
-  }
 }
 
-// Header Search Manager - Single Responsibility Principle
-// Manages search functionality across desktop and mobile interfaces
-// Manages search functionality across desktop and mobile interfaces
-class HeaderSearch {
-  constructor() {
-    this.searchInput = document.getElementById('header-search');
-    this.mobileSearchInput = document.getElementById('mobile-search-input');
-    this.desktopSearchInput = document.getElementById('desktop-search');
-    this.searchTimeout = null;
-    this.mobileSearchTimeout = null;
-    this.desktopSearchTimeout = null;
-    this.currentResults = [];
-    this.currentIndicatorGraphics = null;
+// MobileTabBar moved to ./ui/MobileTabBar.js
 
-  }
+// DashboardManager moved to ./ui/DashboardManager.js
 
-
-
-  async init() {
-    if (!this.searchInput && !this.mobileSearchInput && !this.desktopSearchInput) return;
-
-    await customElements.whenDefined('calcite-autocomplete');
-    await customElements.whenDefined('calcite-autocomplete-item');
-    await customElements.whenDefined('calcite-input');
-
-
-
-    this.setupEventListeners();
-  }
-
-
-  setupEventListeners() {
-    // Header search (autocomplete)
-    if (this.searchInput) {
-      // Use input event which reliably fires and contains inputValue
-      this.searchInput.addEventListener('input', (e) => {
-        // Try both inputValue and value properties
-        const searchValue = e.target.inputValue || e.target.value;
-        if (searchValue) {
-          this.handleSearchInput(searchValue, 'header');
-        }
-      });
-
-      // Enter key to select first result
-      this.searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          this.handleEnterKeySelection(this.searchInput);
-        }
-      });
-
-      // Escape to clear everything (use keyup to fire after calcite processing)
-      this.searchInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Escape') {
-          this.clearEverything('header');
-        }
-      });
-
-      // Selection event for when user picks a result
-      this.searchInput.addEventListener('calciteAutocompleteChange', (e) => {
-        if (e.target.selectedItem) {
-          this.handleSearchSelection(e.target.selectedItem);
-        } else {
-          // Try to find the selected item by value
-          if (e.target.value) {
-            const selectedElement = e.target.querySelector(`calcite-autocomplete-item[value="${e.target.value}"]`);
-            if (selectedElement && selectedElement._resultData) {
-              this.handleSearchSelection(selectedElement);
-            }
-          }
-        }
-      });
-    }
-
-    // Desktop search (autocomplete)
-    if (this.desktopSearchInput) {
-      // Use input event for desktop search too
-      this.desktopSearchInput.addEventListener('input', (e) => {
-        if (e.target.inputValue) {
-          this.handleSearchInput(e.target.inputValue, 'desktop');
-        }
-      });
-
-      // Enter key to select first result
-      this.desktopSearchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          this.handleEnterKeySelection(this.desktopSearchInput);
-        }
-      });
-
-      // Escape to clear everything (use keyup to fire after calcite processing)
-      this.desktopSearchInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Escape') {
-          this.clearEverything('desktop');
-        }
-      });
-
-      this.desktopSearchInput.addEventListener('calciteAutocompleteChange', (e) => {
-        if (e.target.selectedItem) {
-          this.handleSearchSelection(e.target.selectedItem);
-        }
-      });
-    }
-
-    // Mobile search (regular input)
-    if (this.mobileSearchInput) {
-      this.mobileSearchInput.addEventListener('input', (e) => {
-        this.handleMobileSearchInput(e.target.value);
-      });
-
-      this.mobileSearchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          this.handleMobileEnterKey(e.target.value);
-        }
-      });
-
-      this.mobileSearchInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Escape') {
-          this.clearEverything('mobile');
-        }
-      });
-    }
-
-  }
-
-  handleSearchInput(searchTerm, source = 'header') {
-    const timeoutKey = source === 'desktop' ? 'desktopSearchTimeout' : 'searchTimeout';
-
-    // Clear previous timeout
-    if (this[timeoutKey]) {
-      clearTimeout(this[timeoutKey]);
-    }
-
-    // If search field is completely cleared, clear everything
-    if (!searchTerm || searchTerm.trim() === '') {
-      this.clearEverything(source);
-      return;
-    }
-
-    // Clear results if search term is too short (but not empty)
-    if (searchTerm.length < 4) {
-      this.clearSearchResults(source);
-      return;
-    }
-
-    // Debounce search to avoid too many API calls
-    this[timeoutKey] = setTimeout(() => {
-      this.performSearch(searchTerm, source);
-    }, 300);
-  }
-
-  async performSearch(searchTerm, source = 'header') {
-    try {
-      const targetInput = source === 'desktop' ? this.desktopSearchInput : this.searchInput;
-
-      // Show loading state
-      this.setSearchLoading(true, targetInput);
-
-      // Perform the search
-      const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
-
-      // Update search results for autocomplete inputs
-      this.updateSearchResults(searchResult, targetInput);
-
-    } catch (error) {
-      log.error('Search failed:', error);
-      this.showSearchError(source === 'desktop' ? this.desktopSearchInput : this.searchInput);
-    } finally {
-      this.setSearchLoading(false, source === 'desktop' ? this.desktopSearchInput : this.searchInput);
-    }
-  }
-
-  updateSearchResults(searchResult, targetInput) {
-    // Clear existing DOM items FIRST, but don't clear internal state
-    this.clearSearchResults(null, targetInput, false);
-
-    // Now set the new results
-    this.currentResults = searchResult.results;
-
-    if (this.currentResults.length === 0) {
-      this.showNoResults(searchResult.searchTerm, targetInput);
-      return;
-    }
-
-    // Add search result items
-    this.currentResults.forEach((result, index) => {
-      const item = document.createElement('calcite-autocomplete-item');
-      item.setAttribute('value', String(result.id || index));
-
-      // Use text-label for the customer name only
-      const label = this.formatSearchResultLabel(result);
-      item.setAttribute('text-label', label || 'Unknown');
-
-      // Use description for all the details
-      const description = this.formatEnhancedDescription(result);
-      item.setAttribute('description', description || '');
-
-      // Add data attribute for status-based styling
-      item.setAttribute('data-status', result.status || 'unknown');
-
-      // Add status indicator icon using CalciteUI colors
-      const statusColor = result.status === 'Online' ? 'success' : 'danger';
-      item.innerHTML = `
-        <calcite-icon slot="icon" icon="person" style="color: var(--calcite-color-status-${statusColor});"></calcite-icon>
-      `;
-
-      // Store full result data
-      item._resultData = result;
-
-      targetInput.appendChild(item);
-    });
-  }
-
-  formatSearchResultLabel(result) {
-    // Ensure we always return a valid string
-    if (!result) return 'Unknown';
-    return String(result.customer_name || 'Unnamed Customer');
-  }
-
-  formatSearchResultDescription(result) {
-    if (!result) return '';
-    const parts = [];
-    if (result.customer_number) parts.push(`#${result.customer_number}`);
-    if (result.address) parts.push(result.address);
-    if (result.city) parts.push(result.city);
-    return parts.join(' • ') || 'No details available';
-  }
-
-  formatFullAddress(result) {
-    const parts = [];
-    if (result.address) parts.push(result.address);
-    if (result.city) parts.push(result.city);
-    if (result.state) parts.push(result.state);
-    if (result.zip) parts.push(result.zip);
-
-    return parts.length > 0 ? parts.join(', ') : 'No address available';
-  }
-
-  formatEnhancedDescription(result) {
-    if (!result) return 'No details available';
-
-    const parts = [];
-
-    if (result.customer_name) {
-      parts.push(String(result.customer_name));
-    }
-
-    if (result.customer_number) {
-      parts.push(String(result.customer_number));
-    }
-
-    const address = this.formatFullAddress(result);
-    if (address && address !== 'No address available') {
-      parts.push(String(address));
-    }
-
-    return parts.join(' • ') || 'No details available';
-  }
-
-  handleSearchSelection(selectedItem) {
-    const resultData = selectedItem._resultData;
-
-    if (resultData) {
-
-
-      this.navigateToResult(resultData);
-
-      // Clear search input values
-      if (this.searchInput) {
-        this.searchInput.value = '';
-        this.clearSearchResults('header');
-      }
-      if (this.desktopSearchInput) {
-        this.desktopSearchInput.value = '';
-        this.clearSearchResults('desktop');
-      }
-    }
-  }
-
-  handleEnterKeySelection(targetInput) {
-    // Find the first search result item
-    const firstItem = targetInput.querySelector('calcite-autocomplete-item:not([disabled])');
-
-    if (firstItem && firstItem._resultData) {
-      this.handleSearchSelection(firstItem);
-    } else {
-      // If no results available, check if we have current results in memory
-      if (this.currentResults && this.currentResults.length > 0) {
-        const firstResult = this.currentResults[0];
-
-        // Create a mock selected item with the result data
-        const mockSelectedItem = {
-          _resultData: firstResult
-        };
-
-        this.handleSearchSelection(mockSelectedItem);
-      }
-    }
-  }
-
-  navigateToResult(result) {
-    if (!result.latitude || !result.longitude) {
-      log.warn('Missing coordinates for navigation');
-      return;
-    }
-
-    if (!window.mapView) {
-      // Try to get view from application services
-      const mapView = window.app?.services?.mapController?.view;
-
-      if (!mapView) {
-        log.error('No mapView available');
-        return;
-      }
-
-      // Use the fallback view
-      window.mapView = mapView;
-    }
-
-    // Clear any existing location indicators first
-    this.clearLocationIndicator();
-
-    const point = {
-      type: "point",
-      longitude: parseFloat(result.longitude),
-      latitude: parseFloat(result.latitude)
-    };
-
-    // Set view instantly without animation
-    window.mapView.center = [parseFloat(result.longitude), parseFloat(result.latitude)];
-    window.mapView.zoom = Math.max(window.mapView.zoom, 16); // Ensure minimum zoom level 16
-
-    // Show location indicator (ring) at the point
-    this.showLocationIndicator(point, result);
-
-    // Show popup immediately
-    this.showLayerPopup(result, point);
-  }
-
-  showLocationIndicator(point, result) {
-    if (!window.mapView) return;
-
-    // Clean up any existing indicators
-    this.clearLocationIndicator();
-
-    // Create ring indicator with layer-consistent styling
-    this.createRingIndicator(point, result);
-  }
-
-  createRingIndicator(point, result) {
-    if (!window.mapView) return;
-
-    import('@arcgis/core/Graphic').then(({ default: Graphic }) => {
-      import('@arcgis/core/symbols/SimpleMarkerSymbol').then(({ default: SimpleMarkerSymbol }) => {
-        const indicatorGraphics = [];
-
-        // Determine subscriber type and layer visibility
-        const isOnline = result.status === 'Online';
-        const layerId = isOnline ? 'online-subscribers' : 'offline-subscribers';
-        const layer = window.mapView.map.layers.find(l => l.id === layerId);
-        const isLayerVisible = layer ? layer.visible : false;
-
-        // Get layer-consistent colors and sizes
-        let centerColor, centerSize, outlineWidth;
-        if (isOnline) {
-          centerColor = [34, 197, 94, 1]; // Green from online config
-          centerSize = 6;
-          outlineWidth = 1;
-        } else {
-          centerColor = [220, 38, 38, 1]; // Red from offline config  
-          centerSize = 8;
-          outlineWidth = 2;
-        }
-
-        // Create center dot using layer colors
-        const centerDot = new Graphic({
-          geometry: point,
-          symbol: new SimpleMarkerSymbol({
-            style: 'circle',
-            color: centerColor,
-            size: centerSize,
-            outline: {
-              color: [255, 255, 255, 1], // White outline for visibility
-              width: outlineWidth
-            }
-          })
-        });
-
-        // If layer is not visible, create a temporary point that matches layer style
-        let temporaryPoint = null;
-        if (!isLayerVisible) {
-          temporaryPoint = new Graphic({
-            geometry: point,
-            symbol: new SimpleMarkerSymbol({
-              style: 'circle',
-              color: isOnline ? [34, 197, 94, 0.8] : [220, 38, 38, 0.8], // Layer colors with alpha
-              size: isOnline ? 6 : 8,
-              outline: {
-                color: centerColor,
-                width: isOnline ? 1 : 2
-              }
-            })
-          });
-        }
-
-        // Create unfilled ring around the point
-        const ring = new Graphic({
-          geometry: point,
-          symbol: new SimpleMarkerSymbol({
-            style: 'circle',
-            color: [0, 0, 0, 0], // Transparent fill (unfilled)
-            size: 45,
-            outline: {
-              color: [0, 150, 255, 1], // Blue ring
-              width: 3
-            }
-          })
-        });
-
-        // Add graphics to map
-        indicatorGraphics.push(ring);
-
-        // Add temporary point if layer is not visible
-        if (temporaryPoint) {
-          indicatorGraphics.push(temporaryPoint);
-        }
-
-        indicatorGraphics.push(centerDot);
-
-        indicatorGraphics.forEach(graphic => {
-          window.mapView.graphics.add(graphic);
-        });
-
-        // Store reference for cleanup
-        this.currentIndicatorGraphics = indicatorGraphics;
-
-        // Auto cleanup after 10 seconds
-        setTimeout(() => {
-          this.clearLocationIndicator();
-        }, 10000);
-      });
-    });
-  }
-
-  clearLocationIndicator() {
-    if (this.currentIndicatorGraphics && window.mapView) {
-      this.currentIndicatorGraphics.forEach(graphic => {
-        window.mapView.graphics.remove(graphic);
-      });
-      this.currentIndicatorGraphics = null;
-    }
-  }
-
-  async showLayerPopup(result, point) {
-    if (!window.mapView) return;
-
-    try {
-      // Determine which layer this result belongs to based on status
-      const layerId = result.status === 'Online' ? 'online-subscribers' : 'offline-subscribers';
-
-      // Find the layer in the map
-      const layer = window.mapView.map.layers.find(l => l.id === layerId);
-      if (!layer) {
-        log.warn('Layer not found:', layerId);
-        this.fallbackPopup(result, point);
-        return;
-      }
-
-      // Query the layer for features at this location
-      const query = layer.createQuery();
-      query.geometry = point;
-      query.spatialRelationship = 'intersects';
-      query.distance = 10; // 10 meter tolerance
-      query.units = 'meters';
-      query.returnGeometry = true;
-      query.outFields = ['*'];
-
-      const queryResult = await layer.queryFeatures(query);
-
-      if (queryResult.features.length > 0) {
-        // Use the first matching feature
-        const feature = queryResult.features[0];
-
-        // Open popup with the actual layer feature
-        window.mapView.openPopup({
-          features: [feature],
-          location: point
-        });
-      } else {
-        // Try querying by customer number if available
-        if (result.customer_number) {
-          await this.queryByCustomerNumber(layer, result, point);
-        } else {
-          this.fallbackPopup(result, point);
-        }
-      }
-
-    } catch (error) {
-      log.error('Layer feature error:', error);
-      this.fallbackPopup(result, point);
-    }
-  }
-
-  async queryByCustomerNumber(layer, result, point) {
-    try {
-      const query = layer.createQuery();
-      query.where = `customer_number = '${result.customer_number}' OR customer_number = ${result.customer_number}`;
-      query.returnGeometry = true;
-      query.outFields = ['*'];
-
-      const queryResult = await layer.queryFeatures(query);
-
-      if (queryResult.features.length > 0) {
-        const feature = queryResult.features[0];
-
-        window.mapView.openPopup({
-          features: [feature],
-          location: feature.geometry || point
-        });
-      } else {
-        this.fallbackPopup(result, point);
-      }
-    } catch (error) {
-      log.error('Customer query failed:', error);
-      this.fallbackPopup(result, point);
-    }
-  }
-
-  fallbackPopup(result, point) {
-    // Simple fallback popup
-    window.mapView.openPopup({
-      title: `${result.customer_name}`,
-      content: `
-        <div class="search-result-popup">
-          <p><strong>Customer:</strong> ${result.customer_name || 'Unknown'}</p>
-          <p><strong>Account:</strong> ${result.customer_number || 'N/A'}</p>
-          <p><strong>Address:</strong> ${result.address || 'No address'}</p>
-          <p><strong>City:</strong> ${result.city || 'N/A'}</p>
-          <p><strong>Status:</strong> <span class="status-${result.status}">${result.status || 'Unknown'}</span></p>
-          <p><strong>County:</strong> ${result.county || 'N/A'}</p>
-          <p><em>Note: Using search result data (layer feature not found)</em></p>
-        </div>
-      `,
-      location: point
-    });
-  }
-
-  clearSearchResults(source = null, targetInput = null, clearState = true) {
-    if (targetInput) {
-      // Clear specific input
-      const items = targetInput.querySelectorAll('calcite-autocomplete-item');
-      items.forEach(item => item.remove());
-    } else if (source === 'desktop' && this.desktopSearchInput) {
-      // Clear desktop search
-      const items = this.desktopSearchInput.querySelectorAll('calcite-autocomplete-item');
-      items.forEach(item => item.remove());
-    } else if (source === 'header' && this.searchInput) {
-      // Clear header search
-      const items = this.searchInput.querySelectorAll('calcite-autocomplete-item');
-      items.forEach(item => item.remove());
-    } else {
-      // Clear all autocomplete inputs
-      [this.searchInput, this.desktopSearchInput].forEach(input => {
-        if (input) {
-          const items = input.querySelectorAll('calcite-autocomplete-item');
-          items.forEach(item => item.remove());
-        }
-      });
-    }
-
-    // Only clear internal state if requested
-    if (clearState) {
-      this.currentResults = [];
-    }
-  }
-
-  showNoResults(searchTerm, targetInput) {
-    const item = document.createElement('calcite-autocomplete-item');
-    item.setAttribute('value', 'no-results');
-    item.setAttribute('text-label', 'No results found');
-    item.setAttribute('description', `No subscribers found for "${searchTerm || ''}"` || 'No subscribers found');
-    item.innerHTML = `<calcite-icon slot="icon" icon="information"></calcite-icon>`;
-    item.disabled = true;
-    targetInput.appendChild(item);
-  }
-
-  showSearchError(targetInput) {
-    const item = document.createElement('calcite-autocomplete-item');
-    item.setAttribute('value', 'error');
-    item.setAttribute('text-label', 'Search Error');
-    item.setAttribute('description', 'Unable to perform search. Please try again.');
-    item.innerHTML = `<calcite-icon slot="icon" icon="exclamation-mark-triangle"></calcite-icon>`;
-    item.disabled = true;
-    targetInput.appendChild(item);
-  }
-
-  setSearchLoading(loading, targetInput) {
-    if (loading) {
-      const item = document.createElement('calcite-autocomplete-item');
-      item.setAttribute('value', 'loading');
-      item.setAttribute('text-label', 'Searching...');
-      item.setAttribute('description', 'Please wait while we search for subscribers');
-      item.innerHTML = `<calcite-icon slot="icon" icon="spinner"></calcite-icon>`;
-      item.disabled = true;
-      item.id = 'search-loading-item';
-      targetInput.appendChild(item);
-    } else {
-      const loadingItem = targetInput.querySelector('#search-loading-item');
-      if (loadingItem) {
-        loadingItem.remove();
-      }
-    }
-  }
-
-  handleMobileSearchInput(searchTerm) {
-    // Clear previous timeout
-    if (this.mobileSearchTimeout) {
-      clearTimeout(this.mobileSearchTimeout);
-    }
-
-    // If search field is completely cleared, clear search results
-    if (!searchTerm || searchTerm.trim() === '') {
-      this.clearMobileSearchResults();
-      return;
-    }
-
-    // Clear results if search term is too short (but not empty)
-    if (searchTerm.length < 4) {
-      this.clearMobileSearchResults();
-      return;
-    }
-
-    // Debounce search to avoid too many API calls
-    this.mobileSearchTimeout = setTimeout(() => {
-      this.performMobileSearch(searchTerm);
-    }, 300);
-  }
-
-  async performMobileSearch(searchTerm) {
-    try {
-      // Perform the search
-      const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
-
-      // Update mobile search results
-      this.updateMobileSearchResults(searchResult);
-
-    } catch (error) {
-      log.error('Mobile search failed:', error);
-    }
-  }
-
-  updateMobileSearchResults(searchResult) {
-    const resultsContainer = this.createMobileResultsContainer();
-    if (!resultsContainer) return;
-
-    // Clear existing results
-    resultsContainer.innerHTML = '';
-
-    if (searchResult.results.length === 0) {
-      this.showMobileNoResults(resultsContainer, searchResult.searchTerm);
-      return;
-    }
-
-    // Add search result items
-    searchResult.results.forEach(result => {
-      const listItem = document.createElement('calcite-list-item');
-      listItem.setAttribute('label', result.customer_name || 'Unnamed Customer');
-
-      // Create rich description for mobile list items too
-      const statusColor = result.status === 'Online' ? 'success' : 'danger';
-
-      listItem.setAttribute('description', this.formatEnhancedDescription(result));
-
-      listItem.innerHTML = `
-        <calcite-icon slot="content-start" icon="person" style="color: var(--calcite-color-status-${statusColor});"></calcite-icon>
-        <calcite-action slot="actions-end" icon="arrowRight"></calcite-action>
-      `;
-
-      // Store result data and add click handler
-      listItem._resultData = result;
-      listItem.addEventListener('click', () => {
-        this.handleMobileSearchSelection(result);
-      });
-
-      resultsContainer.appendChild(listItem);
-    });
-
-    // Show the search results block
-    const resultsBlock = resultsContainer.closest('calcite-block');
-    if (resultsBlock) {
-      resultsBlock.hidden = false;
-    }
-  }
-
-  handleMobileSearchSelection(result) {
-
-
-    // Clear the mobile search input
-    if (this.mobileSearchInput) {
-      this.mobileSearchInput.value = '';
-    }
-
-    // Clear mobile search results
-    this.clearMobileSearchResults();
-
-    // Close the mobile search dialog
-    const mobileDialog = document.getElementById('mobile-search-sheet');
-    if (mobileDialog) {
-      mobileDialog.open = false;
-    }
-
-    // Close any open mobile panels
-    if (window.app?.services?.mobileTabBar) {
-      window.app.services.mobileTabBar.closeCurrentPanel();
-    }
-
-    // Navigate to result
-    this.navigateToResult(result);
-  }
-
-  async handleMobileEnterKey(searchTerm) {
-    // Check if we have results from previous search
-    const resultsContainer = document.querySelector('#mobile-search-sheet .mobile-search-results-list');
-    const firstResultItem = resultsContainer?.querySelector('calcite-list-item');
-
-    if (firstResultItem && firstResultItem._resultData) {
-      // Select the first available result
-      this.handleMobileSearchSelection(firstResultItem._resultData);
-      return;
-    }
-
-    // If no existing results, perform search and select first result
-    if (searchTerm && searchTerm.length >= 4) {
-      try {
-        const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
-
-        if (searchResult.results && searchResult.results.length > 0) {
-          // Directly navigate to first result
-          const firstResult = searchResult.results[0];
-
-          // Clear the mobile search input
-          if (this.mobileSearchInput) {
-            this.mobileSearchInput.value = '';
-          }
-
-          // Clear mobile search results
-          this.clearMobileSearchResults();
-
-          // Close the mobile search dialog
-          const mobileDialog = document.getElementById('mobile-search-sheet');
-          if (mobileDialog) {
-            mobileDialog.open = false;
-          }
-
-          // Close any open mobile panels
-          if (window.app?.services?.mobileTabBar) {
-            window.app.services.mobileTabBar.closeCurrentPanel();
-          }
-
-          // Navigate to result
-          this.navigateToResult(firstResult);
-        } else {
-          // Perform normal search to show "no results"
-          this.performMobileSearch(searchTerm);
-        }
-      } catch (error) {
-        log.error('Mobile search failed:', error);
-        // Fallback to normal search
-        this.performMobileSearch(searchTerm);
-      }
-    } else {
-      // Search term too short, just perform normal search
-      this.performMobileSearch(searchTerm);
-    }
-  }
-
-  createMobileResultsContainer() {
-    const searchSheet = document.getElementById('mobile-search-sheet');
-    if (!searchSheet) return null;
-
-    // Find or create results block
-    let resultsBlock = searchSheet.querySelector('.mobile-search-results');
-    if (!resultsBlock) {
-      resultsBlock = document.createElement('calcite-block');
-      resultsBlock.className = 'mobile-search-results';
-      resultsBlock.setAttribute('heading', 'Search Results');
-      resultsBlock.setAttribute('expanded', '');
-      resultsBlock.hidden = true; // Hidden by default
-
-      // Insert the results block into the search dialog
-      const content = searchSheet.querySelector('[slot="content"]');
-      if (content) {
-        content.appendChild(resultsBlock);
-      }
-    }
-
-    // Create or get the list (with a different class name to avoid conflicts)
-    let resultsList = resultsBlock.querySelector('calcite-list');
-    if (!resultsList) {
-      resultsList = document.createElement('calcite-list');
-      resultsList.className = 'mobile-search-results-list';
-      resultsList.setAttribute('selection-mode', 'none');
-      resultsBlock.appendChild(resultsList);
-    }
-
-    return resultsList;
-  }
-
-  showMobileNoResults(container, searchTerm) {
-    const listItem = document.createElement('calcite-list-item');
-    listItem.setAttribute('label', 'No results found');
-    listItem.setAttribute('description', `No subscribers found for "${searchTerm}"`);
-    listItem.innerHTML = `<calcite-icon slot="content-start" icon="information"></calcite-icon>`;
-    container.appendChild(listItem);
-  }
-
-  clearMobileSearchResults() {
-    // Clear search results
-    const resultsContainer = document.querySelector('#mobile-search-sheet .mobile-search-results-list');
-    if (resultsContainer) {
-      resultsContainer.innerHTML = '';
-    }
-
-    // Hide the search results block
-    const resultsBlock = document.querySelector('#mobile-search-sheet .mobile-search-results');
-    if (resultsBlock) {
-      resultsBlock.hidden = true;
-    }
-  }
-
-  clearEverything(source = null) {
-    // Close popup if open
-    if (window.mapView && window.mapView.popup) {
-      window.mapView.popup.close();
-    }
-
-    // Clear location indicator (ring and temporary points)
-    this.clearLocationIndicator();
-
-    // Clear search results
-    if (source === 'mobile') {
-      this.clearMobileSearchResults();
-      // Clear mobile search input
-      if (this.mobileSearchInput) {
-        this.mobileSearchInput.value = '';
-      }
-    } else {
-      this.clearSearchResults(source);
-      // Clear appropriate search input with enhanced clearing
-      if (source === 'desktop' && this.desktopSearchInput) {
-        this.desktopSearchInput.value = '';
-        this.desktopSearchInput.inputValue = '';
-        // Force calcite to update its internal state
-        this.desktopSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
-      } else if (source === 'header' && this.searchInput) {
-        this.searchInput.value = '';
-        this.searchInput.inputValue = '';
-        // Force calcite to update its internal state
-        this.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    }
-
-    // Clear timeouts
-    const timeoutKey = source === 'desktop' ? 'desktopSearchTimeout' :
-      source === 'mobile' ? 'mobileSearchTimeout' : 'searchTimeout';
-    if (this[timeoutKey]) {
-      clearTimeout(this[timeoutKey]);
-      this[timeoutKey] = null;
-    }
-
-    // Clear internal state
-    this.currentResults = [];
-  }
-
-  // Cleanup method for proper resource management
-  cleanup() {
-    // Clear all timeouts
-    if (this.searchTimeout) {
-      clearTimeout(this.searchTimeout);
-      this.searchTimeout = null;
-    }
-    if (this.mobileSearchTimeout) {
-      clearTimeout(this.mobileSearchTimeout);
-      this.mobileSearchTimeout = null;
-    }
-    if (this.desktopSearchTimeout) {
-      clearTimeout(this.desktopSearchTimeout);
-      this.desktopSearchTimeout = null;
-    }
-
-    // Clear location indicators
-    this.clearLocationIndicator();
-
-    // Clear search results
-    this.clearSearchResults();
-    this.clearMobileSearchResults();
-
-
-  }
-}
+// HeaderSearch moved to ./ui/HeaderSearch.js
 
 // Application Orchestrator - Dependency Injection Pattern (DIP)
 /**
@@ -3371,14 +1918,14 @@ class Application {
 
   async init() {
     // Create services with dependency injection (DIP - Dependency Inversion Principle)
-    this.services.themeManager = new ThemeManager();
+    this.services.themeManager = new ImportedThemeManager();
     this.services.layerManager = new LayerManager(subscriberDataService);
     this.services.mapController = new MapController(this.services.layerManager, this.services.themeManager);
     this.services.popupManager = new PopupManager();
-    this.services.layerPanel = new LayerPanel();
-    this.services.mobileTabBar = new MobileTabBar();
-    this.services.dashboard = new DashboardManager();
-    this.services.headerSearch = new HeaderSearch();
+    this.services.layerPanel = new ImportedLayerPanel();
+    this.services.mobileTabBar = new ImportedMobileTabBar();
+    this.services.dashboard = new ImportedDashboardManager();
+    this.services.headerSearch = new ImportedHeaderSearch();
     this.services.rainViewerService = new RainViewerService();
 
     // Store polling manager reference
@@ -5196,176 +3743,12 @@ class Application {
   }
 }
 
-// PWA Installer - Enhanced implementation with update handling
-class PWAInstaller {
-  constructor() {
-    this.deferredPrompt = null;
-    this.updateAvailable = false;
-    this.registration = null;
-  }
-
-  init() {
-    // Handle install prompt
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      this.deferredPrompt = e;
-    });
-
-    // Handle successful installation
-    window.addEventListener('appinstalled', () => {
-    });
-
-    // Register service worker and handle updates
-    this.registerServiceWorker();
-  }
-
-  async registerServiceWorker() {
-    if ('serviceWorker' in navigator && import.meta.env.PROD) {
-      try {
-        // Add error handler for service worker errors
-        navigator.serviceWorker.addEventListener('error', (event) => {
-          console.warn('Service worker error:', event);
-        });
-
-        // Add handler for cache errors from service worker
-        navigator.serviceWorker.addEventListener('message', (event) => {
-          if (event.data && event.data.type === 'CACHE_ERROR') {
-            console.warn('Service worker cache error:', event.data.error);
-            // Don't throw - just log the error
-          }
-        });
-
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        this.registration = registration;
-
-        // Check for updates every time the page loads
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New service worker is available
-                this.handleUpdateAvailable();
-              }
-            });
-          }
-        });
-
-        // Check for updates periodically
-        setInterval(() => {
-          registration.update().catch(err => {
-            console.warn('Service worker update check failed:', err);
-          });
-        }, 60000); // Check every minute
-
-      } catch (error) {
-        console.error('Service Worker registration failed:', error);
-      }
-    }
-  }
-
-  handleUpdateAvailable() {
-    this.updateAvailable = true;
-    this.showUpdateNotification();
-  }
-
-  showUpdateNotification() {
-    // Check if notification already exists
-    if (document.querySelector('#pwa-update-notice')) {
-      return;
-    }
-
-    // Use the same notification system as other components
-    let noticeContainer = document.querySelector('#notice-container');
-    if (!noticeContainer) {
-      noticeContainer = document.createElement('div');
-      noticeContainer.id = 'notice-container';
-      noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
-      document.body.appendChild(noticeContainer);
-    }
-
-    // Create notice using same system as other notifications
-    const notice = document.createElement('calcite-notice');
-    notice.id = 'pwa-update-notice';
-    notice.setAttribute('open', '');
-    notice.setAttribute('kind', 'brand');
-    notice.setAttribute('closable', '');
-    notice.setAttribute('icon', 'refresh');
-    notice.setAttribute('width', 'auto');
-
-    const titleDiv = document.createElement('div');
-    titleDiv.slot = 'title';
-    titleDiv.textContent = 'App Update Available';
-
-    const messageDiv = document.createElement('div');
-    messageDiv.slot = 'message';
-    messageDiv.textContent = 'A new version of the app is available. Refresh to get the latest features and improvements.';
-
-    const refreshButton = document.createElement('calcite-button');
-    refreshButton.slot = 'actions-end';
-    refreshButton.setAttribute('appearance', 'solid');
-    refreshButton.setAttribute('scale', 's');
-    refreshButton.textContent = 'Refresh Now';
-    refreshButton.onclick = () => {
-      notice.remove();
-      if (noticeContainer.children.length === 0) {
-        noticeContainer.remove();
-      }
-      window.location.reload(true);
-    };
-
-    notice.appendChild(titleDiv);
-    notice.appendChild(messageDiv);
-    notice.appendChild(refreshButton);
-
-    noticeContainer.appendChild(notice);
-
-    // Listen for close event
-    notice.addEventListener('calciteNoticeClose', () => {
-      notice.remove();
-      if (noticeContainer.children.length === 0) {
-        noticeContainer.remove();
-      }
-    });
-
-    // Auto-remove after 15 seconds (longer for important updates)
-    setTimeout(() => {
-      if (document.body.contains(notice)) {
-        notice.setAttribute('open', 'false');
-        setTimeout(() => {
-          notice.remove();
-          if (noticeContainer.children.length === 0) {
-            noticeContainer.remove();
-          }
-        }, 300);
-      }
-    }, 15000);
-  }
-
-  // Method to force update
-  async forceUpdate() {
-    if (this.registration && this.registration.waiting) {
-      // Tell the waiting service worker to skip waiting
-      this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      window.location.reload();
-    }
-  }
-
-  // Method to clear all caches
-  async clearAllCaches() {
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      await Promise.all(
-        cacheNames.map(cacheName => caches.delete(cacheName))
-      );
-    }
-  }
-}
+// PWAInstaller moved to ./core/PWAInstaller.js
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize PWA installer
-  const pwaInstaller = new PWAInstaller();
+  const pwaInstaller = new ImportedPWAInstaller();
   pwaInstaller.init();
 
   // Initialize version checking for cache busting
