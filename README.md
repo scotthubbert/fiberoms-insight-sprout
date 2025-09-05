@@ -54,6 +54,10 @@ Copy `.env.example` to `.env` and configure:
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_ARCGIS_API_KEY=your_arcgis_api_key
+# Optional: Sentry monitoring
+VITE_SENTRY_ENABLED=false
+VITE_SENTRY_DSN=
+VITE_SENTRY_TRACES_SAMPLE_RATE=0.1
 ```
 
 ### Development Commands

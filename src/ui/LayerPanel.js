@@ -1153,7 +1153,10 @@ export class LayerPanel {
             } else {
                 if (emptyDiv) emptyDiv.hidden = true;
                 if (tableContainer) tableContainer.style.display = 'block';
-                this.populateTruckTable(allTrucks);
+                // Ensure dialog component is loaded before showing table
+                (await import('../utils/calciteLazy.js')).ensureCalciteDialog().catch(() => {});
+                const { populateTruckTable } = await import('./VehicleTable.js');
+                populateTruckTable(allTrucks);
             }
 
             if (truckCountSpan) {
@@ -1177,64 +1180,7 @@ export class LayerPanel {
         }
     }
 
-    populateTruckTable(trucks) {
-        const tbody = document.getElementById('truck-table-body');
-        if (!tbody) {
-            console.error('🚛 Table body not found!');
-            return;
-        }
-
-        tbody.innerHTML = '';
-        trucks.forEach((truck, index) => {
-            const row = document.createElement('tr');
-
-            const zoomCell = document.createElement('td');
-            zoomCell.innerHTML = `
-        <calcite-icon 
-          icon="zoom-to-object" 
-          scale="m" 
-          class="truck-zoom-btn"
-          title="Zoom to ${truck.name || truck.id}"
-          data-truck-id="${truck.id}"
-          data-truck-lat="${truck.latitude}"
-          data-truck-lng="${truck.longitude}">
-        </calcite-icon>
-      `;
-
-            const zoomIcon = zoomCell.querySelector('.truck-zoom-btn');
-            if (zoomIcon) {
-                zoomIcon.addEventListener('click', () => {
-                    this.zoomToTruck(truck);
-                });
-            }
-
-            const nameCell = document.createElement('td');
-            nameCell.innerHTML = `
-        <div class="truck-name-cell">
-          <calcite-icon icon="${truck.typeIcon}" scale="s" class="truck-type-icon"></calcite-icon>
-          <span>${this.formatTruckName(truck)}</span>
-        </div>
-      `;
-
-            const installerCell = document.createElement('td');
-            installerCell.textContent = truck.installer || truck.driver || 'Unknown';
-
-            const statusCell = document.createElement('td');
-            const status = this.getTruckStatus(truck);
-            statusCell.innerHTML = `<span class="truck-status-${status.toLowerCase()}">${status}</span>`;
-
-            const locationCell = document.createElement('td');
-            locationCell.textContent = this.formatTruckLocation(truck);
-
-            row.appendChild(zoomCell);
-            row.appendChild(nameCell);
-            row.appendChild(installerCell);
-            row.appendChild(statusCell);
-            row.appendChild(locationCell);
-
-            tbody.appendChild(row);
-        });
-    }
+    // populateTruckTable moved to ./ui/VehicleTable.js
 
     formatTruckName(truck) {
         if (truck.name) return truck.name;

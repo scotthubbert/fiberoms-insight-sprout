@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -36,6 +37,15 @@ function getBuildInfo() {
 const buildInfo = getBuildInfo();
 
 export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    reporters: 'default',
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: './coverage',
+      reporter: ['text', 'html']
+    }
+  },
   define: {
     global: 'globalThis',
     __BUILD_TIME__: JSON.stringify(buildInfo.buildTime),
@@ -237,8 +247,27 @@ export default defineConfig({
         // Ensure consistent hashing for better caching
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
-      }
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks(id) {
+          if (id.includes('@arcgis/core')) return 'arcgis-core';
+          if (id.includes('@arcgis/map-components')) return 'arcgis-wc';
+          if (id.includes('@esri/calcite-components')) return 'calcite';
+          if (id.includes('node_modules')) return 'vendor';
+        }
+      },
+      plugins: [
+        ...(process.env.ANALYZE
+          ? [
+              visualizer({
+                filename: 'dist/stats.html',
+                template: 'treemap',
+                gzipSize: true,
+                brotliSize: true,
+                open: false
+              })
+            ]
+          : [])
+      ]
     },
     chunkSizeWarningLimit: 1000,
     // Generate manifest for tracking file versions

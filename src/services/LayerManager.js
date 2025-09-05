@@ -8,6 +8,7 @@ import Graphic from '@arcgis/core/Graphic';
 import Polygon from '@arcgis/core/geometry/Polygon';
 import Point from '@arcgis/core/geometry/Point';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
+import { errorService } from './ErrorService.js';
 
 // Production logging utility
 const isDevelopment = import.meta.env.DEV;
@@ -57,6 +58,7 @@ export class LayerManager {
             }
         } catch (error) {
             log.error(`Failed to create layer ${layerConfig.id}:`, error);
+            errorService.report(error, { module: 'LayerManager', action: 'createLayer', id: layerConfig?.id });
             return null;
         }
     }
@@ -157,6 +159,7 @@ export class LayerManager {
             return layer;
         } catch (error) {
             log.error(`Failed to create URL-based GeoJSON layer ${layerConfig.id}:`, error);
+            errorService.report(error, { module: 'LayerManager', action: 'createGeoJSONLayerFromUrl', id: layerConfig?.id });
             return null;
         }
     }
@@ -260,6 +263,7 @@ export class LayerManager {
                     }
                 } catch (error) {
                     log.error('Failed to create centroid:', error);
+                    errorService.report(error, { module: 'LayerManager', action: 'createPowerOutageLayer' });
                 }
                 continue;
             }
@@ -436,6 +440,7 @@ export class LayerManager {
             return true;
         } catch (error) {
             log.error(`Failed to update layer ${layerId}:`, error);
+            errorService.report(error, { module: 'LayerManager', action: 'updateLayerData', id: layerId });
             return false;
         }
     }
@@ -657,6 +662,7 @@ export class LayerManager {
             return true;
         } catch (error) {
             log.error(`❌ Failed to smooth update truck layer ${layerId}:`, error);
+            errorService.report(error, { module: 'LayerManager', action: 'smoothTruckUpdate', id: layerId });
             return false;
         }
     }
