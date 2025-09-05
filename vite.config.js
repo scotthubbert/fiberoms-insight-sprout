@@ -39,6 +39,7 @@ const buildInfo = getBuildInfo();
 export default defineConfig({
   test: {
     environment: 'jsdom',
+    setupFiles: ['./tests/setup.js'],
     reporters: 'default',
     coverage: {
       provider: 'v8',
@@ -247,13 +248,7 @@ export default defineConfig({
         // Ensure consistent hashing for better caching
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
-        manualChunks(id) {
-          if (id.includes('@arcgis/core')) return 'arcgis-core';
-          if (id.includes('@arcgis/map-components')) return 'arcgis-wc';
-          if (id.includes('@esri/calcite-components')) return 'calcite';
-          if (id.includes('node_modules')) return 'vendor';
-        }
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       },
       plugins: [
         ...(process.env.ANALYZE
