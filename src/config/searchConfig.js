@@ -106,6 +106,10 @@ const SERVICE_AREAS = {
 // Current deployment configuration - CHANGE THIS FOR DIFFERENT DEPLOYMENTS
 const CURRENT_SERVICE_AREA = 'alabama_apco';
 
+// Optional extent buffer (in degrees) to extend map constraints beyond service area
+// Set to 0 for no buffer. Recommended small buffer like 0.5-1.0 degrees if vehicles roam outside.
+const SERVICE_AREA_BUFFER_DEGREES = 1.5;
+
 /**
  * Get the current service area configuration
  * @returns {Object} Current service area configuration object
@@ -124,6 +128,24 @@ export function getCurrentServiceArea() {
  * @returns {Object|null} Bounds object or null for global
  */
 export function getServiceAreaBounds() {
+    const base = getCurrentServiceArea().bounds;
+    if (!base) return null;
+    const buf = Number.isFinite(SERVICE_AREA_BUFFER_DEGREES) ? SERVICE_AREA_BUFFER_DEGREES : 0;
+    if (buf <= 0) return base;
+    return {
+        xmin: base.xmin - buf,
+        ymin: base.ymin - buf,
+        xmax: base.xmax + buf,
+        ymax: base.ymax + buf,
+        spatialReference: base.spatialReference
+    };
+}
+
+/**
+ * Get the base (unbuffered) service area bounds
+ * @returns {Object|null}
+ */
+export function getServiceAreaBoundsBase() {
     return getCurrentServiceArea().bounds;
 }
 
@@ -176,9 +198,10 @@ export function getDeploymentInfo() {
         serviceAreaName: currentArea.name,
         region: currentArea.region,
         hasBounds: !!currentArea.bounds,
-        center: currentArea.center
+        center: currentArea.center,
+        bufferDegrees: SERVICE_AREA_BUFFER_DEGREES
     };
 }
 
 // Export constants for external access
-export { SERVICE_AREAS, CURRENT_SERVICE_AREA };
+export { SERVICE_AREAS, CURRENT_SERVICE_AREA, SERVICE_AREA_BUFFER_DEGREES };

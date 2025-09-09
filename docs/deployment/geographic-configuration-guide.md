@@ -9,6 +9,7 @@ The application uses a centralized configuration system in `src/config/searchCon
 - Search widget bounds for local result preferences
 - Map view constraints and initial positioning
 - Service area-specific settings
+- Optional extent buffer for panning beyond the nominal service area
 
 ## Quick Setup for New Deployments
 
@@ -19,6 +20,8 @@ Edit `src/config/searchConfig.js`:
 ```javascript
 // Change this line to match your deployment
 const CURRENT_SERVICE_AREA = "your_area_key";
+// Optional: extend map constraints beyond bounds (degrees)
+const SERVICE_AREA_BUFFER_DEGREES = 1.5; // 0 disables buffering
 ```
 
 ### 2. Add Your Service Area
@@ -136,6 +139,14 @@ global: {
 - **Units**: Decimal degrees (WGS84)
 - **Set to `null`**: For global deployments with no geographic constraints
 
+### `SERVICE_AREA_BUFFER_DEGREES`
+
+- **Purpose**: Expands the navigation constraints (panning area) beyond the configured `bounds` without changing the initial or home extent.
+- **Units**: Degrees (applied equally to xmin/xmax/ymin/ymax)
+- **Default**: 0 (no buffer)
+- **Recommendation**: 0.5–2.0 depending on how far vehicles/data can roam
+- **Behavior**: The map uses the buffered extent for `view.constraints.geometry` but keeps the unbuffered extent for initial positioning and the home button.
+
 ### `center` Object
 
 - **Purpose**: Defines the initial map center and home button location
@@ -162,8 +173,8 @@ After updating the configuration:
 
 2. **Map Bounds Testing**:
 
-   - Verify the map initializes within your defined bounds
-   - Test that navigation is constrained to your service area
+   - Verify the map initializes within your defined (unbuffered) bounds and expected zoom
+   - Test that navigation is constrained to the buffered area (if configured)
    - Check that the home button returns to your defined extent
 
 3. **Console Verification**:

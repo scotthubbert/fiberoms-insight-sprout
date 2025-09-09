@@ -18,7 +18,18 @@ describe('LayerManager', () => {
 
   beforeEach(() => {
     manager = new LayerManager(fakeDataService);
-    global.window = { mapView: { map: { add: vi.fn(), findLayerById: vi.fn() } } };
+    global.window = {
+      mapView: {
+        map: {
+          add: vi.fn(),
+          remove: vi.fn(),
+          findLayerById: vi.fn()
+        }
+      }
+    };
+    global.document = {
+      dispatchEvent: vi.fn()
+    };
   });
 
   it('creates a GeoJSON layer from features', async () => {
@@ -42,6 +53,62 @@ describe('LayerManager', () => {
       renderer: {}
     });
     expect(layer.type).toBe('feature');
+  });
+
+  it('smoothly updates truck layer via applyEdits (add only)', async () => {
+    const layerId = 'fiber-trucks';
+    const mockLayer = {
+      type: 'feature',
+      visible: true,
+      applyEdits: vi.fn(async () => ({})),
+      queryFeatures: vi.fn(async () => ({ features: [] }))
+    };
+
+    manager.layers.set(layerId, mockLayer);
+    manager.layerConfigs.set(layerId, { id: layerId });
+
+    const ok = await manager.updateLayerData(layerId, [
+      { id: 't1', latitude: 1, longitude: 2, is_driving: true },
+      { id: 't2', latitude: 3, longitude: 4, is_driving: false }
+    ]);
+
+    expect(ok).toBe(true);
+    expect(mockLayer.applyEdits).toHaveBeenCalled();
+    const arg = mockLayer.applyEdits.mock.calls[0][0];
+    expect(Array.isArray(arg.addFeatures)).toBe(true);
+    expect(arg.addFeatures.length).toBe(2);
+  });
+
+  it('recreates GeoJSON layer on update (preserves visibility)', async () => {
+    const layerId = 'offline-subscribers';
+    // Seed an existing geojson layer
+    const existing = { id: layerId, type: 'geojson', visible: true };
+    manager.layers.set(layerId, existing);
+    manager.layerConfigs.set(layerId, { id: layerId, fields: [], renderer: {} });
+
+    const ok = await manager.updateLayerData(layerId, {
+      features: [{ geometry: {}, properties: {} }]
+    });
+
+    expect(ok).toBe(true);
+    expect(window.mapView.map.remove).toHaveBeenCalledWith(existing);
+    expect(window.mapView.map.add).toHaveBeenCalled();
+  });
+
+  it('toggles layer visibility and dispatches event', async () => {
+    const layerId = 'fsa-boundaries';
+    const layerRef = { id: layerId, type: 'geojson', visible: false, listMode: 'hide' };
+    manager.layers.set(layerId, layerRef);
+
+    const mapLayerRef = { id: layerId, type: 'geojson', visible: false };
+    window.mapView.map.findLayerById.mockReturnValue(mapLayerRef);
+
+    const ok = await manager.toggleLayerVisibility(layerId, true);
+    expect(ok).toBe(true);
+    expect(layerRef.visible).toBe(true);
+    expect(layerRef.listMode).toBe('show');
+    expect(mapLayerRef.visible).toBe(true);
+    expect(document.dispatchEvent).toHaveBeenCalled();
   });
 });
 

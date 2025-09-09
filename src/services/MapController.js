@@ -1,7 +1,7 @@
 // MapController.js - Single Responsibility: Map initialization only
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
 import Extent from '@arcgis/core/geometry/Extent';
-import { getServiceAreaBounds, getCurrentServiceArea } from '../config/searchConfig.js';
+import { getServiceAreaBounds, getServiceAreaBoundsBase, getCurrentServiceArea } from '../config/searchConfig.js';
 
 export class MapController {
     constructor(layerManager, themeManager) {
@@ -45,19 +45,22 @@ export class MapController {
 
     // Pre-calculate service area bounds and center (called before map initialization)
     prepareServiceAreaBounds() {
-        const serviceAreaBounds = getServiceAreaBounds();
+        const bufferedBounds = getServiceAreaBounds();        // for constraints
+        const baseBounds = getServiceAreaBoundsBase();         // for initial/home
         const serviceArea = getCurrentServiceArea();
 
-        if (serviceAreaBounds) {
-            this.calculatedExtent = new Extent(serviceAreaBounds);
-            // Calculate center point for reference
-            const centerLng = (serviceAreaBounds.xmin + serviceAreaBounds.xmax) / 2;
-            const centerLat = (serviceAreaBounds.ymin + serviceAreaBounds.ymax) / 2;
+        // Store both extents when available
+        this.calculatedExtent = bufferedBounds ? new Extent(bufferedBounds) : null;
+        this.calculatedExtentBase = baseBounds ? new Extent(baseBounds) : null;
+
+        if (baseBounds) {
+            // Calculate center from base (unbuffered) extent for initial zoom
+            const centerLng = (baseBounds.xmin + baseBounds.xmax) / 2;
+            const centerLat = (baseBounds.ymin + baseBounds.ymax) / 2;
             this.calculatedCenter = [centerLng, centerLat];
         } else {
             // Use configured center for global deployments
             this.calculatedCenter = [serviceArea.center.longitude, serviceArea.center.latitude];
-            this.calculatedExtent = null; // No bounds constraint
         }
     }
 
@@ -83,14 +86,15 @@ export class MapController {
             };
 
             // Set initial extent with immediate positioning
-            this.view.goTo(this.calculatedExtent, {
+            const initialTarget = this.calculatedExtentBase || this.calculatedExtent;
+            this.view.goTo(initialTarget, {
                 animate: false,
                 duration: 0
             }).catch(error => {
                 console.error('MapController: Failed to apply service area bounds via goTo, using fallback:', error);
                 // Fallback: set extent directly
                 try {
-                    this.view.extent = this.calculatedExtent;
+                    this.view.extent = initialTarget;
                 } catch (fallbackError) {
                     console.error('MapController: Extent fallback also failed:', fallbackError);
                 }
@@ -129,9 +133,9 @@ export class MapController {
             import('@arcgis/core/Viewpoint').then(({ default: Viewpoint }) => {
                 // Create a viewpoint from our calculated extent or center
                 let homeViewpoint;
-                if (this.calculatedExtent) {
+                if (this.calculatedExtentBase || this.calculatedExtent) {
                     homeViewpoint = new Viewpoint({
-                        targetGeometry: this.calculatedExtent
+                        targetGeometry: this.calculatedExtentBase || this.calculatedExtent
                     });
                 } else {
                     // For global deployments, use center point and zoom level

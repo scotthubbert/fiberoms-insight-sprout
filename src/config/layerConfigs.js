@@ -1403,22 +1403,22 @@ const createTruckRenderer = (truckType) => {
             {
                 type: "rotation",
                 field: "bearing",
-                rotationType: "geographic"  // Trucks rotate based on GPS bearing
+                rotationType: "geographic"
             },
             {
                 type: "color",
                 field: "is_driving",
                 stops: [
-                    { value: false, color: [...color.slice(0, 3), 0.6] }, // Stopped
-                    { value: true, color: color } // Moving
+                    { value: 0, color: [...color.slice(0, 3), 0.6] },
+                    { value: 1, color: color }
                 ]
             },
             {
                 type: "size",
                 field: "is_driving",
                 stops: [
-                    { value: false, size: 22 }, // Stopped - smaller
-                    { value: true, size: 28 }   // Moving - larger
+                    { value: 0, size: 22 },
+                    { value: 1, size: 28 }
                 ]
             }
         ]
