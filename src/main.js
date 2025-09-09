@@ -6,6 +6,13 @@
 import * as intl from '@arcgis/core/intl';
 intl.setLocale('en');
 
+// Configure ArcGIS API key
+import esriConfig from '@arcgis/core/config';
+const arcgisApiKey = import.meta.env.VITE_ARCGIS_API_KEY;
+if (arcgisApiKey) {
+  esriConfig.apiKey = arcgisApiKey;
+}
+
 // Import SOLID-compliant services (DIP - Dependency Injection)
 import { MapController } from './services/MapController.js';
 import { LayerManager } from './services/LayerManager.js';

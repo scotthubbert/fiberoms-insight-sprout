@@ -200,6 +200,15 @@ export class MapController {
         this.map = view.map;
         window.mapView = view; // For theme management
 
+        // Apply current theme now that the view is available (ensures Navigation Night on dark at startup)
+        try {
+            if (this.themeManager && typeof this.themeManager.applyTheme === 'function') {
+                this.themeManager.applyTheme(this.themeManager.currentTheme);
+            }
+        } catch (e) {
+            console.warn('MapController: failed to apply theme on view ready:', e);
+        }
+
         // Wait for view to be fully ready before applying extent
         this.view.when(() => {
             this.applyServiceAreaBounds();
@@ -233,7 +242,7 @@ export class MapController {
 
         const fallbackBasemaps = isDarkMode
             ? ['streets-night-vector', 'dark-gray-vector', 'gray-vector']
-            : ['navigation', 'gray-vector', 'satellite'];
+            : ['streets-navigation-vector', 'gray-vector', 'satellite'];
 
         // Set the primary basemap for the theme
         const primaryBasemap = fallbackBasemaps[0];

@@ -460,7 +460,7 @@ export class Application {
         if (measurementWidget) {
             // Lazy-load the measurement web component on first need
             if (!customElements.get('arcgis-measurement')) {
-                import('@arcgis/map-components/dist/components/arcgis-measurement').catch(() => {});
+                import('@arcgis/map-components/dist/components/arcgis-measurement').catch(() => { });
             }
             measurementWidget.addEventListener('arcgisReady', () => { this.setupMeasurementButtons(); });
             setTimeout(() => { this.setupMeasurementButtons(); }, 3000);
@@ -762,7 +762,7 @@ export class Application {
                 }
             } catch (error) {
                 log.error('Failed to handle subscriber update:', error);
-                try { (await import('../services/ErrorService.js')).errorService.report(error, { module: 'Application', action: 'handleSubscriberUpdate' }); } catch {}
+                try { (await import('../services/ErrorService.js')).errorService.report(error, { module: 'Application', action: 'handleSubscriberUpdate' }); } catch { }
                 if (!window._isManualRefresh) {
                     loadingIndicator.showError('offline-subscribers-update', 'Offline Subscribers', 'Update failed');
                     loadingIndicator.showError('online-subscribers-update', 'Online Subscribers', 'Update failed');
@@ -828,7 +828,7 @@ export class Application {
                 }
             } catch (error) {
                 log.error('Failed to handle power outage update:', error);
-                try { (await import('../services/ErrorService.js')).errorService.report(error, { module: 'Application', action: 'handlePowerOutageUpdate' }); } catch {}
+                try { (await import('../services/ErrorService.js')).errorService.report(error, { module: 'Application', action: 'handlePowerOutageUpdate' }); } catch { }
                 if (!window._isManualRefresh) {
                     loadingIndicator.showError('apco-outages-update', 'APCo Power Outages', 'Update failed');
                     loadingIndicator.showError('tombigbee-outages-update', 'Tombigbee Power Outages', 'Update failed');

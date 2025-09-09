@@ -1,14 +1,18 @@
 // ThemeManager.js - Handles theme switching and related UI updates
 
+import Basemap from '@arcgis/core/Basemap';
+
 // Basemap configuration by theme
 const BASEMAP_CONFIG = {
     light: {
-        primary: 'streets',
-        alternate: 'hybrid'
+        primary: 'streets-navigation-vector',
+        alternate: 'hybrid',
+        styleId: 'arcgis/navigation'
     },
     dark: {
         primary: 'streets-night-vector',
-        alternate: 'hybrid'
+        alternate: 'hybrid',
+        styleId: 'arcgis/navigation-night'
     }
 };
 
@@ -31,7 +35,7 @@ export class ThemeManager {
         this.themeToggle = document.getElementById('theme-toggle');
 
         if (this.themeToggle) {
-            this.applyTheme(this.currentTheme);
+            // Do not reapply theme synchronously; onViewReady will set style basemap
             this.themeToggle.addEventListener('click', () => this.toggleTheme());
 
             // Always listen for system theme changes
@@ -46,9 +50,9 @@ export class ThemeManager {
         }
     }
 
-    applyTheme(theme) {
+    async applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
-        this.updateToggleIcon(theme);
+        if (this.themeToggle) this.updateToggleIcon(theme);
 
         const isDark = theme === 'dark';
         document.body.classList.toggle('calcite-mode-dark', isDark);
@@ -62,16 +66,32 @@ export class ThemeManager {
             darkStylesheet.disabled = !isDark;
         }
 
-        // Update ArcGIS map components theme
+        // Update ArcGIS map components theme and basemap
         const mapElement = document.getElementById('map');
         if (mapElement) {
             mapElement.setAttribute('theme', theme);
             const themeBasemaps = BASEMAP_CONFIG[theme];
-            mapElement.setAttribute('basemap', themeBasemaps.primary);
 
-            const basemapToggle = mapElement.querySelector('arcgis-basemap-toggle');
-            if (basemapToggle) {
-                basemapToggle.setAttribute('next-basemap', themeBasemaps.alternate);
+            // Prefer style-based basemap when view is available (requires API key)
+            const view = window.mapView;
+            let styleApplied = false;
+            if (view && view.map && themeBasemaps.styleId) {
+                try {
+                    const basemap = new Basemap({ style: { id: themeBasemaps.styleId } });
+                    view.map.basemap = basemap;
+                    styleApplied = true;
+                } catch (error) {
+                    console.warn('ThemeManager: Failed to apply style basemap, falling back to ID', error);
+                }
+            }
+
+            // Fallback to ID-based basemap via component attribute
+            if (!styleApplied) {
+                mapElement.setAttribute('basemap', themeBasemaps.primary);
+                const basemapToggle = mapElement.querySelector('arcgis-basemap-toggle');
+                if (basemapToggle) {
+                    basemapToggle.setAttribute('next-basemap', themeBasemaps.alternate);
+                }
             }
 
             const widgets = mapElement.querySelectorAll('arcgis-search, arcgis-zoom, arcgis-home, arcgis-locate, arcgis-basemap-toggle, arcgis-basemap-gallery, arcgis-expand, arcgis-track, arcgis-fullscreen');
