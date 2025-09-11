@@ -39,10 +39,10 @@ import '@arcgis/map-components/dist/components/arcgis-map';
 import '@arcgis/map-components/dist/components/arcgis-zoom';
 import '@arcgis/map-components/dist/components/arcgis-home';
 import '@arcgis/map-components/dist/components/arcgis-basemap-toggle';
-import '@arcgis/map-components/dist/components/arcgis-basemap-gallery';
 import '@arcgis/map-components/dist/components/arcgis-expand';
 import '@arcgis/map-components/dist/components/arcgis-track';
-import '@arcgis/map-components/dist/components/arcgis-fullscreen';
+// import '@arcgis/map-components/dist/components/arcgis-fullscreen'; // lazy-loaded
+// import '@arcgis/map-components/dist/components/arcgis-basemap-gallery'; // lazy-loaded
 // Defer measurement widget load until first use
 
 // Import ALL CalciteUI components we need (comprehensive approach)

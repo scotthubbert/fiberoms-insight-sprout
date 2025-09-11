@@ -116,7 +116,7 @@ export default defineConfig({
       injectRegister: 'auto',
       strategies: 'generateSW',
       devOptions: {
-        enabled: true,
+        enabled: false,
         suppressWarnings: true
       },
       workbox: {
@@ -162,7 +162,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/js\.arcgis\.com\/.*/i,
+            urlPattern: /^https:\/\/js\.arcgis\.com\/.*$/i,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'arcgis-js-cache',
@@ -183,7 +183,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/basemaps\.arcgis\.com\/.*/i,
+            urlPattern: /^https:\/\/basemaps\.arcgis\.com\/.*$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'arcgis-basemap-cache',
@@ -204,7 +204,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-api-cache',
@@ -253,14 +253,14 @@ export default defineConfig({
       plugins: [
         ...(process.env.ANALYZE
           ? [
-              visualizer({
-                filename: 'dist/stats.html',
-                template: 'treemap',
-                gzipSize: true,
-                brotliSize: true,
-                open: false
-              })
-            ]
+            visualizer({
+              filename: 'dist/stats.html',
+              template: 'treemap',
+              gzipSize: true,
+              brotliSize: true,
+              open: false
+            })
+          ]
           : [])
       ]
     },

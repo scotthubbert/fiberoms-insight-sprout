@@ -50,6 +50,10 @@ export class LayerManager {
     // OCP: Create layers through configuration, not modification
     async createLayer(layerConfig) {
         try {
+            // Prefer FeatureLayer for subscribers and trucks (client-side source)
+            if (layerConfig.id === 'offline-subscribers' || layerConfig.id === 'online-subscribers') {
+                return this.createSubscriberFeatureLayer(layerConfig, layerConfig.dataSource?.features ? layerConfig.dataSource : await layerConfig.dataServiceMethod?.());
+            }
             // Determine layer type based on configuration
             if (layerConfig.layerType === 'WebTileLayer') {
                 return this.createWebTileLayer(layerConfig);
@@ -364,6 +368,107 @@ export class LayerManager {
         }
     }
 
+    // Create client-side FeatureLayer for subscribers
+    async createSubscriberFeatureLayer(layerConfig, data) {
+        const features = data?.features || [];
+        if (!features.length) {
+            log.warn(`No subscriber features available for layer: ${layerConfig.id}`);
+            return null;
+        }
+
+        // Convert to Graphics with OBJECTID and stable id
+        const graphics = features.reduce((acc, feature, index) => {
+            if (!feature.geometry || feature.geometry.type !== 'Point') return acc;
+            const [lng, lat] = feature.geometry.coordinates;
+            const geometry = new Point({ longitude: lng, latitude: lat, spatialReference: { wkid: 4326 } });
+            const attributes = { ...feature.properties };
+            const stableId = attributes.id || attributes.account || attributes.remote_id || (index + 1);
+            const graphic = new Graphic({ geometry, attributes: { OBJECTID: index + 1, _stable_id: stableId, ...attributes } });
+            acc.push(graphic);
+            return acc;
+        }, []);
+
+        const layer = new FeatureLayer({
+            id: layerConfig.id,
+            title: layerConfig.title,
+            source: graphics,
+            fields: [
+                { name: 'OBJECTID', type: 'oid' },
+                { name: '_stable_id', type: 'string' },
+                ...(layerConfig.fields || [])
+            ],
+            objectIdField: 'OBJECTID',
+            renderer: layerConfig.renderer,
+            popupTemplate: layerConfig.popupTemplate,
+            featureReduction: layerConfig.featureReduction,
+            listMode: layerConfig.visible ? 'show' : 'hide',
+            visible: layerConfig.visible !== undefined ? layerConfig.visible : true
+        });
+
+        this.layers.set(layerConfig.id, layer);
+        this.layerConfigs.set(layerConfig.id, layerConfig);
+
+        log.info(`✅ Created ${layerConfig.title} FeatureLayer with ${graphics.length} subscribers`);
+        return layer;
+    }
+
+    // Smooth subscriber updates using applyEdits (diff by _stable_id)
+    async smoothSubscriberUpdate(layerId, newData) {
+        const layer = this.layers.get(layerId);
+        if (!layer || layer.type !== 'feature') return false;
+
+        try {
+            const current = await layer.queryFeatures({ where: '1=1', outFields: ['*'], returnGeometry: true });
+            const existingByStable = new Map();
+            current.features.forEach(f => existingByStable.set(f.attributes._stable_id, f));
+
+            const incoming = (newData.features || []).filter(f => f.geometry?.type === 'Point');
+
+            const addFeatures = [];
+            const updateFeatures = [];
+            const incomingStableIds = new Set();
+
+            incoming.forEach((f, idx) => {
+                const [lng, lat] = f.geometry.coordinates;
+                const geometry = new Point({ longitude: parseFloat(lng), latitude: parseFloat(lat), spatialReference: { wkid: 4326 } });
+                const attributes = { ...f.properties };
+                const stableId = attributes.id || attributes.account || attributes.remote_id || `${layerId}-${idx}`;
+                incomingStableIds.add(stableId);
+
+                const existing = existingByStable.get(stableId);
+                if (existing) {
+                    const updated = existing.clone();
+                    updated.geometry = geometry;
+                    Object.assign(updated.attributes, attributes);
+                    updateFeatures.push(updated);
+                } else {
+                    const maxObjectId = Math.max(...current.features.map(x => x.attributes.OBJECTID || 0), 0);
+                    addFeatures.push(new Graphic({
+                        geometry,
+                        attributes: { OBJECTID: maxObjectId + addFeatures.length + 1, _stable_id: stableId, ...attributes }
+                    }));
+                }
+            });
+
+            const deleteFeatures = current.features.filter(f => !incomingStableIds.has(f.attributes._stable_id));
+
+            const edits = {};
+            if (addFeatures.length) edits.addFeatures = addFeatures;
+            if (updateFeatures.length) edits.updateFeatures = updateFeatures;
+            if (deleteFeatures.length) edits.deleteFeatures = deleteFeatures;
+
+            if (Object.keys(edits).length) {
+                await layer.applyEdits(edits);
+                log.info(`✅ Subscriber update applied (${layerId}): +${addFeatures.length} ~${updateFeatures.length} -${deleteFeatures.length}`);
+            }
+            return true;
+        } catch (error) {
+            log.error(`❌ Failed to smooth update subscriber layer ${layerId}:`, error);
+            errorService.report(error, { module: 'LayerManager', action: 'smoothSubscriberUpdate', id: layerId });
+            return false;
+        }
+    }
+
     // ISP: Focused interface for layer visibility
     async toggleLayerVisibility(layerId, visible) {
         const layer = this.layers.get(layerId);
@@ -420,19 +525,23 @@ export class LayerManager {
         try {
             log.info(`🔄 Updating layer: ${layerId}`);
 
-            // Truck FeatureLayers use smooth updates with applyEdits
+            // Trucks via FeatureLayer edits
             if (layerId.includes('trucks') && layer.type === 'feature') {
-                // Convert GeoJSON data to truck array for smooth updates
                 const truckData = newData.features ? newData.features.map(f => f.properties) : newData;
                 return this.smoothTruckUpdate(layerId, truckData);
             }
 
-            // Power outages use GraphicsLayer with remove/re-add pattern
+            // Subscribers via FeatureLayer edits
+            if ((layerId === 'offline-subscribers' || layerId === 'online-subscribers') && layer.type === 'feature') {
+                return this.smoothSubscriberUpdate(layerId, newData);
+            }
+
+            // Power outages use GraphicsLayer
             if (layer.type === 'graphics') {
                 return this.updateGraphicsLayer(layerId, config, newData);
             }
 
-            // GeoJSONLayer uses remove/re-add pattern
+            // GeoJSON fallback
             if (layer.type === 'geojson') {
                 return this.updateGeoJSONLayer(layerId, config, newData);
             }

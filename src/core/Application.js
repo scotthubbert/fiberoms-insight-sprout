@@ -33,6 +33,9 @@ export class Application {
         this._cleanupHandlers = [];
         this.geotabEnabled = import.meta.env.VITE_GEOTAB_ENABLED === 'true';
 
+        // Bind methods used from event handlers
+        this.ensureRainViewerInitializedAndAdded = this.ensureRainViewerInitializedAndAdded?.bind(this);
+
         window.addEventListener('beforeunload', () => this.cleanup());
         this.init();
     }
@@ -46,9 +49,9 @@ export class Application {
         this.services.mobileTabBar = new ImportedMobileTabBar();
         this.services.dashboard = new ImportedDashboardManager();
         this.services.headerSearch = new ImportedHeaderSearch();
-        // Lazy-load RainViewer only when initializing
-        const { RainViewerService } = await import('../services/RainViewerService.js');
-        this.services.rainViewerService = new RainViewerService();
+        // Lazy-load RainViewer only when used (deferred)
+        // const { RainViewerService } = await import('../services/RainViewerService.js');
+        // this.services.rainViewerService = new RainViewerService();
 
         this.pollingManager = pollingManager;
 
@@ -65,15 +68,44 @@ export class Application {
 
         await this.services.mapController.initialize();
 
-        const rainViewerInitialized = await this.services.rainViewerService.initialize();
+        const rainViewerInitialized = true; // initialize on-demand later
         if (rainViewerInitialized) {
-            log.info('✅ RainViewer service initialized');
+            log.info('✅ RainViewer service set to initialize on-demand');
         }
 
         this.services.mapController.mapElement.addEventListener('arcgisViewReadyChange', async (event) => {
             if (event.target.ready) {
                 try { await this.onMapReady(); }
                 catch (error) { console.error(error); }
+
+                // Defer optional component loading to idle time
+                const scheduleIdle = (fn) => {
+                    if ('requestIdleCallback' in window) window.requestIdleCallback(fn, { timeout: 2000 });
+                    else setTimeout(fn, 500);
+                };
+
+                scheduleIdle(async () => {
+                    // Ensure basemap gallery component is defined (import at idle), with click fallback
+                    const expand = document.querySelector('arcgis-expand');
+                    const gallery = document.querySelector('arcgis-basemap-gallery');
+                    if (gallery && !customElements.get('arcgis-basemap-gallery')) {
+                        try { await import('@arcgis/map-components/dist/components/arcgis-basemap-gallery'); } catch (_) { /* no-op */ }
+                        // Fallback: if import failed earlier, try on first expand click
+                        if (expand && !customElements.get('arcgis-basemap-gallery')) {
+                            const handler = async () => {
+                                try { await import('@arcgis/map-components/dist/components/arcgis-basemap-gallery'); } catch (_) { /* no-op */ }
+                                expand.removeEventListener('click', handler);
+                            };
+                            expand.addEventListener('click', handler, { once: true });
+                        }
+                    }
+
+                    // Ensure fullscreen component is defined (import at idle so button appears)
+                    const fullscreen = document.querySelector('arcgis-fullscreen');
+                    if (fullscreen && !customElements.get('arcgis-fullscreen')) {
+                        try { await import('@arcgis/map-components/dist/components/arcgis-fullscreen'); } catch (_) { /* no-op */ }
+                    }
+                });
             }
         });
 
@@ -94,7 +126,7 @@ export class Application {
             await this.initializeGeotabService();
         }
         await this.initializeInfrastructureLayers();
-        await this.initializeRadarLayer();
+        // await this.initializeRadarLayer(); // Defer RainViewer until first use
         await this.updateSubscriberStatistics();
         loadingIndicator.showNetwork('map-init', 'Map');
 
@@ -458,13 +490,30 @@ export class Application {
     initializeMeasurementWidget() {
         const measurementWidget = document.getElementById('measurement-tool');
         if (measurementWidget) {
-            // Lazy-load the measurement web component on first need
-            if (!customElements.get('arcgis-measurement')) {
-                import('@arcgis/map-components/dist/components/arcgis-measurement').catch(() => { });
-            }
-            measurementWidget.addEventListener('arcgisReady', () => { this.setupMeasurementButtons(); });
-            setTimeout(() => { this.setupMeasurementButtons(); }, 3000);
+            // Set up buttons; component will be imported on first use
+            this.setupMeasurementButtons();
         }
+    }
+
+    async ensureMeasurementReady() {
+        const measurementWidget = document.getElementById('measurement-tool');
+        if (!measurementWidget) { throw new Error('Measurement widget not found'); }
+
+        // Load the component definition on demand
+        if (!customElements.get('arcgis-measurement')) {
+            try { await import('@arcgis/map-components/dist/components/arcgis-measurement'); }
+            catch (_) { /* no-op */ }
+        }
+
+        // If already ready, return immediately
+        if (measurementWidget.widget) return;
+
+        // Wait for underlying widget to be ready
+        await new Promise((resolve) => {
+            const readyHandler = () => { resolve(); };
+            measurementWidget.addEventListener('arcgisReady', readyHandler, { once: true });
+            setTimeout(() => { if (measurementWidget.widget) resolve(); }, 1500);
+        });
     }
 
     setupMeasurementButtons() {
@@ -473,24 +522,24 @@ export class Application {
         const distanceBtn = document.getElementById('distance-measurement-btn');
         if (distanceBtn) {
             distanceBtn.removeEventListener('click', this.distanceBtnHandler);
-            this.distanceBtnHandler = () => {
-                try { measurementWidget.activeTool = 'distance'; this.updateMeasurementButtons('distance'); } catch (error) { log.error('Error activating distance measurement:', error); }
+            this.distanceBtnHandler = async () => {
+                try { await this.ensureMeasurementReady(); measurementWidget.activeTool = 'distance'; this.updateMeasurementButtons('distance'); } catch (error) { log.error('Error activating distance measurement:', error); }
             };
             distanceBtn.addEventListener('click', this.distanceBtnHandler);
         }
         const areaBtn = document.getElementById('area-measurement-btn');
         if (areaBtn) {
             areaBtn.removeEventListener('click', this.areaBtnHandler);
-            this.areaBtnHandler = () => {
-                try { measurementWidget.activeTool = 'area'; this.updateMeasurementButtons('area'); } catch (error) { log.error('Error activating area measurement:', error); }
+            this.areaBtnHandler = async () => {
+                try { await this.ensureMeasurementReady(); measurementWidget.activeTool = 'area'; this.updateMeasurementButtons('area'); } catch (error) { log.error('Error activating area measurement:', error); }
             };
             areaBtn.addEventListener('click', this.areaBtnHandler);
         }
         const clearBtn = document.getElementById('clear-measurement-btn');
         if (clearBtn) {
             clearBtn.removeEventListener('click', this.clearBtnHandler);
-            this.clearBtnHandler = () => {
-                try { measurementWidget.clear(); measurementWidget.activeTool = null; this.updateMeasurementButtons(null); } catch (error) { log.error('Error clearing measurements:', error); }
+            this.clearBtnHandler = async () => {
+                try { await this.ensureMeasurementReady(); measurementWidget.clear(); measurementWidget.activeTool = null; this.updateMeasurementButtons(null); } catch (error) { log.error('Error clearing measurements:', error); }
             };
             clearBtn.addEventListener('click', this.clearBtnHandler);
         }
@@ -655,12 +704,46 @@ export class Application {
     async handleLayerToggle(element, checked) {
         if (!element || typeof checked !== 'boolean') { log.warn('Invalid layer toggle parameters'); return; }
         const layerId = this.getLayerIdFromElement(element);
-        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'node-sites', 'rainviewer-radar', 'apco-outages', 'tombigbee-outages', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'mst-fiber', 'splitters', 'closures', 'fiber-trucks', 'electric-trucks']);
+        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'node-sites', 'rainviewer-radar', 'apco-outages', 'tombigbee-outages', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'mst-fiber', 'splitters', 'closures', 'electric-trucks', 'fiber-trucks']);
         if (!layerId || !VALID_LAYER_IDS.has(layerId)) { log.warn(`Invalid or unsupported layer ID: ${layerId}`); return; }
         if (layerId) {
             if (layerId === 'online-subscribers' && checked && !this.onlineLayerLoaded) {
                 const loaded = await this.loadOnlineSubscribersLayer();
                 if (!loaded) { element.checked = false; return; }
+            } else if (layerId === 'rainviewer-radar' && checked) {
+                try {
+                    // If layer already exists, just show it
+                    const existing = this.services.layerManager.getLayer('rainviewer-radar');
+                    if (!existing) {
+                        // Lazy import and instantiate service if needed
+                        if (!this.services.rainViewerService) {
+                            const module = await import('../services/RainViewerService.js');
+                            this.services.rainViewerService = new module.RainViewerService();
+                            await this.services.rainViewerService.initialize();
+                        }
+                        const radarLayer = this.services.rainViewerService.createRadarLayer();
+                        if (!radarLayer) { element.checked = false; return; }
+                        const radarConfig = {
+                            id: 'rainviewer-radar',
+                            title: 'Weather Radar',
+                            layerType: 'WebTileLayer',
+                            layerInstance: radarLayer,
+                            visible: false,
+                            zOrder: -10,
+                            onVisibilityChange: (visible) => { this.services.rainViewerService.toggleVisibility(visible); },
+                            onCleanup: () => { this.services.rainViewerService.cleanup(); }
+                        };
+                        const managedLayer = await this.services.layerManager.createLayer(radarConfig);
+                        if (managedLayer) {
+                            this.services.mapController.addLayer(managedLayer, radarConfig.zOrder);
+                        } else { element.checked = false; return; }
+                    }
+                    await this.services.layerManager.toggleLayerVisibility(layerId, true);
+                    this.syncToggleStates(layerId, true);
+                    return;
+                } catch (err) {
+                    element.checked = false; return;
+                }
             } else {
                 await this.services.layerManager.toggleLayerVisibility(layerId, checked);
             }
