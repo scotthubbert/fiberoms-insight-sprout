@@ -1022,6 +1022,13 @@ export class LayerPanel {
                     const vehicleName = currentVehicle.name || `${currentVehicle.type} Truck`;
                     const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
                     this.showVehicleNotification(`Zoomed to ${vehicleName} (${dataAge})`, 'success');
+
+                    // Open a simple popup at this zoom level with Vehicle Name info
+                    mapView.popup.open({
+                        title: vehicleName,
+                        content: `Vehicle Name: ${vehicleName}`,
+                        location: point
+                    });
                 }).catch(error => {
                     console.error('Failed to zoom to vehicle:', error);
                     this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
@@ -1256,6 +1263,13 @@ export class LayerPanel {
                     const truckName = this.formatTruckName(currentTruck);
                     const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
                     this.showVehicleNotification(`Zoomed to ${truckName} (${dataAge})`, 'success');
+
+                    // Open a simple popup at this zoom level with Vehicle Name info
+                    mapView.popup.open({
+                        title: truckName,
+                        content: `Vehicle Name: ${truckName}`,
+                        location: point
+                    });
                 }).catch(error => {
                     console.error('Failed to zoom to truck:', error);
                     this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
