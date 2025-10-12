@@ -719,6 +719,12 @@ export class PowerOutageStatsComponent extends HTMLElement {
 
         message = notifications.join('. ');
 
+        // Skip on mobile devices
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
+            console.log('📱 Mobile outage notification skipped');
+            return;
+        }
+
         // Create notice container if it doesn't exist
         let noticeContainer = document.querySelector('#notice-container');
         if (!noticeContainer) {
@@ -783,6 +789,12 @@ export class PowerOutageStatsComponent extends HTMLElement {
      * @deprecated Use checkAndNotifyOutageChanges instead for specific outage tracking
      */
     showUpdateToast(prevApco, currApco, prevTombigbee, currTombigbee) {
+        // Skip on mobile devices
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
+            console.log('📱 Mobile outage notification skipped');
+            return;
+        }
+
         // Remove any existing notice
         const existingNotice = document.querySelector('#outage-update-notice');
         if (existingNotice) {

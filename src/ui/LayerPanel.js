@@ -1365,6 +1365,12 @@ export class LayerPanel {
     }
 
     showVehicleNotification(message, kind = 'info') {
+        // Skip on mobile devices
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
+            console.log(`📱 Mobile vehicle notification skipped: ${message}`);
+            return;
+        }
+
         const noticeContainer = document.querySelector('#notice-container') || document.body;
         const notice = document.createElement('calcite-notice');
         notice.setAttribute('open', '');
@@ -1488,6 +1494,12 @@ export class LayerPanel {
             const { cacheService } = await import('../services/CacheService.js');
             await cacheService.clearAllCache();
             await this.updateCacheStatus();
+
+            // Skip notification on mobile devices
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
+                console.log('📱 Mobile cache clear notification skipped');
+                return;
+            }
 
             const noticeContainer = document.querySelector('#notice-container') || document.body;
             const notice = document.createElement('calcite-notice');

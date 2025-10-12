@@ -94,6 +94,12 @@ async function checkVersion(isInitialLoad = false) {
 }
 
 function showUpdateNotification() {
+  // Skip on mobile devices
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
+    console.log('📱 Mobile update notification skipped');
+    return;
+  }
+
   // Check if notification already exists
   if (document.querySelector('#update-notification')) {
     return;

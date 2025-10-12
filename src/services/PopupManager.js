@@ -4,6 +4,14 @@ export class PopupManager {
         this.view = null;
     }
 
+    /**
+     * Check if device is mobile
+     * @returns {boolean} - True if mobile device
+     */
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    }
+
     // Initialize popup action handling
     initialize(view) {
         this.view = view;
@@ -403,7 +411,7 @@ export class PopupManager {
         }
 
         try {
-            // Show loading indicator
+            // Show loading indicator (may be null on mobile)
             const loadingToast = this.showLoadingToast('Refreshing metrics...', nodeSiteName);
 
             // Import the service dynamically
@@ -420,7 +428,7 @@ export class PopupManager {
                     features: [selectedFeature]
                 });
 
-                // Remove loading toast
+                // Remove loading toast (check for null on mobile)
                 if (loadingToast && loadingToast.parentNode) {
                     loadingToast.parentNode.removeChild(loadingToast);
                 }
@@ -430,12 +438,22 @@ export class PopupManager {
 
         } catch (error) {
             console.error('Error refreshing metrics:', error);
+            // Remove loading toast on error (check for null on mobile)
+            if (loadingToast && loadingToast.parentNode) {
+                loadingToast.parentNode.removeChild(loadingToast);
+            }
             this.showErrorToast('Failed to refresh metrics', error.message);
         }
     }
 
     // Loading toast with spinner
     showLoadingToast(message, nodeSiteName) {
+        // Skip on mobile devices
+        if (this.isMobileDevice()) {
+            console.log(`📱 Mobile popup toast skipped: ${message} - ${nodeSiteName}`);
+            return null;
+        }
+
         const toast = document.createElement('calcite-notice');
         toast.setAttribute('kind', 'brand');
         toast.setAttribute('open', 'true');
@@ -467,6 +485,12 @@ export class PopupManager {
 
     // Success toast with checkmark
     showSuccessToast(message, nodeSiteName) {
+        // Skip on mobile devices
+        if (this.isMobileDevice()) {
+            console.log(`📱 Mobile popup toast skipped: ${message} - ${nodeSiteName}`);
+            return null;
+        }
+
         const toast = document.createElement('calcite-notice');
         toast.setAttribute('kind', 'positive');
         toast.setAttribute('open', 'true');
@@ -505,6 +529,12 @@ export class PopupManager {
 
     // Error toast with warning icon
     showErrorToast(message, details = '') {
+        // Skip on mobile devices
+        if (this.isMobileDevice()) {
+            console.log(`📱 Mobile popup toast skipped: ${message}`);
+            return null;
+        }
+
         const toast = document.createElement('calcite-notice');
         toast.setAttribute('kind', 'danger');
         toast.setAttribute('open', 'true');

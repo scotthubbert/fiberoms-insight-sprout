@@ -27,6 +27,14 @@ export class LoadingIndicator {
   }
 
   /**
+   * Check if device is mobile
+   * @returns {boolean} - True if mobile device
+   */
+  isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  }
+
+  /**
    * Initialize the loading indicator container
    */
   initialize() {
@@ -141,6 +149,12 @@ export class LoadingIndicator {
    * @returns {string} - The notice ID
    */
   show(config) {
+    // Skip showing notifications on mobile devices
+    if (this.isMobileDevice()) {
+      console.log(`📱 Mobile loading indicator skipped: ${config.dataType || config.message}`);
+      return config.id;
+    }
+
     if (!this.initialized) {
       this.initialize();
     }
@@ -281,6 +295,11 @@ export class LoadingIndicator {
    */
   updateConsolidatedNotice() {
     if (!this.useConsolidated) return;
+
+    // Skip on mobile devices
+    if (this.isMobileDevice()) {
+      return;
+    }
 
     const loadingItems = Array.from(this.loadingQueue.entries());
 
