@@ -250,7 +250,6 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (/@arcgis\/(core|map-components)/.test(id)) return 'vendor_arcgis';
-            if (/@esri\/calcite-components/.test(id)) return 'vendor_calcite';
             if (/@supabase\//.test(id)) return 'vendor_supabase';
           }
         }
