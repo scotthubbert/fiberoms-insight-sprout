@@ -28,6 +28,9 @@ export class LayerPanel {
 
         // Initialize state
         this.currentVehicleData = [];
+        this.vehiclePopupPending = false;
+        this.lastFocusedVehicle = null; // { point, name }
+        this.vehiclePopupWatcherSetup = false;
 
         this.init();
     }
@@ -43,6 +46,44 @@ export class LayerPanel {
 
         // Show layers content by default
         this.showContent('layers');
+
+        // Set up vehicle popup watcher when map view becomes available
+        this.ensureVehiclePopupWatcher();
+    }
+
+    async ensureVehiclePopupWatcher() {
+        if (this.vehiclePopupWatcherSetup) return;
+        const mapView = window.mapView;
+        if (!mapView) {
+            // Retry shortly if view not yet available
+            setTimeout(() => this.ensureVehiclePopupWatcher(), 500);
+            return;
+        }
+        try {
+            const reactiveUtilsModule = await import('@arcgis/core/core/reactiveUtils');
+            const reactiveUtils = reactiveUtilsModule;
+            const vehiclePopupScaleThreshold = 24000; // Match MST visibility scale
+
+            reactiveUtils.watch(() => mapView.scale, (scale) => {
+                try {
+                    if (this.vehiclePopupPending && this.lastFocusedVehicle && scale <= vehiclePopupScaleThreshold) {
+                        const { point, name } = this.lastFocusedVehicle;
+                        mapView.popup.open({
+                            title: name,
+                            content: `Vehicle Name: ${name}`,
+                            location: point
+                        });
+                        this.vehiclePopupPending = false;
+                    }
+                } catch (err) {
+                    console.error('Vehicle popup on zoom error:', err);
+                }
+            });
+
+            this.vehiclePopupWatcherSetup = true;
+        } catch (error) {
+            console.error('Failed to set up vehicle popup watcher:', error);
+        }
     }
 
     setupActionBarNavigation() {
@@ -1015,20 +1056,18 @@ export class LayerPanel {
                     spatialReference: { wkid: 4326 }
                 });
 
+                // Prepare deferred popup opening when scale threshold is reached
+                const vehicleName = currentVehicle.name || `${currentVehicle.type} Truck`;
+                this.lastFocusedVehicle = { point, name: vehicleName };
+                this.vehiclePopupPending = true;
+                this.ensureVehiclePopupWatcher();
+
                 mapView.goTo({
                     target: point,
                     zoom: 16
                 }).then(() => {
-                    const vehicleName = currentVehicle.name || `${currentVehicle.type} Truck`;
                     const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
                     this.showVehicleNotification(`Zoomed to ${vehicleName} (${dataAge})`, 'success');
-
-                    // Open a simple popup at this zoom level with Vehicle Name info
-                    mapView.popup.open({
-                        title: vehicleName,
-                        content: `Vehicle Name: ${vehicleName}`,
-                        location: point
-                    });
                 }).catch(error => {
                     console.error('Failed to zoom to vehicle:', error);
                     this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
@@ -1161,7 +1200,7 @@ export class LayerPanel {
                 if (emptyDiv) emptyDiv.hidden = true;
                 if (tableContainer) tableContainer.style.display = 'block';
                 // Ensure dialog component is loaded before showing table
-                (await import('../utils/calciteLazy.js')).ensureCalciteDialog().catch(() => {});
+                (await import('../utils/calciteLazy.js')).ensureCalciteDialog().catch(() => { });
                 const { populateTruckTable } = await import('./VehicleTable.js');
                 populateTruckTable(allTrucks);
             }
@@ -1253,6 +1292,12 @@ export class LayerPanel {
                     spatialReference: { wkid: 4326 }
                 });
 
+                // Prepare deferred popup opening when scale threshold is reached
+                const truckName = this.formatTruckName(currentTruck);
+                this.lastFocusedVehicle = { point, name: truckName };
+                this.vehiclePopupPending = true;
+                this.ensureVehiclePopupWatcher();
+
                 mapView.goTo({
                     target: point,
                     zoom: 16
@@ -1260,16 +1305,8 @@ export class LayerPanel {
                     const modal = document.getElementById('truck-table-modal');
                     if (modal) modal.open = false;
 
-                    const truckName = this.formatTruckName(currentTruck);
                     const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
                     this.showVehicleNotification(`Zoomed to ${truckName} (${dataAge})`, 'success');
-
-                    // Open a simple popup at this zoom level with Vehicle Name info
-                    mapView.popup.open({
-                        title: truckName,
-                        content: `Vehicle Name: ${truckName}`,
-                        location: point
-                    });
                 }).catch(error => {
                     console.error('Failed to zoom to truck:', error);
                     this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
