@@ -1554,9 +1554,9 @@ const createTruckPopup = (truckType) => {
             },
             {
                 type: 'text',
-                text: `<div style="margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px;">
-                    <strong>Vehicle Type:</strong> ${vehicleTypeDisplay}<br/>
-                    <strong>Real-time tracking:</strong> Updates every 3 seconds
+                text: `<div style="margin-top: 10px; padding: 8px; background: var(--calcite-color-foreground-2); border-radius: 4px; font-size: 12px; color: var(--calcite-color-text-2);">
+                    <strong style="color: var(--calcite-color-text-1);">Vehicle Type:</strong> ${vehicleTypeDisplay}<br/>
+                    <strong style="color: var(--calcite-color-text-1);">Real-time tracking:</strong> Updates every 3 seconds
                 </div>`
             }
         ],
