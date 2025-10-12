@@ -1380,6 +1380,32 @@ const createMSTFiberPopup = () => ({
     ]
 });
 
+// Vehicle labeling configuration (shows vehicle name at closer zooms)
+const createTruckLabeling = () => [
+    {
+        symbol: {
+            type: 'text',
+            color: [255, 255, 255, 1],
+            font: {
+                size: 10,
+                family: 'Noto Sans',
+                weight: 'bold'
+            },
+            haloColor: [0, 0, 0, 0.85],
+            haloSize: 1.5
+        },
+        labelPlacement: 'above-center',
+        labelExpressionInfo: {
+            expression: '$feature.name'
+        },
+        deconflictionStrategy: 'dynamic',
+        repeatLabel: false,
+        removeDuplicateLabels: true,
+        minScale: 24000,
+        maxScale: 0
+    }
+];
+
 // Fiber Plant field definitions
 const createFSAFields = () => [
     { name: 'NAME', type: 'string', alias: 'Service Area Name' },
@@ -1744,6 +1770,7 @@ export const layerConfigs = {
         renderer: createTruckRenderer('fiber'),
         popupTemplate: createTruckPopup('fiber'),
         fields: createTruckFields(),
+        labelingInfo: createTruckLabeling(),
         visible: false,
         zOrder: 130,
         dataServiceMethod: () => subscriberDataService.getFiberTrucks()
@@ -1756,6 +1783,7 @@ export const layerConfigs = {
         renderer: createTruckRenderer('electric'),
         popupTemplate: createTruckPopup('electric'),
         fields: createTruckFields(),
+        labelingInfo: createTruckLabeling(),
         visible: false,
         zOrder: 130,
         dataServiceMethod: () => subscriberDataService.getElectricTrucks()

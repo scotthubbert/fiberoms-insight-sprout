@@ -352,6 +352,7 @@ export class LayerManager {
             objectIdField: 'OBJECTID',
             renderer: layerConfig.renderer,
             popupTemplate: layerConfig.popupTemplate,
+            labelingInfo: layerConfig.labelingInfo,
             listMode: layerConfig.visible ? 'show' : 'hide',
             visible: layerConfig.visible !== undefined ? layerConfig.visible : true
         });
