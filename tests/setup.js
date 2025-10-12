@@ -12,4 +12,13 @@ if (!globalThis.URL.revokeObjectURL) {
   globalThis.URL.revokeObjectURL = vi.fn();
 }
 
+// Stub MutationObserver to avoid jsdom Node checks from ArcGIS internals
+if (!globalThis.MutationObserver) {
+  globalThis.MutationObserver = class {
+    observe() { }
+    disconnect() { }
+    takeRecords() { return []; }
+  };
+}
+
 

@@ -66,8 +66,6 @@ export default defineConfig({
     },
     include: [
       '@arcgis/core/intl',
-      '@arcgis/map-components',
-      '@esri/calcite-components',
       '@supabase/supabase-js',
       'dexie'
     ]
@@ -248,7 +246,14 @@ export default defineConfig({
         // Ensure consistent hashing for better caching
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (/@arcgis\/(core|map-components)/.test(id)) return 'vendor_arcgis';
+            if (/@esri\/calcite-components/.test(id)) return 'vendor_calcite';
+            if (/@supabase\//.test(id)) return 'vendor_supabase';
+          }
+        }
       },
       plugins: [
         ...(process.env.ANALYZE

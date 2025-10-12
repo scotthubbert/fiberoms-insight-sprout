@@ -9,7 +9,7 @@ const createOfflineRenderer = () => ({
         type: 'simple-marker',
         style: 'circle',
         color: [220, 38, 38, 0.8], // Default red for non-business internet
-        size: 8,
+        size: 10,
         outline: {
             color: [220, 38, 38, 1],
             width: 2
@@ -22,14 +22,24 @@ const createOfflineRenderer = () => ({
                 type: 'simple-marker',
                 style: 'circle',
                 color: [147, 51, 234, 0.8], // Purple center for offline business internet
-                size: 8,
+                size: 10,
                 outline: {
                     color: [220, 38, 38, 1], // Red outline for offline business internet
                     width: 2
                 }
             }
         }
-    ]
+    ],
+    // Scale-dependent sizing to prevent cluttering at different zoom levels
+    visualVariables: [{
+        type: "size",
+        valueExpression: "$view.scale",
+        stops: [
+            { value: 80000, size: 10 },      // Zoom 14 and closer: Full size
+            { value: 1000000, size: 6 },     // Zoom 10-13: Smaller size
+            { value: 10000000, size: 3 }     // Zoom 6-9: Tiny size
+        ]
+    }]
 });
 
 const createOnlineRenderer = () => ({
@@ -39,7 +49,7 @@ const createOnlineRenderer = () => ({
         type: 'simple-marker',
         style: 'circle',
         color: [34, 197, 94, 0.8], // Default green for non-business internet
-        size: 6,
+        size: 8,
         outline: {
             color: [34, 197, 94, 1],
             width: 1
@@ -52,14 +62,24 @@ const createOnlineRenderer = () => ({
                 type: 'simple-marker',
                 style: 'circle',
                 color: [147, 51, 234, 0.8], // Purple for online business internet
-                size: 6,
+                size: 8,
                 outline: {
                     color: [147, 51, 234, 1], // Purple outline for online business internet
                     width: 1
                 }
             }
         }
-    ]
+    ],
+    // Scale-dependent sizing to prevent cluttering at different zoom levels
+    visualVariables: [{
+        type: "size",
+        valueExpression: "$view.scale",
+        stops: [
+            { value: 80000, size: 8 },       // Zoom 14 and closer: Full size
+            { value: 1000000, size: 4 },     // Zoom 10-13: Smaller size
+            { value: 10000000, size: 2 }     // Zoom 6-9: Tiny size
+        ]
+    }]
 });
 
 // Clustering configuration for offline subscribers - optimized for production
@@ -133,7 +153,68 @@ const createOfflineClusterConfig = () => ({
     ]
 });
 
-// Online subscribers use individual points (no clustering) for service disruption analysis
+// Online subscribers clustering configuration - optimized for 25k+ features
+const createOnlineClusterConfig = () => ({
+    type: 'cluster',
+    clusterRadius: '45px', // Smaller radius for denser data
+    clusterMinSize: '10px',
+    clusterMaxSize: '40px', 
+    // Disable clustering at street level zoom for detail work
+    maxScale: 80000, // Only show individual points when zoomed to ~zoom level 14
+    popupTemplate: {
+        title: 'Online Subscribers Cluster',
+        content: 'This cluster represents <b>{cluster_count}</b> online subscribers.',
+        fieldInfos: [{
+            fieldName: 'cluster_count',
+            format: {
+                places: 0,
+                digitSeparator: true
+            }
+        }]
+    },
+    renderer: {
+        type: 'simple',
+        symbol: {
+            type: 'simple-marker',
+            style: 'circle',
+            color: [34, 197, 94, 0.8], // Green for online
+            outline: {
+                color: [34, 197, 94, 1],
+                width: 2
+            }
+        },
+        visualVariables: [{
+            type: 'size',
+            field: 'cluster_count',
+            stops: [
+                { value: 1, size: '10px' },
+                { value: 10, size: '16px' },
+                { value: 50, size: '22px' },
+                { value: 100, size: '28px' },
+                { value: 500, size: '34px' },
+                { value: 1000, size: '40px' }
+            ]
+        }]
+    },
+    labelingInfo: [{
+        deconflictionStrategy: 'none',
+        labelExpressionInfo: {
+            expression: '$feature.cluster_count > 1 ? Text($feature.cluster_count) : ""'
+        },
+        symbol: {
+            type: 'text',
+            color: 'white',
+            font: {
+                weight: 'bold',
+                family: 'Noto Sans',
+                size: '11px'
+            },
+            haloColor: [0, 0, 0, 0.8],
+            haloSize: 1
+        },
+        labelPlacement: 'center-center'
+    }]
+});
 
 // Power outage renderers - not used when using GraphicsLayer
 const createPowerOutageRenderer = (company) => {
@@ -593,7 +674,8 @@ const subscriberFields = [
     { name: 'id', type: 'integer', alias: 'ID' },
     { name: 'index_column', type: 'string', alias: 'Index Column' },
     { name: 'number_of_records', type: 'integer', alias: 'Number of Records' },
-    { name: 'geom', type: 'string', alias: 'Geometry' }
+    { name: 'geom', type: 'string', alias: 'Geometry' },
+    { name: '_stable_id', type: 'string', alias: 'Stable ID' } // For tracking updates in LayerManager
 ];
 
 // Fiber Plant renderer configurations
@@ -1512,8 +1594,8 @@ export const layerConfigs = {
         dataSource: 'online_subscribers',
         renderer: createOnlineRenderer(),
         popupTemplate: createSubscriberPopup('online'),
+        featureReduction: createOnlineClusterConfig(), // Enable clustering for performance
         fields: subscriberFields,
-        // Individual points (no clustering)
         visible: false,
         zOrder: 10,  // Changed from 0 to ensure it's above basemap
         dataServiceMethod: () => subscriberDataService.getOnlineSubscribers()

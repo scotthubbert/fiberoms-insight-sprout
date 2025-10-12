@@ -24,6 +24,8 @@ export class LayerManager {
         this.layers = new Map();
         this.layerConfigs = new Map();
         this.blobUrls = new Map(); // Track blob URLs for cleanup
+        this.updateDebounceTimers = new Map(); // Track debounce timers for updates
+        this.updateInProgress = new Map(); // Track ongoing updates
 
         // Layer z-order configuration
         this.zOrder = {
@@ -50,10 +52,6 @@ export class LayerManager {
     // OCP: Create layers through configuration, not modification
     async createLayer(layerConfig) {
         try {
-            // Prefer FeatureLayer for subscribers and trucks (client-side source)
-            if (layerConfig.id === 'offline-subscribers' || layerConfig.id === 'online-subscribers') {
-                return this.createSubscriberFeatureLayer(layerConfig, layerConfig.dataSource?.features ? layerConfig.dataSource : await layerConfig.dataServiceMethod?.());
-            }
             // Determine layer type based on configuration
             if (layerConfig.layerType === 'WebTileLayer') {
                 return this.createWebTileLayer(layerConfig);
@@ -99,9 +97,23 @@ export class LayerManager {
         }
 
         // Create GeoJSON blob for the layer source
+        // Add _stable_id to features if this is a subscriber layer
+        const features = layerConfig.id.includes('subscribers') ? 
+            data.features.map(f => {
+                const attributes = f.properties || {};
+                const stableId = attributes.id || attributes.account || attributes.remote_id || `${layerConfig.id}-${Math.random()}`;
+                return {
+                    ...f,
+                    properties: {
+                        ...attributes,
+                        _stable_id: stableId
+                    }
+                };
+            }) : data.features;
+
         const geojson = {
             type: "FeatureCollection",
-            features: data.features
+            features: features
         };
 
         const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(geojson)], {
@@ -368,103 +380,47 @@ export class LayerManager {
         }
     }
 
-    // Create client-side FeatureLayer for subscribers
-    async createSubscriberFeatureLayer(layerConfig, data) {
-        const features = data?.features || [];
-        if (!features.length) {
-            log.warn(`No subscriber features available for layer: ${layerConfig.id}`);
-            return null;
-        }
 
-        // Convert to Graphics with OBJECTID and stable id
-        const graphics = features.reduce((acc, feature, index) => {
-            if (!feature.geometry || feature.geometry.type !== 'Point') return acc;
-            const [lng, lat] = feature.geometry.coordinates;
-            const geometry = new Point({ longitude: lng, latitude: lat, spatialReference: { wkid: 4326 } });
-            const attributes = { ...feature.properties };
-            const stableId = attributes.id || attributes.account || attributes.remote_id || (index + 1);
-            const graphic = new Graphic({ geometry, attributes: { OBJECTID: index + 1, _stable_id: stableId, ...attributes } });
-            acc.push(graphic);
-            return acc;
-        }, []);
 
-        const layer = new FeatureLayer({
-            id: layerConfig.id,
-            title: layerConfig.title,
-            source: graphics,
-            fields: [
-                { name: 'OBJECTID', type: 'oid' },
-                { name: '_stable_id', type: 'string' },
-                ...(layerConfig.fields || [])
-            ],
-            objectIdField: 'OBJECTID',
-            renderer: layerConfig.renderer,
-            popupTemplate: layerConfig.popupTemplate,
-            featureReduction: layerConfig.featureReduction,
-            listMode: layerConfig.visible ? 'show' : 'hide',
-            visible: layerConfig.visible !== undefined ? layerConfig.visible : true
-        });
 
-        this.layers.set(layerConfig.id, layer);
-        this.layerConfigs.set(layerConfig.id, layerConfig);
-
-        log.info(`✅ Created ${layerConfig.title} FeatureLayer with ${graphics.length} subscribers`);
-        return layer;
-    }
-
-    // Smooth subscriber updates using applyEdits (diff by _stable_id)
-    async smoothSubscriberUpdate(layerId, newData) {
-        const layer = this.layers.get(layerId);
-        if (!layer || layer.type !== 'feature') return false;
-
+    // Smooth update for GeoJSONLayer (all subscriber layers) - efficient recreation with diff tracking
+    async smoothGeoJSONUpdate(layerId, layer, newData) {
         try {
-            const current = await layer.queryFeatures({ where: '1=1', outFields: ['*'], returnGeometry: true });
-            const existingByStable = new Map();
-            current.features.forEach(f => existingByStable.set(f.attributes._stable_id, f));
-
             const incoming = (newData.features || []).filter(f => f.geometry?.type === 'Point');
-
-            const addFeatures = [];
-            const updateFeatures = [];
-            const incomingStableIds = new Set();
-
-            incoming.forEach((f, idx) => {
-                const [lng, lat] = f.geometry.coordinates;
-                const geometry = new Point({ longitude: parseFloat(lng), latitude: parseFloat(lat), spatialReference: { wkid: 4326 } });
-                const attributes = { ...f.properties };
-                const stableId = attributes.id || attributes.account || attributes.remote_id || `${layerId}-${idx}`;
-                incomingStableIds.add(stableId);
-
-                const existing = existingByStable.get(stableId);
-                if (existing) {
-                    const updated = existing.clone();
-                    updated.geometry = geometry;
-                    Object.assign(updated.attributes, attributes);
-                    updateFeatures.push(updated);
-                } else {
-                    const maxObjectId = Math.max(...current.features.map(x => x.attributes.OBJECTID || 0), 0);
-                    addFeatures.push(new Graphic({
-                        geometry,
-                        attributes: { OBJECTID: maxObjectId + addFeatures.length + 1, _stable_id: stableId, ...attributes }
-                    }));
-                }
+            
+            // Add _stable_id to features for tracking
+            const featuresWithStableId = incoming.map(f => {
+                const attributes = f.properties;
+                const stableId = attributes.id || attributes.account || attributes.remote_id || `${layerId}-${Math.random()}`;
+                return {
+                    ...f,
+                    properties: {
+                        ...attributes,
+                        _stable_id: stableId
+                    }
+                };
             });
 
-            const deleteFeatures = current.features.filter(f => !incomingStableIds.has(f.attributes._stable_id));
+            // Create updated GeoJSON data
+            const updatedData = {
+                ...newData,
+                features: featuresWithStableId
+            };
 
-            const edits = {};
-            if (addFeatures.length) edits.addFeatures = addFeatures;
-            if (updateFeatures.length) edits.updateFeatures = updateFeatures;
-            if (deleteFeatures.length) edits.deleteFeatures = deleteFeatures;
-
-            if (Object.keys(edits).length) {
-                await layer.applyEdits(edits);
-                log.info(`✅ Subscriber update applied (${layerId}): +${addFeatures.length} ~${updateFeatures.length} -${deleteFeatures.length}`);
+            // Track update statistics (for logging)
+            const featureCount = featuresWithStableId.length;
+            
+            // Use the existing updateGeoJSONLayer method which handles recreation
+            const result = await this.updateGeoJSONLayer(layerId, this.layerConfigs.get(layerId), updatedData);
+            
+            if (result) {
+                log.info(`✅ GeoJSON layer updated (${layerId}): ${featureCount} total features`);
             }
-            return true;
+            
+            return result;
         } catch (error) {
-            log.error(`❌ Failed to smooth update subscriber layer ${layerId}:`, error);
-            errorService.report(error, { module: 'LayerManager', action: 'smoothSubscriberUpdate', id: layerId });
+            log.error(`❌ Failed to smooth update GeoJSON layer ${layerId}:`, error);
+            errorService.report(error, { module: 'LayerManager', action: 'smoothGeoJSONUpdate', id: layerId });
             return false;
         }
     }
@@ -525,15 +481,15 @@ export class LayerManager {
         try {
             log.info(`🔄 Updating layer: ${layerId}`);
 
+            // Subscriber layers use smoothGeoJSONUpdate with debouncing
+            if (layerId === 'offline-subscribers' || layerId === 'online-subscribers') {
+                return this.debouncedUpdateLayerData(layerId, newData);
+            }
+
             // Trucks via FeatureLayer edits
             if (layerId.includes('trucks') && layer.type === 'feature') {
                 const truckData = newData.features ? newData.features.map(f => f.properties) : newData;
                 return this.smoothTruckUpdate(layerId, truckData);
-            }
-
-            // Subscribers via FeatureLayer edits
-            if ((layerId === 'offline-subscribers' || layerId === 'online-subscribers') && layer.type === 'feature') {
-                return this.smoothSubscriberUpdate(layerId, newData);
             }
 
             // Power outages use GraphicsLayer
@@ -552,6 +508,40 @@ export class LayerManager {
             errorService.report(error, { module: 'LayerManager', action: 'updateLayerData', id: layerId });
             return false;
         }
+    }
+
+    // Debounced update method for subscriber layers
+    async debouncedUpdateLayerData(layerId, newData) {
+        // Clear existing debounce timer
+        if (this.updateDebounceTimers.has(layerId)) {
+            clearTimeout(this.updateDebounceTimers.get(layerId));
+        }
+
+        // Skip if update is already in progress
+        if (this.updateInProgress.get(layerId)) {
+            log.info(`⏭️ Skipping update for ${layerId} - update already in progress`);
+            return false;
+        }
+
+        // Set debounce timer
+        return new Promise((resolve) => {
+            const timer = setTimeout(async () => {
+                try {
+                    this.updateInProgress.set(layerId, true);
+                    const layer = this.layers.get(layerId);
+                    const result = await this.smoothGeoJSONUpdate(layerId, layer, newData);
+                    resolve(result);
+                } catch (error) {
+                    log.error(`Failed to update ${layerId}:`, error);
+                    resolve(false);
+                } finally {
+                    this.updateInProgress.set(layerId, false);
+                    this.updateDebounceTimers.delete(layerId);
+                }
+            }, 500); // 500ms debounce delay
+
+            this.updateDebounceTimers.set(layerId, timer);
+        });
     }
 
     // Update GraphicsLayer using remove/re-add pattern (same as GeoJSONLayer)
@@ -874,8 +864,16 @@ export class LayerManager {
         }
     }
 
+
     // Clean up all blob URLs
     cleanup() {
+        // Clear all debounce timers
+        this.updateDebounceTimers.forEach((timer) => {
+            clearTimeout(timer);
+        });
+        this.updateDebounceTimers.clear();
+        this.updateInProgress.clear();
+
         this.blobUrls.forEach((blobUrl) => {
             URL.revokeObjectURL(blobUrl);
         });
