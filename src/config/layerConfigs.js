@@ -1401,7 +1401,7 @@ const createTruckLabeling = () => [
         deconflictionStrategy: 'dynamic',
         repeatLabel: false,
         removeDuplicateLabels: true,
-        minScale: 24000,
+        minScale: 144000,
         maxScale: 0
     }
 ];

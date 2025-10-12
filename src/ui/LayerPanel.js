@@ -62,7 +62,7 @@ export class LayerPanel {
         try {
             const reactiveUtilsModule = await import('@arcgis/core/core/reactiveUtils');
             const reactiveUtils = reactiveUtilsModule;
-            const vehiclePopupScaleThreshold = 24000; // Match MST visibility scale
+            const vehiclePopupScaleThreshold = 144000; // Zoom level ~12
 
             reactiveUtils.watch(() => mapView.scale, (scale) => {
                 try {
