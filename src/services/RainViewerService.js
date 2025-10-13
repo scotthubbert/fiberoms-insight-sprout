@@ -1,13 +1,9 @@
 // RainViewerService.js - Single Responsibility: RainViewer API integration
 import WebTileLayer from '@arcgis/core/layers/WebTileLayer';
+import { createLogger } from '../utils/logger.js';
 
-// Production logging utility
-const isDevelopment = import.meta.env.DEV;
-const log = {
-    info: (...args) => isDevelopment && console.log(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-};
+// Initialize logger for this module
+const log = createLogger('RainViewerService');
 
 export class RainViewerService {
     constructor() {

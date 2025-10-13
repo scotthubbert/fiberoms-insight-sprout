@@ -1,13 +1,9 @@
 // CacheService.js - Handles local caching of large, infrequently changing data
 import Dexie from 'dexie';
+import { createLogger } from '../utils/logger.js';
 
-// Production logging utility
-const isDevelopment = import.meta.env.DEV;
-const log = {
-  info: (...args) => isDevelopment && console.log(...args),
-  warn: (...args) => console.warn(...args),
-  error: (...args) => console.error(...args)
-};
+// Initialize logger for this module
+const log = createLogger('CacheService');
 
 class CacheService {
   constructor() {

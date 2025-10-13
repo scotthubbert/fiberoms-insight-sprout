@@ -9,14 +9,10 @@ import Polygon from '@arcgis/core/geometry/Polygon';
 import Point from '@arcgis/core/geometry/Point';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import { errorService } from './ErrorService.js';
+import { createLogger } from '../utils/logger.js';
 
-// Production logging utility
-const isDevelopment = import.meta.env.DEV;
-const log = {
-    info: (...args) => isDevelopment && console.log(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-};
+// Initialize logger for this module
+const log = createLogger('LayerManager');
 
 export class LayerManager {
     constructor(dataService) {
@@ -98,7 +94,7 @@ export class LayerManager {
 
         // Create GeoJSON blob for the layer source
         // Add _stable_id to features if this is a subscriber layer
-        const features = layerConfig.id.includes('subscribers') ? 
+        const features = layerConfig.id.includes('subscribers') ?
             data.features.map(f => {
                 const attributes = f.properties || {};
                 const stableId = attributes.id || attributes.account || attributes.remote_id || `${layerConfig.id}-${Math.random()}`;
@@ -388,7 +384,7 @@ export class LayerManager {
     async smoothGeoJSONUpdate(layerId, layer, newData) {
         try {
             const incoming = (newData.features || []).filter(f => f.geometry?.type === 'Point');
-            
+
             // Add _stable_id to features for tracking
             const featuresWithStableId = incoming.map(f => {
                 const attributes = f.properties;
@@ -410,14 +406,14 @@ export class LayerManager {
 
             // Track update statistics (for logging)
             const featureCount = featuresWithStableId.length;
-            
+
             // Use the existing updateGeoJSONLayer method which handles recreation
             const result = await this.updateGeoJSONLayer(layerId, this.layerConfigs.get(layerId), updatedData);
-            
+
             if (result) {
                 log.info(`✅ GeoJSON layer updated (${layerId}): ${featureCount} total features`);
             }
-            
+
             return result;
         } catch (error) {
             log.error(`❌ Failed to smooth update GeoJSON layer ${layerId}:`, error);

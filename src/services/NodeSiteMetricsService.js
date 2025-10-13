@@ -1,12 +1,8 @@
 import { supabase } from '../dataService.js';
+import { createLogger } from '../utils/logger.js';
 
-// Production logging utility
-const isDevelopment = import.meta.env.DEV;
-const log = {
-    info: (...args) => isDevelopment && console.log(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-};
+// Initialize logger for this module
+const log = createLogger('NodeSiteMetrics');
 
 /**
  * NodeSiteMetricsService - Fetches subscriber metrics for node sites

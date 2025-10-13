@@ -1,17 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { cacheService } from './services/CacheService.js'
+import { createLogger } from './utils/logger.js'
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Production logging utility
+// Initialize logger for this module
+const log = createLogger('DataService');
 const isDevelopment = import.meta.env.DEV;
-const log = {
-    info: (...args) => isDevelopment && console.log(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-};
 
 // Only log configuration status in development
 if (isDevelopment) {

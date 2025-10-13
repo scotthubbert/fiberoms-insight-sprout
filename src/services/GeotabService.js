@@ -1,5 +1,9 @@
 // GeotabService.js - MyGeotab API integration service
 import { getGeotabConfig, TRUCK_LAYER_DEFAULTS } from '../config/geotabConfig.js';
+import { createLogger } from '../utils/logger.js';
+
+// Initialize logger for this module
+const log = createLogger('GeotabService');
 
 // Try to import GeotabApi, but handle errors gracefully
 let GeotabApi = null;
@@ -7,16 +11,8 @@ try {
     // Note: mg-api-js may not be compatible with ES modules in browser
     // This will be handled in initializeApi method
 } catch (error) {
-    console.warn('GeotabApi not available in browser environment:', error);
+    log.warn('GeotabApi not available in browser environment:', error);
 }
-
-// Production logging utility
-const isDevelopment = import.meta.env.DEV;
-const log = {
-    info: (...args) => isDevelopment && console.log(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-};
 
 /**
  * GeotabService - Handles MyGeotab API integration for vehicle tracking
