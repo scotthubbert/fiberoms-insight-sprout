@@ -1,5 +1,9 @@
 // Calcite Icon Fallback Utility
 // Handles icon loading failures gracefully and prevents component crashes
+import { createLogger } from './logger.js';
+
+// Initialize logger
+const log = createLogger('CalciteIconFallback');
 
 export function setupCalciteIconFallback() {
   // Track failed icon attempts to avoid infinite loops
@@ -12,7 +16,7 @@ export function setupCalciteIconFallback() {
   document.addEventListener('calciteIconError', (event) => {
     const iconName = event.detail?.icon;
     if (iconName && !failedIcons.has(iconName)) {
-      console.warn(`Icon "${iconName}" failed to load, attempting fallback`);
+      log.warn(`Icon "${iconName}" failed to load, attempting fallback`);
       failedIcons.add(iconName);
 
       // Try alternative icon names
@@ -62,7 +66,7 @@ export function setupCalciteIconFallback() {
       const match = errorMessage.match(/calcite\s+(\S+)\s+.*icon failed to load/);
       if (match && match[1]) {
         const iconName = match[1];
-        console.warn(`🔧 Detected icon loading error for: ${iconName}, applying fallback`);
+        log.warn(`🔧 Detected icon loading error for: ${iconName}, applying fallback`);
 
         // Apply immediate fallbacks for common problematic icons
         const iconReplacements = {
@@ -78,7 +82,7 @@ export function setupCalciteIconFallback() {
         // Find and replace all instances of the failing icon
         document.querySelectorAll(`calcite-icon[icon="${iconName}"]`).forEach(icon => {
           icon.setAttribute('icon', replacement);
-          console.warn(`Replaced ${iconName} with ${replacement} icon`);
+          log.warn(`Replaced ${iconName} with ${replacement} icon`);
         });
 
         // Trigger custom event for other potential handlers
@@ -95,7 +99,7 @@ export function setupCalciteIconFallback() {
     if (errorMessage.includes('renderItemAriaLive') ||
       errorMessage.includes('Cannot read properties of undefined') ||
       errorMessage.includes('calcite-') && errorMessage.includes('undefined')) {
-      console.warn('🔇 Suppressed CalciteUI component error:', errorMessage.substring(0, 100));
+      log.warn('🔇 Suppressed CalciteUI component error:', errorMessage.substring(0, 100));
       return;
     }
 

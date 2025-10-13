@@ -1,4 +1,8 @@
 // MobileTabBar.js - Manages mobile tab bar interactions and dialogs
+import { createLogger } from '../utils/logger.js';
+
+// Initialize logger for this module
+const log = createLogger('MobileTabBar');
 
 export class MobileTabBar {
     constructor() {
@@ -88,7 +92,7 @@ export class MobileTabBar {
                     await this.initializeMobileSubscribersTab();
                 }
             } catch (error) {
-                console.warn('⚠️ CalciteUI components not ready, but proceeding with dialog open:', error);
+                log.warn('⚠️ CalciteUI components not ready, but proceeding with dialog open:', error);
                 // Still try to open the dialog - force it open regardless of component state
                 dialog.open = true;
                 this.currentDialog = dialog;
@@ -126,10 +130,10 @@ export class MobileTabBar {
                     item.style.opacity = '1';
                 });
 
-                console.log('✅ Mobile subscriber tab initialized successfully');
+                log.info('✅ Mobile subscriber tab initialized successfully');
             }
         } catch (error) {
-            console.warn('⚠️ Failed to initialize mobile subscribers tab:', error);
+            log.warn('⚠️ Failed to initialize mobile subscribers tab:', error);
             await this.forceInitializeMobileSubscribersTab();
         }
     }
@@ -172,7 +176,7 @@ export class MobileTabBar {
                     switchEl.style.minHeight = '24px';
                 });
 
-                console.log('🔧 Force-initialized mobile subscriber dialog');
+                log.info('🔧 Force-initialized mobile subscriber dialog');
             }
         }
     }
@@ -247,7 +251,7 @@ export class MobileTabBar {
     recoverMobileUI() {
         // Recovery method to restore mobile UI functionality after CalciteUI errors
         try {
-            console.log('🔧 Recovering mobile UI after component failures...');
+            log.info('🔧 Recovering mobile UI after component failures...');
 
             // Ensure all mobile dialogs are properly configured
             const dialogs = document.querySelectorAll('.mobile-only calcite-dialog');
@@ -280,9 +284,9 @@ export class MobileTabBar {
                 tabBar.style.opacity = '1';
             }
 
-            console.log('✅ Mobile UI recovery completed');
+            log.info('✅ Mobile UI recovery completed');
         } catch (error) {
-            console.warn('⚠️ Mobile UI recovery failed:', error);
+            log.warn('⚠️ Mobile UI recovery failed:', error);
         }
     }
 }

@@ -2,6 +2,10 @@
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
 import Extent from '@arcgis/core/geometry/Extent';
 import { getServiceAreaBounds, getServiceAreaBoundsBase, getCurrentServiceArea } from '../config/searchConfig.js';
+import { createLogger } from '../utils/logger.js';
+
+// Initialize logger for this module
+const log = createLogger('MapController');
 
 export class MapController {
     constructor(layerManager, themeManager) {
@@ -24,7 +28,7 @@ export class MapController {
         // Fallback: ensure bounds are applied even if timing issues occur
         setTimeout(() => {
             if (this.view && this.view.extent && this.view.extent.width > 180) {
-                console.warn('MapController: Applying bounds fallback - detected world view');
+                log.warn('MapController: Applying bounds fallback - detected world view');
                 this.applyServiceAreaBounds();
             }
             // Also retry home button configuration in case it wasn't ready initially
@@ -67,7 +71,7 @@ export class MapController {
     // Apply service area bounds after map is fully ready
     applyServiceAreaBounds() {
         if (!this.view) {
-            console.warn('MapController: View not available for bounds application');
+            log.warn('MapController: View not available for bounds application');
             return;
         }
 
@@ -91,15 +95,15 @@ export class MapController {
                 animate: false,
                 duration: 0
             }).catch(error => {
-                console.error('MapController: Failed to apply service area bounds via goTo, using fallback:', error);
+                log.error('MapController: Failed to apply service area bounds via goTo, using fallback:', error);
                 // Fallback: set extent directly
                 try {
                     this.view.extent = initialTarget;
                 } catch (fallbackError) {
-                    console.error('MapController: Extent fallback also failed:', fallbackError);
+                    log.error('MapController: Extent fallback also failed:', fallbackError);
                 }
             });
-            console.info(`✅ Map constrained to ${serviceArea.name}`);
+            log.info(`✅ Map constrained to ${serviceArea.name}`);
         } else {
             // Global deployment - no geographic constraints, just center the view
             this.view.constraints = {
@@ -115,16 +119,16 @@ export class MapController {
                 animate: false,
                 duration: 0
             }).catch(error => {
-                console.error('MapController: Failed to center global view:', error);
+                log.error('MapController: Failed to center global view:', error);
             });
-            console.info(`✅ Map configured for ${serviceArea.name} (global deployment)`);
+            log.info(`✅ Map configured for ${serviceArea.name} (global deployment)`);
         }
     }
 
     // Configure home button to use service area bounds or center
     configureHomeButton() {
         if (!this.view) {
-            console.warn('MapController: Cannot configure home button - view not available');
+            log.warn('MapController: Cannot configure home button - view not available');
             return;
         }
 
@@ -171,10 +175,10 @@ export class MapController {
                     configureElement();
                 }
             }).catch(error => {
-                console.error('MapController: Failed to configure home button:', error);
+                log.error('MapController: Failed to configure home button:', error);
             });
         } catch (error) {
-            console.error('MapController: Error in home button configuration:', error);
+            log.error('MapController: Error in home button configuration:', error);
         }
     }
 
@@ -206,7 +210,7 @@ export class MapController {
                 this.themeManager.applyTheme(this.themeManager.currentTheme);
             }
         } catch (e) {
-            console.warn('MapController: failed to apply theme on view ready:', e);
+            log.warn('MapController: failed to apply theme on view ready:', e);
         }
 
         // Wait for view to be fully ready before applying extent
@@ -214,7 +218,7 @@ export class MapController {
             this.applyServiceAreaBounds();
             this.configureHomeButton();
         }).catch(error => {
-            console.error('MapController: Map view ready error:', error);
+            log.error('MapController: Map view ready error:', error);
             // Fallback: try to apply bounds anyway
             setTimeout(() => {
                 this.applyServiceAreaBounds();
@@ -250,12 +254,12 @@ export class MapController {
         try {
             this.map.basemap = primaryBasemap;
         } catch (error) {
-            console.warn('MapController: Failed to set primary basemap, trying fallback:', error);
+            log.warn('MapController: Failed to set primary basemap, trying fallback:', error);
             // Try the second option as fallback
             try {
                 this.map.basemap = fallbackBasemaps[1] || 'gray';
             } catch (fallbackError) {
-                console.error('MapController: All basemap options failed, using gray:', fallbackError);
+                log.error('MapController: All basemap options failed, using gray:', fallbackError);
                 this.map.basemap = 'gray';
             }
         }

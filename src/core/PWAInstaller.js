@@ -1,4 +1,8 @@
 // PWAInstaller.js - Handles PWA install prompt and update notifications
+import { createLogger } from '../utils/logger.js';
+
+// Initialize logger for this module
+const log = createLogger('PWAInstaller');
 
 export class PWAInstaller {
     constructor() {
@@ -27,13 +31,13 @@ export class PWAInstaller {
             try {
                 // Add error handler for service worker errors
                 navigator.serviceWorker.addEventListener('error', (event) => {
-                    console.warn('Service worker error:', event);
+                    log.warn('Service worker error:', event);
                 });
 
                 // Add handler for cache errors from service worker
                 navigator.serviceWorker.addEventListener('message', (event) => {
                     if (event.data && event.data.type === 'CACHE_ERROR') {
-                        console.warn('Service worker cache error:', event.data.error);
+                        log.warn('Service worker cache error:', event.data.error);
                         // Don't throw - just log the error
                     }
                 });
@@ -57,12 +61,12 @@ export class PWAInstaller {
                 // Check for updates periodically
                 setInterval(() => {
                     registration.update().catch(err => {
-                        console.warn('Service worker update check failed:', err);
+                        log.warn('Service worker update check failed:', err);
                     });
                 }, 60000); // Check every minute
 
             } catch (error) {
-                console.error('Service Worker registration failed:', error);
+                log.error('Service Worker registration failed:', error);
             }
         }
     }
@@ -75,7 +79,7 @@ export class PWAInstaller {
     showUpdateNotification() {
         // Skip on mobile devices
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
-            console.log('📱 Mobile PWA update notification skipped');
+            log.info('📱 Mobile PWA update notification skipped');
             return;
         }
 

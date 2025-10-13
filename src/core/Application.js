@@ -16,13 +16,10 @@ import { DashboardManager as ImportedDashboardManager } from '../ui/DashboardMan
 import { LayerPanel as ImportedLayerPanel } from '../ui/LayerPanel.js';
 import { MobileTabBar as ImportedMobileTabBar } from '../ui/MobileTabBar.js';
 import { ThemeManager as ImportedThemeManager } from '../ui/ThemeManager.js';
+import { createLogger } from '../utils/logger.js';
 
-const isDevelopment = import.meta.env.DEV;
-const log = {
-    info: (...args) => isDevelopment && console.log(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-};
+// Initialize logger for this module
+const log = createLogger('Application');
 
 export class Application {
     constructor() {
@@ -76,7 +73,7 @@ export class Application {
         this.services.mapController.mapElement.addEventListener('arcgisViewReadyChange', async (event) => {
             if (event.target.ready) {
                 try { await this.onMapReady(); }
-                catch (error) { console.error(error); }
+                catch (error) { log.error(error); }
 
                 // Defer optional component loading to idle time
                 const scheduleIdle = (fn) => {
@@ -191,7 +188,7 @@ export class Application {
             searchWidget.addEventListener('arcgisReady', applyBoundsToSources);
             if (searchWidget.widget && searchWidget.widget.allSources) applyBoundsToSources();
         } catch (error) {
-            console.error(`Failed to configure search widget with ${serviceArea.name} bounds:`, error);
+            log.error(`Failed to configure search widget with ${serviceArea.name} bounds:`, error);
         }
     }
 
@@ -586,7 +583,7 @@ export class Application {
             this.showNotification('success', successMessage, 3000);
             setTimeout(() => { this.resetCSVButton(button, originalText, originalIcon); }, 3000);
         } catch (error) {
-            console.error('CSV download failed:', error);
+            log.error('CSV download failed:', error);
             button.removeAttribute('loading');
             button.setAttribute('icon-start', 'exclamation-mark-triangle');
             button.textContent = 'Download Failed';
@@ -665,7 +662,7 @@ export class Application {
                 lastUpdatedEl.textContent = `Last updated: ${lastUpdated}`;
             }
         } catch (error) {
-            console.error('Failed to update subscriber statistics:', error);
+            log.error('Failed to update subscriber statistics:', error);
             this.services.dashboard.updateOfflineCount(0);
             const onlineCountEl = document.getElementById('online-count-display');
             const offlineCountEl = document.getElementById('offline-count-display');

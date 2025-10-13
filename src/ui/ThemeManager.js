@@ -1,6 +1,10 @@
 // ThemeManager.js - Handles theme switching and related UI updates
 
 import Basemap from '@arcgis/core/Basemap';
+import { createLogger } from '../utils/logger.js';
+
+// Initialize logger for this module
+const log = createLogger('ThemeManager');
 
 // Basemap configuration by theme
 const BASEMAP_CONFIG = {
@@ -81,7 +85,7 @@ export class ThemeManager {
                     view.map.basemap = basemap;
                     styleApplied = true;
                 } catch (error) {
-                    console.warn('ThemeManager: Failed to apply style basemap, falling back to ID', error);
+                    log.warn('Failed to apply style basemap, falling back to ID', error);
                 }
             }
 

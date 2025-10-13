@@ -1,10 +1,8 @@
 // VehicleTable.js - lazily loaded UI for rendering the truck table
+import { createLogger } from '../utils/logger.js';
 
-const log = {
-  info: (...args) => (import.meta.env.DEV ? console.log(...args) : void 0),
-  warn: (...args) => console.warn(...args),
-  error: (...args) => console.error(...args)
-};
+// Initialize logger for this module
+const log = createLogger('VehicleTable');
 
 export function formatTruckName(truck) {
   if (truck.name) return truck.name;
@@ -39,7 +37,7 @@ export async function zoomToTruck(truck) {
     const truckName = formatTruckName(truck);
     window.app?.showVehicleNotification?.(`Zoomed to ${truckName}`, 'success');
   } catch (error) {
-    console.error('Failed to zoom to truck:', error);
+    log.error('Failed to zoom to truck:', error);
     window.app?.showVehicleNotification?.('Failed to zoom to vehicle location', 'danger');
   }
 }
@@ -48,7 +46,7 @@ export function populateTruckTable(trucks) {
   log.info('🚛 populateTruckTable called with trucks:', trucks?.length || 0);
   const tbody = document.getElementById('truck-table-body');
   if (!tbody) {
-    console.error('🚛 Table body not found!');
+    log.error('🚛 Table body not found!');
     return;
   }
 
@@ -97,7 +95,7 @@ export function populateTruckTable(trucks) {
 
       tbody.appendChild(row);
     } catch (error) {
-      console.error('🚛 Error creating truck table row:', error);
+      log.error('🚛 Error creating truck table row:', error);
     }
   });
 }

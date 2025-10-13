@@ -102,8 +102,8 @@ export class GeotabService {
             this.isRateLimited = true;
             // Rate limit resets after 1 minute, add significant buffer
             this.rateLimitResetTime = Date.now() + (120 * 1000); // 2 minutes buffer
-            console.warn('⚠️ MyGeotab API rate limit exceeded. Waiting 2 minutes before retry...');
-            console.warn('⚠️ Rate limit will reset at:', new Date(this.rateLimitResetTime).toLocaleTimeString());
+            log.warn('⚠️ MyGeotab API rate limit exceeded. Waiting 2 minutes before retry...');
+            log.warn('⚠️ Rate limit will reset at:', new Date(this.rateLimitResetTime).toLocaleTimeString());
             return true;
         }
         return false;
@@ -121,7 +121,7 @@ export class GeotabService {
         // Check if we're rate limited
         if (this.isCurrentlyRateLimited()) {
             const timeRemaining = Math.ceil((this.rateLimitResetTime - Date.now()) / 1000);
-            console.warn(`⚠️ Currently rate limited, skipping authentication attempt. ${timeRemaining}s remaining.`);
+            log.warn(`⚠️ Currently rate limited, skipping authentication attempt. ${timeRemaining}s remaining.`);
             return false;
         }
 
@@ -151,7 +151,7 @@ export class GeotabService {
             // Handle rate limiting specifically
             if (this.handleRateLimitError(error)) {
                 // Don't count rate limit errors as connection retries
-                console.warn('⚠️ Authentication failed due to rate limiting, will retry when rate limit expires');
+                log.warn('⚠️ Authentication failed due to rate limiting, will retry when rate limit expires');
                 // Don't retry immediately - wait for rate limit to expire
                 return false;
             }
@@ -260,13 +260,13 @@ export class GeotabService {
         // Check if we're rate limited
         if (this.isCurrentlyRateLimited()) {
             const timeRemaining = Math.ceil((this.rateLimitResetTime - Date.now()) / 1000);
-            console.warn(`⚠️ Currently rate limited, ${timeRemaining}s remaining. Returning cached data if available.`);
+            log.warn(`⚠️ Currently rate limited, ${timeRemaining}s remaining. Returning cached data if available.`);
             if (this.lastTruckData) {
-                console.warn('⚠️ Returning cached truck data during rate limit');
+                log.warn('⚠️ Returning cached truck data during rate limit');
                 return this.lastTruckData;
             }
             // If no cached data available during rate limit, return empty data
-            console.warn('⚠️ No cached data available during rate limit, returning empty data');
+            log.warn('⚠️ No cached data available during rate limit, returning empty data');
             return { fiber: [], electric: [] };
         }
 

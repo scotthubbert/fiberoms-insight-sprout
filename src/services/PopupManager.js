@@ -1,4 +1,9 @@
 // PopupManager.js - Single Responsibility: Popup interaction handling
+import { createLogger } from '../utils/logger.js';
+
+// Initialize logger for this module
+const log = createLogger('PopupManager');
+
 export class PopupManager {
     constructor() {
         this.view = null;
@@ -75,7 +80,7 @@ export class PopupManager {
             }
 
             if (!popup) {
-                console.warn('No popup found');
+                log.warn('No popup found');
                 return;
             }
 
@@ -92,7 +97,7 @@ export class PopupManager {
                 }
             }
         } catch (err) {
-            console.error('Error handling copy action:', err);
+            log.error('Error handling copy action:', err);
             this.updateCopyButton(buttonElement, 'error');
         }
     }
@@ -134,7 +139,7 @@ export class PopupManager {
             this.showCopyFeedback(`Opening directions to ${attributes.customer_name || 'location'}...`);
 
         } catch (error) {
-            console.error('Failed to get directions:', error);
+            log.error('Failed to get directions:', error);
             this.showCopyFeedback('Failed to open directions', 'error');
         }
     }
@@ -283,7 +288,7 @@ export class PopupManager {
             return data.length > 0 ? data.join('\n') : null;
 
         } catch (error) {
-            console.error('Error extracting popup data:', error);
+            log.error('Error extracting popup data:', error);
             return null;
         }
     }
@@ -354,7 +359,7 @@ export class PopupManager {
             document.body.removeChild(textArea);
             return true;
         } catch (err) {
-            console.error('Fallback copy failed:', err);
+            log.error('Fallback copy failed:', err);
             document.body.removeChild(textArea);
             return false;
         }
@@ -398,7 +403,7 @@ export class PopupManager {
         const selectedFeature = popup.selectedFeature;
 
         if (!selectedFeature) {
-            console.warn('No feature selected for metrics refresh');
+            log.warn('No feature selected for metrics refresh');
             return;
         }
 
@@ -406,7 +411,7 @@ export class PopupManager {
         const nodeSiteName = attributes.Name;
 
         if (!nodeSiteName) {
-            console.warn('No node site name available for metrics refresh');
+            log.warn('No node site name available for metrics refresh');
             return;
         }
 
@@ -437,7 +442,7 @@ export class PopupManager {
             }, 100);
 
         } catch (error) {
-            console.error('Error refreshing metrics:', error);
+            log.error('Error refreshing metrics:', error);
             // Remove loading toast on error (check for null on mobile)
             if (loadingToast && loadingToast.parentNode) {
                 loadingToast.parentNode.removeChild(loadingToast);
@@ -450,7 +455,7 @@ export class PopupManager {
     showLoadingToast(message, nodeSiteName) {
         // Skip on mobile devices
         if (this.isMobileDevice()) {
-            console.log(`📱 Mobile popup toast skipped: ${message} - ${nodeSiteName}`);
+            log.info(`📱 Mobile popup toast skipped: ${message} - ${nodeSiteName}`);
             return null;
         }
 
@@ -487,7 +492,7 @@ export class PopupManager {
     showSuccessToast(message, nodeSiteName) {
         // Skip on mobile devices
         if (this.isMobileDevice()) {
-            console.log(`📱 Mobile popup toast skipped: ${message} - ${nodeSiteName}`);
+            log.info(`📱 Mobile popup toast skipped: ${message} - ${nodeSiteName}`);
             return null;
         }
 
@@ -531,7 +536,7 @@ export class PopupManager {
     showErrorToast(message, details = '') {
         // Skip on mobile devices
         if (this.isMobileDevice()) {
-            console.log(`📱 Mobile popup toast skipped: ${message}`);
+            log.info(`📱 Mobile popup toast skipped: ${message}`);
             return null;
         }
 

@@ -1,12 +1,8 @@
 // LayerPanel.js - Manages left shell panel navigation and content
+import { createLogger } from '../utils/logger.js';
 
-// Local logger (development-gated info)
-const isDevelopment = import.meta.env.DEV;
-const log = {
-    info: (...args) => isDevelopment && console.log(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-};
+// Initialize logger for this module
+const log = createLogger('LayerPanel');
 
 export class LayerPanel {
     constructor() {
@@ -76,13 +72,13 @@ export class LayerPanel {
                         this.vehiclePopupPending = false;
                     }
                 } catch (err) {
-                    console.error('Vehicle popup on zoom error:', err);
+                    log.error('Vehicle popup on zoom error:', err);
                 }
             });
 
             this.vehiclePopupWatcherSetup = true;
         } catch (error) {
-            console.error('Failed to set up vehicle popup watcher:', error);
+            log.error('Failed to set up vehicle popup watcher:', error);
         }
     }
 
@@ -216,7 +212,7 @@ export class LayerPanel {
                 }
             }
         } catch (error) {
-            console.error('Failed to update GeotabService status:', error);
+            log.error('Failed to update GeotabService status:', error);
             const statusChip = document.getElementById('geotab-status-chip');
             if (statusChip) {
                 statusChip.textContent = 'Error';
@@ -320,7 +316,7 @@ export class LayerPanel {
             this.showVehicleNotification(message, 'success');
 
         } catch (error) {
-            console.error('Failed to refresh vehicles:', error);
+            log.error('Failed to refresh vehicles:', error);
             this.showVehicleNotification('Failed to refresh vehicle locations', 'danger');
         } finally {
             // Reset button state
@@ -336,7 +332,7 @@ export class LayerPanel {
         log.info('🚛 Loading simple vehicle list...');
         const vehiclesList = document.getElementById('vehicle-list');
         if (!vehiclesList) {
-            console.error('🚛 vehicle-list element not found');
+            log.error('🚛 vehicle-list element not found');
             return;
         }
 
@@ -398,14 +394,14 @@ export class LayerPanel {
                     vehiclesList.appendChild(listItem);
                     log.info(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
                 } catch (vehicleError) {
-                    console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
+                    log.error('🚛 Error processing vehicle:', vehicleError, vehicle);
                 }
             });
 
             log.info('🚛 Vehicle list populated successfully');
 
         } catch (error) {
-            console.error('🚛 Error loading vehicle list:', error);
+            log.error('🚛 Error loading vehicle list:', error);
             // Show error state
             const errorItem = document.createElement('calcite-list-item');
             errorItem.setAttribute('label', 'Error Loading Vehicles');
@@ -502,7 +498,7 @@ export class LayerPanel {
             }
 
         } catch (error) {
-            console.error('Error getting vehicle data:', error);
+            log.error('Error getting vehicle data:', error);
         }
 
         return allVehicles;
@@ -520,7 +516,7 @@ export class LayerPanel {
         });
 
         if (!vehicleList) {
-            console.error('🚛 Vehicle list block element not found!');
+            log.error('🚛 Vehicle list block element not found!');
             return;
         }
 
@@ -584,7 +580,7 @@ export class LayerPanel {
                     vehicleList.appendChild(listItem);
                     log.info(`🚛 Added vehicle ${index + 1}: ${vehicleName}`);
                 } catch (vehicleError) {
-                    console.error('🚛 Error processing vehicle:', vehicleError, vehicle);
+                    log.error('🚛 Error processing vehicle:', vehicleError, vehicle);
                 }
             });
 
@@ -821,7 +817,7 @@ export class LayerPanel {
                 // Remove mock vehicle fallback - not appropriate for production
             }
         } catch (error) {
-            console.error('🚛 DEBUG: Error in testVehicleList:', error);
+            log.error('🚛 DEBUG: Error in testVehicleList:', error);
         }
     }
 
@@ -829,7 +825,7 @@ export class LayerPanel {
         log.info('🚛 populateVehicleList called with vehicles:', vehicles?.length || 0);
         const vehicleList = document.getElementById('vehicle-list');
         if (!vehicleList) {
-            console.error('🚛 Vehicle list element not found!');
+            log.error('🚛 Vehicle list element not found!');
             return;
         }
 
@@ -849,7 +845,7 @@ export class LayerPanel {
 
         // Validate vehicles array
         if (!Array.isArray(vehicles)) {
-            console.error('🚛 Invalid vehicles data - not an array:', typeof vehicles);
+            log.error('🚛 Invalid vehicles data - not an array:', typeof vehicles);
             return;
         }
 
@@ -866,7 +862,7 @@ export class LayerPanel {
 
                 // Ensure CalciteUI is loaded before creating components
                 if (!customElements.get('calcite-list-item')) {
-                    console.error('🚛 CalciteUI components not yet defined');
+                    log.error('🚛 CalciteUI components not yet defined');
                     return;
                 }
 
@@ -945,16 +941,16 @@ export class LayerPanel {
                 try {
                     vehicleList.appendChild(listItem);
                 } catch (error) {
-                    console.error('🚛 Error appending list item:', error);
+                    log.error('🚛 Error appending list item:', error);
                 }
 
             } catch (error) {
                 // Log error details but continue processing other vehicles
-                console.error('🚛 Error creating list item for vehicle', index, ':', error);
-                console.error('🚛 Vehicle data:', vehicle);
+                log.error('🚛 Error creating list item for vehicle', index, ':', error);
+                log.error('🚛 Vehicle data:', vehicle);
 
                 if (error.message && error.message.includes('replace')) {
-                    console.error('🚛 CalciteUI string processing error - likely an undefined value passed to component');
+                    log.error('🚛 CalciteUI string processing error - likely an undefined value passed to component');
                 }
             }
         });
@@ -1013,7 +1009,7 @@ export class LayerPanel {
 
             return 'Idle';
         } catch (error) {
-            console.error('🚛 Error determining vehicle status:', error);
+            log.error('🚛 Error determining vehicle status:', error);
             return 'Unknown';
         }
     }
@@ -1069,13 +1065,13 @@ export class LayerPanel {
                     const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
                     this.showVehicleNotification(`Zoomed to ${vehicleName} (${dataAge})`, 'success');
                 }).catch(error => {
-                    console.error('Failed to zoom to vehicle:', error);
+                    log.error('Failed to zoom to vehicle:', error);
                     this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
                 });
             });
 
         } catch (error) {
-            console.error('Error in zoomToVehicle:', error);
+            log.error('Error in zoomToVehicle:', error);
             this.showVehicleNotification('Failed to get vehicle location', 'danger');
         }
     }
@@ -1213,7 +1209,7 @@ export class LayerPanel {
             }
 
         } catch (error) {
-            console.error('Failed to load truck data:', error);
+            log.error('Failed to load truck data:', error);
             if (loadingDiv) loadingDiv.hidden = true;
             if (emptyDiv) {
                 emptyDiv.hidden = false;
@@ -1308,13 +1304,13 @@ export class LayerPanel {
                     const dataAge = dataSource === 'api' ? 'current location' : 'last known location';
                     this.showVehicleNotification(`Zoomed to ${truckName} (${dataAge})`, 'success');
                 }).catch(error => {
-                    console.error('Failed to zoom to truck:', error);
+                    log.error('Failed to zoom to truck:', error);
                     this.showVehicleNotification('Failed to zoom to vehicle location', 'danger');
                 });
             });
 
         } catch (error) {
-            console.error('Error in zoomToTruck:', error);
+            log.error('Error in zoomToTruck:', error);
             this.showVehicleNotification('Failed to get vehicle location', 'danger');
         }
     }
@@ -1471,7 +1467,7 @@ export class LayerPanel {
 
             cacheDetailsDiv.innerHTML = detailsHTML;
         } catch (error) {
-            console.error('Failed to get cache status:', error);
+            log.error('Failed to get cache status:', error);
         }
     }
 
@@ -1522,7 +1518,7 @@ export class LayerPanel {
 
             setTimeout(() => notice.remove(), 3000);
         } catch (error) {
-            console.error('Failed to clear cache:', error);
+            log.error('Failed to clear cache:', error);
         }
     }
 

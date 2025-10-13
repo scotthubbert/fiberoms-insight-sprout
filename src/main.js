@@ -26,6 +26,7 @@ import { CSVExportService } from './utils/csvExport.js';
 import * as clipboardUtils from './utils/clipboardUtils.js';
 import { ThemeManager as ImportedThemeManager } from './ui/ThemeManager.js';
 import { PollingService } from './services/PollingService.js';
+import { createLogger } from './utils/logger.js';
 
 // Import components
 import './components/PowerOutageStats.js';
@@ -93,13 +94,8 @@ import { LayerPanel as ImportedLayerPanel } from './ui/LayerPanel.js';
 import { errorService as ImportedErrorService } from './services/ErrorService.js';
 import { initSentryIfEnabled, captureError as sentryCaptureError } from './services/SentryService.js';
 
-// Production logging utility
-const isDevelopment = import.meta.env.DEV;
-const log = {
-  info: (...args) => isDevelopment && console.log(...args),
-  warn: (...args) => console.warn(...args),
-  error: (...args) => console.error(...args)
-};
+// Initialize logger for main module
+const log = createLogger('Main');
 
 // Set Calcite assets path - simplified approach
 const assetsPath = import.meta.env.PROD
@@ -140,7 +136,7 @@ window.addEventListener('unhandledrejection', event => {
       errorMessage.includes('AbortError') ||
       errorMessage.includes('RainViewer') ||
       errorMessage.includes('timeout')) {
-      console.warn('🔇 Suppressed non-critical error:', errorMessage);
+      log.warn('🔇 Suppressed non-critical error:', errorMessage);
       ImportedErrorService.report(event.reason, { origin: 'unhandledrejection' });
       event.preventDefault(); // Prevent the error from bubbling up and crashing the app
     }
@@ -151,7 +147,7 @@ window.addEventListener('unhandledrejection', event => {
 window.addEventListener('error', event => {
   if (event.error && event.error.name === 'SyntaxError' &&
     event.error.message.includes('Unexpected token')) {
-    console.warn('🔇 Suppressed JSON parsing error (likely from external API):', event.error.message);
+    log.warn('🔇 Suppressed JSON parsing error (likely from external API):', event.error.message);
     ImportedErrorService.report(event.error, { origin: 'window.error' });
     event.preventDefault();
   }
@@ -172,7 +168,7 @@ window.addEventListener('unhandledrejection', event => {
       errorMessage.includes('PE.render') ||
       errorMessage.includes('PE.update') ||
       error.stack?.includes('calcite-')) {
-      console.warn('🔇 Suppressed CalciteUI component error (non-critical):', errorMessage.substring(0, 100));
+      log.warn('🔇 Suppressed CalciteUI component error (non-critical):', errorMessage.substring(0, 100));
       ImportedErrorService.report(error, { origin: 'calcite-unhandledrejection' });
       event.preventDefault();
 
@@ -180,7 +176,7 @@ window.addEventListener('unhandledrejection', event => {
       setTimeout(() => {
         const app = window.app;
         if (app && app.services && app.services.mobileTabBar) {
-          console.log('🔄 Attempting mobile UI recovery after CalciteUI error');
+          log.info('🔄 Attempting mobile UI recovery after CalciteUI error');
           app.services.mobileTabBar.recoverMobileUI();
         }
       }, 500);
@@ -198,7 +194,7 @@ window.addEventListener('error', event => {
     // Suppress specific CalciteUI errors that break functionality
     if (errorMessage.includes('Cannot read properties of undefined (reading \'replace\')') ||
       errorMessage.includes('TypeError: Cannot read properties of undefined') && errorMessage.includes('replace')) {
-      console.warn('🔇 Suppressed CalciteUI replace error (non-critical):', errorMessage.substring(0, 100));
+      log.warn('🔇 Suppressed CalciteUI replace error (non-critical):', errorMessage.substring(0, 100));
       ImportedErrorService.report(event.error, { origin: 'calcite-window.error' });
       event.preventDefault();
       return false;
@@ -262,7 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Check GeotabService configuration specifically for production
   window.checkGeotabConfig = function () {
     try {
-      console.log('🚛 Checking GeotabService configuration...');
+      log.info('🚛 Checking GeotabService configuration...');
 
       // Check environment variables
       const config = {
@@ -275,32 +271,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         databaseLength: import.meta.env.VITE_GEOTAB_DATABASE?.length || 0
       };
 
-      console.log('GeotabService Config:', config);
+      log.info('GeotabService Config:', config);
 
       // Import and check service
       import('./services/GeotabService.js').then(module => {
         const service = module.geotabService;
-        console.log('GeotabService Status:', service.getStatus());
-        console.log('GeotabService lastTruckData:', service.lastTruckData);
-        console.log('GeotabService authenticated:', service.isAuthenticated);
+        log.info('GeotabService Status:', service.getStatus());
+        log.info('GeotabService lastTruckData:', service.lastTruckData);
+        log.info('GeotabService authenticated:', service.isAuthenticated);
       }).catch(error => {
-        console.error('GeotabService import error:', error);
+        log.error('GeotabService import error:', error);
       });
 
     } catch (error) {
-      console.error('🚛 GeotabService check failed:', error);
+      log.error('🚛 GeotabService check failed:', error);
     }
   };
 
   // Simple production debug function
   window.debugVehicles = () => {
     try {
-      console.log('🚛 === Vehicle Debug Info ===');
-      console.log('Environment:', {
+      log.info('🚛 === Vehicle Debug Info ===');
+      log.info('Environment:', {
         isDev: import.meta.env.DEV,
         mode: import.meta.env.MODE
       });
-      console.log('Global objects:', {
+      log.info('Global objects:', {
         app: !!window.app,
         layerManager: !!window.app?.services?.layerManager,
         geotabService: !!window.geotabService,
@@ -312,20 +308,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       elements.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-          console.log(`${id}:`, {
+          log.info(`${id}:`, {
             exists: true,
             hidden: el.hidden,
             display: getComputedStyle(el).display,
             children: el.children.length
           });
         } else {
-          console.log(`${id}: NOT FOUND`);
+          log.info(`${id}: NOT FOUND`);
         }
       });
 
       return 'Vehicle debug info logged to console';
     } catch (error) {
-      console.error('❌ Error in debugVehicles:', error);
+      log.error('❌ Error in debugVehicles:', error);
       return `Error: ${error.message}`;
     }
   };

@@ -1,14 +1,10 @@
 // HeaderSearch.js - Manages search functionality across desktop and mobile interfaces
 
 import { subscriberDataService } from '../dataService.js';
+import { createLogger } from '../utils/logger.js';
 
-// Production logging utility (scoped to this module)
-const isDevelopment = import.meta.env.DEV;
-const log = {
-    info: (...args) => isDevelopment && console.log(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-};
+// Initialize logger for this module
+const log = createLogger('HeaderSearch');
 
 export class HeaderSearch {
     constructor() {

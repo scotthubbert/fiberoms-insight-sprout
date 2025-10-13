@@ -47,11 +47,11 @@ export class RainViewerService {
                 log.info('✅ RainViewer service initialized successfully');
                 return true;
             } else {
-                console.warn('⚠️ RainViewer service initialized with limited functionality (API unavailable)');
+                log.warn('⚠️ RainViewer service initialized with limited functionality (API unavailable)');
                 return true; // Still return true to allow app to continue
             }
         } catch (error) {
-            console.warn('⚠️ RainViewer service initialization failed (non-critical):', error.message);
+            log.warn('⚠️ RainViewer service initialization failed (non-critical):', error.message);
             return true; // Don't block app startup
         }
     }
@@ -79,7 +79,7 @@ export class RainViewerService {
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                console.warn(`⚠️ RainViewer API returned ${response.status}: ${response.statusText}`);
+                log.warn(`⚠️ RainViewer API returned ${response.status}: ${response.statusText}`);
                 return null;
             }
 
@@ -87,7 +87,7 @@ export class RainViewerService {
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
-                console.warn('⚠️ RainViewer API returned non-JSON response:', text.substring(0, 100));
+                log.warn('⚠️ RainViewer API returned non-JSON response:', text.substring(0, 100));
                 return null;
             }
 
@@ -95,7 +95,7 @@ export class RainViewerService {
 
             // Validate the response structure
             if (!data || !data.radar || !data.radar.past || !Array.isArray(data.radar.past)) {
-                console.warn('⚠️ RainViewer API returned invalid data structure');
+                log.warn('⚠️ RainViewer API returned invalid data structure');
                 return null;
             }
 
@@ -105,9 +105,9 @@ export class RainViewerService {
 
         } catch (error) {
             if (error.name === 'AbortError') {
-                console.warn('⚠️ RainViewer API request timeout');
+                log.warn('⚠️ RainViewer API request timeout');
             } else {
-                console.warn('⚠️ RainViewer API request failed (non-critical):', error.message);
+                log.warn('⚠️ RainViewer API request failed (non-critical):', error.message);
             }
             // Always return null instead of throwing to prevent app crashes
             return null;
@@ -134,7 +134,7 @@ export class RainViewerService {
      */
     createRadarLayer() {
         if (!this.radarData?.radar?.past?.length) {
-            console.warn('⚠️ No radar data available for layer creation');
+            log.warn('⚠️ No radar data available for layer creation');
             return null;
         }
 
@@ -173,7 +173,7 @@ export class RainViewerService {
      */
     async updateRadarLayer() {
         if (!this.currentLayer) {
-            console.warn('⚠️ No radar layer to update');
+            log.warn('⚠️ No radar layer to update');
             return false;
         }
 
@@ -181,7 +181,7 @@ export class RainViewerService {
             await this.fetchRadarData();
 
             if (!this.radarData?.radar?.past?.length) {
-                console.warn('⚠️ No radar data available for update');
+                log.warn('⚠️ No radar data available for update');
                 return false;
             }
 
