@@ -80,7 +80,15 @@
     </div>
   </noscript>
 
-  <div id="app">
+  <!-- Authentication Container (shown when not authenticated) -->
+  <div id="auth-container" class="auth-container" style="display: flex;">
+    <div class="auth-loading">
+      <calcite-loader scale="l"></calcite-loader>
+      <p>Loading authentication...</p>
+    </div>
+  </div>
+
+  <div id="app" style="display: none;">
     <!-- Calcite Shell Layout -->
     <calcite-shell>
       <!-- Header Navigation -->
@@ -105,6 +113,8 @@
             aria-label="Refresh dashboard"></calcite-button>
           <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="s"
             aria-label="Toggle theme"></calcite-button>
+          <calcite-button id="sign-out-button" icon-start="sign-out" appearance="transparent" scale="s"
+            aria-label="Sign out" title="Sign out"></calcite-button>
         </div>
       </calcite-navigation>
 

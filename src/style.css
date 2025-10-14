@@ -16,6 +16,161 @@
   --calcite-color-brand: #4a9eff;
 }
 
+/* ============================================
+   Authentication Styles
+   ============================================ */
+
+/* Authentication container - full screen overlay */
+.auth-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: 10000;
+  padding: 20px;
+}
+
+/* Dark mode for auth container */
+[data-theme="dark"] .auth-container {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+/* Welcome section styling */
+.auth-welcome-section {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: white;
+  max-width: 400px;
+}
+
+.auth-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+}
+
+.auth-logo calcite-icon {
+  color: white;
+  --calcite-icon-size: 2.5rem;
+}
+
+.auth-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.auth-subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+/* Clerk sign-in wrapper */
+.clerk-sign-in-wrapper {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+[data-theme="dark"] .clerk-sign-in-wrapper {
+  background: var(--calcite-color-foreground-1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* Clerk sign-in container */
+#clerk-sign-in-container {
+  width: 100%;
+}
+
+/* Auth loading state */
+.auth-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: white;
+}
+
+.auth-loading p {
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Auth error page */
+.auth-error-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 400px;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .auth-error-page {
+  background: var(--calcite-color-foreground-1);
+}
+
+.auth-error {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 1rem;
+}
+
+/* Sign-out button styling */
+#sign-out-button {
+  margin-left: 0.5rem;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 1rem;
+  }
+
+  .auth-title {
+    font-size: 1.5rem;
+  }
+
+  .auth-subtitle {
+    font-size: 0.875rem;
+  }
+
+  .clerk-sign-in-wrapper {
+    padding: 1.5rem;
+  }
+
+  .auth-logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .auth-logo calcite-icon {
+    --calcite-icon-size: 2rem;
+  }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial,
     sans-serif;
