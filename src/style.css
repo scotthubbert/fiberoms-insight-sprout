@@ -31,7 +31,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
   z-index: 10000;
   padding: 20px;
 }
@@ -47,7 +47,7 @@
 
 /* Dark mode for auth container */
 [data-theme="dark"] .auth-container {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(135deg, #343a40 0%, #212529 100%);
 }
 
 /* Welcome section styling */
@@ -109,6 +109,19 @@
 /* Clerk sign-in container - keep Clerk's default styling */
 #clerk-sign-in-container {
   width: 100%;
+}
+
+/* Clerk component styling overrides for neutral colors */
+.clerk-sign-in-root {
+  --clerk-primary: #6c757d;
+  --clerk-primary-hover: #5a6268;
+  --clerk-primary-active: #495057;
+}
+
+.clerk-sign-in-card {
+  --clerk-primary: #6c757d;
+  --clerk-primary-hover: #5a6268;
+  --clerk-primary-active: #495057;
 }
 
 /* Auth loading state */
@@ -188,8 +201,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial,
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   background-color: var(--calcite-color-foreground-1);
   color: var(--calcite-color-text-1);
   overflow: hidden;
