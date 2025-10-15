@@ -82,18 +82,30 @@ export class MobileTabBar {
                 // Close previous panel only after new one is ready
                 this.closeCurrentPanel();
 
-                // Force dialog to be visible
+                // Force dialog and all its parts to be visible
                 dialog.style.display = 'block';
                 dialog.style.visibility = 'visible';
                 dialog.style.opacity = '1';
                 dialog.style.zIndex = '1000';
+                dialog.style.position = 'fixed';
 
-                // Ensure dialog content is visible
-                const content = dialog.querySelector('[slot="content"]');
-                if (content) {
-                    content.style.display = 'block';
-                    content.style.visibility = 'visible';
-                    content.style.opacity = '1';
+                // Ensure all dialog parts are visible
+                ['header', 'content', 'footer'].forEach(slot => {
+                    const part = dialog.querySelector(`[slot="${slot}"]`);
+                    if (part) {
+                        part.style.display = 'block';
+                        part.style.visibility = 'visible';
+                        part.style.opacity = '1';
+                    }
+                });
+
+                // Force dialog container to be visible
+                const container = dialog.shadowRoot?.querySelector('.container');
+                if (container) {
+                    container.style.display = 'flex';
+                    container.style.visibility = 'visible';
+                    container.style.opacity = '1';
+                    container.style.transform = 'none';
                 }
 
                 // Open the dialog
@@ -293,16 +305,41 @@ export class MobileTabBar {
             const dialogs = document.querySelectorAll('.mobile-only calcite-dialog');
             dialogs.forEach(dialog => {
                 if (dialog) {
+                    // Force dialog to be visible
                     dialog.style.display = 'block';
                     dialog.style.visibility = 'visible';
+                    dialog.style.opacity = '1';
+                    dialog.style.zIndex = '1000';
+                    dialog.style.position = 'fixed';
 
-                    // Ensure content is visible
-                    const content = dialog.querySelector('[slot="content"]');
-                    if (content) {
-                        content.style.display = 'block';
-                        content.style.visibility = 'visible';
-                        content.style.opacity = '1';
+                    // Ensure all dialog parts are visible
+                    ['header', 'content', 'footer'].forEach(slot => {
+                        const part = dialog.querySelector(`[slot="${slot}"]`);
+                        if (part) {
+                            part.style.display = 'block';
+                            part.style.visibility = 'visible';
+                            part.style.opacity = '1';
+                        }
+                    });
+
+                    // Force dialog container to be visible
+                    const container = dialog.shadowRoot?.querySelector('.container');
+                    if (container) {
+                        container.style.display = 'flex';
+                        container.style.visibility = 'visible';
+                        container.style.opacity = '1';
+                        container.style.transform = 'none';
                     }
+
+                    // Force all child elements to be visible
+                    const allElements = dialog.querySelectorAll('*');
+                    allElements.forEach(el => {
+                        if (el.tagName.toLowerCase().startsWith('calcite-')) {
+                            el.style.display = el.style.display || 'block';
+                            el.style.visibility = 'visible';
+                            el.style.opacity = '1';
+                        }
+                    });
                 }
             });
 
@@ -318,6 +355,17 @@ export class MobileTabBar {
                 tabBar.style.display = 'block';
                 tabBar.style.visibility = 'visible';
                 tabBar.style.opacity = '1';
+                tabBar.style.transform = 'none';
+                tabBar.style.transition = 'none';
+                tabBar.style.pointerEvents = 'auto';
+            }
+
+            // Ensure close button is visible when needed
+            if (this.currentDialog) {
+                this.closeButton.style.display = 'block';
+                this.closeButton.style.visibility = 'visible';
+                this.closeButton.style.opacity = '1';
+                this.closeButton.classList.add('show');
             }
 
             log.info('✅ Mobile UI recovery completed');
