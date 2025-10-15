@@ -44,9 +44,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   width: 100%;
   max-width: 400px;
-  margin: 0 auto;
+  text-align: center;
 }
 
 /* Dark mode for auth container */
@@ -114,6 +115,13 @@
 /* Clerk sign-in container - keep Clerk's default styling */
 #clerk-sign-in-container {
   width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Ensure Clerk component itself is centered */
+#clerk-sign-in-container > * {
+  margin: 0 auto;
 }
 
 /* Clerk component styling overrides for neutral colors */
