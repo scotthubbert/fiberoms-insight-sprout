@@ -85,72 +85,26 @@ export class MobileTabBar {
     }
 
     async handleTabSelection(tabValue) {
-        // Don't close current panel until new one is ready
+        this.closeCurrentPanel();
+
         const dialogId = `mobile-${tabValue}-sheet`;
         const dialog = document.getElementById(dialogId);
 
         if (dialog) {
+            // Ensure CalciteUI components are properly initialized before opening
             try {
-                // Wait for critical CalciteUI components with increased timeout
+                // Wait for critical CalciteUI components with timeout
                 await Promise.race([
                     Promise.all([
                         customElements.whenDefined('calcite-dialog'),
                         customElements.whenDefined('calcite-switch'),
                         customElements.whenDefined('calcite-list-item'),
                         customElements.whenDefined('calcite-list'),
-                        customElements.whenDefined('calcite-block'),
-                        customElements.whenDefined('calcite-icon')
+                        customElements.whenDefined('calcite-block')
                     ]),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('CalciteUI timeout')), 5000))
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('CalciteUI timeout')), 2000))
                 ]);
 
-                // Wait for dialog to be ready
-                if (dialog.componentOnReady && typeof dialog.componentOnReady === 'function') {
-                    await dialog.componentOnReady();
-                }
-
-                // Handle icon loading errors
-                const icons = dialog.querySelectorAll('calcite-icon');
-                icons.forEach(icon => {
-                    if (!icon.loaded) {
-                        icon.addEventListener('error', () => {
-                            // Replace failed icon with a fallback
-                            icon.icon = 'circle';
-                            icon.scale = 's';
-                        });
-                    }
-                });
-
-                // Close previous panel only after new one is ready
-                this.closeCurrentPanel();
-
-                // Force dialog and all its parts to be visible
-                dialog.style.display = 'block';
-                dialog.style.visibility = 'visible';
-                dialog.style.opacity = '1';
-                dialog.style.zIndex = '1000';
-                dialog.style.position = 'fixed';
-
-                // Ensure all dialog parts are visible
-                ['header', 'content', 'footer'].forEach(slot => {
-                    const part = dialog.querySelector(`[slot="${slot}"]`);
-                    if (part) {
-                        part.style.display = 'block';
-                        part.style.visibility = 'visible';
-                        part.style.opacity = '1';
-                    }
-                });
-
-                // Force dialog container to be visible
-                const container = dialog.shadowRoot?.querySelector('.container');
-                if (container) {
-                    container.style.display = 'flex';
-                    container.style.visibility = 'visible';
-                    container.style.opacity = '1';
-                    container.style.transform = 'none';
-                }
-
-                // Open the dialog
                 dialog.open = true;
                 this.currentDialog = dialog;
                 this.closeButton.classList.add('show');
@@ -161,37 +115,17 @@ export class MobileTabBar {
                 } else if (tabValue === 'subscribers') {
                     await this.initializeMobileSubscribersTab();
                 }
-
-                // Add a small delay to ensure everything is rendered
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // Force a reflow to ensure the dialog is visible
-                dialog.style.transform = 'translateZ(0)';
             } catch (error) {
-                log.warn('⚠️ CalciteUI components not ready, attempting recovery:', error);
-
-                // Close previous panel
-                this.closeCurrentPanel();
-
-                // Force dialog visibility
-                dialog.style.display = 'block';
-                dialog.style.visibility = 'visible';
-                dialog.style.opacity = '1';
-                dialog.style.zIndex = '1000';
-                dialog.style.transform = 'translateZ(0)';
-
-                // Force open the dialog
+                log.warn('⚠️ CalciteUI components not ready, but proceeding with dialog open:', error);
+                // Still try to open the dialog - force it open regardless of component state
                 dialog.open = true;
                 this.currentDialog = dialog;
                 this.closeButton.classList.add('show');
 
-                // Force initialize content
+                // Force subscriber initialization even if CalciteUI failed
                 if (tabValue === 'subscribers') {
                     await this.forceInitializeMobileSubscribersTab();
                 }
-
-                // Attempt UI recovery
-                this.recoverMobileUI();
             }
         }
     }

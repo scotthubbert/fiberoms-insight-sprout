@@ -21,9 +21,6 @@ export class AuthContainer {
     try {
       log.info('🎨 Initializing authentication UI...');
 
-      // Add auth-active class to body to prevent style conflicts
-      document.body.classList.add('auth-active');
-
       this.container = document.getElementById('auth-container');
 
       if (!this.container) {
@@ -112,8 +109,6 @@ export class AuthContainer {
     if (this.container) {
       this.container.innerHTML = '';
     }
-    // Remove auth-active class when auth container is destroyed
-    document.body.classList.remove('auth-active');
     this.signInElement = null;
   }
 }
