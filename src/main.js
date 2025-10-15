@@ -137,13 +137,7 @@ async function initializeAuthenticatedApp() {
     import('@esri/calcite-components/dist/components/calcite-dropdown-group'),
     import('@esri/calcite-components/dist/components/calcite-dropdown-item'),
     // ArcGIS Map Components - in same parallel batch
-    import('@arcgis/map-components/dist/components/arcgis-search'),
-    import('@arcgis/map-components/dist/components/arcgis-map'),
-    import('@arcgis/map-components/dist/components/arcgis-zoom'),
-    import('@arcgis/map-components/dist/components/arcgis-home'),
-    import('@arcgis/map-components/dist/components/arcgis-basemap-toggle'),
-    import('@arcgis/map-components/dist/components/arcgis-expand'),
-    import('@arcgis/map-components/dist/components/arcgis-track')
+    import('@arcgis/map-components/dist/components/arcgis-map')
   ]);
 
   // Setup error handlers immediately

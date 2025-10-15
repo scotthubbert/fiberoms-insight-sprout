@@ -82,26 +82,150 @@ export class Application {
                 };
 
                 scheduleIdle(async () => {
-                    // Ensure basemap gallery component is defined (import at idle), with click fallback
-                    const expand = document.querySelector('arcgis-expand');
-                    const gallery = document.querySelector('arcgis-basemap-gallery');
-                    if (gallery && !customElements.get('arcgis-basemap-gallery')) {
-                        try { await import('@arcgis/map-components/dist/components/arcgis-basemap-gallery'); } catch (_) { /* no-op */ }
-                        // Fallback: if import failed earlier, try on first expand click
-                        if (expand && !customElements.get('arcgis-basemap-gallery')) {
-                            const handler = async () => {
-                                try { await import('@arcgis/map-components/dist/components/arcgis-basemap-gallery'); } catch (_) { /* no-op */ }
-                                expand.removeEventListener('click', handler);
-                            };
-                            expand.addEventListener('click', handler, { once: true });
-                        }
-                    }
+                    // Lazy inject core widgets on all devices
+                    const injectCoreWidgets = async () => {
+                        const mapEl = this.services?.mapController?.mapElement;
+                        if (!mapEl) return;
 
-                    // Ensure fullscreen component is defined (import at idle so button appears)
-                    const fullscreen = document.querySelector('arcgis-fullscreen');
-                    if (fullscreen && !customElements.get('arcgis-fullscreen')) {
-                        try { await import('@arcgis/map-components/dist/components/arcgis-fullscreen'); } catch (_) { /* no-op */ }
-                    }
+                        // Search
+                        try {
+                            if (!customElements.get('arcgis-search')) {
+                                await import('@arcgis/map-components/dist/components/arcgis-search');
+                            }
+                            if (!mapEl.querySelector('arcgis-search')) {
+                                const s = document.createElement('arcgis-search');
+                                s.setAttribute('position', 'top-left');
+                                s.setAttribute('include-default-sources', 'true');
+                                s.setAttribute('max-results', '8');
+                                s.setAttribute('min-characters', '3');
+                                s.setAttribute('search-all-enabled', 'false');
+                                s.setAttribute('placeholder', 'Search addresses, places...');
+                                mapEl.appendChild(s);
+                                // reconfigure after insertion
+                                try { this.configureSearchWidget(); } catch (_) { }
+                            }
+                        } catch (_) { }
+
+                        // Home
+                        try {
+                            if (!customElements.get('arcgis-home')) {
+                                await import('@arcgis/map-components/dist/components/arcgis-home');
+                            }
+                            if (!mapEl.querySelector('arcgis-home')) {
+                                const h = document.createElement('arcgis-home');
+                                h.setAttribute('position', 'top-left');
+                                mapEl.appendChild(h);
+                                // configure home after insertion
+                                try { this.services?.mapController?.configureHomeButton(); } catch (_) { }
+                            }
+                        } catch (_) { }
+
+                        // Locate
+                        try {
+                            if (!customElements.get('arcgis-locate')) {
+                                await import('@arcgis/map-components/dist/components/arcgis-locate');
+                            }
+                            if (!mapEl.querySelector('arcgis-locate')) {
+                                const l = document.createElement('arcgis-locate');
+                                l.setAttribute('position', 'top-left');
+                                mapEl.appendChild(l);
+                            }
+                        } catch (_) { }
+
+                        // Track
+                        try {
+                            if (!customElements.get('arcgis-track')) {
+                                await import('@arcgis/map-components/dist/components/arcgis-track');
+                            }
+                            if (!mapEl.querySelector('arcgis-track')) {
+                                const t = document.createElement('arcgis-track');
+                                t.setAttribute('position', 'top-left');
+                                mapEl.appendChild(t);
+                            }
+                        } catch (_) { }
+                    };
+                    await injectCoreWidgets();
+                    // Basemap Toggle: lazy import on all devices (mobile and desktop)
+                    const ensureBasemapToggle = async () => {
+                        try {
+                            const mapEl = this.services?.mapController?.mapElement;
+                            if (!mapEl) return;
+                            if (!customElements.get('arcgis-basemap-toggle')) {
+                                try { await import('@arcgis/map-components/dist/components/arcgis-basemap-toggle'); } catch (_) { /* no-op */ }
+                            }
+                            if (!mapEl.querySelector('arcgis-basemap-toggle')) {
+                                const toggleEl = document.createElement('arcgis-basemap-toggle');
+                                toggleEl.setAttribute('position', 'bottom-right');
+                                toggleEl.setAttribute('next-basemap', 'satellite');
+                                mapEl.appendChild(toggleEl);
+                            }
+                        } catch (_) { /* no-op */ }
+                    };
+                    await ensureBasemapToggle();
+                    // Desktop-only Basemap Gallery: lazy import and attach within an Expand
+                    const mq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
+                    const ensureBasemapGallery = async () => {
+                        try {
+                            const mapEl = this.services?.mapController?.mapElement;
+                            if (!mapEl) return;
+
+                            if (mq.matches) {
+                                // Only import/define component on desktop
+                                if (!customElements.get('arcgis-basemap-gallery')) {
+                                    try { await import('@arcgis/map-components/dist/components/arcgis-basemap-gallery'); } catch (_) { /* no-op */ }
+                                }
+                                if (!customElements.get('arcgis-expand')) {
+                                    try { await import('@arcgis/map-components/dist/components/arcgis-expand'); } catch (_) { /* no-op */ }
+                                }
+
+                                // Create expand with gallery if not already present
+                                const existingExpand = mapEl.querySelector('arcgis-expand[icon="basemap"]');
+                                if (!existingExpand) {
+                                    const expandEl = document.createElement('arcgis-expand');
+                                    expandEl.setAttribute('position', 'top-left');
+                                    expandEl.setAttribute('icon', 'basemap');
+                                    expandEl.setAttribute('tooltip', 'Basemap Gallery');
+                                    const galleryEl = document.createElement('arcgis-basemap-gallery');
+                                    expandEl.appendChild(galleryEl);
+                                    const mapChildContainer = mapEl;
+                                    mapChildContainer.appendChild(expandEl);
+                                }
+                            } else {
+                                // Mobile: remove expand/gallery if present to reduce footprint
+                                const existingExpand = mapEl.querySelector('arcgis-expand[icon="basemap"]');
+                                if (existingExpand) {
+                                    existingExpand.parentNode?.removeChild(existingExpand);
+                                }
+                            }
+                        } catch (_) { /* no-op */ }
+                    };
+
+                    await ensureBasemapGallery();
+                    mq.addEventListener('change', ensureBasemapGallery);
+
+                    // Desktop-only Fullscreen: lazy import and inject/remove via media query
+                    const fsMq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
+                    const ensureFullscreen = async () => {
+                        try {
+                            const mapEl = this.services?.mapController?.mapElement;
+                            if (!mapEl) return;
+                            if (fsMq.matches) {
+                                if (!customElements.get('arcgis-fullscreen')) {
+                                    try { await import('@arcgis/map-components/dist/components/arcgis-fullscreen'); } catch (_) { /* no-op */ }
+                                }
+                                if (!mapEl.querySelector('arcgis-fullscreen')) {
+                                    const fsEl = document.createElement('arcgis-fullscreen');
+                                    fsEl.setAttribute('position', 'top-left');
+                                    mapEl.appendChild(fsEl);
+                                }
+                            } else {
+                                const fsEl = mapEl.querySelector('arcgis-fullscreen');
+                                if (fsEl) fsEl.parentNode?.removeChild(fsEl);
+                            }
+                        } catch (_) { /* no-op */ }
+                    };
+                    await ensureFullscreen();
+                    fsMq.addEventListener('change', ensureFullscreen);
                 });
             }
         });
@@ -485,24 +609,31 @@ export class Application {
     }
 
     initializeMeasurementWidget() {
-        const measurementWidget = document.getElementById('measurement-tool');
-        if (measurementWidget) {
-            // Set up buttons; component will be imported on first use
-            this.setupMeasurementButtons();
-        }
+        // Always set up buttons; widget will be created on-demand on desktop
+        this.setupMeasurementButtons();
     }
 
     async ensureMeasurementReady() {
-        const measurementWidget = document.getElementById('measurement-tool');
-        if (!measurementWidget) { throw new Error('Measurement widget not found'); }
+        const mq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
+        if (!mq.matches) return; // Skip entirely on mobile
 
-        // Load the component definition on demand
+        // Define component if needed
         if (!customElements.get('arcgis-measurement')) {
             try { await import('@arcgis/map-components/dist/components/arcgis-measurement'); }
             catch (_) { /* no-op */ }
         }
 
-        // If already ready, return immediately
+        // Create the element on-demand if not present
+        let measurementWidget = document.getElementById('measurement-tool');
+        if (!measurementWidget) {
+            const mapEl = this.services?.mapController?.mapElement;
+            if (!mapEl) return;
+            measurementWidget = document.createElement('arcgis-measurement');
+            measurementWidget.id = 'measurement-tool';
+            mapEl.appendChild(measurementWidget);
+        }
+
+        // If already ready, return
         if (measurementWidget.widget) return;
 
         // Wait for underlying widget to be ready
@@ -514,13 +645,17 @@ export class Application {
     }
 
     setupMeasurementButtons() {
-        const measurementWidget = document.getElementById('measurement-tool');
-        if (!measurementWidget) { log.error('Measurement widget not found'); return; }
         const distanceBtn = document.getElementById('distance-measurement-btn');
         if (distanceBtn) {
             distanceBtn.removeEventListener('click', this.distanceBtnHandler);
             this.distanceBtnHandler = async () => {
-                try { await this.ensureMeasurementReady(); measurementWidget.activeTool = 'distance'; this.updateMeasurementButtons('distance'); } catch (error) { log.error('Error activating distance measurement:', error); }
+                try {
+                    await this.ensureMeasurementReady();
+                    const measurementWidget = document.getElementById('measurement-tool');
+                    if (!measurementWidget) return;
+                    measurementWidget.activeTool = 'distance';
+                    this.updateMeasurementButtons('distance');
+                } catch (error) { log.error('Error activating distance measurement:', error); }
             };
             distanceBtn.addEventListener('click', this.distanceBtnHandler);
         }
@@ -528,7 +663,13 @@ export class Application {
         if (areaBtn) {
             areaBtn.removeEventListener('click', this.areaBtnHandler);
             this.areaBtnHandler = async () => {
-                try { await this.ensureMeasurementReady(); measurementWidget.activeTool = 'area'; this.updateMeasurementButtons('area'); } catch (error) { log.error('Error activating area measurement:', error); }
+                try {
+                    await this.ensureMeasurementReady();
+                    const measurementWidget = document.getElementById('measurement-tool');
+                    if (!measurementWidget) return;
+                    measurementWidget.activeTool = 'area';
+                    this.updateMeasurementButtons('area');
+                } catch (error) { log.error('Error activating area measurement:', error); }
             };
             areaBtn.addEventListener('click', this.areaBtnHandler);
         }
@@ -536,7 +677,14 @@ export class Application {
         if (clearBtn) {
             clearBtn.removeEventListener('click', this.clearBtnHandler);
             this.clearBtnHandler = async () => {
-                try { await this.ensureMeasurementReady(); measurementWidget.clear(); measurementWidget.activeTool = null; this.updateMeasurementButtons(null); } catch (error) { log.error('Error clearing measurements:', error); }
+                try {
+                    await this.ensureMeasurementReady();
+                    const measurementWidget = document.getElementById('measurement-tool');
+                    if (!measurementWidget) return;
+                    measurementWidget.clear();
+                    measurementWidget.activeTool = null;
+                    this.updateMeasurementButtons(null);
+                } catch (error) { log.error('Error clearing measurements:', error); }
             };
             clearBtn.addEventListener('click', this.clearBtnHandler);
         }
