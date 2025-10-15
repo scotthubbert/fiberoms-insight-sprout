@@ -211,8 +211,8 @@ export class Application {
                             if (!mapEl) return;
                             if (fsMq.matches) {
                                 if (!customElements.get('arcgis-fullscreen')) {
-                                    try { await import('@arcgis/map-components/dist/components/arcgis-fullscreen'); } catch (_) { /* no-op */ }
-                                }
+                        try { await import('@arcgis/map-components/dist/components/arcgis-fullscreen'); } catch (_) { /* no-op */ }
+                    }
                                 if (!mapEl.querySelector('arcgis-fullscreen')) {
                                     const fsEl = document.createElement('arcgis-fullscreen');
                                     fsEl.setAttribute('position', 'top-left');
@@ -610,7 +610,7 @@ export class Application {
 
     initializeMeasurementWidget() {
         // Always set up buttons; widget will be created on-demand on desktop
-        this.setupMeasurementButtons();
+            this.setupMeasurementButtons();
     }
 
     async ensureMeasurementReady() {
