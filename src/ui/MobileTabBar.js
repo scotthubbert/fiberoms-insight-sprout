@@ -12,8 +12,32 @@ export class MobileTabBar {
     }
 
     async init() {
-        await customElements.whenDefined('calcite-segmented-control');
-        this.setupEventListeners();
+        try {
+            // Wait for critical components to be defined
+            await Promise.all([
+                customElements.whenDefined('calcite-segmented-control'),
+                customElements.whenDefined('calcite-dialog'),
+                customElements.whenDefined('calcite-switch'),
+                customElements.whenDefined('calcite-list-item'),
+                customElements.whenDefined('calcite-list'),
+                customElements.whenDefined('calcite-block')
+            ]);
+
+            // Wait for components to be ready
+            const tabBar = document.getElementById('mobile-tab-bar');
+            if (tabBar && typeof tabBar.componentOnReady === 'function') {
+                await tabBar.componentOnReady();
+            }
+
+            // Initialize event listeners
+            this.setupEventListeners();
+
+            log.info('✅ Mobile tab bar initialized successfully');
+        } catch (error) {
+            log.warn('⚠️ Mobile tab bar initialization error:', error);
+            // Still set up event listeners even if component initialization fails
+            this.setupEventListeners();
+        }
     }
 
     setupEventListeners() {
@@ -74,10 +98,28 @@ export class MobileTabBar {
                         customElements.whenDefined('calcite-switch'),
                         customElements.whenDefined('calcite-list-item'),
                         customElements.whenDefined('calcite-list'),
-                        customElements.whenDefined('calcite-block')
+                        customElements.whenDefined('calcite-block'),
+                        customElements.whenDefined('calcite-icon')
                     ]),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('CalciteUI timeout')), 5000))
                 ]);
+
+                // Wait for dialog to be ready
+                if (dialog.componentOnReady && typeof dialog.componentOnReady === 'function') {
+                    await dialog.componentOnReady();
+                }
+
+                // Handle icon loading errors
+                const icons = dialog.querySelectorAll('calcite-icon');
+                icons.forEach(icon => {
+                    if (!icon.loaded) {
+                        icon.addEventListener('error', () => {
+                            // Replace failed icon with a fallback
+                            icon.icon = 'circle';
+                            icon.scale = 's';
+                        });
+                    }
+                });
 
                 // Close previous panel only after new one is ready
                 this.closeCurrentPanel();
