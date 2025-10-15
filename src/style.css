@@ -36,8 +36,11 @@
   padding: 20px;
 }
 
-/* Center all content within auth container */
-.auth-container > * {
+/* Center auth content within auth container */
+.auth-container > .auth-welcome-section,
+.auth-container > .clerk-sign-in-wrapper,
+.auth-container > .auth-loading,
+.auth-container > .auth-error {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -445,7 +448,7 @@ calcite-modal.mobile-only calcite-button + calcite-button {
 /* Mobile dialog styles */
 @media (max-width: 768px) {
   /* Position dialogs to avoid tab bar and close button */
-  calcite-dialog.mobile-only[open] {
+  body:not(.auth-active) calcite-dialog.mobile-only[open] {
     --calcite-dialog-width-multiplier: 1;
     position: fixed !important;
     top: 0 !important;
@@ -457,17 +460,30 @@ calcite-modal.mobile-only calcite-button + calcite-button {
     max-height: calc(100vh - 120px) !important;
     margin: 0 !important;
     border-radius: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 1000 !important;
+    transform: none !important;
+    transition: none !important;
+    flex: none !important;
+    align-items: stretch !important;
   }
 
   /* Add blur to scrim */
   calcite-dialog.mobile-only[open]::part(scrim) {
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
 
   /* Ensure primary slot is visible */
   calcite-dialog.mobile-only[open] [slot="primary"] {
     display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
 
   /* Fix dialog internal layout to ensure proper sizing */
@@ -476,6 +492,9 @@ calcite-modal.mobile-only calcite-button + calcite-button {
     flex-direction: column !important;
     height: 100% !important;
     max-height: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
   calcite-dialog.mobile-only::part(container) {
@@ -483,6 +502,19 @@ calcite-modal.mobile-only calcite-button + calcite-button {
     flex-direction: column !important;
     height: 100% !important;
     max-height: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Ensure all dialog parts are visible */
+  calcite-dialog.mobile-only::part(header),
+  calcite-dialog.mobile-only::part(content),
+  calcite-dialog.mobile-only::part(footer) {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
   /* Header positioning defined below */
