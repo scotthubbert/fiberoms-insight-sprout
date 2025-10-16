@@ -81,8 +81,14 @@ export class MapController {
         }
 
         // Prefer snapped zoom on mobile for performance and UX
-        const isMobile = (typeof window !== 'undefined') &&
-            (window.matchMedia && window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 768);
+        const isMobile = (typeof window !== 'undefined') && (
+            (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+            (navigator.maxTouchPoints > 0) ||
+            (window.innerWidth <= 768)
+        );
+
+        // Hint the web component as well (best-effort)
+        try { if (isMobile && this.mapElement) this.mapElement.setAttribute('snap-to-zoom', 'true'); } catch (_) { }
 
         const serviceArea = getCurrentServiceArea();
 
@@ -127,6 +133,18 @@ export class MapController {
             });
             log.info(`✅ Map configured for ${serviceArea.name} (global deployment)`);
         }
+
+        // Re-assert snap after other async init may tweak constraints
+        const ensureSnap = () => {
+            try {
+                if (isMobile && this.view && this.view.constraints && this.view.constraints.snapToZoom !== true) {
+                    this.view.constraints = { ...this.view.constraints, snapToZoom: true };
+                }
+            } catch (_) { }
+        };
+        ensureSnap();
+        setTimeout(ensureSnap, 500);
+        setTimeout(ensureSnap, 2000);
     }
 
     // Configure home button to use service area bounds or center
