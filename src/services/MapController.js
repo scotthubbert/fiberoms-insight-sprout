@@ -80,12 +80,16 @@ export class MapController {
             this.prepareServiceAreaBounds();
         }
 
+        // Prefer snapped zoom on mobile for performance and UX
+        const isMobile = (typeof window !== 'undefined') &&
+            (window.matchMedia && window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 768);
+
         const serviceArea = getCurrentServiceArea();
 
         if (this.calculatedExtent) {
             // Apply geographic bounds for regional deployments
             this.view.constraints = {
-                snapToZoom: false,  // Smooth zoom per CLAUDE.md performance requirements
+                snapToZoom: !!isMobile,  // Snap on mobile, smooth on desktop
                 geometry: this.calculatedExtent  // Constrain navigation to service area
             };
 
@@ -107,7 +111,7 @@ export class MapController {
         } else {
             // Global deployment - no geographic constraints, just center the view
             this.view.constraints = {
-                snapToZoom: false  // Smooth zoom per CLAUDE.md performance requirements
+                snapToZoom: !!isMobile  // Snap on mobile, smooth on desktop
                 // No geometry constraint for global deployments
             };
 

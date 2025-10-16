@@ -74,8 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 async function initializeAuthenticatedApp() {
   log.info('📦 Loading application modules...');
-
-  // Load EVERYTHING in one massive parallel batch for maximum speed
+  // Load modules in parallel
   const [
     { errorService: ImportedErrorService },
     intlModule,
@@ -99,44 +98,28 @@ async function initializeAuthenticatedApp() {
     import('./core/Application.js'),
     import('./services/SentryService.js'),
     import('./components/PowerOutageStats.js'),
-    // CalciteUI components - all in same parallel batch
+    // CalciteUI core (mobile + shared)
     import('@esri/calcite-components/dist/components/calcite-shell'),
-    import('@esri/calcite-components/dist/components/calcite-shell-panel'),
-    import('@esri/calcite-components/dist/components/calcite-panel'),
-    import('@esri/calcite-components/dist/components/calcite-block'),
-    import('@esri/calcite-components/dist/components/calcite-action'),
-    import('@esri/calcite-components/dist/components/calcite-action-bar'),
-    import('@esri/calcite-components/dist/components/calcite-button'),
-    import('@esri/calcite-components/dist/components/calcite-icon'),
-    import('@esri/calcite-components/dist/components/calcite-label'),
-    import('@esri/calcite-components/dist/components/calcite-checkbox'),
-    import('@esri/calcite-components/dist/components/calcite-list'),
-    import('@esri/calcite-components/dist/components/calcite-list-item'),
     import('@esri/calcite-components/dist/components/calcite-navigation'),
     import('@esri/calcite-components/dist/components/calcite-navigation-logo'),
-    import('@esri/calcite-components/dist/components/calcite-segmented-control'),
-    import('@esri/calcite-components/dist/components/calcite-segmented-control-item'),
+    import('@esri/calcite-components/dist/components/calcite-button'),
+    import('@esri/calcite-components/dist/components/calcite-icon'),
     import('@esri/calcite-components/dist/components/calcite-loader'),
     import('@esri/calcite-components/dist/components/calcite-chip'),
-    import('@esri/calcite-components/dist/components/calcite-modal'),
-    import('@esri/calcite-components/dist/components/calcite-dialog'),
-    import('@esri/calcite-components/dist/components/calcite-sheet'),
-    import('@esri/calcite-components/dist/components/calcite-scrim'),
+    import('@esri/calcite-components/dist/components/calcite-block'),
     import('@esri/calcite-components/dist/components/calcite-input'),
     import('@esri/calcite-components/dist/components/calcite-switch'),
+    import('@esri/calcite-components/dist/components/calcite-notice'),
+    import('@esri/calcite-components/dist/components/calcite-alert'),
+    import('@esri/calcite-components/dist/components/calcite-dialog'),
+    import('@esri/calcite-components/dist/components/calcite-sheet'),
+    import('@esri/calcite-components/dist/components/calcite-segmented-control'),
+    import('@esri/calcite-components/dist/components/calcite-segmented-control-item'),
+    import('@esri/calcite-components/dist/components/calcite-list'),
+    import('@esri/calcite-components/dist/components/calcite-list-item'),
     import('@esri/calcite-components/dist/components/calcite-autocomplete'),
     import('@esri/calcite-components/dist/components/calcite-autocomplete-item'),
-    import('@esri/calcite-components/dist/components/calcite-alert'),
-    import('@esri/calcite-components/dist/components/calcite-notice'),
-    import('@esri/calcite-components/dist/components/calcite-select'),
-    import('@esri/calcite-components/dist/components/calcite-option'),
-    import('@esri/calcite-components/dist/components/calcite-card'),
-    import('@esri/calcite-components/dist/components/calcite-popover'),
-    import('@esri/calcite-components/dist/components/calcite-tooltip'),
-    import('@esri/calcite-components/dist/components/calcite-dropdown'),
-    import('@esri/calcite-components/dist/components/calcite-dropdown-group'),
-    import('@esri/calcite-components/dist/components/calcite-dropdown-item'),
-    // ArcGIS Map Components - in same parallel batch
+    // ArcGIS Map Components - core
     import('@arcgis/map-components/dist/components/arcgis-map')
   ]);
 
@@ -156,11 +139,38 @@ async function initializeAuthenticatedApp() {
   const assetsPath = import.meta.env.PROD
     ? '/calcite/assets'
     : '/node_modules/@esri/calcite-components/dist/calcite/assets';
-
   log.info('🎨 Setting CalciteUI asset path:', assetsPath);
   setAssetPath(assetsPath);
 
-  log.info('✅ All components loaded in parallel');
+  // Desktop-only Calcite set: load when desktop is detected
+  let desktopCalciteLoaded = false;
+  const loadDesktopCalcite = async () => {
+    if (desktopCalciteLoaded) return;
+    await Promise.all([
+      import('@esri/calcite-components/dist/components/calcite-shell-panel'),
+      import('@esri/calcite-components/dist/components/calcite-panel'),
+      import('@esri/calcite-components/dist/components/calcite-block'),
+      import('@esri/calcite-components/dist/components/calcite-action'),
+      import('@esri/calcite-components/dist/components/calcite-action-bar'),
+      import('@esri/calcite-components/dist/components/calcite-action-group'),
+      import('@esri/calcite-components/dist/components/calcite-checkbox'),
+      import('@esri/calcite-components/dist/components/calcite-label'),
+      import('@esri/calcite-components/dist/components/calcite-card'),
+      import('@esri/calcite-components/dist/components/calcite-select'),
+      import('@esri/calcite-components/dist/components/calcite-option')
+    ]);
+    desktopCalciteLoaded = true;
+  };
+
+  const mqDesktop = window.matchMedia('(min-width: 900px) and (pointer: fine)');
+  if (mqDesktop.matches) {
+    await loadDesktopCalcite();
+  } else {
+    // Load on transition to desktop
+    mqDesktop.addEventListener('change', (e) => { if (e.matches) loadDesktopCalcite(); });
+  }
+
+  log.info('✅ Core components loaded; desktop Calcite will load on demand');
 
   // Setup icon fallback handling
   setupCalciteIconFallback();

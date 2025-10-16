@@ -74,7 +74,8 @@ export function setupCalciteIconFallback() {
           'loading': 'spinner',
           'database': 'data',
           'code-branch': 'code',
-          'file-text': 'fileText'
+          'file-text': 'fileText',
+          'circle-check': 'check-circle'
         };
 
         const replacement = iconReplacements[iconName] || FALLBACK_ICON;
