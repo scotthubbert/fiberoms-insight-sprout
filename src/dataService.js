@@ -283,10 +283,22 @@ export class SubscriberDataService {
             }
 
             if (!data || data.length === 0) {
-                log.warn('⚠️ No offline subscribers found. Check your data:')
+                log.warn('⚠️ No offline subscribers found. Returning last known features to avoid flicker if available')
+                const last = this.getCache('offline_subscribers_last');
+                if (last && last.features && last.features.length) {
+                    return {
+                        count: last.features.length,
+                        data: last.data || [],
+                        features: last.features,
+                        lastUpdated: new Date().toISOString(),
+                        fromCache: true
+                    }
+                }
+                // Dev guidance
+                log.warn('⚠️ Check that records exist with status="Offline" and coordinates present');
                 if (isDevelopment) {
-                    log.info('- Make sure you have records with status="Offline"')
-                    log.info('- Make sure latitude and longitude are not null')
+                    log.info('- Ensure status="Offline"')
+                    log.info('- Ensure latitude and longitude are not null')
                 }
                 return {
                     count: 0,
@@ -318,7 +330,9 @@ export class SubscriberDataService {
                 fromCache: false
             }
 
-            // No caching for realtime data
+            // Persist last non-empty result in memory cache to guard against transient empty responses
+            this.setCache('offline_subscribers_last', result);
+            // No caching for realtime data beyond last snapshot
             return result
         } catch (error) {
             log.error('Failed to fetch offline subscribers:', error)

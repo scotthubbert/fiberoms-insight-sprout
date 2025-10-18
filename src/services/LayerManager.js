@@ -478,8 +478,13 @@ export class LayerManager {
         try {
             log.info(`🔄 Updating layer: ${layerId}`);
 
-            // Subscriber layers use smoothGeoJSONUpdate with debouncing
+            // Subscriber layers use smoothGeoJSONUpdate with debouncing; ignore empties to avoid flicker
             if (layerId === 'offline-subscribers' || layerId === 'online-subscribers') {
+                const count = newData?.features?.length || 0;
+                if (count === 0) {
+                    log.warn(`⏭️ Ignoring empty update for ${layerId} to preserve existing markers`);
+                    return true;
+                }
                 return this.debouncedUpdateLayerData(layerId, newData);
             }
 
@@ -589,6 +594,13 @@ export class LayerManager {
         if (!map) {
             log.warn(`No map found for layer ${layerId}`);
             return false;
+        }
+
+        // If incoming dataset is empty, keep existing layer to avoid wiping markers due to transient backend empties
+        const incomingCount = newData?.features?.length || 0;
+        if (incomingCount === 0) {
+            log.warn(`⚠️ Skipping ${layerId} update: incoming feature count is 0 (preserving existing markers)`);
+            return true;
         }
 
         // Get old layer to preserve visibility state
