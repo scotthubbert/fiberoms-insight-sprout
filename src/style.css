@@ -713,7 +713,7 @@ calcite-dialog.mobile-only [slot="content"] {
 }
 
 /* Mobile-specific adjustments */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   /* Hide the entire header on mobile */
   calcite-navigation.unified-header {
     display: none !important;
@@ -726,6 +726,13 @@ calcite-dialog.mobile-only [slot="content"] {
 
   /* Hide ArcGIS search widget on mobile */
   arcgis-search {
+    display: none !important;
+  }
+
+  /* Hide ArcGIS map widgets on mobile */
+  arcgis-locate,
+  arcgis-track,
+  arcgis-basemap-toggle {
     display: none !important;
   }
 
@@ -768,8 +775,158 @@ calcite-dialog.mobile-only [slot="content"] {
   }
 }
 
-/* Desktop enhancements */
-@media (min-width: 769px) {
+/* Tablet adjustments - iPads and similar devices */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Hide the entire header on tablets (same as mobile) */
+  calcite-navigation.unified-header {
+    display: none !important;
+  }
+
+  /* Show mobile overlay on tablets */
+  #mobile-outage-overlay {
+    display: block !important;
+  }
+
+  /* Hide ArcGIS search widget on tablets */
+  arcgis-search {
+    display: none !important;
+  }
+
+  /* Hide ArcGIS map widgets on tablets */
+  arcgis-locate,
+  arcgis-track,
+  arcgis-basemap-toggle {
+    display: none !important;
+  }
+
+  /* Show mobile UI for tablets to ensure proper touch interaction */
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Ensure mobile navigation is visible on tablets */
+  #mobile-tab-bar {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Adjust map container for tablet */
+  .map-container {
+    height: calc(100vh - 64px); /* Account for bottom nav */
+    margin-bottom: 0;
+  }
+
+  /* Ensure mobile dialogs are visible on tablets */
+  calcite-dialog.mobile-only {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Ensure mobile dialogs work properly on tablets - full screen like mobile */
+  calcite-dialog.mobile-only[open] {
+    --calcite-dialog-width-multiplier: 1;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 120px !important; /* Account for tab bar (64px) + close button (~56px) */
+    width: 100% !important;
+    height: calc(100vh - 120px) !important;
+    max-height: calc(100vh - 120px) !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Add blur to scrim on tablets */
+  calcite-dialog.mobile-only[open]::part(scrim) {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Ensure primary slot is visible on tablets */
+  calcite-dialog.mobile-only[open] [slot="primary"] {
+    display: block !important;
+  }
+
+  /* Fix dialog internal layout for tablets */
+  calcite-dialog.mobile-only::part(dialog) {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  calcite-dialog.mobile-only::part(container) {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  /* Enhanced dialog header styling for tablets */
+  calcite-dialog.mobile-only [slot="header"] {
+    padding: var(--calcite-spacing-md) !important;
+    background: var(--calcite-color-foreground-2) !important;
+    border-bottom: 1px solid var(--calcite-color-border-2) !important;
+    min-height: 48px !important;
+    flex: 0 0 auto !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+  }
+
+  /* Fix content area sizing and scrolling for tablets */
+  calcite-dialog.mobile-only [slot="content"] {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    background: var(--calcite-color-foreground-1) !important;
+    padding: var(--calcite-spacing-md) !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    position: relative !important;
+  }
+
+  /* Force close button to be visible at bottom on tablets */
+  #mobile-close-button.show {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    bottom: 64px !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 901 !important;
+  }
+
+  /* Tablet-specific content adjustments */
+  #simple-vehicle-list {
+    height: calc(100vh - 350px);
+  }
+
+  #power-outages-content {
+    height: calc(100vh - 350px);
+  }
+}
+
+/* Desktop enhancements - only for screens larger than 1024px */
+@media (min-width: 1025px) {
   calcite-navigation.unified-header .navigation-actions {
     padding-right: var(--calcite-spacing-lg);
   }
@@ -2379,12 +2536,7 @@ calcite-dialog.mobile-only calcite-block {
   }
 }
 
-/* Tablet adjustments */
-@media (max-width: 1024px) and (min-width: 769px) {
-  #simple-vehicle-list {
-    height: calc(100vh - 350px);
-  }
-}
+/* Tablet adjustments - moved to main tablet media query above */
 
 /* Power Outages - Full Height Layout */
 #power-outages-content {
@@ -2483,19 +2635,14 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   }
 }
 
-/* Tablet adjustments for power outages */
-@media (max-width: 1024px) and (min-width: 769px) {
-  #power-outages-content {
-    height: calc(100vh - 350px);
-  }
-}
+/* Tablet adjustments for power outages - moved to main tablet media query above */
 
 /* Let Calcite handle shell panel layout naturally */
 
 /* Let Calcite handle panel content layout naturally - minimal custom styling */
 
-/* Ensure mobile dialogs are hidden on desktop */
-@media (min-width: 769px) {
+/* Ensure mobile dialogs are hidden on desktop (screens larger than 1024px) */
+@media (min-width: 1025px) {
   .mobile-only {
     display: none !important;
     visibility: hidden !important;
