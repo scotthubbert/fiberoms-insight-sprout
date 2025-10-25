@@ -775,8 +775,8 @@ calcite-dialog.mobile-only [slot="content"] {
   }
 }
 
-/* Tablet adjustments - iPads and similar devices */
-@media (min-width: 768px) and (max-width: 1024px) {
+/* Tablet adjustments - iPads and similar devices (including iPad Pro in landscape) */
+@media (min-width: 768px) and (max-width: 1366px) {
   /* Hide the entire header on tablets (same as mobile) */
   calcite-navigation.unified-header {
     display: none !important;
@@ -925,8 +925,8 @@ calcite-dialog.mobile-only [slot="content"] {
   }
 }
 
-/* Desktop enhancements - only for screens larger than 1024px */
-@media (min-width: 1025px) {
+/* Desktop enhancements - only for screens larger than 1366px (iPad Pro landscape is 1366px) */
+@media (min-width: 1367px) {
   calcite-navigation.unified-header .navigation-actions {
     padding-right: var(--calcite-spacing-lg);
   }
@@ -2641,8 +2641,8 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
 
 /* Let Calcite handle panel content layout naturally - minimal custom styling */
 
-/* Ensure mobile dialogs are hidden on desktop (screens larger than 1024px) */
-@media (min-width: 1025px) {
+/* Ensure mobile dialogs are hidden on desktop (screens larger than 1366px - iPad Pro landscape) */
+@media (min-width: 1367px) {
   .mobile-only {
     display: none !important;
     visibility: hidden !important;
