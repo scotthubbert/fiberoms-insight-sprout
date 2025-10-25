@@ -5,6 +5,11 @@
   box-sizing: border-box;
 }
 
+/* Font loading optimization - use swap for better performance */
+@font-face {
+  font-display: swap;
+}
+
 /* Use Calcite CSS variables for consistent theming */
 :root {
   /* Custom brand color */

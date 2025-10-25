@@ -89,23 +89,28 @@ export class Application {
                 const mapEl = this.services?.mapController?.mapElement;
                 if (!mapEl) return;
 
-                // Search
-                try {
-                    if (!customElements.get('arcgis-search')) {
-                        await import('@arcgis/map-components/dist/components/arcgis-search');
-                    }
-                    if (!mapEl.querySelector('arcgis-search')) {
-                        const s = document.createElement('arcgis-search');
-                        s.setAttribute('position', 'top-left');
-                        s.setAttribute('include-default-sources', 'true');
-                        s.setAttribute('max-results', '8');
-                        s.setAttribute('min-characters', '3');
-                        s.setAttribute('search-all-enabled', 'false');
-                        s.setAttribute('placeholder', 'Search addresses, places...');
-                        mapEl.appendChild(s);
-                        try { this.configureSearchWidget(); } catch (_) { }
-                    }
-                } catch (_) { }
+                // Search widget - lazy load on idle (non-blocking, saves ~200KB from critical path)
+                const loadSearchWidget = async () => {
+                    try {
+                        if (!customElements.get('arcgis-search')) {
+                            await import('@arcgis/map-components/dist/components/arcgis-search');
+                        }
+                        if (!mapEl.querySelector('arcgis-search')) {
+                            const s = document.createElement('arcgis-search');
+                            s.setAttribute('position', 'top-left');
+                            s.setAttribute('include-default-sources', 'true');
+                            s.setAttribute('max-results', '8');
+                            s.setAttribute('min-characters', '3');
+                            s.setAttribute('search-all-enabled', 'false');
+                            s.setAttribute('placeholder', 'Search addresses, places...');
+                            mapEl.appendChild(s);
+                            try { this.configureSearchWidget(); } catch (_) { }
+                        }
+                    } catch (_) { }
+                };
+                
+                // Load search widget during idle time (after critical rendering)
+                scheduleIdle(loadSearchWidget);
 
                 // Home
                 try {
@@ -164,12 +169,14 @@ export class Application {
             };
             await ensureBasemapToggle();
 
-            // Desktop-only Basemap Gallery
+            // Desktop-only Basemap Gallery - lazy load during idle (saves ~150KB on mobile)
             const mq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
             const ensureBasemapGallery = async () => {
                 try {
                     const mapEl = this.services?.mapController?.mapElement;
                     if (!mapEl) return;
+                    
+                    // Only load on desktop, not mobile/tablet
                     if (mq.matches) {
                         if (!customElements.get('arcgis-basemap-gallery')) {
                             try { await import('@arcgis/map-components/dist/components/arcgis-basemap-gallery'); } catch (_) { /* no-op */ }
@@ -188,13 +195,35 @@ export class Application {
                             mapEl.appendChild(expandEl);
                         }
                     } else {
+                        // Remove gallery if switching to mobile
                         const existingExpand = mapEl.querySelector('arcgis-expand[icon="basemap"]');
                         if (existingExpand) existingExpand.parentNode?.removeChild(existingExpand);
                     }
                 } catch (_) { /* no-op */ }
             };
-            await ensureBasemapGallery();
+            // Load on desktop during idle time (non-blocking)
+            if (mq.matches) {
+                scheduleIdle(ensureBasemapGallery);
+            }
             addMqChange(mq, ensureBasemapGallery);
+
+            // Preload measurement widget on desktop during idle (desktop-only, ~180KB)
+            const preloadMeasurementWidget = async () => {
+                const mapEl = this.services?.mapController?.mapElement;
+                if (!mapEl || !mq.matches) return;
+                
+                try {
+                    // Just preload the component, don't create the widget yet
+                    if (!customElements.get('arcgis-measurement')) {
+                        await import('@arcgis/map-components/dist/components/arcgis-measurement');
+                    }
+                } catch (_) { /* no-op */ }
+            };
+            
+            // Preload on desktop during idle time
+            if (mq.matches) {
+                scheduleIdle(preloadMeasurementWidget);
+            }
 
             // Desktop-only Fullscreen
             const fsMq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
@@ -256,12 +285,20 @@ export class Application {
         loadingIndicator.clearConsolidated();
         loadingIndicator.showLoading('map-init', 'Map');
 
-        await this.initializeSubscriberLayers();
+        // Parallel initialization for better performance
+        const initTasks = [
+            this.initializeSubscriberLayers(),
+            this.initializeInfrastructureLayers()
+        ];
+
         // Initialize Geotab early if enabled so vehicle layers can use a ready service
         if (this.geotabEnabled) {
-            await this.initializeGeotabService();
+            initTasks.push(this.initializeGeotabService());
         }
-        await this.initializeInfrastructureLayers();
+
+        // Wait for all initialization tasks to complete (parallel execution)
+        await Promise.allSettled(initTasks);
+
         // await this.initializeRadarLayer(); // Defer RainViewer until first use
         await this.updateSubscriberStatistics();
         loadingIndicator.showNetwork('map-init', 'Map');

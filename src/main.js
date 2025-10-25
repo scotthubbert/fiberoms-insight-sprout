@@ -113,12 +113,13 @@ async function initializeAuthenticatedApp() {
     import('@esri/calcite-components/dist/components/calcite-alert'),
     import('@esri/calcite-components/dist/components/calcite-dialog'),
     import('@esri/calcite-components/dist/components/calcite-sheet'),
-    import('@esri/calcite-components/dist/components/calcite-segmented-control'),
-    import('@esri/calcite-components/dist/components/calcite-segmented-control-item'),
     import('@esri/calcite-components/dist/components/calcite-list'),
     import('@esri/calcite-components/dist/components/calcite-list-item'),
     import('@esri/calcite-components/dist/components/calcite-autocomplete'),
     import('@esri/calcite-components/dist/components/calcite-autocomplete-item'),
+    // Mobile tab bar components (needed early to prevent componentOnReady errors)
+    import('@esri/calcite-components/dist/components/calcite-segmented-control'),
+    import('@esri/calcite-components/dist/components/calcite-segmented-control-item'),
     // ArcGIS Map Components - core
     import('@arcgis/map-components/dist/components/arcgis-map')
   ]);

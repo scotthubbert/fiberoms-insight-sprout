@@ -22,52 +22,25 @@
 
   <title>FiberOMS Insight</title>
 
-  <!-- Production Error Handling -->
-  <script>
-    // Global error handler for production
-    window.addEventListener('error', (event) => {
-      console.error('Global error:', event.error);
-      // In production, you might want to send this to a logging service
-    });
-
-    window.addEventListener('unhandledrejection', (event) => {
-      console.error('Unhandled promise rejection:', event.reason);
-      // In production, you might want to send this to a logging service
-    });
-
-    // Polyfill for Node.js globals in browser
-    if (typeof global === 'undefined') {
-      window.global = window;
-    }
-
-    // Production performance monitoring
-    if ('performance' in window) {
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          const perfData = performance.getEntriesByType('navigation')[0];
-          if (perfData) {
-            console.info('Page load time:', perfData.loadEventEnd - perfData.navigationStart, 'ms');
-          }
-        }, 0);
-      });
-    }
-  </script>
-
   <!-- Progressive Web App Icons -->
   <link rel="icon" type="image/x-icon" href="/icons/ff.ico">
   <link rel="apple-touch-icon" href="/icons/ff.ico">
   <link rel="manifest" href="/manifest.json">
 
   <!-- Performance Optimization -->
-  <!-- Preloading handled automatically by Vite -->
-  <link rel="dns-prefetch" href="//fonts.googleapis.com">
-  <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+  <!-- Preconnect to critical third-party domains -->
+  <link rel="preconnect" href="https://js.arcgis.com" crossorigin>
+  <link rel="preconnect" href="https://basemaps.arcgis.com" crossorigin>
+  <link rel="dns-prefetch" href="//js.arcgis.com">
+  <link rel="dns-prefetch" href="//basemaps.arcgis.com">
 
-  <!-- ArcGIS Map SDK theme stylesheets -->
+  <!-- ArcGIS Map SDK theme stylesheets - must load synchronously for map rendering -->
   <link id="esri-theme-light" rel="stylesheet" href="/assets/esri/themes/light/main.css" />
   <link id="esri-theme-dark" rel="stylesheet" href="/assets/esri/themes/dark/main.css" disabled />
 
-  <link rel="stylesheet" href="/src/style.css">
+  <!-- Main styles - deferred loading for non-critical styles -->
+  <link rel="preload" href="/src/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/src/style.css"></noscript>
 </head>
 
 <body>
@@ -720,6 +693,37 @@
       </div>
     </calcite-dialog>
   </div>
+
+  <!-- Performance and Error Handling (deferred to end for faster FCP) -->
+  <script>
+    // Polyfill for Node.js globals in browser
+    if (typeof global === 'undefined') {
+      window.global = window;
+    }
+
+    // Global error handler for production
+    window.addEventListener('error', (event) => {
+      console.error('Global error:', event.error);
+      // In production, you might want to send this to a logging service
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      // In production, you might want to send this to a logging service
+    });
+
+    // Production performance monitoring
+    if ('performance' in window) {
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const perfData = performance.getEntriesByType('navigation')[0];
+          if (perfData) {
+            console.info('Page load time:', perfData.loadEventEnd - perfData.navigationStart, 'ms');
+          }
+        }, 0);
+      });
+    }
+  </script>
 
   <!-- Production Script Loading -->
   <script type="module" src="/src/main.js" onerror="console.error('Failed to load main application script')"></script>

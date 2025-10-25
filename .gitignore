@@ -22,6 +22,10 @@ Thumbs.db
 .vscode/settings.local.json
 .idea/
 
+# MCP (Model Context Protocol) - Warp AI configuration
+.mcp.json
+.warp/mcp.json
+
 # Runtime
 *.pid
 *.seed
