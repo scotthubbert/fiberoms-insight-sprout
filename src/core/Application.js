@@ -89,7 +89,7 @@ export class Application {
                 const mapEl = this.services?.mapController?.mapElement;
                 if (!mapEl) return;
 
-                // Search widget - lazy load on idle (non-blocking, saves ~200KB from critical path)
+                // Search widget - load FIRST to ensure top position (lazy via idle, saves ~200KB from critical path)
                 const loadSearchWidget = async () => {
                     try {
                         if (!customElements.get('arcgis-search')) {
@@ -103,14 +103,19 @@ export class Application {
                             s.setAttribute('min-characters', '3');
                             s.setAttribute('search-all-enabled', 'false');
                             s.setAttribute('placeholder', 'Search addresses, places...');
-                            mapEl.appendChild(s);
+                            // Insert as first child to ensure top position in widget stack
+                            if (mapEl.firstChild) {
+                                mapEl.insertBefore(s, mapEl.firstChild);
+                            } else {
+                                mapEl.appendChild(s);
+                            }
                             try { this.configureSearchWidget(); } catch (_) { }
                         }
                     } catch (_) { }
                 };
                 
-                // Load search widget during idle time (after critical rendering)
-                scheduleIdle(loadSearchWidget);
+                // Load search widget FIRST during idle time
+                await loadSearchWidget();
 
                 // Home
                 try {
