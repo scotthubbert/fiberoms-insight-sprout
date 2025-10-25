@@ -156,11 +156,10 @@ export class Application {
             };
             await injectCoreWidgets();
 
-            // Basemap Toggle: lazy import on all devices
-            const ensureBasemapToggle = async () => {
-                try {
-                    const mapEl = this.services?.mapController?.mapElement;
-                    if (!mapEl) return;
+            // Basemap Toggle: load with other widgets (not deferred to ensure thumbnails load)
+            try {
+                const mapEl = this.services?.mapController?.mapElement;
+                if (mapEl) {
                     if (!customElements.get('arcgis-basemap-toggle')) {
                         try { await import('@arcgis/map-components/dist/components/arcgis-basemap-toggle'); } catch (_) { /* no-op */ }
                     }
@@ -170,9 +169,8 @@ export class Application {
                         toggleEl.setAttribute('next-basemap', 'satellite');
                         mapEl.appendChild(toggleEl);
                     }
-                } catch (_) { /* no-op */ }
-            };
-            await ensureBasemapToggle();
+                }
+            } catch (_) { /* no-op */ }
 
             // Desktop-only Basemap Gallery - lazy load during idle (saves ~150KB on mobile)
             const mq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
