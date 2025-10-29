@@ -724,7 +724,8 @@
         setTimeout(() => {
           const perfData = performance.getEntriesByType('navigation')[0];
           if (perfData) {
-            console.info('Page load time:', perfData.loadEventEnd - perfData.navigationStart, 'ms');
+            const loadMs = Math.round(perfData.duration || (perfData.loadEventEnd - (perfData.startTime || 0)) || 0);
+            console.info('Page load time:', loadMs, 'ms');
           }
         }, 0);
       });

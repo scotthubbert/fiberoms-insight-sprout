@@ -9,6 +9,7 @@ export class PWAInstaller {
         this.deferredPrompt = null;
         this.updateAvailable = false;
         this.registration = null;
+        this._reloadOnControllerChange = false; // only reload when we explicitly trigger an update
     }
 
     init() {
@@ -44,7 +45,12 @@ export class PWAInstaller {
 
                 // When the new SW takes control, reload to apply it
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    try { window.location.reload(); } catch {}
+                    // Only reload when we explicitly requested activation (via forceUpdate)
+                    if (this._reloadOnControllerChange) {
+                        try { window.location.reload(); } catch {}
+                    } else {
+                        log.info('Service worker controller changed (initial activation)');
+                    }
                 });
 
                 const registration = await navigator.serviceWorker.register('/sw.js');
@@ -180,8 +186,8 @@ export class PWAInstaller {
     async forceUpdate() {
         if (this.registration && this.registration.waiting) {
             // Tell the waiting service worker to skip waiting
+            this._reloadOnControllerChange = true;
             this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            window.location.reload();
         }
     }
 
