@@ -122,6 +122,11 @@ export class MapController {
 
             // Set initial extent with immediate positioning
             const initialTarget = this.calculatedExtentBase || this.calculatedExtent;
+            try {
+                // Expose initial extent for other modules (e.g., search widget)
+                const toJson = (ext) => (ext && typeof ext.toJSON === 'function') ? ext.toJSON() : ext;
+                window.initialMapExtent = toJson(initialTarget);
+            } catch (_) { }
             this.view.goTo(initialTarget, {
                 animate: false,
                 duration: 0

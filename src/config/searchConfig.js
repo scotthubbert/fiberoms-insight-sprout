@@ -13,8 +13,8 @@
 // Available service area configurations
 const SERVICE_AREAS = {
     // Alabama Power Company service area (current deployment)
-    alabama_apco: {
-        name: 'Alabama Power Company Service Area',
+    freedom_fiber: {
+        name: 'Freedom Fiber Service Area',
         region: 'Alabama, USA',
         bounds: {
             xmin: -88.3319638467807,   // Western bound (SW longitude)
@@ -104,7 +104,7 @@ const SERVICE_AREAS = {
 };
 
 // Current deployment configuration - CHANGE THIS FOR DIFFERENT DEPLOYMENTS
-const CURRENT_SERVICE_AREA = 'alabama_apco';
+const CURRENT_SERVICE_AREA = 'freedom_fiber';
 
 // Optional extent buffer (in degrees) to extend map constraints beyond service area
 // Set to 0 for no buffer. Recommended small buffer like 0.5-1.0 degrees if vehicles roam outside.

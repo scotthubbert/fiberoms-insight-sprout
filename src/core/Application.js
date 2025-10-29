@@ -346,7 +346,9 @@ export class Application {
         }
 
         const serviceArea = getCurrentServiceArea();
-        const bounds = getServiceAreaBounds();
+        const initialExtent = (typeof window !== 'undefined' && window.initialMapExtent) ? window.initialMapExtent : null;
+        // Prefer initial map extent from MapController; fallback to configured bounds
+        const bounds = initialExtent || this.services?.mapController?.calculatedExtentBase || this.services?.mapController?.calculatedExtent || getServiceAreaBounds();
         const searchSettings = getSearchSettings();
 
         try {
@@ -366,7 +368,7 @@ export class Application {
                             if (source.filter && source.filter.geometry) delete source.filter.geometry;
                         }
                     });
-                    const boundsInfo = bounds ? `${serviceArea.name} bounds for local results preference` : 'global search (no geographic constraints)';
+                    const boundsInfo = bounds ? `initial map bounds for ${serviceArea.name}` : 'global search (no geographic constraints)';
                     console.info(`✅ Search widget configured with ${boundsInfo}`);
                 }
             };
