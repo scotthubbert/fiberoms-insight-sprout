@@ -205,7 +205,72 @@ class CacheService {
     // Always try cache first on mobile devices
     return /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
   }
+
+  // Check storage quota and clear old cache if needed
+  async checkQuota() {
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        const { usage, quota } = await navigator.storage.estimate();
+        const percentUsed = (usage / quota) * 100;
+        
+        log.info(`💾 Storage usage: ${(usage / 1024 / 1024).toFixed(2)}MB / ${(quota / 1024 / 1024).toFixed(2)}MB (${percentUsed.toFixed(1)}%)`);
+        
+        // Clear expired cache if usage is high
+        if (percentUsed > 80) {
+          log.warn(`⚠️ Storage ${percentUsed.toFixed(1)}% full, clearing expired cache...`);
+          await this.clearExpiredCache();
+          
+          // Check again after cleanup
+          const { usage: newUsage } = await navigator.storage.estimate();
+          const newPercentUsed = (newUsage / quota) * 100;
+          log.info(`✅ Storage after cleanup: ${newPercentUsed.toFixed(1)}% full`);
+          
+          // If still over 90%, clear all cache
+          if (newPercentUsed > 90) {
+            log.warn(`🚨 Storage critically full (${newPercentUsed.toFixed(1)}%), clearing all cache...`);
+            await this.clearAllCache();
+          }
+        }
+        
+        return { usage, quota, percentUsed };
+      }
+      
+      return null;
+    } catch (error) {
+      log.error('❌ Error checking storage quota:', error);
+      return null;
+    }
+  }
+
+  // Start periodic quota monitoring
+  startQuotaMonitoring(intervalMs = 300000) { // Default 5 minutes for battery efficiency
+    // Check quota immediately
+    this.checkQuota();
+    
+    // Then check periodically
+    this._quotaCheckInterval = setInterval(() => {
+      this.checkQuota();
+    }, intervalMs);
+    
+    log.info(`🔄 Started storage quota monitoring (interval: ${intervalMs / 1000 / 60}min)`);
+  }
+
+  // Stop quota monitoring
+  stopQuotaMonitoring() {
+    if (this._quotaCheckInterval) {
+      clearInterval(this._quotaCheckInterval);
+      this._quotaCheckInterval = null;
+      log.info('🛑 Stopped storage quota monitoring');
+    }
+  }
 }
 
 // Create singleton instance
 export const cacheService = new CacheService();
+
+// Start quota monitoring automatically after a short delay
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    cacheService.startQuotaMonitoring();
+  }, 5000); // Start after 5 seconds
+}
