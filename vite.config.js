@@ -121,7 +121,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
+        skipWaiting: false,  // Changed: Prevents mid-session crashes from auto-updates
         clientsClaim: true,
         // Add revision info to ensure cache busting
         dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
