@@ -111,8 +111,6 @@ async function initializeAuthenticatedApp() {
     import('@esri/calcite-components/dist/components/calcite-switch'),
     import('@esri/calcite-components/dist/components/calcite-notice'),
     import('@esri/calcite-components/dist/components/calcite-alert'),
-    import('@esri/calcite-components/dist/components/calcite-dialog'),
-    import('@esri/calcite-components/dist/components/calcite-sheet'),
     import('@esri/calcite-components/dist/components/calcite-list'),
     import('@esri/calcite-components/dist/components/calcite-list-item'),
     import('@esri/calcite-components/dist/components/calcite-autocomplete'),
@@ -123,6 +121,21 @@ async function initializeAuthenticatedApp() {
     // ArcGIS Map Components - core
     import('@arcgis/map-components/dist/components/arcgis-map')
   ]);
+
+  // Defer dialog component - only used in modals that open on user action
+  // Saves ~8-12KB from critical path, loads during idle time
+  const loadDialogComponents = async () => {
+    log.info('📦 Loading dialog components during idle time...');
+    await import('@esri/calcite-components/dist/components/calcite-dialog');
+    log.info('✅ Dialog components loaded and ready');
+  };
+
+  // Schedule dialog loading during idle time
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => loadDialogComponents(), { timeout: 2000 });
+  } else {
+    setTimeout(() => loadDialogComponents(), 1000);
+  }
 
   // Setup error handlers immediately
   setupErrorHandlers(log, ImportedErrorService);
