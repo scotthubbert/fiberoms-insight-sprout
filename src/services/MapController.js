@@ -20,6 +20,27 @@ export class MapController {
         // Pre-calculate bounds before waiting for map to be ready
         this.prepareServiceAreaBounds();
 
+        // Prevent initial world-view flash by setting initial state early and hiding map until bounds are applied
+        if (this.mapElement) {
+            try {
+                // Hide visually but keep layout
+                this.mapElement.style.visibility = 'hidden';
+                // Prime initial extent/center on the custom element before view creation
+                if (this.calculatedExtentBase || this.calculatedExtent) {
+                    const initial = this.calculatedExtentBase || this.calculatedExtent;
+                    this.mapElement.extent = initial; // property assignment preferred over attribute for complex objects
+                    // Also provide a center hint for components that read attributes
+                    if (this.calculatedCenter?.length === 2) {
+                        this.mapElement.setAttribute('center', `${this.calculatedCenter[0]},${this.calculatedCenter[1]}`);
+                    }
+                } else if (this.calculatedCenter?.length === 2) {
+                    // Global fallback
+                    this.mapElement.setAttribute('center', `${this.calculatedCenter[0]},${this.calculatedCenter[1]}`);
+                    this.mapElement.setAttribute('zoom', '6');
+                }
+            } catch (_) { /* no-op */ }
+        }
+
         await this.waitForMapReady();
         this.setupInitialConfiguration();
         this.configureView();
@@ -112,6 +133,8 @@ export class MapController {
                 } catch (fallbackError) {
                     log.error('MapController: Extent fallback also failed:', fallbackError);
                 }
+            }).finally(() => {
+                try { if (this.mapElement) this.mapElement.style.visibility = 'visible'; } catch (_) {}
             });
             log.info(`✅ Map constrained to ${serviceArea.name}`);
         } else {
@@ -124,12 +147,14 @@ export class MapController {
             // Center on configured location
             this.view.goTo({
                 center: this.calculatedCenter,
-                zoom: 4  // Continental view for global deployments
+                zoom: 6  // Slightly closer than world to reduce initial flash
             }, {
                 animate: false,
                 duration: 0
             }).catch(error => {
                 log.error('MapController: Failed to center global view:', error);
+            }).finally(() => {
+                try { if (this.mapElement) this.mapElement.style.visibility = 'visible'; } catch (_) {}
             });
             log.info(`✅ Map configured for ${serviceArea.name} (global deployment)`);
         }
