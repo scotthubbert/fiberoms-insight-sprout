@@ -34,8 +34,9 @@
   <link rel="dns-prefetch" href="//js.arcgis.com">
   <link rel="dns-prefetch" href="//basemaps.arcgis.com">
 
-  <!-- ArcGIS Map SDK theme stylesheets - must load synchronously for map rendering -->
-  <link id="esri-theme-light" rel="stylesheet" href="/assets/esri/themes/light/main.css" />
+  <!-- ArcGIS Map SDK theme stylesheets - deferred loading for faster FCP -->
+  <link id="esri-theme-light" rel="preload" href="/assets/esri/themes/light/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link id="esri-theme-light" rel="stylesheet" href="/assets/esri/themes/light/main.css" /></noscript>
   <link id="esri-theme-dark" rel="stylesheet" href="/assets/esri/themes/dark/main.css" disabled />
 
   <!-- Main styles - deferred loading for non-critical styles -->
