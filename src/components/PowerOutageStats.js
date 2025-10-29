@@ -589,36 +589,54 @@ export class PowerOutageStatsComponent extends HTMLElement {
             const tombigbeeLayer = window.app?.services?.layerManager?.getLayer('tombigbee-outages');
 
             let targetLayer = null;
-            if (apcoLayer && apcoLayer.visible) {
-                const apcoResults = await apcoLayer.queryFeatures({
-                    where: `outage_id = '${outageId}'`,
-                    returnGeometry: true,
-                    outFields: ['*']
+            let targetFeatures = [];
+
+            const collectMatchingGraphics = (layer) => {
+                const items = layer?.graphics?.items || layer?.graphics || [];
+                return items.filter(g => {
+                    const id = g?.attributes?.outage_id || g?.attributes?.id;
+                    return id && id.toString() === String(outageId);
                 });
-                if (apcoResults.features.length > 0) {
-                    targetLayer = apcoLayer;
+            };
+
+            // Prefer APCo if visible and has matching features
+            if (apcoLayer && apcoLayer.visible) {
+                if (typeof apcoLayer.queryFeatures === 'function') {
+                    const apcoResults = await apcoLayer.queryFeatures({ where: `outage_id = '${outageId}'`, returnGeometry: true, outFields: ['*'] });
+                    if (apcoResults?.features?.length) {
+                        targetLayer = apcoLayer;
+                        targetFeatures = apcoResults.features;
+                    }
+                } else {
+                    const matches = collectMatchingGraphics(apcoLayer);
+                    if (matches.length) {
+                        targetLayer = apcoLayer;
+                        targetFeatures = matches;
+                    }
                 }
             }
 
+            // Fallback to Tombigbee
             if (!targetLayer && tombigbeeLayer && tombigbeeLayer.visible) {
-                const tombigbeeResults = await tombigbeeLayer.queryFeatures({
-                    where: `outage_id = '${outageId}'`,
-                    returnGeometry: true,
-                    outFields: ['*']
-                });
-                if (tombigbeeResults.features.length > 0) {
-                    targetLayer = tombigbeeLayer;
+                if (typeof tombigbeeLayer.queryFeatures === 'function') {
+                    const tombigbeeResults = await tombigbeeLayer.queryFeatures({ where: `outage_id = '${outageId}'`, returnGeometry: true, outFields: ['*'] });
+                    if (tombigbeeResults?.features?.length) {
+                        targetLayer = tombigbeeLayer;
+                        targetFeatures = tombigbeeResults.features;
+                    }
+                } else {
+                    const matches = collectMatchingGraphics(tombigbeeLayer);
+                    if (matches.length) {
+                        targetLayer = tombigbeeLayer;
+                        targetFeatures = matches;
+                    }
                 }
             }
 
             if (targetLayer) {
                 window.mapView.popup.open({
                     location: point,
-                    features: await targetLayer.queryFeatures({
-                        where: `outage_id = '${outageId}'`,
-                        returnGeometry: true,
-                        outFields: ['*']
-                    }).then(result => result.features)
+                    features: targetFeatures
                 });
             }
 

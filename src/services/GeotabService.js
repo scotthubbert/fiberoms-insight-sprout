@@ -17,6 +17,8 @@ try {
 /**
  * GeotabService - Handles MyGeotab API integration for vehicle tracking
  */
+const isDevelopment = import.meta.env && import.meta.env.DEV;
+
 export class GeotabService {
     constructor() {
         this.api = null;

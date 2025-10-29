@@ -697,6 +697,11 @@
 
   <!-- Performance and Error Handling (deferred to end for faster FCP) -->
   <script>
+    // Stencil/Calcite defensive polyfill: avoid errors when componentOnReady is missing on non-stencil elements
+    if (!HTMLElement.prototype.componentOnReady) {
+      HTMLElement.prototype.componentOnReady = function () { return Promise.resolve(this); };
+    }
+
     // Polyfill for Node.js globals in browser
     if (typeof global === 'undefined') {
       window.global = window;
