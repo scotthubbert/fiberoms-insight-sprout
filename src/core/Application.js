@@ -1031,7 +1031,15 @@ export class Application {
     }
 
     startSubscriberPolling() {
-        log.info('🔄 Starting subscriber data polling');
+        // Detect mobile device - use longer intervals to save battery
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                         window.innerWidth <= 768;
+        
+        // Mobile: 5 minutes (users typically don't leave app running)
+        // Desktop: 30 seconds (users monitor actively)
+        const subscriberPollInterval = isMobile ? 300000 : 30000;
+        
+        log.info(`🔄 Starting subscriber data polling (${isMobile ? 'mobile' : 'desktop'}: ${subscriberPollInterval / 1000}s interval)`);
         let previousOfflineCount = null;
         let previousOnlineCount = null;
         const handleSubscriberUpdate = async (data) => {
@@ -1069,7 +1077,7 @@ export class Application {
                 }
             }
         };
-        this.pollingManager.startPolling('subscribers', handleSubscriberUpdate);
+        this.pollingManager.startPolling('subscribers', handleSubscriberUpdate, subscriberPollInterval);
         const refreshButton = document.getElementById('refresh-data');
         if (refreshButton) {
             refreshButton.addEventListener('click', async () => {
@@ -1102,7 +1110,15 @@ export class Application {
     }
 
     startPowerOutagePolling() {
-        log.info('⚡ Starting power outage data polling (1 minute interval)');
+        // Detect mobile device - use longer intervals to save battery
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                         window.innerWidth <= 768;
+        
+        // Mobile: 5 minutes (users typically don't leave app running)
+        // Desktop: 1 minute (users monitor actively)
+        const outagePollInterval = isMobile ? 300000 : 60000;
+        
+        log.info(`⚡ Starting power outage data polling (${isMobile ? 'mobile' : 'desktop'}: ${outagePollInterval / 1000}s interval)`);
         const handlePowerOutageUpdate = async (data) => {
             try {
                 if (data.apco && data.tombigbee) {
@@ -1135,7 +1151,7 @@ export class Application {
                 }
             }
         };
-        this.pollingManager.startPolling('power-outages', handlePowerOutageUpdate, 60000);
+        this.pollingManager.startPolling('power-outages', handlePowerOutageUpdate, outagePollInterval);
         const refreshPowerButton = document.getElementById('refresh-power-outages');
         if (refreshPowerButton) {
             refreshPowerButton.addEventListener('click', async () => {
