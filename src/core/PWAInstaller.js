@@ -42,8 +42,18 @@ export class PWAInstaller {
                     }
                 });
 
+                // When the new SW takes control, reload to apply it
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    try { window.location.reload(); } catch {}
+                });
+
                 const registration = await navigator.serviceWorker.register('/sw.js');
                 this.registration = registration;
+
+                // If there's already a waiting worker, notify immediately
+                if (registration.waiting) {
+                    this.handleUpdateAvailable();
+                }
 
                 // Check for updates every time the page loads
                 registration.addEventListener('updatefound', () => {
@@ -83,8 +93,11 @@ export class PWAInstaller {
             return;
         }
 
-        // Check if notification already exists
-        if (document.querySelector('#pwa-update-notice')) {
+        // Only show when page is visible
+        if (document.hidden) return;
+
+        // De-duplicate with versionCheck notice
+        if (document.querySelector('#pwa-update-notice, #update-notification')) {
             return;
         }
 
@@ -120,6 +133,14 @@ export class PWAInstaller {
         refreshButton.setAttribute('scale', 's');
         refreshButton.textContent = 'Refresh Now';
         refreshButton.onclick = () => {
+            // Prefer activating the waiting SW if available
+            try {
+                if (this.registration && this.registration.waiting) {
+                    this.forceUpdate();
+                    return;
+                }
+            } catch {}
+            // Fallback: full reload
             notice.remove();
             if (noticeContainer.children.length === 0) {
                 noticeContainer.remove();

@@ -137,6 +137,20 @@ async function initializeAuthenticatedApp() {
     setTimeout(() => loadDialogComponents(), 1000);
   }
 
+  // Ensure dialogs are loaded if user opens a dialog before idle task runs
+  const ensureDialogLoaded = async () => {
+    if (!customElements.get('calcite-dialog')) await loadDialogComponents();
+  };
+  const dialogOpenObserver = new MutationObserver((muts) => {
+    for (const m of muts) {
+      if (m.type === 'attributes' && m.attributeName === 'open' && m.target.tagName === 'CALCITE-DIALOG') {
+        ensureDialogLoaded();
+        break;
+      }
+    }
+  });
+  dialogOpenObserver.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['open'] });
+
   // Setup error handlers immediately
   setupErrorHandlers(log, ImportedErrorService);
 

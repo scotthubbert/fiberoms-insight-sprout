@@ -2599,6 +2599,28 @@ power-outage-stats .outages-list-container {
   min-height: 0; /* Allow flex item to shrink below content size */
 }
 
+/* Prevent FOUC for dialogs until web component is defined */
+calcite-dialog:not(:defined) { display: none !important; }
+
+/* Safe-area support for bottom nav on notched devices */
+#mobile-tab-bar { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Ensure mobile close button sits above home indicator */
+@media (max-width: 768px) {
+  #mobile-close-button {
+    bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+  }
+  #mobile-close-button.show {
+    bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1366px) {
+  #mobile-close-button.show {
+    bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
 power-outage-stats .outages-list {
   flex: 1;
   overflow-y: auto;

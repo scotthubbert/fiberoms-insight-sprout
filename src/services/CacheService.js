@@ -225,8 +225,8 @@ class CacheService {
           const newPercentUsed = (newUsage / quota) * 100;
           log.info(`✅ Storage after cleanup: ${newPercentUsed.toFixed(1)}% full`);
           
-          // If still over 90%, clear all cache
-          if (newPercentUsed > 90) {
+          // If still over 95%, clear all cache
+          if (newPercentUsed > 95) {
             log.warn(`🚨 Storage critically full (${newPercentUsed.toFixed(1)}%), clearing all cache...`);
             await this.clearAllCache();
           }
@@ -244,14 +244,30 @@ class CacheService {
 
   // Start periodic quota monitoring
   startQuotaMonitoring(intervalMs = 300000) { // Default 5 minutes for battery efficiency
+    if (this._quotaCheckInterval) return; // prevent duplicate intervals
+
     // Check quota immediately
     this.checkQuota();
-    
+
+    // Pause checks when page is hidden to save battery
+    this._quotaPaused = typeof document !== 'undefined' ? document.hidden : false;
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        this._quotaPaused = document.hidden;
+        if (!document.hidden) this.checkQuota();
+      });
+    }
+
     // Then check periodically
     this._quotaCheckInterval = setInterval(() => {
-      this.checkQuota();
+      if (!this._quotaPaused) this.checkQuota();
     }, intervalMs);
-    
+
+    // Clean up on unload
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => this.stopQuotaMonitoring(), { once: true });
+    }
+
     log.info(`🔄 Started storage quota monitoring (interval: ${intervalMs / 1000 / 60}min)`);
   }
 

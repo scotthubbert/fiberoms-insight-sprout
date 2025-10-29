@@ -330,6 +330,12 @@ export class Application {
         this.initialLoadComplete = true;
         this.startSubscriberPolling();
         this.startPowerOutagePolling();
+        const triggerImmediateRefresh = () => {
+            try { this.pollingManager.performUpdate('subscribers'); } catch {}
+            try { this.pollingManager.performUpdate('power-outages'); } catch {}
+        };
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) triggerImmediateRefresh(); });
+        window.addEventListener('online', triggerImmediateRefresh);
     }
 
     configureSearchWidget() {
@@ -1097,7 +1103,7 @@ export class Application {
         this.setupCSVExport();
         this.setupSubscriberStatistics();
         const testSubscriberButton = document.getElementById('test-subscriber-update');
-        if (testSubscriberButton && isDevelopment) {
+        if (testSubscriberButton && typeof isDevelopment !== 'undefined' && isDevelopment) {
             testSubscriberButton.style.display = 'block';
             testSubscriberButton.addEventListener('click', () => {
                 const prevOffline = Math.floor(Math.random() * 300) + 200;
@@ -1170,7 +1176,7 @@ export class Application {
             });
         }
         const testButton = document.getElementById('test-outage-update');
-        if (testButton && isDevelopment) {
+        if (testButton && typeof isDevelopment !== 'undefined' && isDevelopment) {
             testButton.style.display = 'block';
             testButton.addEventListener('click', () => {
                 const powerOutageStats = document.querySelector('power-outage-stats');
