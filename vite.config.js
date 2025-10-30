@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import viteCompression from 'vite-plugin-compression';
 import { execSync } from 'child_process';
 import fs from 'fs';
 
@@ -107,6 +108,20 @@ export default defineConfig({
     }),
     // Only use SSL in production or when explicitly requested
     ...(process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS ? [basicSsl()] : []),
+    // Pre-compress assets with Brotli for faster serving (best compression)
+    viteCompression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024, // Only compress files > 1KB
+      deleteOriginFile: false
+    }),
+    // Pre-compress assets with Gzip for broader compatibility
+    viteCompression({
+      algorithm: 'gzip',
+      ext: '.gz',
+      threshold: 1024,
+      deleteOriginFile: false
+    }),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'icons/*.png', 'icons/*.svg'],
