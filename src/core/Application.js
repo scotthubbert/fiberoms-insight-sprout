@@ -8,7 +8,7 @@ import { subscriberDataService, pollingManager } from '../dataService.js';
 import { getLayerConfig } from '../config/layerConfigs.js';
 import { getCurrentServiceArea, getServiceAreaBounds, getSearchSettings } from '../config/searchConfig.js';
 // geotabService will be lazy-loaded
-import { CSVExportService } from '../utils/csvExport.js';
+// CSVExportService will be lazy-loaded on demand (desktop-only feature)
 import * as clipboardUtils from '../utils/clipboardUtils.js';
 import { loadingIndicator } from '../utils/loadingIndicator.js';
 import { HeaderSearch as ImportedHeaderSearch } from '../ui/HeaderSearch.js';
@@ -780,12 +780,11 @@ export class Application {
     }
 
     setupCSVExport() {
+        // Desktop-only CSV export buttons (mobile UI removed for performance)
         const desktopExportBtn = document.getElementById('desktop-export-offline-csv-btn');
         if (desktopExportBtn) desktopExportBtn.addEventListener('click', async () => { await this.handleCSVExport(desktopExportBtn, 'offline'); });
         const desktopExportAllBtn = document.getElementById('desktop-export-all-csv-btn');
         if (desktopExportAllBtn) desktopExportAllBtn.addEventListener('click', async () => { await this.handleCSVExport(desktopExportAllBtn, 'all'); });
-        const mobileExportBtn = document.getElementById('export-offline-csv-btn');
-        if (mobileExportBtn) mobileExportBtn.addEventListener('click', async () => { await this.handleCSVExport(mobileExportBtn, 'offline'); });
         const ta5kReportsBtn = document.getElementById('export-ta5k-reports-btn');
         if (ta5kReportsBtn) ta5kReportsBtn.addEventListener('click', async () => { await this.handleCSVExport(ta5kReportsBtn, 'ta5k-reports'); });
     }
@@ -799,6 +798,10 @@ export class Application {
             button.textContent = 'Preparing Download...';
             button.setAttribute('icon-start', 'loading');
             button.disabled = true;
+            
+            // Lazy-load CSV export service only when needed (desktop-only feature)
+            const { CSVExportService } = await import('../utils/csvExport.js');
+            
             if (exportType === 'all') await CSVExportService.exportAllSubscribers();
             else if (exportType === 'ta5k-reports') await CSVExportService.exportTA5KNodeReports();
             else await CSVExportService.exportOfflineSubscribers();
