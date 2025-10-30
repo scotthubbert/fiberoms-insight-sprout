@@ -249,8 +249,37 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (/@arcgis\/(core|map-components)/.test(id)) return 'vendor_arcgis';
-            if (/@supabase\//.test(id)) return 'vendor_supabase';
+            // Split ArcGIS into granular chunks for better caching and parallel loading
+            if (/@arcgis\/core\//.test(id)) {
+              // Core ArcGIS modules - essential map functionality
+              if (/\/(config|intl|request|kernel|core)/.test(id)) {
+                return 'vendor_arcgis-core';
+              }
+              // Geometry and spatial operations
+              if (/\/geometry\//.test(id)) {
+                return 'vendor_arcgis-geometry';
+              }
+              // Layers - lazy loaded when needed
+              if (/\/layers\//.test(id)) {
+                return 'vendor_arcgis-layers';
+              }
+              // Everything else from @arcgis/core
+              return 'vendor_arcgis-other';
+            }
+            // ArcGIS Map Components - widgets loaded on demand
+            if (/@arcgis\/map-components/.test(id)) {
+              return 'vendor_arcgis-widgets';
+            }
+            // Calcite UI components
+            if (/@esri\/calcite-components/.test(id)) {
+              return 'vendor_calcite';
+            }
+            // Supabase
+            if (/@supabase\//.test(id)) {
+              return 'vendor_supabase';
+            }
+            // Other vendor dependencies
+            return 'vendor_other';
           }
         }
       },
