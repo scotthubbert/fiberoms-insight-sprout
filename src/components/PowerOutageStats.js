@@ -9,6 +9,7 @@
  */
 
 import { subscriberDataService } from '../dataService.js';
+import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
 
 /**
  * Production logging utility - only warnings and errors in production
@@ -743,14 +744,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
             return;
         }
 
-        // Create notice container if it doesn't exist
-        let noticeContainer = document.querySelector('#notice-container');
-        if (!noticeContainer) {
-            noticeContainer = document.createElement('div');
-            noticeContainer.id = 'notice-container';
-            noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
-            document.body.appendChild(noticeContainer);
-        }
+        // Use shared notice container
+        const noticeContainer = getOrCreateNoticeContainer();
 
         // Create notice
         const notice = document.createElement('calcite-notice');
@@ -842,14 +837,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
             message += changes.join(', ');
         }
 
-        // Create notice container if it doesn't exist
-        let noticeContainer = document.querySelector('#notice-container');
-        if (!noticeContainer) {
-            noticeContainer = document.createElement('div');
-            noticeContainer.id = 'notice-container';
-            noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
-            document.body.appendChild(noticeContainer);
-        }
+        // Use shared notice container
+        const noticeContainer = getOrCreateNoticeContainer();
 
         // Create notice
         const notice = document.createElement('calcite-notice');

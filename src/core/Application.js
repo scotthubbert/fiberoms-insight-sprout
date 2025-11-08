@@ -11,6 +11,7 @@ import { getCurrentServiceArea, getServiceAreaBounds, getSearchSettings } from '
 // CSVExportService will be lazy-loaded on demand (desktop-only feature)
 import * as clipboardUtils from '../utils/clipboardUtils.js';
 import { loadingIndicator } from '../utils/loadingIndicator.js';
+import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
 import { HeaderSearch as ImportedHeaderSearch } from '../ui/HeaderSearch.js';
 import { DashboardManager as ImportedDashboardManager } from '../ui/DashboardManager.js';
 import { LayerPanel as ImportedLayerPanel } from '../ui/LayerPanel.js';
@@ -910,21 +911,18 @@ export class Application {
 
     showNotification(type, message, duration = 5000) {
         if (this.isMobileDevice()) { console.log(`📱 Mobile notification skipped: ${type} - ${message}`); return; }
+        const container = getOrCreateNoticeContainer();
         const notification = document.createElement('calcite-notice');
         notification.setAttribute('kind', type);
         notification.setAttribute('width', 'auto');
         notification.setAttribute('scale', 'm');
-        notification.setAttribute('active', 'true');
-        notification.style.position = 'fixed';
-        notification.style.top = '80px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '9999';
-        notification.style.maxWidth = '400px';
+        notification.setAttribute('open', 'true');
+        notification.setAttribute('closable', '');
         const messageDiv = document.createElement('div');
         messageDiv.slot = 'message';
         messageDiv.textContent = message;
         notification.appendChild(messageDiv);
-        document.body.appendChild(notification);
+        container.appendChild(notification);
         setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, duration);
         notification.addEventListener('calciteNoticeClose', () => { if (notification.parentNode) notification.parentNode.removeChild(notification); });
     }
@@ -1292,8 +1290,7 @@ export class Application {
         } else {
             kind = 'info'; title = 'Service Status Changes'; message = offlineChange > 0 ? `${offlineChange.toLocaleString()} subscribers changed status (${currOffline.toLocaleString()} offline, ${currOnline.toLocaleString()} online)` : `Subscriber status updates (${currOffline.toLocaleString()} offline, ${currOnline.toLocaleString()} online)`;
         }
-        let noticeContainer = document.querySelector('#notice-container');
-        if (!noticeContainer) { noticeContainer = document.createElement('div'); noticeContainer.id = 'notice-container'; noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;'; document.body.appendChild(noticeContainer); }
+        const noticeContainer = getOrCreateNoticeContainer();
         const notice = document.createElement('calcite-notice');
         notice.id = 'subscriber-update-notice'; notice.setAttribute('open', ''); notice.setAttribute('kind', kind); notice.setAttribute('closable', ''); notice.setAttribute('icon', 'users'); notice.setAttribute('width', 'auto');
         const titleDiv = document.createElement('div'); titleDiv.slot = 'title'; titleDiv.textContent = title;

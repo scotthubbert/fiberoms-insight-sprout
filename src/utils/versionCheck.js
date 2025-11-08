@@ -2,6 +2,7 @@
 // Checks for new deployments by comparing build hashes
 
 import { buildInfo, storeBuildInfo, getStoredBuildInfo } from './buildInfo.js';
+import { getOrCreateNoticeContainer } from './noticeContainer.js';
 
 export function initVersionCheck() {
   // Store current build info on load
@@ -106,13 +107,7 @@ function showUpdateNotification() {
   }
 
   // Get or create notice container
-  let noticeContainer = document.querySelector('#notice-container');
-  if (!noticeContainer) {
-    noticeContainer = document.createElement('div');
-    noticeContainer.id = 'notice-container';
-    noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
-    document.body.appendChild(noticeContainer);
-  }
+  const noticeContainer = getOrCreateNoticeContainer();
 
   // Create calcite-notice
   const notice = document.createElement('calcite-notice');

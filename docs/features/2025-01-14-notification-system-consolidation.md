@@ -20,8 +20,9 @@ Resolved dual notification system issues and enhanced generic update messages ac
 
 **Solution:** Standardized all notifications to use `calcite-notice` with consistent positioning:
 
-- **Main notifications**: `#notice-container` at `top: 20px, right: 20px`
+- **Main notifications**: `#notice-container` at `top: 80px, right: 20px` (below header)
 - **Popup-specific notifications**: Positioned at `top: 120px` to avoid conflicts
+- **LoadingIndicator**: Consolidated into `#notice-container` (previously used separate container)
 
 ### 2. Generic Update Messages
 
@@ -44,7 +45,50 @@ Found and enhanced **3 generic notification messages**:
 
 ## Technical Changes Made
 
-### 1. PWA Installer Notification System
+### 1. Shared Container Utility
+
+**File:** `src/utils/noticeContainer.js` (new)
+
+Created a centralized utility for managing the notice container:
+
+```javascript
+export function getOrCreateNoticeContainer() {
+  let container = document.querySelector('#notice-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'notice-container';
+    // Positioning handled by CSS - no inline styles
+    document.body.appendChild(container);
+  }
+  return container;
+}
+```
+
+### 2. LoadingIndicator Consolidation
+
+**File:** `src/utils/loadingIndicator.js`
+
+**Before:**
+- Used separate `.loading-indicator-container` at `top: 20px`
+- Created its own style element with animations
+- Managed its own container lifecycle
+
+**After:**
+- Uses shared `#notice-container` via `getOrCreateNoticeContainer()`
+- Removed separate container creation and styling
+- Animations moved to main CSS file
+- Container lifecycle managed by shared utility
+
+### 3. CSS Standardization
+
+**File:** `src/style.css`
+
+- Standardized `#notice-container` at `top: 80px` (below header)
+- Added slide-in/slide-out animations from LoadingIndicator
+- Removed all inline style overrides from JavaScript
+- Consistent z-index: `1000` for main container, `10000` for popup toasts
+
+### 4. PWA Installer Notification System
 
 **File:** `src/main.js` - `PWAInstaller.showUpdateNotification()`
 
@@ -59,10 +103,12 @@ toast.setAttribute("placement", "top");
 **After:**
 
 ```javascript
-// Uses same notice-container system as other notifications
+// Uses shared notice container utility
+import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
+const noticeContainer = getOrCreateNoticeContainer();
 const notice = document.createElement("calcite-notice");
 notice.id = "pwa-update-notice";
-// Uses shared #notice-container at top: 20px, right: 20px
+// Uses shared #notice-container at top: 80px, right: 20px
 ```
 
 ### 2. Vehicle Notification Enhancement
@@ -122,11 +168,17 @@ top: 120px; /* Positioned below main notification area */
 ```
 ┌─ Browser Window ─────────────────────────────────────┐
 │                                                      │
-│                               ┌─ Main Notifications ─┤ top: 20px
+│  ┌─ Header ─────────────────────────────────────┐  │
+│  │ (Navigation, Search, etc.)                   │  │
+│  └──────────────────────────────────────────────┘  │
+│                                                      │
+│                               ┌─ Main Notifications ─┤ top: 80px
 │                               │ • Power Outages      │ right: 20px
 │                               │ • Subscriber Updates │ z-index: 1000
+│                               │ • Vehicle Updates    │
 │                               │ • PWA Updates        │
 │                               │ • Version Updates    │
+│                               │ • Loading States     │
 │                               └──────────────────────┤
 │                                                      │
 │                               ┌─ Popup Notifications ┤ top: 120px
@@ -139,24 +191,31 @@ top: 120px; /* Positioned below main notification area */
 
 ### Notification Types by System
 
-1. **Main System** (`#notice-container`):
+1. **Main System** (`#notice-container` at `top: 80px`):
 
    - Power outage updates
    - Subscriber changes
    - Vehicle location updates
    - PWA updates
    - Version updates
+   - Loading states (via `LoadingIndicator`)
+   - Network status updates
+   - Error states
 
-2. **Popup System** (Direct body append):
+2. **Popup System** (Direct body append at `top: 120px`):
 
    - Node site metric refreshes
    - Popup action feedback
-   - Loading states for specific actions
+   - Loading states for specific popup actions
 
-3. **Loading Indicator System** (`LoadingIndicator`):
-   - Data loading states
-   - Network status updates
-   - Error states
+### Shared Container Utility
+
+All main notifications use the shared `getOrCreateNoticeContainer()` utility from `src/utils/noticeContainer.js`:
+
+- **Single source of truth** for container creation
+- **Consistent positioning** via CSS (no inline style overrides)
+- **Automatic cleanup** when container is empty
+- **DRY principle** - no duplicate container creation code
 
 ## Benefits Achieved
 
@@ -183,10 +242,27 @@ top: 120px; /* Positioned below main notification area */
 
 No configuration changes required. The system automatically:
 
-- Routes all main notifications through the shared container
-- Positions popup notifications to avoid conflicts
+- Routes all main notifications through the shared `#notice-container`
+- Uses centralized `getOrCreateNoticeContainer()` utility for consistency
+- Positions popup notifications at `top: 120px` to avoid conflicts
 - Provides specific messages based on actual data changes
 - Handles container cleanup when notifications are dismissed
+- All positioning handled by CSS (no inline style overrides)
+
+## Files Modified
+
+### New Files
+- `src/utils/noticeContainer.js` - Shared container utility
+
+### Modified Files
+- `src/style.css` - Standardized positioning and added animations
+- `src/core/Application.js` - Updated `showNotification()` and `showSubscriberUpdateToast()`
+- `src/utils/loadingIndicator.js` - Consolidated into shared container
+- `src/components/PowerOutageStats.js` - Removed inline styles, uses shared utility
+- `src/core/PWAInstaller.js` - Removed inline styles, uses shared utility
+- `src/utils/versionCheck.js` - Removed inline styles, uses shared utility
+- `src/ui/LayerPanel.js` - Removed inline styles, uses shared utility
+- `src/services/PopupManager.js` - Verified positioning (no changes needed)
 
 ## Testing Scenarios
 

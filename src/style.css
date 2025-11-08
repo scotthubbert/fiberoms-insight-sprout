@@ -2184,12 +2184,39 @@ calcite-list-item[style*="cursor: pointer"]:active {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  pointer-events: none;
 }
 
 /* Stack notices properly */
 #notice-container calcite-notice {
   margin-bottom: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: all;
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Slide-in animation for notices */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Slide-out animation for notices */
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 /* Mobile adjustments for notices */

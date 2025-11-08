@@ -1,5 +1,6 @@
 // PWAInstaller.js - Handles PWA install prompt and update notifications
 import { createLogger } from '../utils/logger.js';
+import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
 
 // Initialize logger for this module
 const log = createLogger('PWAInstaller');
@@ -108,13 +109,7 @@ export class PWAInstaller {
         }
 
         // Use the same notification system as other components
-        let noticeContainer = document.querySelector('#notice-container');
-        if (!noticeContainer) {
-            noticeContainer = document.createElement('div');
-            noticeContainer.id = 'notice-container';
-            noticeContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;';
-            document.body.appendChild(noticeContainer);
-        }
+        const noticeContainer = getOrCreateNoticeContainer();
 
         // Create notice using same system as other notifications
         const notice = document.createElement('calcite-notice');
