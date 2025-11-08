@@ -3,6 +3,7 @@
 // Uses Calcite Notice components for non-intrusive user feedback
 
 import '@esri/calcite-components/dist/components/calcite-notice';
+import { getOrCreateNoticeContainer } from './noticeContainer.js';
 
 /**
  * LoadingIndicator class - Manages loading state notifications
@@ -36,107 +37,17 @@ export class LoadingIndicator {
 
   /**
    * Initialize the loading indicator container
+   * Uses the shared #notice-container for consistent positioning
    */
   initialize() {
     if (this.initialized) return;
 
-    // Create container for notices
-    this.container = document.createElement('div');
-    this.container.className = 'loading-indicator-container';
+    // Use shared notice container
+    this.container = getOrCreateNoticeContainer();
     this.container.setAttribute('role', 'status');
     this.container.setAttribute('aria-live', 'polite');
-
-    // Apply mobile-first responsive positioning
-    this.applyContainerStyles();
-
-    document.body.appendChild(this.container);
+    
     this.initialized = true;
-
-    // Handle window resize for responsive positioning
-    window.addEventListener('resize', () => this.updateContainerPosition());
-  }
-
-  /**
-   * Apply mobile-first responsive styles to container
-   */
-  applyContainerStyles() {
-    const styles = `
-      .loading-indicator-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        max-width: 350px;
-        width: calc(100% - 40px);
-        pointer-events: none;
-      }
-
-      .loading-indicator-container calcite-notice {
-        pointer-events: all;
-        animation: slideIn 0.3s ease-out;
-      }
-
-      @keyframes slideIn {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-
-      @keyframes slideOut {
-        from {
-          transform: translateX(0);
-          opacity: 1;
-        }
-        to {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-      }
-
-      /* Mobile-first responsive adjustments */
-      @media (max-width: 768px) {
-        .loading-indicator-container {
-          top: 10px;
-          right: 10px;
-          left: 10px;
-          width: auto;
-          max-width: none;
-        }
-      }
-
-      /* Adjust for smaller screens */
-      @media (max-width: 480px) {
-        .loading-indicator-container {
-          top: 5px;
-          right: 5px;
-          left: 5px;
-        }
-      }
-    `;
-
-    // Add styles to document if not already present
-    if (!document.querySelector('#loading-indicator-styles')) {
-      const styleElement = document.createElement('style');
-      styleElement.id = 'loading-indicator-styles';
-      styleElement.textContent = styles;
-      document.head.appendChild(styleElement);
-    }
-  }
-
-  /**
-   * Update container position based on viewport
-   */
-  updateContainerPosition() {
-    // This method can be extended for more complex positioning logic
-    // Currently handled by CSS media queries
   }
 
   /**
@@ -591,13 +502,13 @@ export class LoadingIndicator {
 
   /**
    * Destroy the loading indicator
+   * Note: Does not remove the shared container as it may be used by other components
    */
   destroy() {
     this.clear();
     this.loadingQueue.clear();
-    if (this.container && this.container.parentNode) {
-      this.container.parentNode.removeChild(this.container);
-    }
+    // Don't remove the shared container - it's used by other components
+    this.container = null;
     this.initialized = false;
   }
 }

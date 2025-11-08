@@ -1,5 +1,6 @@
 // LayerPanel.js - Manages left shell panel navigation and content
 import { createLogger } from '../utils/logger.js';
+import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
 
 // Initialize logger for this module
 const log = createLogger('LayerPanel');
@@ -1367,7 +1368,7 @@ export class LayerPanel {
             return;
         }
 
-        const noticeContainer = document.querySelector('#notice-container') || document.body;
+        const noticeContainer = getOrCreateNoticeContainer();
         const notice = document.createElement('calcite-notice');
         notice.setAttribute('open', '');
         notice.setAttribute('kind', kind);
@@ -1497,7 +1498,7 @@ export class LayerPanel {
                 return;
             }
 
-            const noticeContainer = document.querySelector('#notice-container') || document.body;
+            const noticeContainer = getOrCreateNoticeContainer();
             const notice = document.createElement('calcite-notice');
             notice.setAttribute('open', '');
             notice.setAttribute('kind', 'success');
