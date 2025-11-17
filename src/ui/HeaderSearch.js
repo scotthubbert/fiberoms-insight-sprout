@@ -132,7 +132,7 @@ export class HeaderSearch {
         try {
             const targetInput = source === 'desktop' ? this.desktopSearchInput : this.searchInput;
             this.setSearchLoading(true, targetInput);
-            const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
+            const searchResult = await subscriberDataService.searchSubscribers(searchTerm);
             this.updateSearchResults(searchResult, targetInput);
         } catch (error) {
             log.error('Search failed:', error);
@@ -477,7 +477,7 @@ export class HeaderSearch {
 
     async performMobileSearch(searchTerm) {
         try {
-            const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
+            const searchResult = await subscriberDataService.searchSubscribers(searchTerm);
             this.updateMobileSearchResults(searchResult);
         } catch (error) {
             log.error('Mobile search failed:', error);
@@ -531,7 +531,7 @@ export class HeaderSearch {
         }
         if (searchTerm && searchTerm.length >= 4) {
             try {
-                const searchResult = await subscriberDataService.searchSubscribers(searchTerm, 8);
+                const searchResult = await subscriberDataService.searchSubscribers(searchTerm);
                 if (searchResult.results && searchResult.results.length > 0) {
                     if (this.mobileSearchInput) this.mobileSearchInput.value = '';
                     this.clearMobileSearchResults();

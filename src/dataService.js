@@ -498,12 +498,12 @@ export class SubscriberDataService {
     }
 
     // Search subscribers by various criteria
-    async searchSubscribers(searchTerm, limit = 10) {
+    async searchSubscribers(searchTerm) {
         if (!searchTerm || searchTerm.length < 2) {
             return { results: [], count: 0 }
         }
 
-        const cacheKey = `search_${searchTerm.toLowerCase()}_${limit}`
+        const cacheKey = `search_${searchTerm.toLowerCase()}_all`
 
         // Return cached results if valid
         if (this.isCacheValid(cacheKey)) {
@@ -512,7 +512,7 @@ export class SubscriberDataService {
 
         // Use mock data if Supabase not configured
         if (isMockMode) {
-            return this.searchMockData(searchTerm, limit);
+            return this.searchMockData(searchTerm);
         }
 
         try {
@@ -526,7 +526,8 @@ export class SubscriberDataService {
                 .or(`name.ilike.%${searchTerm}%,account.ilike.%${searchTerm}%,service_address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,county.ilike.%${searchTerm}%`)
                 .not('latitude', 'is', null)
                 .not('longitude', 'is', null)
-                .limit(limit)
+                .neq('latitude', 0)
+                .neq('longitude', 0)
 
             if (error) {
                 log.error('❌ Error searching subscribers:', error)
@@ -570,7 +571,7 @@ export class SubscriberDataService {
     }
 
     // Mock search function for testing
-    searchMockData(searchTerm, limit = 10) {
+    searchMockData(searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         const filtered = MOCK_SUBSCRIBERS.filter(subscriber => {
             return (
@@ -580,7 +581,7 @@ export class SubscriberDataService {
                 subscriber.phone_number.includes(searchTerm) ||
                 subscriber.city.toLowerCase().includes(searchLower)
             );
-        }).slice(0, limit);
+        });
 
         const results = filtered.map(record => ({
             id: record.id,
@@ -608,6 +609,7 @@ export class SubscriberDataService {
         log.info('🔍 Mock search found', results.length, 'results for:', searchTerm);
 
         // Cache the mock result
+        const cacheKey = `search_${searchTerm.toLowerCase()}_all`;
         this.setCache(cacheKey, searchResult);
 
         return searchResult;
