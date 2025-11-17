@@ -68,6 +68,7 @@ export class NodeSiteMetricsService {
             'Fayette East': ['Fayette_East'],
             'Fayette EastTA5K': ['Fayette_East'],  // Handle the no-space case
             'Belgreen Hut': ['Belgreen'],
+            'Carbon Hill Hut': ['Carbon Hill'],
             'waco': ['Waco', 'Waco_2']  // Waco_1 is just "Waco" in database
         };
 
