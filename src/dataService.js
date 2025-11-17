@@ -456,34 +456,42 @@ export class SubscriberDataService {
         try {
             log.info('📡 Fetching subscribers summary from Supabase... (realtime - no cache)')
 
-            const { data, error } = await supabase
-                .from('mfs')
-                .select('status')
+            // Use server-side counts with case-insensitive, trimmed matching to avoid string variation issues
+            const [
+                { count: totalCount, error: totalError },
+                { count: offlineCount, error: offlineError },
+                { count: onlineCount, error: onlineError },
+                { count: unknownCount, error: unknownError }
+            ] = await Promise.all([
+                supabase.from('mfs').select('id', { count: 'exact', head: true }),
+                // Match status variants like 'Offline', 'offline', 'Offline ' etc.
+                supabase.from('mfs').select('id', { count: 'exact', head: true }).ilike('status', 'offline%'),
+                supabase.from('mfs').select('id', { count: 'exact', head: true }).ilike('status', 'online%'),
+                // Unknown includes null/empty/explicit 'Unknown'
+                supabase.from('mfs').select('id', { count: 'exact', head: true }).or('status.is.null,status.eq.,status.ilike.unknown%')
+            ])
 
-            if (error) {
-                log.error('Error fetching subscribers summary:', error)
-                throw error
+            if (totalError || offlineError || onlineError || unknownError) {
+                const err = totalError || offlineError || onlineError || unknownError
+                log.error('Error fetching subscribers summary counts:', err)
+                throw err
             }
 
-            // Count by status
-            const statusCounts = data.reduce((acc, row) => {
-                const status = row.status || 'Unknown'
-                acc[status] = (acc[status] || 0) + 1
-                return acc
-            }, {})
+            const statusBreakdown = {
+                Online: onlineCount || 0,
+                Offline: offlineCount || 0,
+                Unknown: unknownCount || 0
+            }
 
-            const result = {
-                total: data.length,
-                online: statusCounts['Online'] || 0,
-                offline: statusCounts['Offline'] || 0,
-                unknown: statusCounts['Unknown'] || 0,
-                statusBreakdown: statusCounts,
+            return {
+                total: totalCount || 0,
+                online: onlineCount || 0,
+                offline: offlineCount || 0,
+                unknown: unknownCount || 0,
+                statusBreakdown,
                 lastUpdated: new Date().toISOString(),
                 fromCache: false
             }
-
-            // No caching for realtime data
-            return result
         } catch (error) {
             log.error('Failed to fetch subscribers summary:', error)
             throw error
