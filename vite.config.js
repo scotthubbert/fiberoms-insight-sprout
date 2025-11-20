@@ -239,7 +239,19 @@ export default defineConfig({
           }
         ]
       }
-    })
+    }),
+    // Plugin to disable caching in development
+    {
+      name: 'no-cache-headers',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+          next();
+        });
+      }
+    }
   ],
   server: {
     https: process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS,

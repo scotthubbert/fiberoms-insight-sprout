@@ -30,6 +30,8 @@ export class Application {
         this._onlineLayerLoadingPromise = null;
         this._cleanupHandlers = [];
         this.geotabEnabled = import.meta.env.VITE_GEOTAB_ENABLED === 'true';
+        this.businessFilterEnabled = false; // Track business filter state for lazy-loaded layers
+        this._syncingBusinessFilter = false; // Re-entrancy guard for switch sync
 
         // Bind methods used from event handlers
         this.ensureRainViewerInitializedAndAdded = this.ensureRainViewerInitializedAndAdded?.bind(this);
@@ -114,7 +116,7 @@ export class Application {
                         }
                     } catch (_) { }
                 };
-                
+
                 // Load search widget FIRST during idle time
                 await loadSearchWidget();
 
@@ -179,7 +181,7 @@ export class Application {
                 try {
                     const mapEl = this.services?.mapController?.mapElement;
                     if (!mapEl) return;
-                    
+
                     // Only load on desktop, not mobile/tablet
                     if (mq.matches) {
                         if (!customElements.get('arcgis-basemap-gallery')) {
@@ -215,7 +217,7 @@ export class Application {
             const preloadMeasurementWidget = async () => {
                 const mapEl = this.services?.mapController?.mapElement;
                 if (!mapEl || !mq.matches) return;
-                
+
                 try {
                     // Just preload the component, don't create the widget yet
                     if (!customElements.get('arcgis-measurement')) {
@@ -223,7 +225,7 @@ export class Application {
                     }
                 } catch (_) { /* no-op */ }
             };
-            
+
             // Preload on desktop during idle time
             if (mq.matches) {
                 scheduleIdle(preloadMeasurementWidget);
@@ -332,8 +334,8 @@ export class Application {
         this.startSubscriberPolling();
         this.startPowerOutagePolling();
         const triggerImmediateRefresh = () => {
-            try { this.pollingManager.performUpdate('subscribers'); } catch {}
-            try { this.pollingManager.performUpdate('power-outages'); } catch {}
+            try { this.pollingManager.performUpdate('subscribers'); } catch { }
+            try { this.pollingManager.performUpdate('power-outages'); } catch { }
         };
         document.addEventListener('visibilitychange', () => { if (!document.hidden) triggerImmediateRefresh(); });
         window.addEventListener('online', triggerImmediateRefresh);
@@ -498,18 +500,18 @@ export class Application {
             for (const layerInfo of fiberPlantLayers) {
                 loadingIndicator.showLoading(`osp-${layerInfo.key}`, layerInfo.name);
             }
-            
+
             // Load layers in batches of 3 for better parallelization
             // This reduces total load time by ~40-50% vs sequential loading
             const batchSize = 3;
             for (let i = 0; i < fiberPlantLayers.length; i += batchSize) {
                 const batch = fiberPlantLayers.slice(i, i + batchSize);
-                
+
                 // Process batch in parallel using Promise.allSettled
                 const batchPromises = batch.map(async (layerInfo) => {
                     const layerConfig = getLayerConfig(layerInfo.key);
                     if (!layerConfig) return { layerInfo, success: false, reason: 'No config' };
-                    
+
                     try {
                         const result = await this.createLayerFromConfig(layerConfig);
                         if (result && result.layer) {
@@ -528,7 +530,7 @@ export class Application {
                         return { layerInfo, success: false, error };
                     }
                 });
-                
+
                 // Wait for batch to complete before starting next batch
                 const results = await Promise.allSettled(batchPromises);
                 log.info(`📦 Batch ${Math.floor(i / batchSize) + 1} complete: ${results.filter(r => r.status === 'fulfilled').length}/${batch.length} layers loaded`);
@@ -639,6 +641,13 @@ export class Application {
             const result = await this.createLayerFromConfig(onlineConfig);
             if (result && result.layer) {
                 result.layer.visible = true;
+
+                // Apply business filter if it was enabled before layer was loaded
+                if (this.businessFilterEnabled) {
+                    result.layer.definitionExpression = "service_type = 'BUSINESS INTERNET'";
+                    log.info('✅ Applied business filter to newly loaded online subscribers layer');
+                }
+
                 this.services.mapController.addLayer(result.layer, onlineConfig.zOrder);
                 loadingIndicator.showNetwork('online-subscribers', 'Online Subscribers');
                 log.info('✅ Online subscribers layer loaded on demand');
@@ -666,19 +675,31 @@ export class Application {
                 log.info(`⚡ Power outage layer toggled: ${layerId} = ${visible}`);
             }
         });
+        // Add listeners to switches in .layer-toggle-item elements that don't have their own ID-based listeners
         const switches = document.querySelectorAll('.layer-toggle-item calcite-switch');
         switches.forEach(switchElement => {
-            switchElement.addEventListener('calciteSwitchChange', (e) => {
-                this.handleLayerToggle(e.target, e.target.checked);
-            });
+            // Skip switches that are handled by ID in setupLayerSwitches()
+            // (online/offline switches on desktop, and business filter switches on desktop/mobile)
+            const handledByIdSwitches = [
+                'online-subscribers-switch',
+                'offline-subscribers-switch',
+                'business-internet-filter-switch',
+                'mobile-business-internet-filter-switch'
+            ];
+            
+            if (!handledByIdSwitches.includes(switchElement.id)) {
+                switchElement.addEventListener('calciteSwitchChange', (e) => {
+                    this.handleLayerToggle(e.target, e.target.checked);
+                });
+            }
         });
         const listItems = document.querySelectorAll('.layer-toggle-item');
         listItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 const switchElement = item.querySelector('calcite-switch');
                 if (switchElement && e.target !== switchElement) {
-                    switchElement.checked = !switchElement.checked;
-                    this.handleLayerToggle(switchElement, switchElement.checked);
+                    // Simulate a click on the switch to trigger full visual update
+                    switchElement.click();
                 }
             });
         });
@@ -799,10 +820,10 @@ export class Application {
             button.textContent = 'Preparing Download...';
             button.setAttribute('icon-start', 'loading');
             button.disabled = true;
-            
+
             // Lazy-load CSV export service only when needed (desktop-only feature)
             const { CSVExportService } = await import('../utils/csvExport.js');
-            
+
             if (exportType === 'all') await CSVExportService.exportAllSubscribers();
             else if (exportType === 'ta5k-reports') await CSVExportService.exportTA5KNodeReports();
             else await CSVExportService.exportOfflineSubscribers();
@@ -844,8 +865,15 @@ export class Application {
     setupLayerSwitches() {
         const onlineSwitch = document.getElementById('online-subscribers-switch');
         const offlineSwitch = document.getElementById('offline-subscribers-switch');
+        const businessFilterSwitch = document.getElementById('business-internet-filter-switch');
+        const mobileBusinessFilterSwitch = document.getElementById('mobile-business-internet-filter-switch');
+        
+        // All switches use the same pattern
         if (onlineSwitch) onlineSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
         if (offlineSwitch) offlineSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
+        if (businessFilterSwitch) businessFilterSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
+        if (mobileBusinessFilterSwitch) mobileBusinessFilterSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
+        
         this.setupLayerSwitchesForAllSections();
         this.setupClickableListItems();
     }
@@ -864,6 +892,11 @@ export class Application {
     setupClickableListItems() {
         const listItems = document.querySelectorAll('calcite-list-item');
         listItems.forEach(listItem => {
+            // Skip items that have .layer-toggle-item class (they're handled separately)
+            if (listItem.classList.contains('layer-toggle-item')) {
+                return;
+            }
+            
             const switchElement = listItem.querySelector('calcite-switch');
             if (switchElement) {
                 listItem.style.cursor = 'pointer';
@@ -930,6 +963,30 @@ export class Application {
     async handleLayerToggle(element, checked) {
         if (!element || typeof checked !== 'boolean') { log.warn('Invalid layer toggle parameters'); return; }
         const layerId = this.getLayerIdFromElement(element);
+        
+        // Handle business filter separately (not a layer, but a filter on existing layers)
+        if (layerId === 'business-internet-filter') {
+            // Prevent re-entrancy during sync
+            if (this._syncingBusinessFilter) return;
+            
+            this._syncingBusinessFilter = true;
+            try {
+                await this.toggleBusinessInternetFilter(checked);
+                
+                // Sync the other switch (desktop/mobile)
+                const otherSwitch = element.id === 'business-internet-filter-switch' 
+                    ? document.getElementById('mobile-business-internet-filter-switch')
+                    : document.getElementById('business-internet-filter-switch');
+                    
+                if (otherSwitch && otherSwitch.checked !== checked) {
+                    otherSwitch.checked = checked;
+                }
+            } finally {
+                this._syncingBusinessFilter = false;
+            }
+            return;
+        }
+        
         const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'node-sites', 'rainviewer-radar', 'apco-outages', 'tombigbee-outages', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'mst-fiber', 'splitters', 'closures', 'electric-trucks', 'fiber-trucks']);
         if (!layerId || !VALID_LAYER_IDS.has(layerId)) { log.warn(`Invalid or unsupported layer ID: ${layerId}`); return; }
         if (layerId) {
@@ -979,9 +1036,56 @@ export class Application {
         }
     }
 
+    /**
+     * Toggle business internet filter on subscriber layers
+     * @param {boolean} enabled - Whether to enable business-only filter
+     */
+    async toggleBusinessInternetFilter(enabled) {
+        try {
+            log.info(`${enabled ? '📋' : '🔓'} Business Internet filter ${enabled ? 'enabled' : 'disabled'}`);
+
+            // Store the filter state for lazy-loaded layers
+            this.businessFilterEnabled = enabled;
+
+            // Get both subscriber layers
+            const onlineLayer = this.services.layerManager.getLayer('online-subscribers');
+            const offlineLayer = this.services.layerManager.getLayer('offline-subscribers');
+
+            // Definition expression to filter for business internet only
+            const businessFilter = "service_type = 'BUSINESS INTERNET'";
+
+            // Apply or remove the filter from both layers (if they exist)
+            if (onlineLayer) {
+                onlineLayer.definitionExpression = enabled ? businessFilter : null;
+                log.info(`Online layer filter ${enabled ? 'applied' : 'removed'}`);
+            } else if (enabled && !this.onlineLayerLoaded) {
+                log.info('ℹ️ Online layer not loaded yet - filter will be applied when loaded');
+            }
+
+            if (offlineLayer) {
+                offlineLayer.definitionExpression = enabled ? businessFilter : null;
+                log.info(`Offline layer filter ${enabled ? 'applied' : 'removed'}`);
+            }
+
+            // Show notification
+            const message = enabled
+                ? 'Now showing Business Internet subscribers only'
+                : 'Showing all subscriber types';
+            this.showNotification('info', message, 3000);
+
+        } catch (error) {
+            log.error('Failed to toggle business internet filter:', error);
+            this.showNotification('error', 'Failed to apply filter', 3000);
+        }
+    }
+
     getLayerIdFromElement(element) {
         if (element.id === 'online-subscribers-switch') return 'online-subscribers';
         if (element.id === 'offline-subscribers-switch') return 'offline-subscribers';
+        // Business filter switches - return consistent identifier
+        if (element.id === 'business-internet-filter-switch' || element.id === 'mobile-business-internet-filter-switch') {
+            return 'business-internet-filter';
+        }
         if (element.classList.contains('apco-toggle')) return 'apco-outages';
         if (element.classList.contains('tombigbee-toggle')) return 'tombigbee-outages';
         const listItem = element.closest('calcite-list-item');
@@ -1041,13 +1145,13 @@ export class Application {
 
     startSubscriberPolling() {
         // Detect mobile device - use longer intervals to save battery
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                         window.innerWidth <= 768;
-        
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            window.innerWidth <= 768;
+
         // Mobile: 5 minutes (users typically don't leave app running)
         // Desktop: 30 seconds (users monitor actively)
         const subscriberPollInterval = isMobile ? 300000 : 30000;
-        
+
         log.info(`🔄 Starting subscriber data polling (${isMobile ? 'mobile' : 'desktop'}: ${subscriberPollInterval / 1000}s interval)`);
         let previousOfflineCount = null;
         let previousOnlineCount = null;
@@ -1120,13 +1224,13 @@ export class Application {
 
     startPowerOutagePolling() {
         // Detect mobile device - use longer intervals to save battery
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                         window.innerWidth <= 768;
-        
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            window.innerWidth <= 768;
+
         // Mobile: 5 minutes (users typically don't leave app running)
         // Desktop: 1 minute (users monitor actively)
         const outagePollInterval = isMobile ? 300000 : 60000;
-        
+
         log.info(`⚡ Starting power outage data polling (${isMobile ? 'mobile' : 'desktop'}: ${outagePollInterval / 1000}s interval)`);
         const handlePowerOutageUpdate = async (data) => {
             try {

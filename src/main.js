@@ -17,6 +17,31 @@ import { createLogger } from './utils/logger.js';
 // Initialize logger for main module
 const log = createLogger('Main');
 
+// In development, aggressively clear all service workers and caches
+if (import.meta.env.DEV) {
+  (async () => {
+    try {
+      // Unregister all service workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+          log.info('🧹 Unregistered service worker in dev mode');
+        }
+      }
+      
+      // Clear all caches
+      const cacheNames = await caches.keys();
+      for (const cacheName of cacheNames) {
+        await caches.delete(cacheName);
+        log.info(`🧹 Cleared cache: ${cacheName}`);
+      }
+    } catch (error) {
+      log.warn('Failed to clear service workers/caches:', error);
+    }
+  })();
+}
+
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize authentication FIRST

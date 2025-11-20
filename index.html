@@ -35,13 +35,18 @@
   <link rel="dns-prefetch" href="//basemaps.arcgis.com">
 
   <!-- ArcGIS Map SDK theme stylesheets - deferred loading for faster FCP -->
-  <link id="esri-theme-light" rel="preload" href="/assets/esri/themes/light/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript><link id="esri-theme-light" rel="stylesheet" href="/assets/esri/themes/light/main.css" /></noscript>
+  <link id="esri-theme-light" rel="preload" href="/assets/esri/themes/light/main.css" as="style"
+    onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript>
+    <link id="esri-theme-light" rel="stylesheet" href="/assets/esri/themes/light/main.css" />
+  </noscript>
   <link id="esri-theme-dark" rel="stylesheet" href="/assets/esri/themes/dark/main.css" disabled />
 
   <!-- Main styles - deferred loading for non-critical styles -->
   <link rel="preload" href="/src/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="/src/style.css"></noscript>
+  <noscript>
+    <link rel="stylesheet" href="/src/style.css">
+  </noscript>
 </head>
 
 <body>
@@ -165,6 +170,13 @@
                 <calcite-list-item label="Offline Subscribers" description="Show disconnected subscribers on map">
                   <calcite-icon slot="content-start" icon="circle" class="status-icon-danger"></calcite-icon>
                   <calcite-switch slot="content-end" id="offline-subscribers-switch" checked></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="Business Internet Only" description="Filter to show only business subscribers"
+                  class="layer-toggle-item">
+                  <calcite-icon slot="content-start" icon="organization" class="status-icon-business"
+                    style="color: #9333ea;"></calcite-icon>
+                  <calcite-switch slot="content-end" id="business-internet-filter-switch"></calcite-switch>
                 </calcite-list-item>
               </calcite-list>
             </calcite-block>
@@ -526,6 +538,13 @@
             class="layer-toggle-item">
             <calcite-icon slot="content-start" icon="circle" class="status-icon-danger"></calcite-icon>
             <calcite-switch slot="content-end" checked></calcite-switch>
+          </calcite-list-item>
+
+          <calcite-list-item label="Business Internet Only" description="Filter to show only business subscribers"
+            class="layer-toggle-item">
+            <calcite-icon slot="content-start" icon="organization" class="status-icon-business"
+              style="color: #9333ea;"></calcite-icon>
+            <calcite-switch slot="content-end" id="mobile-business-internet-filter-switch"></calcite-switch>
           </calcite-list-item>
         </calcite-block>
 

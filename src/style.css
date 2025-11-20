@@ -3238,11 +3238,34 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
 }
 
 .status-icon-success {
-  color: var(--calcite-color-status-success);
+  color: var(--calcite-color-status-success) !important;
 }
 
 .status-icon-danger {
-  color: var(--calcite-color-status-danger);
+  color: var(--calcite-color-status-danger) !important;
+}
+
+.status-icon-business {
+  color: #9333ea !important; /* Purple for business subscribers */
+}
+
+/* Additional specificity for Calcite components */
+calcite-icon.status-icon-business {
+  color: #9333ea !important;
+  --calcite-color-brand: #9333ea !important;
+  --calcite-ui-icon-color: #9333ea !important;
+}
+
+calcite-list-item calcite-icon.status-icon-business {
+  color: #9333ea !important;
+  --calcite-color-brand: #9333ea !important;
+  --calcite-ui-icon-color: #9333ea !important;
+}
+
+/* Target the shadow DOM if needed */
+calcite-icon.status-icon-business::part(icon) {
+  color: #9333ea !important;
+  fill: #9333ea !important;
 }
 
 .info-icon {

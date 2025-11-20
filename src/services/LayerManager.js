@@ -554,13 +554,17 @@ export class LayerManager {
             return false;
         }
 
-        // Get old layer to preserve visibility state
+        // Get old layer to preserve visibility state and definition expression
         const oldLayer = this.layers.get(layerId);
         let wasVisible = false;
+        let definitionExpression = null;
 
         if (oldLayer) {
             // Preserve the visibility state
             wasVisible = oldLayer.visible;
+            
+            // Preserve the definition expression (for future filter support)
+            definitionExpression = oldLayer.definitionExpression;
 
             // Remove old layer from map
             map.remove(oldLayer);
@@ -580,6 +584,12 @@ export class LayerManager {
             // Add to map at correct position
             const zOrder = this.getZOrder(layerId);
             map.add(newLayer, zOrder);
+            
+            // Restore definition expression if it existed
+            if (definitionExpression) {
+                newLayer.definitionExpression = definitionExpression;
+                log.info(`✅ Restored definition expression for ${layerId}: ${definitionExpression}`);
+            }
 
             log.info(`✅ Re-added ${layerId} layer with ${newLayer.graphics.length} graphics, visible: ${wasVisible}`);
             return true;
@@ -603,13 +613,17 @@ export class LayerManager {
             return true;
         }
 
-        // Get old layer to preserve visibility state
+        // Get old layer to preserve visibility state and definition expression
         const oldLayer = this.layers.get(layerId);
         let wasVisible = false;
+        let definitionExpression = null;
 
         if (oldLayer) {
             // Preserve the visibility state
             wasVisible = oldLayer.visible;
+            
+            // Preserve the definition expression (for filters like Business Internet Only)
+            definitionExpression = oldLayer.definitionExpression;
 
             // Remove old layer
             map.remove(oldLayer);
@@ -636,9 +650,16 @@ export class LayerManager {
             const zOrder = this.getZOrder(layerId);
             map.add(newLayer, zOrder);
 
-            // Set visibility after a small delay to ensure layer is properly initialized
+            // Set visibility and definition expression after a small delay to ensure layer is properly initialized
             setTimeout(() => {
                 newLayer.visible = wasVisible;
+                
+                // Restore definition expression if it existed
+                if (definitionExpression) {
+                    newLayer.definitionExpression = definitionExpression;
+                    log.info(`✅ Restored definition expression for ${layerId}: ${definitionExpression}`);
+                }
+                
                 log.info(`✅ Set visibility for ${layerId} to ${wasVisible}`);
 
                 // Force refresh if visible
