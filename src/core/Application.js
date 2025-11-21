@@ -1207,6 +1207,30 @@ export class Application {
                 }
             });
         }
+        
+        // Setup mobile refresh button
+        const mobileRefreshButton = document.getElementById('refresh-subscriber-data');
+        if (mobileRefreshButton) {
+            mobileRefreshButton.addEventListener('click', async () => {
+                log.info('🔄 Mobile manual data refresh triggered');
+                mobileRefreshButton.setAttribute('loading', '');
+                try {
+                    window._isManualRefresh = true;
+                    subscriberDataService.clearCache();
+                    await this.pollingManager.performUpdate('subscribers');
+                    if (window.app && window.app.updateSubscriberStatistics) await window.app.updateSubscriberStatistics();
+                    
+                    // Update mobile subscriber statistics
+                    if (this.services.mobileTabBar && this.services.mobileTabBar.updateMobileSubscriberStatistics) {
+                        await this.services.mobileTabBar.updateMobileSubscriberStatistics();
+                    }
+                } finally {
+                    mobileRefreshButton.removeAttribute('loading');
+                    window._isManualRefresh = false;
+                }
+            });
+        }
+        
         this.setupCSVExport();
         this.setupSubscriberStatistics();
         const testSubscriberButton = document.getElementById('test-subscriber-update');

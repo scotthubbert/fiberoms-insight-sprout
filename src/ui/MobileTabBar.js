@@ -154,6 +154,9 @@ export class MobileTabBar {
                     item.style.opacity = '1';
                 });
 
+                // Update subscriber statistics
+                await this.updateMobileSubscriberStatistics();
+
                 log.info('✅ Mobile subscriber tab initialized successfully');
             }
         } catch (error) {
@@ -200,8 +203,48 @@ export class MobileTabBar {
                     switchEl.style.minHeight = '24px';
                 });
 
+                // Update subscriber statistics even in fallback mode
+                await this.updateMobileSubscriberStatistics();
+
                 log.info('🔧 Force-initialized mobile subscriber dialog');
             }
+        }
+    }
+
+    async updateMobileSubscriberStatistics() {
+        try {
+            // Import subscriber data service dynamically to avoid circular dependencies
+            const { subscriberDataService } = await import('../dataService.js');
+            
+            const summary = await subscriberDataService.getSubscribersSummary();
+            
+            const mobileOnlineCountEl = document.getElementById('mobile-online-count-display');
+            const mobileOfflineCountEl = document.getElementById('mobile-offline-count-display');
+            const mobileLastUpdatedEl = document.getElementById('mobile-last-updated-display');
+            
+            if (mobileOnlineCountEl) {
+                mobileOnlineCountEl.textContent = summary.online?.toLocaleString() || '0';
+            }
+            if (mobileOfflineCountEl) {
+                mobileOfflineCountEl.textContent = summary.offline?.toLocaleString() || '0';
+            }
+            if (mobileLastUpdatedEl) {
+                const lastUpdated = summary.lastUpdated ? new Date(summary.lastUpdated).toLocaleString() : 'Never';
+                mobileLastUpdatedEl.textContent = `Last updated: ${lastUpdated}`;
+            }
+            
+            log.info('✅ Mobile subscriber statistics updated');
+        } catch (error) {
+            log.error('Failed to update mobile subscriber statistics:', error);
+            
+            // Set error states
+            const mobileOnlineCountEl = document.getElementById('mobile-online-count-display');
+            const mobileOfflineCountEl = document.getElementById('mobile-offline-count-display');
+            const mobileLastUpdatedEl = document.getElementById('mobile-last-updated-display');
+            
+            if (mobileOnlineCountEl) mobileOnlineCountEl.textContent = '--';
+            if (mobileOfflineCountEl) mobileOfflineCountEl.textContent = '--';
+            if (mobileLastUpdatedEl) mobileLastUpdatedEl.textContent = 'Last updated: Error loading data';
         }
     }
 

@@ -528,6 +528,37 @@
           aria-label="Close"></calcite-button>
       </div>
       <div slot="content">
+        <!-- Network Status Summary -->
+        <calcite-block heading="Network Status" expanded>
+          <calcite-icon slot="icon" icon="users"></calcite-icon>
+
+          <div class="mobile-network-status-cards">
+            <div class="mobile-status-card mobile-status-card-online">
+              <div class="mobile-status-label">
+                <calcite-icon icon="circle" scale="s"></calcite-icon>
+                <span>Online</span>
+              </div>
+              <div class="mobile-status-count" id="mobile-online-count-display">--</div>
+            </div>
+
+            <div class="mobile-status-card mobile-status-card-offline">
+              <div class="mobile-status-label">
+                <calcite-icon icon="circle" scale="s"></calcite-icon>
+                <span>Offline</span>
+              </div>
+              <div class="mobile-status-count" id="mobile-offline-count-display">--</div>
+            </div>
+          </div>
+
+          <!-- Last Updated Info -->
+          <calcite-notice scale="s" width="full" kind="info">
+            <div slot="message">
+              <calcite-icon icon="clock" class="clock-icon"></calcite-icon>
+              <span id="mobile-last-updated-display">Last updated: --</span>
+            </div>
+          </calcite-notice>
+        </calcite-block>
+
         <calcite-block heading="Subscriber Status" expanded>
           <calcite-list-item label="Online Subscribers" description="Show active subscribers" class="layer-toggle-item">
             <calcite-icon slot="content-start" icon="circle" class="status-icon-success"></calcite-icon>
