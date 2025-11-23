@@ -20,6 +20,9 @@ export class DashboardManager {
     }
 
     setupEventListeners() {
+        // Header refresh button - consolidated all refresh operations here (2025-01-22)
+        // Previously there were 2 redundant buttons: #refresh-dashboard and #refresh-data
+        // The #refresh-data button was removed from the Actions panel
         this.refreshButton = document.getElementById('refresh-dashboard');
         if (this.refreshButton) {
             this.refreshButton.addEventListener('click', () => this.refreshDashboard());
@@ -68,7 +71,18 @@ export class DashboardManager {
         }
     }
 
+    /**
+     * Comprehensive dashboard refresh operation
+     * Consolidated on 2025-01-22 to replace redundant #refresh-data button
+     * This performs ALL refresh operations:
+     * - Clears subscriber data cache
+     * - Performs polling manager update for subscribers
+     * - Updates subscriber statistics
+     * - Refreshes power outage stats
+     */
     async refreshDashboard() {
+        log.info('🔄 Manual dashboard refresh triggered');
+        
         // Add loading state to refresh button
         if (this.refreshButton) {
             this.refreshButton.setAttribute('loading', '');
@@ -83,6 +97,11 @@ export class DashboardManager {
 
             // Clear cache to ensure fresh data
             subscriberDataService.clearCache();
+
+            // Perform polling manager update for subscribers data
+            if (window.app?.pollingManager) {
+                await window.app.pollingManager.performUpdate('subscribers');
+            }
 
             // Use consolidated update method to prevent duplicate fetches
             if (window.app && window.app.updateSubscriberStatistics) {

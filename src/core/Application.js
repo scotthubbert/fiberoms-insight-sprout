@@ -87,38 +87,110 @@ export class Application {
 
         // Optional UI loading (widgets/components) executed at idle
         const loadOptionalUi = async () => {
+            log.info('[MAP-UI] 🚀 loadOptionalUi() called');
+
             // Lazy inject core widgets on all devices
             const injectCoreWidgets = async () => {
                 const mapEl = this.services?.mapController?.mapElement;
-                if (!mapEl) return;
+                log.info('[MAP-UI] 📍 Map element:', mapEl ? 'FOUND' : 'NOT FOUND');
+
+                if (!mapEl) {
+                    log.warn('[MAP-UI] ❌ Map element not found, retrying in 1 second...');
+                    setTimeout(async () => {
+                        log.info('[MAP-UI] 🔄 Retrying loadOptionalUi...');
+                        await loadOptionalUi();
+                    }, 1000);
+                    return;
+                }
+
+                // Wait for map view to be ready before adding components (ArcGIS 4.34+ requirement)
+                if (!mapEl.view) {
+                    log.warn('[MAP-UI] ⏳ Map view not ready yet, waiting...');
+                    try {
+                        await mapEl.arcgisViewReadyChange;
+                        log.info('[MAP-UI] ✅ Map view ready via event, injecting widgets');
+                    } catch (e) {
+                        log.warn('[MAP-UI] arcgisViewReadyChange event failed, polling...');
+                        let attempts = 0;
+                        while (!mapEl.view && attempts < 10) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            attempts++;
+                        }
+                        if (!mapEl.view) {
+                            log.error('[MAP-UI] ❌ Map view never became ready, aborting widget injection');
+                            return;
+                        }
+                        log.info('[MAP-UI] ✅ Map view ready via polling, injecting widgets');
+                    }
+                } else {
+                    log.info('[MAP-UI] ✅ Map view already ready, injecting widgets');
+                }
 
                 // Search widget - load FIRST to ensure top position (lazy via idle, saves ~200KB from critical path)
                 const loadSearchWidget = async () => {
                     try {
                         if (!customElements.get('arcgis-search')) {
                             await import('@arcgis/map-components/dist/components/arcgis-search');
+                            log.info('[MAP-UI] ✅ Search component loaded');
                         }
                         if (!mapEl.querySelector('arcgis-search')) {
                             const s = document.createElement('arcgis-search');
-                            s.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
+                            s.setAttribute('slot', 'top-left');
                             s.setAttribute('include-default-sources', 'true');
                             s.setAttribute('max-results', '8');
                             s.setAttribute('min-characters', '3');
                             s.setAttribute('search-all-enabled', 'false');
                             s.setAttribute('placeholder', 'Search addresses, places...');
-                            // Insert as first child to ensure top position in widget stack
                             if (mapEl.firstChild) {
                                 mapEl.insertBefore(s, mapEl.firstChild);
                             } else {
                                 mapEl.appendChild(s);
                             }
-                            try { this.configureSearchWidget(); } catch (_) { }
+                            log.info('[MAP-UI] ✅ Search widget added to map');
+                            try {
+                                await s.componentOnReady();
+                                log.info('[MAP-UI] ✅ Search component ready, visible:', !s.hidden, 'display:', getComputedStyle(s).display);
+                                if (this.services?.mapController?.view) {
+                                    this.configureSearchWidget();
+                                } else {
+                                    setTimeout(() => {
+                                        if (this.services?.mapController?.view) {
+                                            this.configureSearchWidget();
+                                        }
+                                    }, 1000);
+                                }
+                            } catch (error) {
+                                log.error('[MAP-UI] Search widget ready error:', error);
+                            }
                         }
-                    } catch (_) { }
+                    } catch (error) {
+                        log.error('[MAP-UI] Failed to load Search widget:', error);
+                    }
                 };
 
                 // Load search widget FIRST during idle time
                 await loadSearchWidget();
+
+                // Verify widgets were added and check visibility
+                setTimeout(() => {
+                    const widgets = {
+                        search: mapEl.querySelector('arcgis-search'),
+                        home: mapEl.querySelector('arcgis-home'),
+                        locate: mapEl.querySelector('arcgis-locate'),
+                        track: mapEl.querySelector('arcgis-track')
+                    };
+                    const widgetCount = Object.values(widgets).filter(w => w).length;
+                    log.info(`[MAP-UI] 📊 Total widgets in DOM: ${widgetCount}`);
+                    Object.entries(widgets).forEach(([name, el]) => {
+                        if (el) {
+                            const style = getComputedStyle(el);
+                            const visible = !el.hidden && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+                            log.info(`[MAP-UI]    ${name}: DOM=${el ? '✅' : '❌'} visible=${visible ? '✅' : '❌'} display=${style.display} visibility=${style.visibility} opacity=${style.opacity}`);
+                        } else {
+                            log.info(`[MAP-UI]    ${name}: ❌ NOT IN DOM`);
+                        }
+                    });
+                }, 2000);
 
                 // Home
                 try {
@@ -127,8 +199,9 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-home')) {
                         const h = document.createElement('arcgis-home');
-                        h.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
+                        h.setAttribute('slot', 'top-left');
                         mapEl.appendChild(h);
+                        log.info('[MAP-UI] ✅ Home widget added');
                         try { this.services?.mapController?.configureHomeButton(); } catch (_) { }
                     }
                 } catch (_) { }
@@ -140,10 +213,13 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-locate')) {
                         const l = document.createElement('arcgis-locate');
-                        l.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
+                        l.setAttribute('slot', 'top-left');
                         mapEl.appendChild(l);
+                        log.info('[MAP-UI] ✅ Locate widget added');
                     }
-                } catch (_) { }
+                } catch (error) {
+                    log.error('[MAP-UI] Failed to load Locate widget:', error);
+                }
 
                 // Track
                 try {
@@ -152,10 +228,33 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-track')) {
                         const t = document.createElement('arcgis-track');
-                        t.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
+                        t.setAttribute('slot', 'top-left');
                         mapEl.appendChild(t);
+                        log.info('[MAP-UI] ✅ Track widget added');
                     }
-                } catch (_) { }
+                } catch (error) {
+                    log.error('[MAP-UI] Failed to load Track widget:', error);
+                }
+
+                // Zoom - Desktop only (mobile uses pinch-to-zoom)
+                const isDesktop = window.matchMedia('(min-width: 769px)').matches;
+                if (isDesktop) {
+                    try {
+                        if (!customElements.get('arcgis-zoom')) {
+                            await import('@arcgis/map-components/dist/components/arcgis-zoom');
+                        }
+                        if (!mapEl.querySelector('arcgis-zoom')) {
+                            const z = document.createElement('arcgis-zoom');
+                            z.setAttribute('slot', 'top-left');
+                            mapEl.appendChild(z);
+                            log.info('[MAP-UI] ✅ Zoom widget added (desktop only)');
+                        }
+                    } catch (error) {
+                        log.error('[MAP-UI] Failed to load Zoom widget:', error);
+                    }
+                } else {
+                    log.info('[MAP-UI] ℹ️ Zoom skipped on mobile (pinch-to-zoom available)');
+                }
             };
             await injectCoreWidgets();
 
@@ -164,16 +263,24 @@ export class Application {
                 const mapEl = this.services?.mapController?.mapElement;
                 if (mapEl) {
                     if (!customElements.get('arcgis-basemap-toggle')) {
-                        try { await import('@arcgis/map-components/dist/components/arcgis-basemap-toggle'); } catch (_) { /* no-op */ }
+                        try {
+                            await import('@arcgis/map-components/dist/components/arcgis-basemap-toggle');
+                            log.info('[MAP-UI] ✅ Basemap Toggle component loaded');
+                        } catch (error) {
+                            log.error('[MAP-UI] Failed to load Basemap Toggle component:', error);
+                        }
                     }
                     if (!mapEl.querySelector('arcgis-basemap-toggle')) {
                         const toggleEl = document.createElement('arcgis-basemap-toggle');
-                        toggleEl.setAttribute('slot', 'bottom-right'); // Using modern slot pattern (4.34+)
+                        toggleEl.setAttribute('slot', 'bottom-right');
                         toggleEl.setAttribute('next-basemap', 'satellite');
                         mapEl.appendChild(toggleEl);
+                        log.info('[MAP-UI] ✅ Basemap Toggle added to map');
                     }
                 }
-            } catch (_) { /* no-op */ }
+            } catch (error) {
+                log.error('[MAP-UI] Error setting up Basemap Toggle:', error);
+            }
 
             // Desktop-only Basemap Gallery - lazy load during idle (saves ~150KB on mobile)
             const mq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
@@ -1049,6 +1156,20 @@ export class Application {
                     await this.ensureMeasurementReady();
                     const distanceTool = document.getElementById('distance-measurement-tool');
 
+                    // Clean up state variables to prevent orphaned listeners and timeouts
+                    // Cancel any pending cleanup timeout that might re-show the tool
+                    if (this._measurementCleanupTimeout) {
+                        clearTimeout(this._measurementCleanupTimeout);
+                        this._measurementCleanupTimeout = null;
+                    }
+
+                    // Remove event listener to prevent memory leaks
+                    if (this._distanceToolListener && distanceTool) {
+                        distanceTool.removeEventListener('arcgisPropertyChange', this._distanceToolListener);
+                        this._distanceToolListener = null;
+                        this._distanceToolActivationId = null;
+                    }
+
                     // Clear and hide distance tool using official API
                     if (distanceTool) {
                         await distanceTool.clear?.();
@@ -1461,40 +1582,54 @@ export class Application {
             }
         };
         this.pollingManager.startPolling('subscribers', handleSubscriberUpdate, subscriberPollInterval);
-        const refreshButton = document.getElementById('refresh-data');
-        if (refreshButton) {
-            refreshButton.addEventListener('click', async () => {
-                log.info('🔄 Manual data refresh triggered');
-                refreshButton.setAttribute('loading', '');
-                try {
-                    window._isManualRefresh = true;
-                    subscriberDataService.clearCache();
-                    await this.pollingManager.performUpdate('subscribers');
-                    if (window.app && window.app.updateSubscriberStatistics) await window.app.updateSubscriberStatistics();
-                } finally {
-                    refreshButton.removeAttribute('loading');
-                    window._isManualRefresh = false;
-                }
-            });
-        }
-
-        // Setup mobile refresh button
+        // Setup mobile refresh button - matches desktop header refresh functionality
+        // Note: The desktop Actions panel #refresh-data button was removed on 2025-01-22
+        // Desktop users now use the header #refresh-dashboard button (DashboardManager.js)
+        // Mobile users use this #refresh-subscriber-data button in the mobile Tools section
         const mobileRefreshButton = document.getElementById('refresh-subscriber-data');
         if (mobileRefreshButton) {
             mobileRefreshButton.addEventListener('click', async () => {
                 log.info('🔄 Mobile manual data refresh triggered');
                 mobileRefreshButton.setAttribute('loading', '');
                 try {
+                    // Set global flag to skip notifications during manual refresh
                     window._isManualRefresh = true;
+
+                    // Clear any existing loading notifications
+                    loadingIndicator.clearConsolidated();
+
+                    // Clear cache to ensure fresh data
                     subscriberDataService.clearCache();
+
+                    // Perform polling manager update for subscribers data
                     await this.pollingManager.performUpdate('subscribers');
-                    if (window.app && window.app.updateSubscriberStatistics) await window.app.updateSubscriberStatistics();
+
+                    // Update subscriber statistics
+                    if (window.app && window.app.updateSubscriberStatistics) {
+                        await window.app.updateSubscriberStatistics();
+                    }
 
                     // Update mobile subscriber statistics
                     if (this.services.mobileTabBar && this.services.mobileTabBar.updateMobileSubscriberStatistics) {
                         await this.services.mobileTabBar.updateMobileSubscriberStatistics();
                     }
+
+                    // Also refresh power outage stats without notification
+                    const powerStats = document.querySelector('power-outage-stats');
+                    if (powerStats && typeof powerStats.updateStats === 'function') {
+                        await powerStats.updateStats(true); // Skip notification
+                    }
+
+                    // Simulate brief loading for user feedback
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                } catch (error) {
+                    log.error('Error refreshing mobile data:', error);
                 } finally {
+                    // Force clear all loading indicators regardless of completion state
+                    loadingIndicator.clearConsolidated();
+                    loadingIndicator.clear(); // Clear any individual notices too
+
                     mobileRefreshButton.removeAttribute('loading');
                     window._isManualRefresh = false;
                 }
@@ -1742,5 +1877,6 @@ export class Application {
         this.services = {}; this._cleanupHandlers = []; this.geotabFeed = null; this.activeTruckLayers.clear(); this.geotabReady = false;
     }
 }
+
 
 

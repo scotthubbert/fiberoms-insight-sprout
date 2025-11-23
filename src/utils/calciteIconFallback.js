@@ -75,7 +75,9 @@ export function setupCalciteIconFallback() {
           'database': 'data',
           'code-branch': 'code',
           'file-text': 'fileText',
-          'circle-check': 'check-circle'
+          'circle-check': 'check-circle',
+          'locate': 'gps-on',
+          'report': 'file-report'
         };
 
         const replacement = iconReplacements[iconName] || FALLBACK_ICON;

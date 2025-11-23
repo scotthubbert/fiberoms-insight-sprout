@@ -764,17 +764,7 @@ calcite-dialog.mobile-only [slot="content"] {
     display: block !important;
   }
 
-  /* Hide ArcGIS search widget on mobile */
-  arcgis-search {
-    display: none !important;
-  }
-
-  /* Hide ArcGIS map widgets on mobile */
-  arcgis-locate,
-  arcgis-track,
-  arcgis-basemap-toggle {
-    display: none !important;
-  }
+  /* Note: Search, Home, Locate, Track, and Basemap Toggle are now shown on mobile (2025-01-22) */
 
   /* Expand map to full height minus bottom navigation */
   .map-container {
@@ -827,17 +817,7 @@ calcite-dialog.mobile-only [slot="content"] {
     display: block !important;
   }
 
-  /* Hide ArcGIS search widget on tablets */
-  arcgis-search {
-    display: none !important;
-  }
-
-  /* Hide ArcGIS map widgets on tablets */
-  arcgis-locate,
-  arcgis-track,
-  arcgis-basemap-toggle {
-    display: none !important;
-  }
+  /* Note: Search, Home, Locate, Track, and Basemap Toggle are now shown on tablets (2025-01-22) */
 
   /* Show mobile UI for tablets to ensure proper touch interaction */
   .desktop-only {

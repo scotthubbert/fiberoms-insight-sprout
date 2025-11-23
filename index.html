@@ -185,11 +185,10 @@
             <calcite-block heading="Actions" collapsible expanded>
               <calcite-icon slot="icon" icon="gear"></calcite-icon>
 
+              <!-- Note: "Refresh Data" button (#refresh-data) was intentionally removed on 2025-01-22
+                   and consolidated into the header refresh button (#refresh-dashboard) to eliminate
+                   redundancy. The header button now performs all refresh operations. See DashboardManager.js -->
               <div class="actions-container">
-                <calcite-button id="refresh-data" icon-start="refresh" scale="m" width="full" appearance="solid">
-                  Refresh Data
-                </calcite-button>
-
                 <div class="action-group action-group-spaced">
                   <calcite-button id="desktop-export-offline-csv-btn" icon-start="download" scale="s" width="full"
                     appearance="outline">
@@ -404,7 +403,11 @@
       <!-- Main Content Area -->
       <div class="map-container">
         <arcgis-map id="map" basemap="streets-navigation-vector">
-          <!-- Distance Measurement Tool (2D) -->
+          <!-- Map Controls are dynamically created via JavaScript after map view initialization -->
+          <!-- See Application.js loadOptionalUi() for component creation -->
+          <!-- ArcGIS 4.34+ uses slot-based pattern: created programmatically and added to DOM after view is ready -->
+
+          <!-- Distance Measurement Tool (2D) - pre-declared for faster access -->
           <arcgis-distance-measurement-2d id="distance-measurement-tool" slot="bottom-left" unit="imperial"
             hidden></arcgis-distance-measurement-2d>
         </arcgis-map>
