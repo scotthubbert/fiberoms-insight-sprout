@@ -273,7 +273,7 @@ export class Application {
                     if (!mapEl.querySelector('arcgis-basemap-toggle')) {
                         const toggleEl = document.createElement('arcgis-basemap-toggle');
                         toggleEl.setAttribute('slot', 'bottom-right');
-                        toggleEl.setAttribute('next-basemap', 'satellite');
+                        toggleEl.setAttribute('next-basemap', 'hybrid');
                         mapEl.appendChild(toggleEl);
                         log.info('[MAP-UI] ✅ Basemap Toggle added to map');
                     }
