@@ -342,8 +342,6 @@
             <calcite-block heading="Measurement Tools" collapsible expanded>
               <calcite-button width="full" icon-start="measure-line" scale="s" id="distance-measurement-btn">Distance
                 Measurement</calcite-button>
-              <calcite-button width="full" icon-start="polygon" scale="s" id="area-measurement-btn">Area
-                Measurement</calcite-button>
               <calcite-button width="full" icon-start="trash" scale="s" id="clear-measurement-btn">Clear
                 Measurements</calcite-button>
             </calcite-block>
@@ -405,7 +403,11 @@
 
       <!-- Main Content Area -->
       <div class="map-container">
-        <arcgis-map id="map" basemap="streets-navigation-vector"></arcgis-map>
+        <arcgis-map id="map" basemap="streets-navigation-vector">
+          <!-- Distance Measurement Tool (2D) -->
+          <arcgis-distance-measurement-2d id="distance-measurement-tool" slot="bottom-left" unit="imperial"
+            hidden></arcgis-distance-measurement-2d>
+        </arcgis-map>
       </div>
 
       <!-- Mobile Close Button - shows when panels are open -->

@@ -1,5 +1,6 @@
 // PopupManager.js - Single Responsibility: Popup interaction handling
 import { createLogger } from '../utils/logger.js';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils.js';
 
 // Initialize logger for this module
 const log = createLogger('PopupManager');
@@ -7,6 +8,11 @@ const log = createLogger('PopupManager');
 export class PopupManager {
     constructor() {
         this.view = null;
+        // Bug 1 fix: Track processed buttons to prevent duplicate listener attachments
+        // Use WeakMap to avoid memory leaks - keys are button elements, values are handler functions
+        this._buttonListeners = new WeakMap();
+        // Track actionIds processed per popup instance to prevent re-processing after re-renders
+        this._processedActionIds = new Set();
     }
 
     /**
@@ -23,83 +29,385 @@ export class PopupManager {
         this.setupPopupActionHandlers();
     }
 
+    // Clean up watchers (Bug 2 fix: proper cleanup method)
+    destroy() {
+        if (this._popupVisibleWatcher) {
+            this._popupVisibleWatcher.remove();
+            this._popupVisibleWatcher = null;
+        }
+        if (this._popupFeatureWatcher) {
+            this._popupFeatureWatcher.remove();
+            this._popupFeatureWatcher = null;
+        }
+        // Bug 1 fix: Clear processed actionIds when destroying
+        this._processedActionIds.clear();
+        this.view = null;
+        log.info('PopupManager watchers cleaned up');
+    }
+
     setupPopupActionHandlers() {
         if (!this.view) return;
 
-        // Use DOM event delegation for ArcGIS popup actions
-        document.addEventListener('click', (e) => {
-            // Look for buttons inside popup actions
-            const button = e.target.closest('.esri-popup__action, .esri-popup__action-toggle, calcite-action, calcite-button');
-            if (!button) return;
+        // Clean up any existing watchers before creating new ones (Bug 2 fix)
+        if (this._popupVisibleWatcher) {
+            this._popupVisibleWatcher.remove();
+            this._popupVisibleWatcher = null;
+        }
+        if (this._popupFeatureWatcher) {
+            this._popupFeatureWatcher.remove();
+            this._popupFeatureWatcher = null;
+        }
 
-            // Make sure it's inside a popup
-            const popup = button.closest('.esri-popup, .esri-popup__main-container, arcgis-popup');
-            if (!popup) return;
+        // ArcGIS 4.34 Map Components: Popup is in shadow DOM, so we need to:
+        // 1. Watch for popup visibility changes using reactiveUtils
+        // 2. Find the popup container and attach listeners directly
 
-            // Check for our action IDs in various ways ArcGIS might store them
-            const actionId = button.getAttribute('data-action-id') ||
-                button.getAttribute('data-id') ||
-                button.id ||
-                button.title;
-
-            // Also check if the button text/title matches our actions
-            const buttonText = button.textContent?.toLowerCase() || button.title?.toLowerCase() || '';
-
-            if (actionId === 'copy-info' || buttonText.includes('copy')) {
-                e.preventDefault();
-                e.stopPropagation();
-                setTimeout(() => {
-                    this.handleCopyAction(button);
-                }, 100);
-            } else if (actionId === 'directions' || buttonText.includes('directions')) {
-                e.preventDefault();
-                e.stopPropagation();
-                setTimeout(() => {
-                    this.handleDirectionsAction(button);
-                }, 100);
-            } else if (actionId === 'refresh-metrics' || buttonText.includes('refresh')) {
-                e.preventDefault();
-                e.stopPropagation();
-                setTimeout(() => {
-                    this.handleRefreshMetricsAction(button);
-                }, 100);
+        // Watch for popup visibility changes using modern reactiveUtils
+        // Bug 2 fix: Store watch handle for cleanup
+        this._popupVisibleWatcher = reactiveUtils.watch(
+            () => this.view.popup?.visible,
+            (visible) => {
+                // If the manager has been destroyed, skip any pending callbacks
+                if (!this.view) return;
+                if (visible) {
+                    log.info('Popup became visible, attaching action handlers...');
+                    // Small delay to ensure popup DOM is fully rendered
+                    setTimeout(() => {
+                        if (!this.view) return;
+                        this.attachPopupActionListeners();
+                    }, 100);
+                }
             }
-        }, true); // Use capture phase to catch event before ArcGIS handles it
+        );
+
+        // Also watch for selected feature changes (when navigating between multiple features)
+        // Bug 2 fix: Store watch handle for cleanup
+        this._popupFeatureWatcher = reactiveUtils.watch(
+            () => this.view.popup?.selectedFeature,
+            (feature, oldFeature) => {
+                // If the manager has been destroyed, skip any pending callbacks
+                if (!this.view) return;
+                if (feature) {
+                    // Bug 1 fix: Clear processed actionIds when feature actually changes
+                    // This allows re-processing buttons for the new feature
+                    if (oldFeature !== feature) {
+                        log.info('Popup feature changed, clearing processed actionIds...');
+                        this._processedActionIds.clear();
+                    }
+                    log.info('Popup feature changed, re-attaching action handlers...');
+                    setTimeout(() => {
+                        if (!this.view) return;
+                        this.attachPopupActionListeners();
+                    }, 100);
+                }
+            }
+        );
+
+        log.info('Popup watchers initialized for ArcGIS 4.34 using reactiveUtils');
     }
 
-    // Handle the copy action using DOM extraction (original working method)
-    async handleCopyAction(buttonElement) {
+    attachPopupActionListeners() {
         try {
-            // Get the popup element - try multiple selectors
-            let popup = document.querySelector('.esri-popup--is-visible');
-            if (!popup) {
-                popup = document.querySelector('.esri-popup[aria-hidden="false"]');
-            }
-            if (!popup) {
-                popup = document.querySelector('.esri-popup');
-            }
-
-            if (!popup) {
-                log.warn('No popup found');
+            // If the view or popup is no longer available (e.g., after destroy()),
+            // safely exit without attempting to access properties on a null view.
+            if (!this.view || !this.view.popup) {
+                log.warn('PopupManager view or popup not available; skipping attachPopupActionListeners');
                 return;
             }
 
-            // Extract all the information from the popup
-            const copyData = this.extractPopupData(popup);
+            // Bug 1 fix: Get current selected feature to create stable popup instance identifier
+            // Use feature's geometry or attributes to create a stable ID that persists across re-renders
+            const currentFeature = this.view.popup?.selectedFeature;
+            let popupInstanceId = 'no-feature';
+            if (currentFeature) {
+                // Try to use a stable identifier from the feature
+                const featureId = currentFeature.attributes?.OBJECTID ||
+                    currentFeature.attributes?.FID ||
+                    currentFeature.attributes?.id ||
+                    (currentFeature.geometry ? JSON.stringify(currentFeature.geometry.extent || currentFeature.geometry) : null);
+                popupInstanceId = featureId ? `feature-${featureId}` : `feature-${currentFeature.attributes?.Name || currentFeature.attributes?.name || 'unknown'}`;
+            }
+
+            // Find the popup container - it may be in the regular DOM or shadow DOM
+            let popupContainer = null;
+
+            // Try multiple strategies to find the popup
+            // Strategy 1: Look for the widget container in the view
+            if (this.view.popup?.container) {
+                popupContainer = this.view.popup.container;
+                log.info('Found popup via view.popup.container');
+            }
+
+            // Strategy 2: Query for visible popup in DOM
+            if (!popupContainer) {
+                popupContainer = document.querySelector('.esri-popup.esri-popup--is-visible');
+                if (popupContainer) {
+                    log.info('Found popup via .esri-popup--is-visible selector');
+                }
+            }
+
+            // Strategy 3: Try to find popup inside the map component
+            if (!popupContainer) {
+                const mapEl = document.getElementById('map');
+                if (mapEl && mapEl.shadowRoot) {
+                    popupContainer = mapEl.shadowRoot.querySelector('.esri-popup');
+                    if (popupContainer) {
+                        log.info('Found popup inside map shadow DOM');
+                    }
+                }
+            }
+
+            if (!popupContainer) {
+                log.warn('Could not find popup container');
+                return;
+            }
+
+            // Hardcoded action titles (popup.actions doesn't populate in 4.34)
+            const actionTitles = {
+                'copy-info': 'Copy Info',
+                'directions': 'Get Directions',
+                'zoom-to-feature': 'Zoom to',
+                'refresh-metrics': 'Refresh Metrics',
+                'track-vehicle': 'Track Vehicle',
+                'copy-truck-info': 'Copy Truck Info',
+                'get-directions': 'Get Directions'
+            };
+
+            log.info('Using hardcoded action titles for known actions');
+
+            // Find ONLY custom action buttons in the popup (Bug 2 fix)
+            // More specific selector to avoid matching built-in ArcGIS buttons
+            const actionButtons = popupContainer.querySelectorAll(
+                '.esri-popup__action[data-action-id], ' +
+                '.esri-popup__actions calcite-button[data-action-id], ' +
+                '.esri-popup__actions calcite-action[data-action-id], ' +
+                'calcite-button[data-action-id], ' +
+                'calcite-action[data-action-id]'
+            );
+
+            log.info(`Found ${actionButtons.length} custom action buttons in popup`);
+
+            // Bug 1 fix: Create unique key for this popup instance's buttons
+            // This ensures we don't re-process buttons when ArcGIS re-renders them
+            const buttonKeyPrefix = `popup-${popupInstanceId}`;
+
+            // Attach click listeners to each button
+            actionButtons.forEach((button, index) => {
+                const actionId = button.getAttribute('data-action-id') ||
+                    button.getAttribute('id') ||
+                    button.getAttribute('data-action');
+
+                // Skip built-in ArcGIS actions (dock, close, zoom, etc.) - they handle their own functionality
+                const builtInActions = ['popup-dock-action', 'popup-close-action', 'zoom-to-feature'];
+                if (builtInActions.includes(actionId)) {
+                    log.info(`Skipping built-in action: ${actionId}`);
+                    return;
+                }
+
+                // Bug 1 fix: Create unique identifier for this button instance
+                const buttonInstanceId = `${buttonKeyPrefix}-${actionId}`;
+
+                // Bug 1 fix: Check if we've already processed this actionId for this popup instance
+                // This prevents duplicate listeners when ArcGIS re-renders buttons for the same feature
+                if (this._processedActionIds.has(buttonInstanceId)) {
+                    log.info(`Button ${actionId} (instance ${buttonInstanceId}) already processed for this popup, skipping`);
+                    return;
+                }
+
+                // Also check if this specific button element already has a listener attached
+                // (handles case where button wasn't re-rendered but we're processing again)
+                if (button.hasAttribute('data-listener-attached') &&
+                    button.getAttribute('data-listener-instance-id') === buttonInstanceId) {
+                    log.info(`Button element ${actionId} (instance ${buttonInstanceId}) already has listener, skipping`);
+                    // Still mark as processed in case it wasn't tracked
+                    this._processedActionIds.add(buttonInstanceId);
+                    return;
+                }
+
+                // Bug 1 fix: Remove any existing listener from this button element before attaching new one
+                // This handles the case where ArcGIS re-rendered the button but we're processing it again
+                const existingHandler = this._buttonListeners.get(button);
+                if (existingHandler) {
+                    log.info(`Removing existing listener from button ${actionId} before re-attaching`);
+                    button.removeEventListener('click', existingHandler, true);
+                    this._buttonListeners.delete(button);
+                }
+
+                // Set text on the ORIGINAL button before cloning (for Calcite components)
+                if (button.tagName === 'CALCITE-ACTION' || button.tagName === 'CALCITE-BUTTON') {
+                    // Try to get title from the hardcoded action configuration
+                    let title = null;
+                    if (actionId && actionTitles[actionId]) {
+                        title = actionTitles[actionId];
+                    } else {
+                        // Fallback to element attributes (for custom copy buttons in popup content)
+                        title = button.getAttribute('title') || button.getAttribute('aria-label') || button.getAttribute('text');
+                    }
+
+                    // Set text attribute if we have a title and it's not already set
+                    if (title && !button.getAttribute('text')) {
+                        button.setAttribute('text', title);
+                        button.setAttribute('text-enabled', 'true');
+                        log.info(`Set text for action ${actionId}: ${title}`);
+                    }
+                }
+
+                // Now clone the button with the updated attributes
+                const clone = button.cloneNode(true);
+                clone.setAttribute('data-listener-attached', 'true'); // Mark as processed (Bug 2 fix)
+                clone.setAttribute('data-listener-instance-id', buttonInstanceId); // Bug 1 fix: Track instance
+
+                // Bug 3 fix: Check for parent node before replacement
+                if (button.parentNode) {
+                    button.parentNode.replaceChild(clone, button);
+                } else {
+                    log.warn(`Button ${actionId} has no parent node, skipping replacement`);
+                    return;
+                }
+
+                const buttonText = (clone.textContent || clone.title || clone.getAttribute('aria-label') || '').toLowerCase();
+
+                log.info(`Button ${index}:`, {
+                    text: buttonText,
+                    actionId: actionId,
+                    instanceId: buttonInstanceId,
+                    tagName: clone.tagName,
+                    title: clone.getAttribute('title'),
+                    textAttr: clone.getAttribute('text')
+                });
+
+                // Bug 1 fix: Create handler function and store reference for cleanup
+                const clickHandler = async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    log.info('Popup action button clicked:', { buttonText, actionId, instanceId: buttonInstanceId });
+
+                    if (actionId?.includes('copy') || buttonText.includes('copy')) {
+                        await this.handleCopyAction(clone);
+                    } else if (actionId?.includes('direction') || buttonText.includes('direction')) {
+                        await this.handleDirectionsAction(clone);
+                    } else if (actionId?.includes('refresh') || buttonText.includes('refresh')) {
+                        await this.handleRefreshMetricsAction(clone);
+                    } else if (actionId?.includes('track') || buttonText.includes('track')) {
+                        await this.handleTrackVehicleAction();
+                    }
+                };
+
+                // Attach handler and store reference in WeakMap for potential cleanup
+                clone.addEventListener('click', clickHandler, true);
+                this._buttonListeners.set(clone, clickHandler);
+
+                // Bug 1 fix: Track that we've processed this actionId for this popup instance
+                this._processedActionIds.add(buttonInstanceId);
+            });
+
+        } catch (error) {
+            log.error('Error attaching popup action listeners:', error);
+        }
+    }
+
+    // Handle the copy action using modern API (4.34+) with DOM extraction fallback
+    async handleCopyAction(buttonElement) {
+        try {
+            let copyData;
+
+            // Method 1: Extract from view.popup.selectedFeature (modern, reliable)
+            const graphic = this.view.popup?.selectedFeature;
+            if (graphic && graphic.attributes) {
+                copyData = this.extractDataFromFeature(graphic);
+            }
+
+            // Method 2: Fallback to DOM extraction if no feature data
+            if (!copyData) {
+                let popup = document.querySelector('.esri-popup--is-visible');
+                if (!popup) {
+                    popup = document.querySelector('.esri-popup[aria-hidden="false"]');
+                }
+                if (!popup) {
+                    popup = document.querySelector('.esri-popup');
+                }
+
+                if (popup) {
+                    copyData = this.extractPopupData(popup);
+                }
+            }
 
             if (copyData) {
                 const success = await this.copyToClipboard(copyData);
 
                 if (success) {
-                    this.updateCopyButton(buttonElement, 'success');
+                    // Only update button feedback, no toast notification
+                    if (buttonElement) this.updateCopyButton(buttonElement, 'success');
+                    log.info('Data copied to clipboard successfully');
                 } else {
-                    this.updateCopyButton(buttonElement, 'error');
+                    if (buttonElement) this.updateCopyButton(buttonElement, 'error');
+                    log.error('Failed to copy to clipboard');
                 }
+            } else {
+                log.warn('No data to copy');
+                if (buttonElement) this.updateCopyButton(buttonElement, 'error');
             }
         } catch (err) {
             log.error('Error handling copy action:', err);
-            this.updateCopyButton(buttonElement, 'error');
+            this.showCopyFeedback('Error copying data', 'error');
+            if (buttonElement) this.updateCopyButton(buttonElement, 'error');
         }
+    }
+
+    // Extract data directly from graphic feature (modern approach)
+    extractDataFromFeature(graphic) {
+        const data = [];
+        const attributes = graphic.attributes;
+
+        const nameKeys = new Set(['name', 'customer_name', 'Name']);
+
+        // Add title if available
+        if (attributes.name || attributes.customer_name || attributes.Name) {
+            data.push(`Name: ${attributes.name || attributes.customer_name || attributes.Name}`);
+        }
+
+        // Add all attributes in a readable format
+        Object.keys(attributes).forEach(key => {
+            // Skip internal/system fields
+            if (key.startsWith('__') || key === 'OBJECTID' || key === 'FID') {
+                return;
+            }
+
+            // Skip name-related fields we've already added above
+            if (nameKeys.has(key)) {
+                return;
+            }
+
+            const value = attributes[key];
+
+            // Format the value
+            let displayValue = value;
+            if (value === null || value === undefined || value === '') {
+                return; // Skip empty values
+            } else if (typeof value === 'boolean') {
+                displayValue = value ? 'Yes' : 'No';
+            } else if (typeof value === 'number' && !isNaN(value)) {
+                displayValue = value.toFixed(2);
+            } else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('update')) {
+                try {
+                    displayValue = new Date(value).toLocaleString();
+                } catch (e) {
+                    displayValue = value;
+                }
+            }
+
+            // Format key name (convert snake_case or camelCase to Title Case)
+            const formattedKey = key
+                .replace(/_/g, ' ')
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase())
+                .trim();
+
+            data.push(`${formattedKey}: ${displayValue}`);
+        });
+
+        return data.length > 0 ? data.join('\n') : null;
     }
 
     // Handle directions action
@@ -448,6 +756,28 @@ export class PopupManager {
                 loadingToast.parentNode.removeChild(loadingToast);
             }
             this.showErrorToast('Failed to refresh metrics', error.message);
+        }
+    }
+
+    // Handle track vehicle action
+    async handleTrackVehicleAction() {
+        try {
+            const graphic = this.view.popup?.selectedFeature;
+            if (!graphic || !graphic.geometry) {
+                log.warn('No vehicle geometry available');
+                return;
+            }
+
+            // Center the map on the vehicle
+            await this.view.goTo({
+                target: graphic.geometry,
+                zoom: 16
+            });
+
+            this.showCopyFeedback('Tracking vehicle...');
+        } catch (error) {
+            log.error('Failed to track vehicle:', error);
+            this.showCopyFeedback('Failed to track vehicle', 'error');
         }
     }
 

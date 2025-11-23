@@ -158,7 +158,7 @@ const createOnlineClusterConfig = () => ({
     type: 'cluster',
     clusterRadius: '45px', // Smaller radius for denser data
     clusterMinSize: '10px',
-    clusterMaxSize: '40px', 
+    clusterMaxSize: '40px',
     // Disable clustering at street level zoom for detail work
     maxScale: 80000, // Only show individual points when zoomed to ~zoom level 14
     popupTemplate: {
@@ -366,9 +366,242 @@ const createNodeSitePopup = () => ({
                         container.removeChild(loadingDiv);
 
                         // Create metrics display
+                        // Note: ArcGIS 4.34+ renders popups in shadow DOM, so we must inject CSS directly
                         const metricsDiv = document.createElement('div');
                         metricsDiv.className = 'node-site-metrics';
                         metricsDiv.innerHTML = `
+                            <style>
+                                .node-site-metrics {
+                                    font-family: var(--calcite-font-family);
+                                    max-width: 400px;
+                                }
+                                .node-metrics-card {
+                                    --calcite-card-background-color: var(--calcite-color-foreground-1);
+                                    --calcite-card-border-color: var(--calcite-color-border-2);
+                                    margin: 0;
+                                }
+                                .metrics-header {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: var(--calcite-spacing-sm);
+                                    padding: var(--calcite-spacing-md);
+                                    background: var(--calcite-color-foreground-2);
+                                    border-bottom: 1px solid var(--calcite-color-border-2);
+                                }
+                                .metrics-header calcite-icon {
+                                    color: var(--calcite-color-text-2);
+                                }
+                                .metrics-title {
+                                    font-size: var(--calcite-font-size-0);
+                                    font-weight: var(--calcite-font-weight-medium);
+                                    color: var(--calcite-color-text-1);
+                                }
+                                .metrics-content {
+                                    padding: var(--calcite-spacing-md);
+                                }
+                                .metrics-counters {
+                                    display: flex;
+                                    gap: var(--calcite-spacing-sm);
+                                    margin-bottom: var(--calcite-spacing-md);
+                                }
+                                .metric-item {
+                                    flex: 1;
+                                    text-align: center;
+                                    padding: var(--calcite-spacing-sm);
+                                    border-radius: var(--calcite-border-radius);
+                                    background: var(--calcite-color-foreground-2);
+                                    border: 1px solid var(--calcite-color-border-3);
+                                }
+                                .metric-item[data-status="online"] {
+                                    border-color: var(--calcite-color-status-success);
+                                    border-width: 2px;
+                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(34, 197, 94, 0.08) 100%);
+                                    position: relative;
+                                    overflow: hidden;
+                                }
+                                .metric-item[data-status="offline"] {
+                                    border-color: var(--calcite-color-status-danger);
+                                    border-width: 2px;
+                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(239, 68, 68, 0.08) 100%);
+                                    position: relative;
+                                    overflow: hidden;
+                                }
+                                .metric-item[data-status="total"] {
+                                    border-color: var(--calcite-color-brand);
+                                    border-width: 2px;
+                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(25, 118, 210, 0.08) 100%);
+                                    position: relative;
+                                    overflow: hidden;
+                                }
+                                .metric-item[data-status="online"]::before {
+                                    content: "";
+                                    position: absolute;
+                                    top: 0;
+                                    left: 0;
+                                    right: 0;
+                                    height: 2px;
+                                    background: linear-gradient(90deg, var(--calcite-color-status-success) 0%, rgba(34, 197, 94, 0.6) 100%);
+                                }
+                                .metric-item[data-status="offline"]::before {
+                                    content: "";
+                                    position: absolute;
+                                    top: 0;
+                                    left: 0;
+                                    right: 0;
+                                    height: 2px;
+                                    background: linear-gradient(90deg, var(--calcite-color-status-danger) 0%, rgba(239, 68, 68, 0.6) 100%);
+                                }
+                                .metric-item[data-status="total"]::before {
+                                    content: "";
+                                    position: absolute;
+                                    top: 0;
+                                    left: 0;
+                                    right: 0;
+                                    height: 2px;
+                                    background: linear-gradient(90deg, var(--calcite-color-brand) 0%, rgba(25, 118, 210, 0.6) 100%);
+                                }
+                                .metric-value {
+                                    font-size: var(--calcite-font-size-2);
+                                    font-weight: var(--calcite-font-weight-bold);
+                                    font-family: var(--calcite-font-family-monospace);
+                                    line-height: var(--calcite-line-height-tight);
+                                    margin-bottom: var(--calcite-spacing-xs);
+                                }
+                                .metric-item[data-status="online"] .metric-value {
+                                    color: var(--calcite-color-status-success);
+                                }
+                                .metric-item[data-status="offline"] .metric-value {
+                                    color: var(--calcite-color-status-danger);
+                                }
+                                .metric-item[data-status="total"] .metric-value {
+                                    color: var(--calcite-color-text-1);
+                                }
+                                .metric-label {
+                                    font-size: var(--calcite-font-size--1);
+                                    color: var(--calcite-color-text-3);
+                                    text-transform: uppercase;
+                                    letter-spacing: var(--calcite-letter-spacing-wide);
+                                    font-weight: var(--calcite-font-weight-medium);
+                                }
+                                .metrics-progress {
+                                    margin: var(--calcite-spacing-md) 0;
+                                }
+                                .metrics-progress calcite-progress {
+                                    --calcite-progress-fill-color: var(--calcite-color-status-success);
+                                    --calcite-progress-track-color: var(--calcite-color-status-danger);
+                                }
+                                .metrics-legend {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    gap: var(--calcite-spacing-md);
+                                    margin-bottom: var(--calcite-spacing-md);
+                                }
+                                .legend-item {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: var(--calcite-spacing-xs);
+                                    font-size: var(--calcite-font-size--1);
+                                    color: var(--calcite-color-text-2);
+                                }
+                                .legend-item[data-status="online"] calcite-icon {
+                                    color: var(--calcite-color-status-success);
+                                }
+                                .legend-item[data-status="offline"] calcite-icon {
+                                    color: var(--calcite-color-status-danger);
+                                }
+                                .service-type-counters {
+                                    display: flex;
+                                    gap: var(--calcite-spacing-sm);
+                                    margin-bottom: var(--calcite-spacing-md);
+                                }
+                                .service-type-item {
+                                    flex: 1;
+                                    text-align: center;
+                                    padding: var(--calcite-spacing-sm);
+                                    border-radius: var(--calcite-border-radius);
+                                    background: var(--calcite-color-foreground-2);
+                                    border: 1px solid var(--calcite-color-border-3);
+                                    position: relative;
+                                    overflow: hidden;
+                                }
+                                .service-type-item[data-type="residential"] {
+                                    border-color: var(--calcite-color-info);
+                                    border-width: 2px;
+                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(59, 130, 246, 0.08) 100%);
+                                }
+                                .service-type-item[data-type="business"] {
+                                    border-color: var(--calcite-color-warning);
+                                    border-width: 2px;
+                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(245, 158, 11, 0.08) 100%);
+                                }
+                                .service-type-item[data-type="residential"]::before {
+                                    content: "";
+                                    position: absolute;
+                                    top: 0;
+                                    left: 0;
+                                    right: 0;
+                                    height: 2px;
+                                    background: linear-gradient(90deg, var(--calcite-color-info) 0%, rgba(59, 130, 246, 0.6) 100%);
+                                }
+                                .service-type-item[data-type="business"]::before {
+                                    content: "";
+                                    position: absolute;
+                                    top: 0;
+                                    left: 0;
+                                    right: 0;
+                                    height: 2px;
+                                    background: linear-gradient(90deg, var(--calcite-color-warning) 0%, rgba(245, 158, 11, 0.6) 100%);
+                                }
+                                .service-type-value {
+                                    font-size: var(--calcite-font-size-2);
+                                    font-weight: var(--calcite-font-weight-bold);
+                                    font-family: var(--calcite-font-family-monospace);
+                                    line-height: var(--calcite-line-height-tight);
+                                    margin-bottom: var(--calcite-spacing-xs);
+                                }
+                                .service-type-item[data-type="residential"] .service-type-value {
+                                    color: var(--calcite-color-info);
+                                }
+                                .service-type-item[data-type="business"] .service-type-value {
+                                    color: var(--calcite-color-warning);
+                                }
+                                .service-type-label {
+                                    font-size: var(--calcite-font-size--1);
+                                    color: var(--calcite-color-text-3);
+                                    text-transform: uppercase;
+                                    letter-spacing: var(--calcite-letter-spacing-wide);
+                                    font-weight: var(--calcite-font-weight-medium);
+                                }
+                                .health-status-card {
+                                    --calcite-card-background-color: var(--calcite-color-foreground-2);
+                                    --calcite-card-border-color: var(--calcite-color-border-2);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: space-between;
+                                    padding: var(--calcite-spacing-sm);
+                                }
+                                .health-indicator {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: var(--calcite-spacing-xs);
+                                }
+                                .health-label {
+                                    font-size: var(--calcite-font-size--1);
+                                    font-weight: var(--calcite-font-weight-medium);
+                                    color: var(--calcite-color-text-2);
+                                    text-transform: capitalize;
+                                }
+                                .recent-activity {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: var(--calcite-spacing-xs);
+                                    font-size: var(--calcite-font-size--1);
+                                    color: var(--calcite-color-text-3);
+                                }
+                                .recent-activity calcite-icon {
+                                    color: var(--calcite-color-text-3);
+                                }
+                            </style>
                              <calcite-card class="node-metrics-card">
                                  <div class="metrics-header">
                                      <calcite-icon icon="graph-time-series" scale="s"></calcite-icon>
@@ -454,7 +687,8 @@ const createNodeSitePopup = () => ({
                                          </div>
                                      ` : ''}
                                  </div>
-                             </div>
+                             </calcite-card>
+                             <!-- Note: Structure is correct - </div> closes metrics-content, </calcite-card> closes node-metrics-card -->
                              
                              <div style="font-size: 11px; color: var(--calcite-color-text-3); text-align: center; margin-top: 12px; padding: 8px 16px; opacity: 0.8;">
                                  Last updated: ${new Date(metrics.lastUpdated).toLocaleString()}

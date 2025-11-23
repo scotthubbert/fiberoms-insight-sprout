@@ -267,6 +267,35 @@ arcgis-map {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Map Component Spacing (ArcGIS 4.34+ using slots)
+ * Restores spacing between map controls that was default in 4.32 widgets
+ */
+arcgis-map arcgis-home,
+arcgis-map arcgis-locate,
+arcgis-map arcgis-track,
+arcgis-map arcgis-zoom,
+arcgis-map arcgis-compass,
+arcgis-map arcgis-search,
+arcgis-map arcgis-fullscreen,
+arcgis-map arcgis-expand {
+  margin-bottom: 12px; /* Standard spacing between controls */
+}
+
+/* Specific positioning adjustments for stacked controls */
+arcgis-map[slot] arcgis-home:not(:last-child),
+arcgis-map arcgis-locate:not(:last-child),
+arcgis-map arcgis-track:not(:last-child),
+arcgis-map arcgis-fullscreen:not(:last-child),
+arcgis-map arcgis-expand:not(:last-child) {
+  margin-bottom: 12px;
+}
+
+/* Bottom controls spacing */
+arcgis-map arcgis-basemap-toggle,
+arcgis-map arcgis-distance-measurement-2d {
+  margin-top: 12px;
+}
+
 /* Unified Header Navigation - Clean & Streamlined */
 calcite-navigation.unified-header {
   --calcite-navigation-height: 64px;
@@ -1044,6 +1073,30 @@ calcite-dialog.mobile-only [slot="content"] {
 }
 
 /* ArcGIS Popup Custom Styling */
+/* Ensure popup action buttons always show text labels (ArcGIS 4.34+) */
+.esri-popup__actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
+
+.esri-popup__action,
+.esri-popup__actions button,
+.esri-popup__actions calcite-action,
+.esri-popup__actions calcite-button {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Force action text to be visible */
+.esri-popup__action-text,
+.esri-popup__action span {
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
 /* Status indicator styles for popups */
 .popup-status-indicator {
   display: flex;
@@ -1420,9 +1473,15 @@ calcite-autocomplete-item:focus {
   border-bottom: 1px solid var(--calcite-color-border-3);
 }
 
-/* Measurement Widget Styling */
-#measurement-tool {
+/* Measurement Tools Styling (ArcGIS 4.34+ slot-based components) */
+#distance-measurement-tool {
   z-index: 100;
+  /* Tools use bottom-left slot and toggle visibility via hidden attribute */
+}
+
+/* Customize measurement tool appearance if needed */
+arcgis-distance-measurement-2d {
+  --calcite-ui-brand: var(--calcite-color-brand);
 }
 
 /* Power Outage Stats Component Styles */
@@ -2029,12 +2088,12 @@ calcite-list-item[style*="cursor: pointer"]:active {
   .status-card [slot="title"] {
     font-size: var(--calcite-font-size-2);
   }
-  
+
   .mobile-network-status-cards {
     flex-direction: row; /* Keep side by side on mobile */
     gap: var(--calcite-spacing-sm);
   }
-  
+
   .mobile-status-count {
     font-size: var(--calcite-font-size-2);
   }
@@ -2687,10 +2746,14 @@ power-outage-stats .outages-list-container {
 }
 
 /* Prevent FOUC for dialogs until web component is defined */
-calcite-dialog:not(:defined) { display: none !important; }
+calcite-dialog:not(:defined) {
+  display: none !important;
+}
 
 /* Safe-area support for bottom nav on notched devices */
-#mobile-tab-bar { padding-bottom: env(safe-area-inset-bottom); }
+#mobile-tab-bar {
+  padding-bottom: env(safe-area-inset-bottom);
+}
 
 /* Ensure mobile close button sits above home indicator */
 @media (max-width: 768px) {

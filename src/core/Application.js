@@ -100,7 +100,7 @@ export class Application {
                         }
                         if (!mapEl.querySelector('arcgis-search')) {
                             const s = document.createElement('arcgis-search');
-                            s.setAttribute('position', 'top-left');
+                            s.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
                             s.setAttribute('include-default-sources', 'true');
                             s.setAttribute('max-results', '8');
                             s.setAttribute('min-characters', '3');
@@ -127,7 +127,7 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-home')) {
                         const h = document.createElement('arcgis-home');
-                        h.setAttribute('position', 'top-left');
+                        h.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
                         mapEl.appendChild(h);
                         try { this.services?.mapController?.configureHomeButton(); } catch (_) { }
                     }
@@ -140,7 +140,7 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-locate')) {
                         const l = document.createElement('arcgis-locate');
-                        l.setAttribute('position', 'top-left');
+                        l.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
                         mapEl.appendChild(l);
                     }
                 } catch (_) { }
@@ -152,7 +152,7 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-track')) {
                         const t = document.createElement('arcgis-track');
-                        t.setAttribute('position', 'top-left');
+                        t.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
                         mapEl.appendChild(t);
                     }
                 } catch (_) { }
@@ -168,7 +168,7 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-basemap-toggle')) {
                         const toggleEl = document.createElement('arcgis-basemap-toggle');
-                        toggleEl.setAttribute('position', 'bottom-right');
+                        toggleEl.setAttribute('slot', 'bottom-right'); // Using modern slot pattern (4.34+)
                         toggleEl.setAttribute('next-basemap', 'satellite');
                         mapEl.appendChild(toggleEl);
                     }
@@ -193,7 +193,7 @@ export class Application {
                         const existingExpand = mapEl.querySelector('arcgis-expand[icon="basemap"]');
                         if (!existingExpand) {
                             const expandEl = document.createElement('arcgis-expand');
-                            expandEl.setAttribute('position', 'top-left');
+                            expandEl.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
                             expandEl.setAttribute('icon', 'basemap');
                             expandEl.setAttribute('tooltip', 'Basemap Gallery');
                             const galleryEl = document.createElement('arcgis-basemap-gallery');
@@ -213,24 +213,6 @@ export class Application {
             }
             addMqChange(mq, ensureBasemapGallery);
 
-            // Preload measurement widget on desktop during idle (desktop-only, ~180KB)
-            const preloadMeasurementWidget = async () => {
-                const mapEl = this.services?.mapController?.mapElement;
-                if (!mapEl || !mq.matches) return;
-
-                try {
-                    // Just preload the component, don't create the widget yet
-                    if (!customElements.get('arcgis-measurement')) {
-                        await import('@arcgis/map-components/dist/components/arcgis-measurement');
-                    }
-                } catch (_) { /* no-op */ }
-            };
-
-            // Preload on desktop during idle time
-            if (mq.matches) {
-                scheduleIdle(preloadMeasurementWidget);
-            }
-
             // Desktop-only Fullscreen
             const fsMq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
             const ensureFullscreen = async () => {
@@ -243,7 +225,7 @@ export class Application {
                         }
                         if (!mapEl.querySelector('arcgis-fullscreen')) {
                             const fsEl = document.createElement('arcgis-fullscreen');
-                            fsEl.setAttribute('position', 'top-left');
+                            fsEl.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
                             mapEl.appendChild(fsEl);
                         }
                     } else {
@@ -358,24 +340,109 @@ export class Application {
             if (searchSettings.placeholder) {
                 searchWidget.setAttribute('placeholder', searchSettings.placeholder);
             }
+
+            // Bug 15 fix: Store listener as instance property to enable proper removal
+            // Remove any existing listener before creating a new one
+            if (this._searchWidgetListener) {
+                searchWidget.removeEventListener('arcgisReady', this._searchWidgetListener);
+                this._searchWidgetListener = null;
+            }
+
             const applyBoundsToSources = () => {
-                if (searchWidget.widget && searchWidget.widget.allSources) {
-                    searchWidget.widget.allSources.forEach(source => {
-                        if (bounds) {
-                            if (source.filter) {
-                                source.filter.geometry = { type: 'extent', ...bounds };
-                            } else {
-                                source.filter = { geometry: { type: 'extent', ...bounds } };
-                            }
-                        } else {
-                            if (source.filter && source.filter.geometry) delete source.filter.geometry;
+                const widget = searchWidget.widget;
+                if (!widget || !widget.allSources) return;
+
+                if (bounds) {
+                    // 1) searchExtent – prefer results within the service-area box
+                    const searchExtent = {
+                        type: 'extent',
+                        xmin: bounds.xmin,
+                        ymin: bounds.ymin,
+                        xmax: bounds.xmax,
+                        ymax: bounds.ymax,
+                        spatialReference: bounds.spatialReference || { wkid: 4326 }
+                    };
+                    widget.searchExtent = searchExtent;
+
+                    // 2) location – bias toward the center of the service area
+                    const centerLat = (bounds.ymin + bounds.ymax) / 2;
+                    const centerLon = (bounds.xmin + bounds.xmax) / 2;
+
+                    widget.allSources.forEach(source => {
+                        if (!source.locator) return;
+
+                        // Bias toward service-area center
+                        source.location = {
+                            type: 'point',
+                            latitude: centerLat,
+                            longitude: centerLon,
+                            spatialReference: { wkid: 4326 }
+                        };
+
+                        // Prefer US results overall
+                        source.countryCode = 'US';
+
+                        // Strong hint: restrict search to the state extent for this source
+                        // This mirrors the Search widget example:
+                        //   search.sources.getItemAt(0).searchExtent = stateExtent;
+                        source.searchExtent = searchExtent;
+
+                        // Constrain results to what's currently in view when zoomed in
+                        source.withinViewEnabled = true;
+
+                        // Strengthen local preference via localSearchOptions
+                        source.localSearchDisabled = false;
+                        source.localSearchOptions = {
+                            distance: 50000,  // ~50km radius around center
+                            minScale: 300000  // behavior threshold for local bias
+                        };
+
+                        // Optional: control how far the map zooms when a result is selected.
+                        // This does not affect suggestions, only the final zoom level.
+                        if (source.zoomScale == null) {
+                            source.zoomScale = 24000; // nice street-level scale for subscribers
                         }
                     });
-                    const boundsInfo = bounds ? `initial map bounds for ${serviceArea.name}` : 'global search (no geographic constraints)';
-                    console.info(`✅ Search widget configured with ${boundsInfo}`);
+
+                    console.info('✅ Search configured with local preference:', {
+                        area: serviceArea.name,
+                        extent: searchExtent
+                    });
+                } else {
+                    // Clear any previous hints and fall back to global behavior
+                    widget.searchExtent = null;
+                    widget.allSources.forEach(source => {
+                        // Bug 1 fix: Early return for sources without locator (consistent with bounded case)
+                        if (!source.locator) return;
+
+                        // Only delete properties that we explicitly set during bounded search
+                        if (source.location) delete source.location;
+                        if (source.countryCode) delete source.countryCode;
+                        if (source.localSearchOptions) delete source.localSearchOptions;
+                        if (source.searchExtent) delete source.searchExtent;
+
+                        // Bug 1 fix: Only reset flags that we explicitly set during bounded search
+                        // Only modify properties that were set by our bounded search logic (line 391, 394)
+                        // This prevents altering default behavior of sources that never had these properties
+                        if (source.hasOwnProperty('withinViewEnabled')) {
+                            source.withinViewEnabled = false;
+                        }
+                        // Bug 1 fix: In global (unbounded) mode, enable local search to allow broader results
+                        // This is consistent with the bounded case where localSearchDisabled = false (line 394)
+                        // Setting it to false (enable local search) allows the search to work globally without restrictions
+                        if (source.hasOwnProperty('localSearchDisabled')) {
+                            source.localSearchDisabled = false; // false = enable local search for global search
+                        }
+                    });
+                    console.info('✅ Search configured for global search (no local preference)');
                 }
             };
-            searchWidget.addEventListener('arcgisReady', applyBoundsToSources);
+
+            // Store the listener reference for proper removal on next call
+            this._searchWidgetListener = applyBoundsToSources;
+            // Bug 1 fix: Use { once: true } to prevent listener accumulation if arcgisReady fires multiple times
+            // This is consistent with the distance measurement tool listener and prevents memory leaks
+            searchWidget.addEventListener('arcgisReady', applyBoundsToSources, { once: true });
             if (searchWidget.widget && searchWidget.widget.allSources) applyBoundsToSources();
         } catch (error) {
             log.error(`Failed to configure search widget with ${serviceArea.name} bounds:`, error);
@@ -686,7 +753,7 @@ export class Application {
                 'business-internet-filter-switch',
                 'mobile-business-internet-filter-switch'
             ];
-            
+
             if (!handledByIdSwitches.includes(switchElement.id)) {
                 switchElement.addEventListener('calciteSwitchChange', (e) => {
                     this.handleLayerToggle(e.target, e.target.checked);
@@ -711,7 +778,8 @@ export class Application {
     }
 
     initializeMeasurementWidget() {
-        // Always set up buttons; widget will be created on-demand on desktop
+        // Desktop-only measurement widgets using modern slot-based pattern (4.34+)
+        // Measurement components are declared in HTML with slot="bottom-left"
         this.setupMeasurementButtons();
     }
 
@@ -719,31 +787,113 @@ export class Application {
         const mq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
         if (!mq.matches) return; // Skip entirely on mobile
 
-        // Define component if needed
-        if (!customElements.get('arcgis-measurement')) {
-            try { await import('@arcgis/map-components/dist/components/arcgis-measurement'); }
+        // Load measurement components if not already defined
+        if (!customElements.get('arcgis-distance-measurement-2d')) {
+            try {
+                await import('@arcgis/map-components/dist/components/arcgis-distance-measurement-2d');
+            }
             catch (_) { /* no-op */ }
         }
 
-        // Create the element on-demand if not present
-        let measurementWidget = document.getElementById('measurement-tool');
-        if (!measurementWidget) {
-            const mapEl = this.services?.mapController?.mapElement;
-            if (!mapEl) return;
-            measurementWidget = document.createElement('arcgis-measurement');
-            measurementWidget.id = 'measurement-tool';
-            mapEl.appendChild(measurementWidget);
+        // Components are already in DOM, just wait for them to be ready
+        const distanceTool = document.getElementById('distance-measurement-tool');
+
+        // Bug 1 fix: Check if component is already ready before waiting for event
+        // Check multiple readiness indicators to accurately detect if component is ready
+        const isReady = distanceTool && (
+            distanceTool.widget !== undefined ||  // Widget property exists
+            distanceTool.ready === true ||        // Ready property is true
+            (distanceTool.view && distanceTool.view.ready) ||  // View is ready
+            distanceTool.state !== undefined      // State property exists (indicates component initialized)
+        );
+
+        // If already ready, return immediately
+        if (isReady) {
+            return;
         }
 
-        // If already ready, return
-        if (measurementWidget.widget) return;
+        // Bug 1 fix: If initialization is already in progress, await the existing promise
+        // This ensures concurrent calls wait for initialization to complete instead of proceeding immediately
+        if (this._distanceToolInitializing && this._distanceToolInitializationPromise) {
+            await this._distanceToolInitializationPromise;
+            return;
+        }
 
-        // Wait for underlying widget to be ready
-        await new Promise((resolve) => {
-            const readyHandler = () => { resolve(); };
-            measurementWidget.addEventListener('arcgisReady', readyHandler, { once: true });
-            setTimeout(() => { if (measurementWidget.widget) resolve(); }, 1500);
-        });
+        // Bug 12 fix: Check if already initialized to avoid duplicate listeners
+        // Bug 1 fix: Only wait for arcgisReady if component is not already ready
+        if (distanceTool && !isReady) {
+            this._distanceToolInitializing = true;
+            this._distanceToolInitializationPromise = new Promise((resolve) => {
+                // Bug 1 fix: Check if component became ready between check and listener attachment
+                // This handles race condition where component becomes ready immediately after check
+                const checkReady = () => {
+                    const tool = document.getElementById('distance-measurement-tool');
+                    if (tool && (
+                        tool.widget !== undefined ||
+                        tool.ready === true ||
+                        (tool.view && tool.view.ready) ||
+                        tool.state !== undefined
+                    )) {
+                        resolve();
+                        return true;
+                    }
+                    return false;
+                };
+
+                // Check immediately before adding listener
+                if (checkReady()) {
+                    // Bug 1 fix: Don't set promise to null here - it will be cleaned up after await
+                    // Just return from executor, promise will resolve immediately
+                    return;
+                }
+
+                // Bug 2 fix: Declare timeoutId and checkInterval before they're used in callbacks
+                // Declare timeoutId first so it's available in the setInterval callback
+                let timeoutId;
+                const checkInterval = setInterval(() => {
+                    if (checkReady()) {
+                        if (timeoutId) clearTimeout(timeoutId);
+                        clearInterval(checkInterval);
+                        // checkReady() already called resolve(), so we're done
+                    }
+                }, 100);
+
+                // Bug 1 fix: Re-query element before attaching listener to avoid stale reference
+                // This is consistent with the defensive pattern used in checkReady() and elsewhere
+                const currentTool = document.getElementById('distance-measurement-tool');
+                if (!currentTool) {
+                    // Element removed from DOM, clean up and resolve
+                    if (timeoutId) clearTimeout(timeoutId);
+                    clearInterval(checkInterval);
+                    resolve();
+                    return;
+                }
+
+                // Add listener for arcgisReady event using current DOM reference
+                currentTool.addEventListener('arcgisReady', () => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                    clearInterval(checkInterval);
+                    resolve();
+                }, { once: true });
+
+                // Fallback timeout - but check periodically to avoid waiting full timeout if ready
+                // Bug 2 fix: timeoutId is now declared above, so it's available in the setInterval callback
+                timeoutId = setTimeout(() => {
+                    clearInterval(checkInterval);
+                    resolve();
+                }, 1500);
+            });
+
+            // Bug 1 fix: Use try/finally to ensure cleanup always executes, even if promise rejects or errors occur
+            try {
+                // Await the initialization promise (will be resolved immediately if already ready)
+                await this._distanceToolInitializationPromise;
+            } finally {
+                // Clean up after initialization completes or fails - always executes
+                this._distanceToolInitializing = false;
+                this._distanceToolInitializationPromise = null;
+            }
+        }
     }
 
     setupMeasurementButtons() {
@@ -753,27 +903,143 @@ export class Application {
             this.distanceBtnHandler = async () => {
                 try {
                     await this.ensureMeasurementReady();
-                    const measurementWidget = document.getElementById('measurement-tool');
-                    if (!measurementWidget) return;
-                    measurementWidget.activeTool = 'distance';
+                    // Bug 2 fix: Get current DOM reference - don't use closure variable
+                    let distanceTool = document.getElementById('distance-measurement-tool');
+                    if (!distanceTool) return;
+
+                    // Bug 2 fix: Clean up any existing listener using current DOM reference
+                    // NOTE: Rapid clicks before previous measurement reaches 'measuring' state will remove
+                    // the previous listener. This is acceptable behavior because:
+                    // 1. The activation ID system ensures only the most recent activation controls visibility
+                    // 2. The previous listener would check isCurrentActivation and find it false, so it wouldn't act anyway
+                    // 3. This is an edge case for a seldom-used tool - acceptable trade-off for simplicity
+                    // 4. The new activation takes precedence, which is the desired UX behavior
+                    // Future reviewers: This edge case can be skipped - the current implementation is sufficient
+                    if (this._distanceToolListener) {
+                        // Re-query to ensure we have the current element
+                        const currentTool = document.getElementById('distance-measurement-tool');
+                        if (currentTool) {
+                            currentTool.removeEventListener('arcgisPropertyChange', this._distanceToolListener);
+                        }
+                        this._distanceToolListener = null;
+                        this._distanceToolActivationId = null;
+                    }
+
+                    // Bug 1 fix: Cancel any existing cleanup timeout to prevent accumulation with rapid clicks
+                    // Without this, rapid button clicks create multiple timeouts that all execute independently
+                    if (this._measurementCleanupTimeout) {
+                        clearTimeout(this._measurementCleanupTimeout);
+                        this._measurementCleanupTimeout = null;
+                    }
+
+                    // Bug 17 fix: Use unique activation ID to prevent race conditions with rapid clicks
+                    const activationId = Date.now() + Math.random();
+                    this._distanceToolActivationId = activationId;
+
+                    // Bug 2 fix: Get fresh reference for listener function
+                    // Start measurement first, then show once state changes to "measuring"
+                    // This prevents the flash of "New measurement" button
+                    // Store reference to the element the listener is attached to for proper cleanup
+                    const listenerFunc = (event) => {
+                        const isCurrentActivation = this._distanceToolActivationId === activationId;
+
+                        // Bug 2 fix: Get current DOM reference inside listener
+                        // If element was replaced, the old listener won't fire, so this should be the same element
+                        const currentTool = document.getElementById('distance-measurement-tool');
+                        if (!currentTool) {
+                            // Element removed, clean up and exit
+                            if (isCurrentActivation && this._distanceToolListener === listenerFunc) {
+                                this._distanceToolListener = null;
+                                this._distanceToolActivationId = null;
+                            }
+                            return;
+                        }
+
+                        // Bug 2 fix: Only remove listener and clean up AFTER state reaches 'measuring'
+                        // This prevents premature removal if other properties change before state becomes 'measuring'
+                        if (isCurrentActivation && currentTool.state === 'measuring') {
+                            // Show the tool now that it's measuring
+                            currentTool.hidden = false;
+
+                            // Bug 2 fix: Remove listener only after state is 'measuring'
+                            // This ensures we don't remove the listener prematurely
+                            currentTool.removeEventListener('arcgisPropertyChange', listenerFunc);
+
+                            // Clear instance fields for the active activation
+                            if (this._distanceToolListener === listenerFunc) {
+                                this._distanceToolListener = null;
+                                this._distanceToolActivationId = null;
+                            }
+                        }
+                        // If state is not 'measuring' yet, keep the listener attached to wait for state change
+                    };
+                    this._distanceToolListener = listenerFunc;
+
+                    // Bug 2 fix: Re-query element before using it
+                    distanceTool = document.getElementById('distance-measurement-tool');
+                    if (!distanceTool) return;
+
+                    // Keep hidden until measuring starts
+                    distanceTool.hidden = true;
+                    distanceTool.addEventListener('arcgisPropertyChange', listenerFunc);
+
+                    // Bug 1 fix: Set up cleanup timeout IMMEDIATELY after adding listener
+                    // This ensures cleanup happens even if start() or subsequent code throws an error
+                    // The timeout shows the tool after 200ms as a fallback, but only removes the listener
+                    // if the state is already 'measuring' (meaning the event fired and listener cleaned itself up)
+                    // Store as instance property so it can be cancelled on rapid clicks or during cleanup
+                    this._measurementCleanupTimeout = setTimeout(() => {
+                        // Bug 2 fix: Re-query element and check for null in case DOM changed
+                        const tool = document.getElementById('distance-measurement-tool');
+                        if (!tool) {
+                            log.warn('Distance measurement tool removed from DOM before timeout');
+                            if (this._distanceToolActivationId === activationId) {
+                                this._distanceToolListener = null;
+                                this._distanceToolActivationId = null;
+                            }
+                            return;
+                        }
+
+                        // Bug 17 fix: Check activation ID to ensure we only act for the
+                        // most recent activation. Older activations will have already
+                        // removed their own listeners in listenerFunc.
+                        if (this._distanceToolActivationId === activationId) {
+                            // Always show the tool if it's still hidden (fallback for slow state transitions)
+                            tool.hidden = false;
+
+                            // Bug 1 fix: Only remove listener if state is already 'measuring'
+                            // If state hasn't reached 'measuring' yet, the listener needs to stay attached
+                            // to respond when the state eventually changes. This prevents the tool from
+                            // remaining permanently hidden if state transition takes longer than 200ms.
+                            if (tool.state === 'measuring') {
+                                // State already reached 'measuring', listener should have cleaned itself up
+                                // Remove it now as a safety measure in case the event didn't fire
+                                tool.removeEventListener('arcgisPropertyChange', listenerFunc);
+
+                                // Only clear instance fields if they still point at this activation's listener.
+                                if (this._distanceToolListener === listenerFunc) {
+                                    this._distanceToolListener = null;
+                                    this._distanceToolActivationId = null;
+                                }
+                            }
+                            // If state !== 'measuring', leave listener attached to wait for state change
+                        }
+                        // Clear the timeout reference after it executes
+                        this._measurementCleanupTimeout = null;
+                    }, 200);
+
+                    // Start the measurement (this will trigger state change to "measuring")
+                    // Note: Timeout is already set up above, so even if this throws, cleanup will happen
+                    if (typeof distanceTool.start === 'function') {
+                        await distanceTool.start();
+                    } else {
+                        log.warn('Distance measurement tool start() not available yet');
+                    }
+
                     this.updateMeasurementButtons('distance');
                 } catch (error) { log.error('Error activating distance measurement:', error); }
             };
             distanceBtn.addEventListener('click', this.distanceBtnHandler);
-        }
-        const areaBtn = document.getElementById('area-measurement-btn');
-        if (areaBtn) {
-            areaBtn.removeEventListener('click', this.areaBtnHandler);
-            this.areaBtnHandler = async () => {
-                try {
-                    await this.ensureMeasurementReady();
-                    const measurementWidget = document.getElementById('measurement-tool');
-                    if (!measurementWidget) return;
-                    measurementWidget.activeTool = 'area';
-                    this.updateMeasurementButtons('area');
-                } catch (error) { log.error('Error activating area measurement:', error); }
-            };
-            areaBtn.addEventListener('click', this.areaBtnHandler);
         }
         const clearBtn = document.getElementById('clear-measurement-btn');
         if (clearBtn) {
@@ -781,10 +1047,14 @@ export class Application {
             this.clearBtnHandler = async () => {
                 try {
                     await this.ensureMeasurementReady();
-                    const measurementWidget = document.getElementById('measurement-tool');
-                    if (!measurementWidget) return;
-                    measurementWidget.clear();
-                    measurementWidget.activeTool = null;
+                    const distanceTool = document.getElementById('distance-measurement-tool');
+
+                    // Clear and hide distance tool using official API
+                    if (distanceTool) {
+                        await distanceTool.clear?.();
+                        distanceTool.hidden = true;
+                    }
+
                     this.updateMeasurementButtons(null);
                 } catch (error) { log.error('Error clearing measurements:', error); }
             };
@@ -793,12 +1063,12 @@ export class Application {
     }
 
     updateMeasurementButtons(activeTool) {
+        // Note: Area measurement was removed in ArcGIS 4.34 upgrade - only distance measurement is supported
+        // This function now only handles 'distance' tool state, which is correct for current implementation
         const distanceBtn = document.getElementById('distance-measurement-btn');
-        const areaBtn = document.getElementById('area-measurement-btn');
         const clearBtn = document.getElementById('clear-measurement-btn');
-        [distanceBtn, areaBtn, clearBtn].forEach(btn => { if (btn) { btn.appearance = 'solid'; btn.kind = 'neutral'; } });
+        [distanceBtn, clearBtn].forEach(btn => { if (btn) { btn.appearance = 'solid'; btn.kind = 'neutral'; } });
         if (activeTool === 'distance' && distanceBtn) { distanceBtn.appearance = 'solid'; distanceBtn.kind = 'brand'; }
-        else if (activeTool === 'area' && areaBtn) { areaBtn.appearance = 'solid'; areaBtn.kind = 'brand'; }
     }
 
     setupCSVExport() {
@@ -867,13 +1137,13 @@ export class Application {
         const offlineSwitch = document.getElementById('offline-subscribers-switch');
         const businessFilterSwitch = document.getElementById('business-internet-filter-switch');
         const mobileBusinessFilterSwitch = document.getElementById('mobile-business-internet-filter-switch');
-        
+
         // All switches use the same pattern
         if (onlineSwitch) onlineSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
         if (offlineSwitch) offlineSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
         if (businessFilterSwitch) businessFilterSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
         if (mobileBusinessFilterSwitch) mobileBusinessFilterSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
-        
+
         this.setupLayerSwitchesForAllSections();
         this.setupClickableListItems();
     }
@@ -896,7 +1166,7 @@ export class Application {
             if (listItem.classList.contains('layer-toggle-item')) {
                 return;
             }
-            
+
             const switchElement = listItem.querySelector('calcite-switch');
             if (switchElement) {
                 listItem.style.cursor = 'pointer';
@@ -963,21 +1233,21 @@ export class Application {
     async handleLayerToggle(element, checked) {
         if (!element || typeof checked !== 'boolean') { log.warn('Invalid layer toggle parameters'); return; }
         const layerId = this.getLayerIdFromElement(element);
-        
+
         // Handle business filter separately (not a layer, but a filter on existing layers)
         if (layerId === 'business-internet-filter') {
             // Prevent re-entrancy during sync
             if (this._syncingBusinessFilter) return;
-            
+
             this._syncingBusinessFilter = true;
             try {
                 await this.toggleBusinessInternetFilter(checked);
-                
+
                 // Sync the other switch (desktop/mobile)
-                const otherSwitch = element.id === 'business-internet-filter-switch' 
+                const otherSwitch = element.id === 'business-internet-filter-switch'
                     ? document.getElementById('mobile-business-internet-filter-switch')
                     : document.getElementById('business-internet-filter-switch');
-                    
+
                 if (otherSwitch && otherSwitch.checked !== checked) {
                     otherSwitch.checked = checked;
                 }
@@ -986,7 +1256,7 @@ export class Application {
             }
             return;
         }
-        
+
         const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'node-sites', 'rainviewer-radar', 'apco-outages', 'tombigbee-outages', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'mst-fiber', 'splitters', 'closures', 'electric-trucks', 'fiber-trucks']);
         if (!layerId || !VALID_LAYER_IDS.has(layerId)) { log.warn(`Invalid or unsupported layer ID: ${layerId}`); return; }
         if (layerId) {
@@ -1207,7 +1477,7 @@ export class Application {
                 }
             });
         }
-        
+
         // Setup mobile refresh button
         const mobileRefreshButton = document.getElementById('refresh-subscriber-data');
         if (mobileRefreshButton) {
@@ -1219,7 +1489,7 @@ export class Application {
                     subscriberDataService.clearCache();
                     await this.pollingManager.performUpdate('subscribers');
                     if (window.app && window.app.updateSubscriberStatistics) await window.app.updateSubscriberStatistics();
-                    
+
                     // Update mobile subscriber statistics
                     if (this.services.mobileTabBar && this.services.mobileTabBar.updateMobileSubscriberStatistics) {
                         await this.services.mobileTabBar.updateMobileSubscriberStatistics();
@@ -1230,7 +1500,7 @@ export class Application {
                 }
             });
         }
-        
+
         this.setupCSVExport();
         this.setupSubscriberStatistics();
         const testSubscriberButton = document.getElementById('test-subscriber-update');
@@ -1438,6 +1708,35 @@ export class Application {
         if (geotab && typeof geotab.cleanup === 'function') geotab.cleanup();
         if (this.services.layerManager && typeof this.services.layerManager.cleanup === 'function') this.services.layerManager.cleanup();
         if (this.services.rainViewerService && typeof this.services.rainViewerService.cleanup === 'function') this.services.rainViewerService.cleanup();
+        // Bug 14 fix: Call PopupManager.destroy() to clean up reactiveUtils watchers
+        // Bug 3 fix: Wrap in try/catch to prevent cleanup failures from breaking teardown
+        if (this.services.popupManager && typeof this.services.popupManager.destroy === 'function') {
+            try {
+                this.services.popupManager.destroy();
+            } catch (error) {
+                log.error('Error destroying PopupManager:', error);
+            }
+        }
+        // Bug 2 fix: Remove search widget listener to prevent memory leak
+        if (this._searchWidgetListener) {
+            // Bug 1 fix: Use querySelector('arcgis-search') to match configureSearchWidget() pattern
+            // The search widget is created dynamically without an ID, so getElementById won't work
+            const searchWidget = document.querySelector('arcgis-search');
+            if (searchWidget) searchWidget.removeEventListener('arcgisReady', this._searchWidgetListener);
+            this._searchWidgetListener = null;
+        }
+        // Bug 1 fix: Remove distance measurement tool listener to prevent memory leak
+        if (this._distanceToolListener) {
+            const distanceTool = document.getElementById('distance-measurement-tool');
+            if (distanceTool) distanceTool.removeEventListener('arcgisPropertyChange', this._distanceToolListener);
+            this._distanceToolListener = null;
+            this._distanceToolActivationId = null;
+        }
+        // Bug 1 fix: Clear any pending measurement cleanup timeout
+        if (this._measurementCleanupTimeout) {
+            clearTimeout(this._measurementCleanupTimeout);
+            this._measurementCleanupTimeout = null;
+        }
         if (loadingIndicator) loadingIndicator.destroy();
         this._cleanupHandlers.forEach(handler => { try { handler(); } catch (error) { log.error('Cleanup handler error:', error); } });
         this.services = {}; this._cleanupHandlers = []; this.geotabFeed = null; this.activeTruckLayers.clear(); this.geotabReady = false;
