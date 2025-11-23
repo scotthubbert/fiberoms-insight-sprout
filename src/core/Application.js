@@ -135,7 +135,7 @@ export class Application {
                         }
                         if (!mapEl.querySelector('arcgis-search')) {
                             const s = document.createElement('arcgis-search');
-                            s.setAttribute('slot', 'top-left');
+                            s.setAttribute('slot', 'top-right');
                             s.setAttribute('include-default-sources', 'true');
                             s.setAttribute('max-results', '8');
                             s.setAttribute('min-characters', '3');
@@ -172,15 +172,15 @@ export class Application {
                 await loadSearchWidget();
 
                 // Verify widgets were added and check visibility
+                // Note: Home widget is now added via MapController (not as a component)
                 setTimeout(() => {
                     const widgets = {
                         search: mapEl.querySelector('arcgis-search'),
-                        home: mapEl.querySelector('arcgis-home'),
                         locate: mapEl.querySelector('arcgis-locate'),
                         track: mapEl.querySelector('arcgis-track')
                     };
                     const widgetCount = Object.values(widgets).filter(w => w).length;
-                    log.info(`[MAP-UI] 📊 Total widgets in DOM: ${widgetCount}`);
+                    log.info(`[MAP-UI] 📊 Total map components in DOM: ${widgetCount}`);
                     Object.entries(widgets).forEach(([name, el]) => {
                         if (el) {
                             const style = getComputedStyle(el);
@@ -192,19 +192,9 @@ export class Application {
                     });
                 }, 2000);
 
-                // Home
-                try {
-                    if (!customElements.get('arcgis-home')) {
-                        await import('@arcgis/map-components/dist/components/arcgis-home');
-                    }
-                    if (!mapEl.querySelector('arcgis-home')) {
-                        const h = document.createElement('arcgis-home');
-                        h.setAttribute('slot', 'top-left');
-                        mapEl.appendChild(h);
-                        log.info('[MAP-UI] ✅ Home widget added');
-                        try { this.services?.mapController?.configureHomeButton(); } catch (_) { }
-                    }
-                } catch (_) { }
+                // Home button removed due to ArcGIS 4.34 clustering cache bug
+                // When programmatic navigation is used, clustered markers disappear
+                // Can be re-added when Esri fixes the issue in a future release
 
                 // Locate
                 try {
@@ -213,7 +203,7 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-locate')) {
                         const l = document.createElement('arcgis-locate');
-                        l.setAttribute('slot', 'top-left');
+                        l.setAttribute('slot', 'top-right');
                         mapEl.appendChild(l);
                         log.info('[MAP-UI] ✅ Locate widget added');
                     }
@@ -228,32 +218,12 @@ export class Application {
                     }
                     if (!mapEl.querySelector('arcgis-track')) {
                         const t = document.createElement('arcgis-track');
-                        t.setAttribute('slot', 'top-left');
+                        t.setAttribute('slot', 'top-right');
                         mapEl.appendChild(t);
                         log.info('[MAP-UI] ✅ Track widget added');
                     }
                 } catch (error) {
                     log.error('[MAP-UI] Failed to load Track widget:', error);
-                }
-
-                // Zoom - Desktop only (mobile uses pinch-to-zoom)
-                const isDesktop = window.matchMedia('(min-width: 769px)').matches;
-                if (isDesktop) {
-                    try {
-                        if (!customElements.get('arcgis-zoom')) {
-                            await import('@arcgis/map-components/dist/components/arcgis-zoom');
-                        }
-                        if (!mapEl.querySelector('arcgis-zoom')) {
-                            const z = document.createElement('arcgis-zoom');
-                            z.setAttribute('slot', 'top-left');
-                            mapEl.appendChild(z);
-                            log.info('[MAP-UI] ✅ Zoom widget added (desktop only)');
-                        }
-                    } catch (error) {
-                        log.error('[MAP-UI] Failed to load Zoom widget:', error);
-                    }
-                } else {
-                    log.info('[MAP-UI] ℹ️ Zoom skipped on mobile (pinch-to-zoom available)');
                 }
             };
             await injectCoreWidgets();
@@ -300,7 +270,7 @@ export class Application {
                         const existingExpand = mapEl.querySelector('arcgis-expand[icon="basemap"]');
                         if (!existingExpand) {
                             const expandEl = document.createElement('arcgis-expand');
-                            expandEl.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
+                            expandEl.setAttribute('slot', 'top-right'); // Using modern slot pattern (4.34+)
                             expandEl.setAttribute('icon', 'basemap');
                             expandEl.setAttribute('tooltip', 'Basemap Gallery');
                             const galleryEl = document.createElement('arcgis-basemap-gallery');
@@ -332,7 +302,7 @@ export class Application {
                         }
                         if (!mapEl.querySelector('arcgis-fullscreen')) {
                             const fsEl = document.createElement('arcgis-fullscreen');
-                            fsEl.setAttribute('slot', 'top-left'); // Using modern slot pattern (4.34+)
+                            fsEl.setAttribute('slot', 'top-right'); // Using modern slot pattern (4.34+)
                             mapEl.appendChild(fsEl);
                         }
                     } else {
@@ -349,7 +319,8 @@ export class Application {
             const tryEnsure = () => {
                 const mapEl = this.services?.mapController?.mapElement;
                 if (!mapEl) return;
-                const missing = !mapEl.querySelector('arcgis-search') || !mapEl.querySelector('arcgis-home') || !mapEl.querySelector('arcgis-locate');
+                // Home widget is now added by MapController, not as a component
+                const missing = !mapEl.querySelector('arcgis-search') || !mapEl.querySelector('arcgis-locate');
                 if (missing) scheduleIdle(loadOptionalUi);
             };
             setTimeout(tryEnsure, 1000);

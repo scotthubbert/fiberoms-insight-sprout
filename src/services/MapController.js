@@ -1,6 +1,7 @@
 // MapController.js - Single Responsibility: Map initialization only
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
 import Extent from '@arcgis/core/geometry/Extent';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import { getServiceAreaBounds, getServiceAreaBoundsBase, getCurrentServiceArea } from '../config/searchConfig.js';
 import { createLogger } from '../utils/logger.js';
 
@@ -47,13 +48,11 @@ export class MapController {
         this.applyTheme();
 
         // Fallback: ensure bounds are applied even if timing issues occur
-        setTimeout(() => {
+        setTimeout(async () => {
             if (this.view && this.view.extent && this.view.extent.width > 180) {
                 log.warn('MapController: Applying bounds fallback - detected world view');
-                this.applyServiceAreaBounds();
+                await this.applyServiceAreaBounds();
             }
-            // Also retry home button configuration in case it wasn't ready initially
-            this.configureHomeButton();
         }, 3000);
     }
 
@@ -90,7 +89,7 @@ export class MapController {
     }
 
     // Apply service area bounds after map is fully ready
-    applyServiceAreaBounds() {
+    async applyServiceAreaBounds() {
         if (!this.view) {
             log.warn('MapController: View not available for bounds application');
             return;
@@ -114,11 +113,55 @@ export class MapController {
         const serviceArea = getCurrentServiceArea();
 
         if (this.calculatedExtent) {
+            // Project constraint geometry to match view's spatial reference
+            let constraintGeometry = this.calculatedExtent;
+            
+            // Check if spatial references match
+            const viewSR = this.view.spatialReference;
+            const extentSR = this.calculatedExtent.spatialReference;
+            
+            if (viewSR && extentSR && viewSR.wkid !== extentSR.wkid) {
+                log.info(`Projecting constraint from WKID ${extentSR.wkid} to ${viewSR.wkid}`);
+                try {
+                    // Import projection correctly (it's a module, not a default export)
+                    const projectionModule = await import('@arcgis/core/geometry/projection.js');
+                    const projection = projectionModule.default || projectionModule;
+                    
+                    // Load projection engine
+                    await projection.load();
+                    
+                    // Project the extent
+                    constraintGeometry = projection.project(this.calculatedExtent, viewSR);
+                    
+                    if (constraintGeometry) {
+                        log.info('✅ Constraint geometry projected successfully');
+                    } else {
+                        throw new Error('Projection returned null');
+                    }
+                } catch (projError) {
+                    log.error('Projection failed:', projError);
+                    log.warn('WARNING: Constraint geometry projection failed - not applying constraint to avoid clipping');
+                    // DON'T use constraint if projection fails - it's worse than no constraint
+                    constraintGeometry = null;
+                }
+            }
+            
             // Apply geographic bounds for regional deployments
-            this.view.constraints = {
-                snapToZoom: !!isMobile,  // Snap on mobile, smooth on desktop
-                geometry: this.calculatedExtent  // Constrain navigation to service area
-            };
+            // Only apply geometry constraint if projection succeeded
+            if (constraintGeometry) {
+                this.view.constraints = {
+                    snapToZoom: !!isMobile,  // Snap on mobile, smooth on desktop
+                    geometry: constraintGeometry  // Constrain navigation to service area (now in correct SR)
+                };
+                log.info('✅ Constraint geometry applied to view');
+            } else {
+                // Projection failed - use no geometry constraint to avoid clipping
+                this.view.constraints = {
+                    snapToZoom: !!isMobile  // Snap on mobile, smooth on desktop
+                    // NO geometry constraint - better to have no constraint than wrong constraint
+                };
+                log.warn('⚠️  NO constraint geometry applied (projection failed)');
+            }
 
             // Set initial extent with immediate positioning
             const initialTarget = this.calculatedExtentBase || this.calculatedExtent;
@@ -177,63 +220,6 @@ export class MapController {
         setTimeout(ensureSnap, 2000);
     }
 
-    // Configure home button to use service area bounds or center
-    configureHomeButton() {
-        if (!this.view) {
-            log.warn('MapController: Cannot configure home button - view not available');
-            return;
-        }
-
-        try {
-            // Import required ArcGIS classes
-            import('@arcgis/core/Viewpoint').then(({ default: Viewpoint }) => {
-                // Create a viewpoint from our calculated extent or center
-                let homeViewpoint;
-                if (this.calculatedExtentBase || this.calculatedExtent) {
-                    homeViewpoint = new Viewpoint({
-                        targetGeometry: this.calculatedExtentBase || this.calculatedExtent
-                    });
-                } else {
-                    // For global deployments, use center point and zoom level
-                    homeViewpoint = new Viewpoint({
-                        center: this.calculatedCenter,
-                        scale: 50000000  // Continental scale for global deployments
-                    });
-                }
-
-                // Method 1: Try to find and configure the home widget in the view UI
-                const homeWidget = this.view.ui.find('arcgis-home');
-                if (homeWidget && homeWidget.viewpoint !== undefined) {
-                    homeWidget.viewpoint = homeViewpoint;
-                    return; // Success - exit early
-                }
-
-                // Method 2: Try to find the home element in the DOM
-                const homeElement = document.querySelector('arcgis-home');
-                if (homeElement) {
-                    // Wait for the element to be ready
-                    const configureElement = () => {
-                        if (homeElement.homeViewModel && homeElement.homeViewModel.viewpoint !== undefined) {
-                            homeElement.homeViewModel.viewpoint = homeViewpoint;
-                        } else if (homeElement.viewpoint !== undefined) {
-                            homeElement.viewpoint = homeViewpoint;
-                        } else {
-                            // Try again after a short delay
-                            setTimeout(configureElement, 500);
-                        }
-                    };
-
-                    // Start configuration attempt
-                    configureElement();
-                }
-            }).catch(error => {
-                log.error('MapController: Failed to configure home button:', error);
-            });
-        } catch (error) {
-            log.error('MapController: Error in home button configuration:', error);
-        }
-    }
-
     async waitForMapReady() {
         await customElements.whenDefined('arcgis-map');
 
@@ -266,15 +252,13 @@ export class MapController {
         }
 
         // Wait for view to be fully ready before applying extent
-        this.view.when(() => {
-            this.applyServiceAreaBounds();
-            this.configureHomeButton();
+        this.view.when(async () => {
+            await this.applyServiceAreaBounds();
         }).catch(error => {
             log.error('MapController: Map view ready error:', error);
             // Fallback: try to apply bounds anyway
-            setTimeout(() => {
-                this.applyServiceAreaBounds();
-                this.configureHomeButton();
+            setTimeout(async () => {
+                await this.applyServiceAreaBounds();
             }, 2000);
         });
     }

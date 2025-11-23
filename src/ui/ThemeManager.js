@@ -98,7 +98,8 @@ export class ThemeManager {
                 }
             }
 
-            const widgets = mapElement.querySelectorAll('arcgis-search, arcgis-zoom, arcgis-home, arcgis-locate, arcgis-basemap-toggle, arcgis-basemap-gallery, arcgis-expand, arcgis-track, arcgis-fullscreen');
+            // Home is now a widget (not component), so it doesn't need theme attribute
+            const widgets = mapElement.querySelectorAll('arcgis-search, arcgis-locate, arcgis-basemap-toggle, arcgis-basemap-gallery, arcgis-expand, arcgis-track, arcgis-fullscreen');
             widgets.forEach(widget => {
                 widget.setAttribute('theme', theme);
             });

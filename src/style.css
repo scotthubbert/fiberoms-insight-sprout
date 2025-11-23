@@ -269,11 +269,10 @@ arcgis-map {
 
 /* Map Component Spacing (ArcGIS 4.34+ using slots)
  * Restores spacing between map controls that was default in 4.32 widgets
+ * Note: Home is now a widget (not component) so it's not listed here
  */
-arcgis-map arcgis-home,
 arcgis-map arcgis-locate,
 arcgis-map arcgis-track,
-arcgis-map arcgis-zoom,
 arcgis-map arcgis-compass,
 arcgis-map arcgis-search,
 arcgis-map arcgis-fullscreen,
@@ -282,7 +281,6 @@ arcgis-map arcgis-expand {
 }
 
 /* Specific positioning adjustments for stacked controls */
-arcgis-map[slot] arcgis-home:not(:last-child),
 arcgis-map arcgis-locate:not(:last-child),
 arcgis-map arcgis-track:not(:last-child),
 arcgis-map arcgis-fullscreen:not(:last-child),
@@ -2273,13 +2271,15 @@ calcite-list-item[style*="cursor: pointer"]:active {
   padding: 0;
 }
 
-/* Notice container styling */
+/* Notice container styling - ESRI standard bottom-center position */
 #notice-container {
   position: fixed;
-  top: 80px; /* Below header */
-  right: 20px;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000;
-  max-width: 400px;
+  max-width: 500px;
+  width: 90%;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2297,11 +2297,11 @@ calcite-list-item[style*="cursor: pointer"]:active {
 /* Slide-in animation for notices */
 @keyframes slideIn {
   from {
-    transform: translateX(100%);
+    transform: translateY(-20px);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -2309,11 +2309,11 @@ calcite-list-item[style*="cursor: pointer"]:active {
 /* Slide-out animation for notices */
 @keyframes slideOut {
   from {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
   to {
-    transform: translateX(100%);
+    transform: translateY(-20px);
     opacity: 0;
   }
 }
@@ -2321,9 +2321,8 @@ calcite-list-item[style*="cursor: pointer"]:active {
 /* Mobile adjustments for notices */
 @media (max-width: 768px) {
   #notice-container {
-    top: 70px;
-    right: 10px;
-    left: 10px;
+    bottom: 74px; /* Above mobile tab bar (64px) + some spacing */
+    width: calc(100% - 20px);
     max-width: none;
   }
 }
