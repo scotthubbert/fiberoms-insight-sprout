@@ -294,6 +294,13 @@ arcgis-map arcgis-distance-measurement-2d {
   margin-top: 12px;
 }
 
+/* Hide basemap toggle when popup is visible on mobile */
+@media (max-width: 768px) {
+  arcgis-map[data-popup-visible="true"] arcgis-basemap-toggle {
+    display: none !important;
+  }
+}
+
 /* Unified Header Navigation - Clean & Streamlined */
 calcite-navigation.unified-header {
   --calcite-navigation-height: 64px;
@@ -719,11 +726,11 @@ calcite-dialog.mobile-only [slot="content"] {
 
 /* Let me delete these duplicate styles since we already have mobile dialog styles above */
 
-/* Mobile Map Overlay for Outage Count */
+/* Mobile Map Overlay for Outage Count - positioned left to avoid right-side map controls */
 #mobile-outage-overlay {
   position: fixed;
   top: 20px;
-  right: 20px;
+  left: 20px;
   z-index: 100;
   pointer-events: none; /* Allow map interaction underneath */
   display: none; /* Hidden by default, shown on mobile */

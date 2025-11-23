@@ -69,6 +69,17 @@ export class PopupManager {
             (visible) => {
                 // If the manager has been destroyed, skip any pending callbacks
                 if (!this.view) return;
+
+                // Toggle data attribute on map element for mobile CSS targeting
+                const mapElement = document.getElementById('map');
+                if (mapElement) {
+                    if (visible) {
+                        mapElement.setAttribute('data-popup-visible', 'true');
+                    } else {
+                        mapElement.removeAttribute('data-popup-visible');
+                    }
+                }
+
                 if (visible) {
                     log.info('Popup became visible, attaching action handlers...');
                     // Small delay to ensure popup DOM is fully rendered

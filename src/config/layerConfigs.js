@@ -366,7 +366,9 @@ const createNodeSitePopup = () => ({
                         container.removeChild(loadingDiv);
 
                         // Create metrics display
-                        // Note: ArcGIS 4.34+ renders popups in shadow DOM, so we must inject CSS directly
+                        // Note: Inline styles are required because ArcGIS popup content is isolated from global CSS.
+                        // These styles successfully penetrate the popup boundary and style both light DOM elements
+                        // and Calcite web components via CSS custom properties.
                         const metricsDiv = document.createElement('div');
                         metricsDiv.className = 'node-site-metrics';
                         metricsDiv.innerHTML = `

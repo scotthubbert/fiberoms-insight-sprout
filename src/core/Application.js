@@ -688,7 +688,14 @@ export class Application {
 
     async initializeVehicleLayers() {
         try {
-            log.info('🚛 Initializing vehicle tracking layers...');
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                window.innerWidth <= 768;
+            log.info(`🚛 Initializing vehicle tracking layers... (${isMobile ? 'mobile' : 'desktop'} device)`);
+            
+            if (!this.geotabReady) {
+                log.warn('🚛 GeotabService not ready - vehicles may not load data until enabled');
+            }
+            
             const vehicleLayers = [
                 { key: 'fiberTrucks', name: 'Fiber Trucks' },
                 { key: 'electricTrucks', name: 'Electric Trucks' }
@@ -697,15 +704,20 @@ export class Application {
                 const layerConfig = getLayerConfig(layerInfo.key);
                 if (layerConfig) {
                     try {
+                        log.info(`🚛 Creating layer: ${layerInfo.name}...`);
                         const result = await this.createLayerFromConfig(layerConfig);
                         if (result && result.layer) {
                             result.layer.visible = layerConfig.visible;
                             this.services.mapController.addLayer(result.layer, layerConfig.zOrder);
-                            log.info(`✅ ${layerConfig.title} layer initialized`);
+                            log.info(`✅ ${layerConfig.title} layer initialized (visible: ${layerConfig.visible})`);
+                        } else {
+                            log.warn(`⚠️  ${layerInfo.name} layer creation returned no layer`);
                         }
                     } catch (error) {
-                        log.error(`Failed to initialize ${layerInfo.name}:`, error);
+                        log.error(`❌ Failed to initialize ${layerInfo.name}:`, error);
                     }
+                } else {
+                    log.warn(`⚠️  No config found for ${layerInfo.key}`);
                 }
             }
             log.info('🚛 Vehicle tracking layers initialization complete');
@@ -1699,14 +1711,17 @@ export class Application {
     }
 
     async initializeGeotabService() {
-        if (!this.geotabEnabled) return;
+        if (!this.geotabEnabled) {
+            log.warn('🚛 GeotabService is disabled (VITE_GEOTAB_ENABLED=false)');
+            return;
+        }
         try {
             log.info('🚛 Initializing GeotabService...');
             const module = await import('../services/GeotabService.js');
             this.services.geotabService = module.geotabService;
             await this.services.geotabService.initialize();
             this.geotabReady = true;
-            log.info('✅ GeotabService ready');
+            log.info('✅ GeotabService ready - vehicle tracking enabled');
         } catch (error) {
             log.error('❌ Failed to initialize GeotabService:', error);
             this.geotabReady = false;

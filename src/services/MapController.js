@@ -123,15 +123,15 @@ export class MapController {
             if (viewSR && extentSR && viewSR.wkid !== extentSR.wkid) {
                 log.info(`Projecting constraint from WKID ${extentSR.wkid} to ${viewSR.wkid}`);
                 try {
-                    // Import projection correctly (it's a module, not a default export)
-                    const projectionModule = await import('@arcgis/core/geometry/projection.js');
-                    const projection = projectionModule.default || projectionModule;
+                    // Import the new projectOperator (replaces deprecated projection module since 4.32)
+                    const projectOperatorModule = await import('@arcgis/core/geometry/operators/projectOperator.js');
+                    const projectOperator = projectOperatorModule.default || projectOperatorModule;
                     
                     // Load projection engine
-                    await projection.load();
+                    await projectOperator.load();
                     
-                    // Project the extent
-                    constraintGeometry = projection.project(this.calculatedExtent, viewSR);
+                    // Project the extent using the new operator
+                    constraintGeometry = projectOperator.project(this.calculatedExtent, viewSR);
                     
                     if (constraintGeometry) {
                         log.info('✅ Constraint geometry projected successfully');
