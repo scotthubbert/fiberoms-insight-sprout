@@ -637,7 +637,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
 
             if (targetLayer) {
                 window.mapView.popup.open({
-                    location: point,
                     features: targetFeatures
                 });
             }

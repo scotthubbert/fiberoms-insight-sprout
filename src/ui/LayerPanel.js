@@ -69,8 +69,7 @@ export class LayerPanel {
                         const { point, name } = this.lastFocusedVehicle;
                         mapView.popup.open({
                             title: name,
-                            content: `Vehicle Name: ${name}`,
-                            location: point
+                            content: `Vehicle Name: ${name}`
                         });
                         this.vehiclePopupPending = false;
                     }

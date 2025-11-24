@@ -64,11 +64,14 @@ export class Application {
         window.themeManager = this.services.themeManager;
         window.clipboardUtils = clipboardUtils;
 
-        await this.services.dashboard.init();
-        await this.services.headerSearch.init();
-        await this.services.mobileTabBar.init();
-
-        await this.services.mapController.initialize();
+        // Parallelize core service initialization
+        // These services are independent and can be initialized concurrently
+        await Promise.all([
+            this.services.dashboard.init(),
+            this.services.headerSearch.init(),
+            this.services.mobileTabBar.init(),
+            this.services.mapController.initialize()
+        ]);
 
         const rainViewerInitialized = true; // initialize on-demand later
         if (rainViewerInitialized) {
@@ -263,8 +266,11 @@ export class Application {
                     loadingIndicator.showError('node-sites', 'Node Sites', 'Failed to create layer');
                 }
             }
-            await this.initializeFiberPlantLayers();
-            await this.initializeVehicleLayers();
+            // Parallelize infrastructure layer loading
+            await Promise.all([
+                this.initializeFiberPlantLayers(),
+                this.initializeVehicleLayers()
+            ]);
         } catch (error) {
             log.error('Failed to initialize infrastructure layers:', error);
         }

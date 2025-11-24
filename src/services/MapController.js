@@ -243,17 +243,20 @@ export class MapController {
         this.map = view.map;
         window.mapView = view; // For theme management
 
+        // Configure popup NOW that view exists
+        this.configurePopup();
+
         // Apply current theme now that the view is available (ensures Navigation Night on dark at startup)
         try {
             if (this.themeManager && typeof this.themeManager.applyTheme === 'function') {
                 this.themeManager.applyTheme(this.themeManager.currentTheme);
             }
-        } catch (e) {
-            log.warn('MapController: failed to apply theme on view ready:', e);
+        } catch (error) {
+            log.error('Error applying theme on map ready:', error);
         }
 
-        // Wait for view to be fully ready before applying extent
-        this.view.when(async () => {
+        // Apply service area bounds when view is ready
+        when(() => view.stationary, async () => {
             await this.applyServiceAreaBounds();
         }).catch(error => {
             log.error('MapController: Map view ready error:', error);
@@ -264,8 +267,72 @@ export class MapController {
         });
     }
 
+    configurePopup() {
+        if (!this.view) {
+            log.error('[MapController] configurePopup called but view does not exist!');
+            return;
+        }
+
+        log.info('[MapController] Configuring popup for top-left docking');
+
+        // Wait for popup to exist before configuring it
+        const configurePopupWhenReady = () => {
+            if (!this.view.popup) {
+                setTimeout(configurePopupWhenReady, 100);
+                return;
+            }
+
+            // Configure popup to always dock at top-left
+            this.view.popup.dockEnabled = true;
+            this.view.popup.collapseEnabled = false;
+            this.view.popup.dockOptions = {
+                buttonEnabled: false, // Hide dock button
+                breakpoint: {
+                    width: 9999, // Force docking at all screen sizes
+                    height: 9999
+                },
+                position: 'top-left'
+            };
+
+            // Hide dock button via CSS
+            const style = document.createElement('style');
+            style.textContent = `
+                .esri-popup__button[data-action-id="popup-dock-action"],
+                .esri-popup__action[data-action-id="popup-dock-action"],
+                calcite-action[data-action-id="popup-dock-action"] {
+                    display: none !important;
+                }
+            `;
+            document.head.appendChild(style);
+
+            log.info('[MapController] Popup configured to dock at top-left');
+        };
+
+        configurePopupWhenReady();
+
+        // Watch for popup instance changes and re-apply configuration
+        reactiveUtils.watch(
+            () => this.view.popup,
+            (popup) => {
+                if (popup) {
+                    popup.dockEnabled = true;
+                    popup.collapseEnabled = false;
+                    popup.dockOptions = {
+                        buttonEnabled: false,
+                        breakpoint: { width: 9999, height: 9999 },
+                        position: 'top-left'
+                    };
+                }
+            },
+            { initial: true }
+        );
+    }
+
     configureView() {
-        if (!this.view) return;
+        if (!this.view) {
+            log.warn('configureView called but view does not exist');
+            return;
+        }
 
         // Basic view configuration - extent will be applied later in applyServiceAreaBounds()
         // This prevents early extent setting that gets overridden by basemap loading

@@ -748,7 +748,6 @@ export class PopupManager {
             // Small delay to ensure popup is closed
             setTimeout(() => {
                 popup.open({
-                    location: geometry,
                     features: [selectedFeature]
                 });
 
