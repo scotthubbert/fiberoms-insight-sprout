@@ -3,6 +3,7 @@
 import { MapController } from '../services/MapController.js';
 import { LayerManager } from '../services/LayerManager.js';
 import { PopupManager } from '../services/PopupManager.js';
+import { WidgetController } from '../services/WidgetController.js';
 // RainViewerService will be lazy-loaded
 import { subscriberDataService, pollingManager } from '../dataService.js';
 import { getLayerConfig } from '../config/layerConfigs.js';
@@ -49,6 +50,7 @@ export class Application {
         this.services.mobileTabBar = new ImportedMobileTabBar();
         this.services.dashboard = new ImportedDashboardManager();
         this.services.headerSearch = new ImportedHeaderSearch();
+        this.services.widgetController = new WidgetController(this.services.mapController);
         // Lazy-load RainViewer only when used (deferred)
         // const { RainViewerService } = await import('../services/RainViewerService.js');
         // this.services.rainViewerService = new RainViewerService();
@@ -73,246 +75,9 @@ export class Application {
             log.info('✅ RainViewer service set to initialize on-demand');
         }
 
-        // Idle scheduler reused across paths
-        const scheduleIdle = (fn) => {
-            if ('requestIdleCallback' in window) window.requestIdleCallback(fn, { timeout: 2000 });
-            else setTimeout(fn, 500);
-        };
-
-        // Cross-browser media query change listener (iOS Safari addListener)
-        const addMqChange = (mq, handler) => {
-            if (mq.addEventListener) mq.addEventListener('change', handler);
-            else if (mq.addListener) mq.addListener(handler);
-        };
-
         // Optional UI loading (widgets/components) executed at idle
         const loadOptionalUi = async () => {
-            log.info('[MAP-UI] 🚀 loadOptionalUi() called');
-
-            // Lazy inject core widgets on all devices
-            const injectCoreWidgets = async () => {
-                const mapEl = this.services?.mapController?.mapElement;
-                log.info('[MAP-UI] 📍 Map element:', mapEl ? 'FOUND' : 'NOT FOUND');
-
-                if (!mapEl) {
-                    log.warn('[MAP-UI] ❌ Map element not found, retrying in 1 second...');
-                    setTimeout(async () => {
-                        log.info('[MAP-UI] 🔄 Retrying loadOptionalUi...');
-                        await loadOptionalUi();
-                    }, 1000);
-                    return;
-                }
-
-                // Wait for map view to be ready before adding components (ArcGIS 4.34+ requirement)
-                if (!mapEl.view) {
-                    log.warn('[MAP-UI] ⏳ Map view not ready yet, waiting...');
-                    try {
-                        await mapEl.arcgisViewReadyChange;
-                        log.info('[MAP-UI] ✅ Map view ready via event, injecting widgets');
-                    } catch (e) {
-                        log.warn('[MAP-UI] arcgisViewReadyChange event failed, polling...');
-                        let attempts = 0;
-                        while (!mapEl.view && attempts < 10) {
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                            attempts++;
-                        }
-                        if (!mapEl.view) {
-                            log.error('[MAP-UI] ❌ Map view never became ready, aborting widget injection');
-                            return;
-                        }
-                        log.info('[MAP-UI] ✅ Map view ready via polling, injecting widgets');
-                    }
-                } else {
-                    log.info('[MAP-UI] ✅ Map view already ready, injecting widgets');
-                }
-
-                // Search widget - load FIRST to ensure top position (lazy via idle, saves ~200KB from critical path)
-                const loadSearchWidget = async () => {
-                    try {
-                        if (!customElements.get('arcgis-search')) {
-                            await import('@arcgis/map-components/dist/components/arcgis-search');
-                            log.info('[MAP-UI] ✅ Search component loaded');
-                        }
-                        if (!mapEl.querySelector('arcgis-search')) {
-                            const s = document.createElement('arcgis-search');
-                            s.setAttribute('slot', 'top-right');
-                            s.setAttribute('include-default-sources', 'true');
-                            s.setAttribute('max-results', '8');
-                            s.setAttribute('min-characters', '3');
-                            s.setAttribute('search-all-enabled', 'false');
-                            s.setAttribute('placeholder', 'Search addresses, places...');
-                            if (mapEl.firstChild) {
-                                mapEl.insertBefore(s, mapEl.firstChild);
-                            } else {
-                                mapEl.appendChild(s);
-                            }
-                            log.info('[MAP-UI] ✅ Search widget added to map');
-                            try {
-                                await s.componentOnReady();
-                                log.info('[MAP-UI] ✅ Search component ready, visible:', !s.hidden, 'display:', getComputedStyle(s).display);
-                                if (this.services?.mapController?.view) {
-                                    this.configureSearchWidget();
-                                } else {
-                                    setTimeout(() => {
-                                        if (this.services?.mapController?.view) {
-                                            this.configureSearchWidget();
-                                        }
-                                    }, 1000);
-                                }
-                            } catch (error) {
-                                log.error('[MAP-UI] Search widget ready error:', error);
-                            }
-                        }
-                    } catch (error) {
-                        log.error('[MAP-UI] Failed to load Search widget:', error);
-                    }
-                };
-
-                // Load search widget FIRST during idle time
-                await loadSearchWidget();
-
-                // Verify widgets were added and check visibility
-                // Note: Home widget is now added via MapController (not as a component)
-                setTimeout(() => {
-                    const widgets = {
-                        search: mapEl.querySelector('arcgis-search'),
-                        locate: mapEl.querySelector('arcgis-locate'),
-                        track: mapEl.querySelector('arcgis-track')
-                    };
-                    const widgetCount = Object.values(widgets).filter(w => w).length;
-                    log.info(`[MAP-UI] 📊 Total map components in DOM: ${widgetCount}`);
-                    Object.entries(widgets).forEach(([name, el]) => {
-                        if (el) {
-                            const style = getComputedStyle(el);
-                            const visible = !el.hidden && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-                            log.info(`[MAP-UI]    ${name}: DOM=${el ? '✅' : '❌'} visible=${visible ? '✅' : '❌'} display=${style.display} visibility=${style.visibility} opacity=${style.opacity}`);
-                        } else {
-                            log.info(`[MAP-UI]    ${name}: ❌ NOT IN DOM`);
-                        }
-                    });
-                }, 2000);
-
-                // Home button removed due to ArcGIS 4.34 clustering cache bug
-                // When programmatic navigation is used, clustered markers disappear
-                // Can be re-added when Esri fixes the issue in a future release
-
-                // Locate
-                try {
-                    if (!customElements.get('arcgis-locate')) {
-                        await import('@arcgis/map-components/dist/components/arcgis-locate');
-                    }
-                    if (!mapEl.querySelector('arcgis-locate')) {
-                        const l = document.createElement('arcgis-locate');
-                        l.setAttribute('slot', 'top-right');
-                        mapEl.appendChild(l);
-                        log.info('[MAP-UI] ✅ Locate widget added');
-                    }
-                } catch (error) {
-                    log.error('[MAP-UI] Failed to load Locate widget:', error);
-                }
-
-                // Track
-                try {
-                    if (!customElements.get('arcgis-track')) {
-                        await import('@arcgis/map-components/dist/components/arcgis-track');
-                    }
-                    if (!mapEl.querySelector('arcgis-track')) {
-                        const t = document.createElement('arcgis-track');
-                        t.setAttribute('slot', 'top-right');
-                        mapEl.appendChild(t);
-                        log.info('[MAP-UI] ✅ Track widget added');
-                    }
-                } catch (error) {
-                    log.error('[MAP-UI] Failed to load Track widget:', error);
-                }
-            };
-            await injectCoreWidgets();
-
-            // Basemap Toggle: load with other widgets (not deferred to ensure thumbnails load)
-            try {
-                const mapEl = this.services?.mapController?.mapElement;
-                if (mapEl) {
-                    if (!customElements.get('arcgis-basemap-toggle')) {
-                        try {
-                            await import('@arcgis/map-components/dist/components/arcgis-basemap-toggle');
-                            log.info('[MAP-UI] ✅ Basemap Toggle component loaded');
-                        } catch (error) {
-                            log.error('[MAP-UI] Failed to load Basemap Toggle component:', error);
-                        }
-                    }
-                    if (!mapEl.querySelector('arcgis-basemap-toggle')) {
-                        const toggleEl = document.createElement('arcgis-basemap-toggle');
-                        toggleEl.setAttribute('slot', 'bottom-right');
-                        toggleEl.setAttribute('next-basemap', 'hybrid');
-                        mapEl.appendChild(toggleEl);
-                        log.info('[MAP-UI] ✅ Basemap Toggle added to map');
-                    }
-                }
-            } catch (error) {
-                log.error('[MAP-UI] Error setting up Basemap Toggle:', error);
-            }
-
-            // Desktop-only Basemap Gallery - lazy load during idle (saves ~150KB on mobile)
-            const mq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
-            const ensureBasemapGallery = async () => {
-                try {
-                    const mapEl = this.services?.mapController?.mapElement;
-                    if (!mapEl) return;
-
-                    // Only load on desktop, not mobile/tablet
-                    if (mq.matches) {
-                        if (!customElements.get('arcgis-basemap-gallery')) {
-                            try { await import('@arcgis/map-components/dist/components/arcgis-basemap-gallery'); } catch (_) { /* no-op */ }
-                        }
-                        if (!customElements.get('arcgis-expand')) {
-                            try { await import('@arcgis/map-components/dist/components/arcgis-expand'); } catch (_) { /* no-op */ }
-                        }
-                        const existingExpand = mapEl.querySelector('arcgis-expand[icon="basemap"]');
-                        if (!existingExpand) {
-                            const expandEl = document.createElement('arcgis-expand');
-                            expandEl.setAttribute('slot', 'top-right'); // Using modern slot pattern (4.34+)
-                            expandEl.setAttribute('icon', 'basemap');
-                            expandEl.setAttribute('tooltip', 'Basemap Gallery');
-                            const galleryEl = document.createElement('arcgis-basemap-gallery');
-                            expandEl.appendChild(galleryEl);
-                            mapEl.appendChild(expandEl);
-                        }
-                    } else {
-                        // Remove gallery if switching to mobile
-                        const existingExpand = mapEl.querySelector('arcgis-expand[icon="basemap"]');
-                        if (existingExpand) existingExpand.parentNode?.removeChild(existingExpand);
-                    }
-                } catch (_) { /* no-op */ }
-            };
-            // Load on desktop during idle time (non-blocking)
-            if (mq.matches) {
-                scheduleIdle(ensureBasemapGallery);
-            }
-            addMqChange(mq, ensureBasemapGallery);
-
-            // Desktop-only Fullscreen
-            const fsMq = window.matchMedia('(min-width: 900px) and (pointer: fine)');
-            const ensureFullscreen = async () => {
-                try {
-                    const mapEl = this.services?.mapController?.mapElement;
-                    if (!mapEl) return;
-                    if (fsMq.matches) {
-                        if (!customElements.get('arcgis-fullscreen')) {
-                            try { await import('@arcgis/map-components/dist/components/arcgis-fullscreen'); } catch (_) { /* no-op */ }
-                        }
-                        if (!mapEl.querySelector('arcgis-fullscreen')) {
-                            const fsEl = document.createElement('arcgis-fullscreen');
-                            fsEl.setAttribute('slot', 'top-right'); // Using modern slot pattern (4.34+)
-                            mapEl.appendChild(fsEl);
-                        }
-                    } else {
-                        const fsEl = mapEl.querySelector('arcgis-fullscreen');
-                        if (fsEl) fsEl.parentNode?.removeChild(fsEl);
-                    }
-                } catch (_) { /* no-op */ }
-            };
-            await ensureFullscreen();
-            addMqChange(fsMq, ensureFullscreen);
+            await this.services.widgetController.loadWidgets();
         };
 
         const scheduleCoreRetries = () => {
@@ -321,7 +86,7 @@ export class Application {
                 if (!mapEl) return;
                 // Home widget is now added by MapController, not as a component
                 const missing = !mapEl.querySelector('arcgis-search') || !mapEl.querySelector('arcgis-locate');
-                if (missing) scheduleIdle(loadOptionalUi);
+                if (missing) this.services.widgetController.scheduleIdle(loadOptionalUi);
             };
             setTimeout(tryEnsure, 1000);
             setTimeout(tryEnsure, 3000);
@@ -333,14 +98,14 @@ export class Application {
                 catch (error) { log.error(error); }
 
                 // Defer optional component loading to idle time
-                scheduleIdle(loadOptionalUi);
+                this.services.widgetController.scheduleIdle(loadOptionalUi);
                 scheduleCoreRetries();
             }
         });
 
         if (this.services.mapController.mapElement.ready) {
             await this.onMapReady();
-            scheduleIdle(loadOptionalUi);
+            this.services.widgetController.scheduleIdle(loadOptionalUi);
             scheduleCoreRetries();
         }
 
@@ -377,7 +142,7 @@ export class Application {
             this.services.popupManager.initialize(this.services.mapController.view);
         }
 
-        this.configureSearchWidget();
+        this.services.widgetController.configureSearchWidget();
 
         setTimeout(() => {
             if (this.services.mapController.view) {
@@ -401,131 +166,7 @@ export class Application {
         window.addEventListener('online', triggerImmediateRefresh);
     }
 
-    configureSearchWidget() {
-        const searchWidget = document.querySelector('arcgis-search');
-        if (!searchWidget || !this.services.mapController.view) {
-            console.warn('Search widget or map view not available for configuration');
-            return;
-        }
 
-        const serviceArea = getCurrentServiceArea();
-        const initialExtent = (typeof window !== 'undefined' && window.initialMapExtent) ? window.initialMapExtent : null;
-        // Prefer initial map extent from MapController; fallback to configured bounds
-        const bounds = initialExtent || this.services?.mapController?.calculatedExtentBase || this.services?.mapController?.calculatedExtent || getServiceAreaBounds();
-        const searchSettings = getSearchSettings();
-
-        try {
-            if (searchSettings.placeholder) {
-                searchWidget.setAttribute('placeholder', searchSettings.placeholder);
-            }
-
-            // Bug 15 fix: Store listener as instance property to enable proper removal
-            // Remove any existing listener before creating a new one
-            if (this._searchWidgetListener) {
-                searchWidget.removeEventListener('arcgisReady', this._searchWidgetListener);
-                this._searchWidgetListener = null;
-            }
-
-            const applyBoundsToSources = () => {
-                const widget = searchWidget.widget;
-                if (!widget || !widget.allSources) return;
-
-                if (bounds) {
-                    // 1) searchExtent – prefer results within the service-area box
-                    const searchExtent = {
-                        type: 'extent',
-                        xmin: bounds.xmin,
-                        ymin: bounds.ymin,
-                        xmax: bounds.xmax,
-                        ymax: bounds.ymax,
-                        spatialReference: bounds.spatialReference || { wkid: 4326 }
-                    };
-                    widget.searchExtent = searchExtent;
-
-                    // 2) location – bias toward the center of the service area
-                    const centerLat = (bounds.ymin + bounds.ymax) / 2;
-                    const centerLon = (bounds.xmin + bounds.xmax) / 2;
-
-                    widget.allSources.forEach(source => {
-                        if (!source.locator) return;
-
-                        // Bias toward service-area center
-                        source.location = {
-                            type: 'point',
-                            latitude: centerLat,
-                            longitude: centerLon,
-                            spatialReference: { wkid: 4326 }
-                        };
-
-                        // Prefer US results overall
-                        source.countryCode = 'US';
-
-                        // Strong hint: restrict search to the state extent for this source
-                        // This mirrors the Search widget example:
-                        //   search.sources.getItemAt(0).searchExtent = stateExtent;
-                        source.searchExtent = searchExtent;
-
-                        // Constrain results to what's currently in view when zoomed in
-                        source.withinViewEnabled = true;
-
-                        // Strengthen local preference via localSearchOptions
-                        source.localSearchDisabled = false;
-                        source.localSearchOptions = {
-                            distance: 50000,  // ~50km radius around center
-                            minScale: 300000  // behavior threshold for local bias
-                        };
-
-                        // Optional: control how far the map zooms when a result is selected.
-                        // This does not affect suggestions, only the final zoom level.
-                        if (source.zoomScale == null) {
-                            source.zoomScale = 24000; // nice street-level scale for subscribers
-                        }
-                    });
-
-                    console.info('✅ Search configured with local preference:', {
-                        area: serviceArea.name,
-                        extent: searchExtent
-                    });
-                } else {
-                    // Clear any previous hints and fall back to global behavior
-                    widget.searchExtent = null;
-                    widget.allSources.forEach(source => {
-                        // Bug 1 fix: Early return for sources without locator (consistent with bounded case)
-                        if (!source.locator) return;
-
-                        // Only delete properties that we explicitly set during bounded search
-                        if (source.location) delete source.location;
-                        if (source.countryCode) delete source.countryCode;
-                        if (source.localSearchOptions) delete source.localSearchOptions;
-                        if (source.searchExtent) delete source.searchExtent;
-
-                        // Bug 1 fix: Only reset flags that we explicitly set during bounded search
-                        // Only modify properties that were set by our bounded search logic (line 391, 394)
-                        // This prevents altering default behavior of sources that never had these properties
-                        if (source.hasOwnProperty('withinViewEnabled')) {
-                            source.withinViewEnabled = false;
-                        }
-                        // Bug 1 fix: In global (unbounded) mode, enable local search to allow broader results
-                        // This is consistent with the bounded case where localSearchDisabled = false (line 394)
-                        // Setting it to false (enable local search) allows the search to work globally without restrictions
-                        if (source.hasOwnProperty('localSearchDisabled')) {
-                            source.localSearchDisabled = false; // false = enable local search for global search
-                        }
-                    });
-                    console.info('✅ Search configured for global search (no local preference)');
-                }
-            };
-
-            // Store the listener reference for proper removal on next call
-            this._searchWidgetListener = applyBoundsToSources;
-            // Bug 1 fix: Use { once: true } to prevent listener accumulation if arcgisReady fires multiple times
-            // This is consistent with the distance measurement tool listener and prevents memory leaks
-            searchWidget.addEventListener('arcgisReady', applyBoundsToSources, { once: true });
-            if (searchWidget.widget && searchWidget.widget.allSources) applyBoundsToSources();
-        } catch (error) {
-            log.error(`Failed to configure search widget with ${serviceArea.name} bounds:`, error);
-        }
-    }
 
     async initializeSubscriberLayers() {
         try {
@@ -691,11 +332,11 @@ export class Application {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                 window.innerWidth <= 768;
             log.info(`🚛 Initializing vehicle tracking layers... (${isMobile ? 'mobile' : 'desktop'} device)`);
-            
+
             if (!this.geotabReady) {
                 log.warn('🚛 GeotabService not ready - vehicles may not load data until enabled');
             }
-            
+
             const vehicleLayers = [
                 { key: 'fiberTrucks', name: 'Fiber Trucks' },
                 { key: 'electricTrucks', name: 'Electric Trucks' }
@@ -1196,7 +837,7 @@ export class Application {
                 section: 'dashboard',
                 export_type: exportType
             });
-            
+
             button.setAttribute('loading', 'true');
             button.textContent = 'Preparing Download...';
             button.setAttribute('icon-start', 'loading');
@@ -1217,7 +858,7 @@ export class Application {
                 itemCount = data?.length || 0;
                 await CSVExportService.exportOfflineSubscribers();
             }
-            
+
             // Track successful export
             trackExport(exportType, {
                 item_count: itemCount,
@@ -1233,14 +874,14 @@ export class Application {
             setTimeout(() => { this.resetCSVButton(button, originalText, originalIcon); }, 3000);
         } catch (error) {
             log.error('CSV download failed:', error);
-            
+
             // Track failed export
             const { trackExport } = await import('../services/AnalyticsService.js');
             trackExport(exportType, {
                 success: false,
                 error: error.message
             });
-            
+
             button.removeAttribute('loading');
             button.setAttribute('icon-start', 'exclamation-mark-triangle');
             button.textContent = 'Download Failed';

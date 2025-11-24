@@ -9,6 +9,7 @@
  */
 
 import { subscriberDataService } from '../dataService.js';
+import { outageService } from '../services/OutageService.js';
 import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
 
 /**
@@ -222,8 +223,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
                     log.info('🔌 No layer data available, fetching directly (initialization only)');
                     log.info(`🔌 APCo layer data: ${apcoData.data?.length || 0} items, Tombigbee layer data: ${tombigbeeData.data?.length || 0} items`);
                     const [fetchedApcoData, fetchedTombigbeeData] = await Promise.all([
-                        subscriberDataService.getApcoOutages(),
-                        subscriberDataService.getTombigbeeOutages()
+                        outageService.getApcoOutages(),
+                        outageService.getTombigbeeOutages()
                     ]);
                     apcoData = fetchedApcoData;
                     tombigbeeData = fetchedTombigbeeData;
@@ -234,8 +235,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 // Fallback for when layer manager is not available (early initialization)
                 log.info('🔌 Layer manager not available, fetching directly (early initialization)');
                 const [fetchedApcoData, fetchedTombigbeeData] = await Promise.all([
-                    subscriberDataService.getApcoOutages(),
-                    subscriberDataService.getTombigbeeOutages()
+                    outageService.getApcoOutages(),
+                    outageService.getTombigbeeOutages()
                 ]);
                 apcoData = fetchedApcoData;
                 tombigbeeData = fetchedTombigbeeData;

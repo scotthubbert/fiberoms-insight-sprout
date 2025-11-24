@@ -1,5 +1,7 @@
 // layerConfigs.js - Open/Closed: Extend through configuration
 import { subscriberDataService } from '../dataService.js';
+import { infrastructureService } from '../services/InfrastructureService.js';
+import { outageService } from '../services/OutageService.js';
 
 // Renderer configurations
 const createOfflineRenderer = () => ({
@@ -1873,7 +1875,7 @@ export const layerConfigs = {
         fields: createPowerOutageFields(),
         visible: true,
         zOrder: 8, // Below subscriber points and clusters
-        dataServiceMethod: () => subscriberDataService.getApcoOutages()
+        dataServiceMethod: () => outageService.getApcoOutages()
     },
 
     tombigbeeOutages: {
@@ -1885,7 +1887,7 @@ export const layerConfigs = {
         fields: createPowerOutageFields(),
         visible: true,
         zOrder: 8, // Below subscriber points and clusters
-        dataServiceMethod: () => subscriberDataService.getTombigbeeOutages()
+        dataServiceMethod: () => outageService.getTombigbeeOutages()
     },
 
     // Node Sites Layer
@@ -1899,7 +1901,7 @@ export const layerConfigs = {
         labelingInfo: createNodeSiteLabeling(),
         visible: false,
         zOrder: 120,
-        dataServiceMethod: () => subscriberDataService.getNodeSites()
+        dataServiceMethod: () => infrastructureService.getNodeSites()
     },
 
     // Fiber Plant Layers
@@ -1913,7 +1915,7 @@ export const layerConfigs = {
         labelingInfo: createFSALabeling(),
         visible: false,
         zOrder: 5, // Below all point layers
-        dataServiceMethod: () => subscriberDataService.getFSABoundaries()
+        dataServiceMethod: () => infrastructureService.getFSABoundaries()
     },
 
     mainLineFiber: {
@@ -1925,7 +1927,7 @@ export const layerConfigs = {
         fields: createMainLineFiberFields(),
         visible: false,
         zOrder: 30,
-        dataServiceMethod: () => subscriberDataService.getMainLineFiber()
+        dataServiceMethod: () => infrastructureService.getMainLineFiber()
     },
 
     mainLineOld: {
@@ -1937,7 +1939,7 @@ export const layerConfigs = {
         fields: createMainLineOldFields(),
         visible: false,
         zOrder: 28, // Slightly below current main line
-        dataServiceMethod: () => subscriberDataService.getMainLineOld()
+        dataServiceMethod: () => infrastructureService.getMainLineOld()
     },
 
     mstTerminals: {
@@ -1953,7 +1955,7 @@ export const layerConfigs = {
         // Only show when zoomed in past zoom level 15 (street level)
         minScale: 24000,  // Hide when zoomed out beyond this scale
         maxScale: 0,      // No limit on zooming in
-        dataServiceMethod: () => subscriberDataService.getMSTTerminals()
+        dataServiceMethod: () => infrastructureService.getMSTTerminals()
     },
 
     splitters: {
@@ -1968,7 +1970,7 @@ export const layerConfigs = {
         // Only show when zoomed in past zoom level 15 (street level)
         minScale: 24000,  // Hide when zoomed out beyond this scale
         maxScale: 0,      // No limit on zooming in
-        dataServiceMethod: () => subscriberDataService.getSplitters()
+        dataServiceMethod: () => infrastructureService.getSplitters()
     },
 
     closures: {
@@ -1983,7 +1985,7 @@ export const layerConfigs = {
         // Only show when zoomed in past zoom level 16 (closer street level)
         minScale: 12000,  // Hide when zoomed out beyond this scale
         maxScale: 0,      // No limit on zooming in
-        dataServiceMethod: () => subscriberDataService.getClosures()
+        dataServiceMethod: () => infrastructureService.getClosures()
     },
 
     mstFiber: {
@@ -1995,7 +1997,7 @@ export const layerConfigs = {
         fields: createMSTFiberFields(),
         visible: false,
         zOrder: 35,
-        dataServiceMethod: () => subscriberDataService.getMSTFiber()
+        dataServiceMethod: () => infrastructureService.getMSTFiber()
     },
 
     // Truck layers

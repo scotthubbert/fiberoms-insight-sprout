@@ -1,5 +1,6 @@
 // MapController.js - Single Responsibility: Map initialization only
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
+import Basemap from '@arcgis/core/Basemap';
 import Extent from '@arcgis/core/geometry/Extent';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import { getServiceAreaBounds, getServiceAreaBoundsBase, getCurrentServiceArea } from '../config/searchConfig.js';
@@ -115,24 +116,24 @@ export class MapController {
         if (this.calculatedExtent) {
             // Project constraint geometry to match view's spatial reference
             let constraintGeometry = this.calculatedExtent;
-            
+
             // Check if spatial references match
             const viewSR = this.view.spatialReference;
             const extentSR = this.calculatedExtent.spatialReference;
-            
+
             if (viewSR && extentSR && viewSR.wkid !== extentSR.wkid) {
                 log.info(`Projecting constraint from WKID ${extentSR.wkid} to ${viewSR.wkid}`);
                 try {
                     // Import the new projectOperator (replaces deprecated projection module since 4.32)
                     const projectOperatorModule = await import('@arcgis/core/geometry/operators/projectOperator.js');
                     const projectOperator = projectOperatorModule.default || projectOperatorModule;
-                    
+
                     // Load projection engine
                     await projectOperator.load();
-                    
+
                     // Project the extent using the new operator
                     constraintGeometry = projectOperator.project(this.calculatedExtent, viewSR);
-                    
+
                     if (constraintGeometry) {
                         log.info('✅ Constraint geometry projected successfully');
                     } else {
@@ -145,7 +146,7 @@ export class MapController {
                     constraintGeometry = null;
                 }
             }
-            
+
             // Apply geographic bounds for regional deployments
             // Only apply geometry constraint if projection succeeded
             if (constraintGeometry) {
@@ -182,7 +183,7 @@ export class MapController {
                     log.error('MapController: Extent fallback also failed:', fallbackError);
                 }
             }).finally(() => {
-                try { if (this.mapElement) this.mapElement.style.visibility = 'visible'; } catch (_) {}
+                try { if (this.mapElement) this.mapElement.style.visibility = 'visible'; } catch (_) { }
             });
             log.info(`✅ Map constrained to ${serviceArea.name}`);
         } else {
@@ -202,7 +203,7 @@ export class MapController {
             }).catch(error => {
                 log.error('MapController: Failed to center global view:', error);
             }).finally(() => {
-                try { if (this.mapElement) this.mapElement.style.visibility = 'visible'; } catch (_) {}
+                try { if (this.mapElement) this.mapElement.style.visibility = 'visible'; } catch (_) { }
             });
             log.info(`✅ Map configured for ${serviceArea.name} (global deployment)`);
         }
@@ -280,20 +281,23 @@ export class MapController {
     setupBasemapFallback(isDarkMode) {
         if (!this.view || !this.map) return;
 
+        // Use style-based basemap for dark mode to match ThemeManager (Navigation Night)
+        // Light mode uses standard Navigation vector
+        const primaryBasemap = isDarkMode
+            ? new Basemap({ style: { id: 'arcgis/navigation-night' } })
+            : 'streets-navigation-vector';
+
         const fallbackBasemaps = isDarkMode
             ? ['streets-night-vector', 'dark-gray-vector', 'gray-vector']
             : ['streets-navigation-vector', 'gray-vector', 'satellite'];
-
-        // Set the primary basemap for the theme
-        const primaryBasemap = fallbackBasemaps[0];
 
         try {
             this.map.basemap = primaryBasemap;
         } catch (error) {
             log.warn('MapController: Failed to set primary basemap, trying fallback:', error);
-            // Try the second option as fallback
+            // Try the first fallback
             try {
-                this.map.basemap = fallbackBasemaps[1] || 'gray';
+                this.map.basemap = fallbackBasemaps[0];
             } catch (fallbackError) {
                 log.error('MapController: All basemap options failed, using gray:', fallbackError);
                 this.map.basemap = 'gray';

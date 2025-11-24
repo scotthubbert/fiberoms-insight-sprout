@@ -1,6 +1,7 @@
 // DashboardManager.js - Manages dashboard refresh and counters
 
 import { subscriberDataService } from '../dataService.js';
+import { infrastructureService } from '../services/InfrastructureService.js';
 import { loadingIndicator } from '../utils/loadingIndicator.js';
 import { createLogger } from '../utils/logger.js';
 import { trackClick, trackFeatureUsage } from '../services/AnalyticsService.js';
@@ -83,14 +84,14 @@ export class DashboardManager {
      */
     async refreshDashboard() {
         log.info('🔄 Manual dashboard refresh triggered');
-        
+
         // Track refresh action
         trackClick('refresh-dashboard', {
             section: 'header',
             action: 'refresh'
         });
         trackFeatureUsage('dashboard_refresh');
-        
+
         // Add loading state to refresh button
         if (this.refreshButton) {
             this.refreshButton.setAttribute('loading', '');
@@ -105,6 +106,7 @@ export class DashboardManager {
 
             // Clear cache to ensure fresh data
             subscriberDataService.clearCache();
+            infrastructureService.clearCache();
 
             // Perform polling manager update for subscribers data
             if (window.app?.pollingManager) {
