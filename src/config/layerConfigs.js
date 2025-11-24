@@ -321,6 +321,51 @@ const createNodeSiteRenderer = () => ({
     }
 });
 
+// Sprout Huts renderer
+const createSproutHutRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-marker',
+        style: 'square',
+        color: [0, 128, 0, 0.8], // Green color for Huts
+        size: 14,
+        outline: {
+            color: [255, 255, 255, 1],
+            width: 2
+        }
+    }
+});
+
+// Sprout Huts popup
+const createSproutHutPopup = () => ({
+    title: '{name}',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'name', label: 'Name', visible: true },
+                { fieldName: 'description', label: 'Description', visible: true },
+                { fieldName: 'id', label: 'ID', visible: true }
+            ]
+        }
+    ],
+    actions: [
+        {
+            id: 'directions',
+            title: 'Get Directions',
+            icon: 'pin-tear',
+            type: 'button'
+        }
+    ]
+});
+
+// Sprout Huts fields
+const createSproutHutFields = () => [
+    { name: 'name', type: 'string', alias: 'Name' },
+    { name: 'description', type: 'string', alias: 'Description' },
+    { name: 'id', type: 'string', alias: 'ID' }
+];
+
 // Node Sites popup template with metrics
 const createNodeSitePopup = () => ({
     title: '{Name}',
@@ -919,272 +964,39 @@ const subscriberFields = [
 // Fiber Plant renderer configurations
 const createFSARenderer = () => ({
     type: "unique-value",
-    // Use Arcade expression to extract prefix from NAME field
-    valueExpression: `
-        var name = $feature.NAME;
-        if (IsEmpty(name)) return "UNKNOWN";
-        
-        // Check for specific longer prefixes first (at beginning)
-        if (Find("FAY-C3", name) == 0) return "FAY-C3";
-        if (Find("FAY-C2", name) == 0) return "FAY-C2";
-        if (Find("FAY-C1", name) == 0) return "FAY-C1";
-        if (Find("FAY-H", name) == 0) return "FAY-H";
-        if (Find("FAYE", name) == 0) return "FAYE";
-        
-        // Check for 3-character prefixes at beginning
-        var prefix = Left(name, 3);
-        if (Includes(["BRC", "BCK", "WNG", "HAM", "HAV", "BRY", "SPP", "VRN", "VIN", "WAN", "BEN", "RBN", "WIN", "NAV", "DBS", "CBH", "RUS"], prefix)) {
-            return prefix;
-        }
-        
-        // Check for patterns like XX-YY-... where YY is the code we want
-        var firstHyphen = Find("-", name);
-        if (firstHyphen > -1) {
-            var secondHyphen = Find("-", name, firstHyphen + 1);
-            if (secondHyphen > -1) {
-                var middleCode = Mid(name, firstHyphen + 1, secondHyphen - firstHyphen - 1);
-                if (Includes(["BE", "WA", "RB"], middleCode)) {
-                    return middleCode;
-                }
-            }
-        }
-        
-        return "OTHER";
-    `,
+    field: "areaname",
     defaultSymbol: {
         type: "simple-fill",
         color: [170, 170, 170, 0.2], // Default gray
         outline: { color: [170, 170, 170, 1.0], width: 2 }
     },
+    // Generate a distinct color palette for the areas
+    // This matches the Mapbox style logic from the reference app
     uniqueValueInfos: [
-        // Fayette-specific areas
-        {
-            value: "FAY-C3",
-            symbol: {
-                type: "simple-fill",
-                color: [255, 20, 147, 0.2], // Deep pink
-                outline: { color: [255, 20, 147, 1.0], width: 2 }
-            },
-            label: "Fayette C3"
-        },
-        {
-            value: "FAY-C2",
-            symbol: {
-                type: "simple-fill",
-                color: [65, 105, 225, 0.2], // Royal blue
-                outline: { color: [65, 105, 225, 1.0], width: 2 }
-            },
-            label: "Fayette C2"
-        },
-        {
-            value: "FAY-C1",
-            symbol: {
-                type: "simple-fill",
-                color: [255, 69, 0, 0.2], // Orange red
-                outline: { color: [255, 69, 0, 1.0], width: 2 }
-            },
-            label: "Fayette C1"
-        },
-        {
-            value: "FAY-H",
-            symbol: {
-                type: "simple-fill",
-                color: [50, 205, 50, 0.2], // Lime green
-                outline: { color: [50, 205, 50, 1.0], width: 2 }
-            },
-            label: "Fayette H"
-        },
-        {
-            value: "FAYE",
-            symbol: {
-                type: "simple-fill",
-                color: [148, 0, 211, 0.2], // Dark violet
-                outline: { color: [148, 0, 211, 1.0], width: 2 }
-            },
-            label: "Fayette E"
-        },
-        // Regional FSA areas
-        {
-            value: "BRC",
-            symbol: {
-                type: "simple-fill",
-                color: [255, 65, 54, 0.2], // Bright red
-                outline: { color: [255, 65, 54, 1.0], width: 2 }
-            },
-            label: "BRC"
-        },
-        {
-            value: "BCK",
-            symbol: {
-                type: "simple-fill",
-                color: [0, 116, 217, 0.2], // Strong blue
-                outline: { color: [0, 116, 217, 1.0], width: 2 }
-            },
-            label: "BCK"
-        },
-        {
-            value: "WNG",
-            symbol: {
-                type: "simple-fill",
-                color: [46, 204, 64, 0.2], // Bright green
-                outline: { color: [46, 204, 64, 1.0], width: 2 }
-            },
-            label: "WNG"
-        },
-        {
-            value: "HAM",
-            symbol: {
-                type: "simple-fill",
-                color: [255, 215, 0, 0.2], // Gold
-                outline: { color: [255, 215, 0, 1.0], width: 2 }
-            },
-            label: "HAM"
-        },
-        {
-            value: "HAV",
-            symbol: {
-                type: "simple-fill",
-                color: [255, 133, 27, 0.2], // Bright orange
-                outline: { color: [255, 133, 27, 1.0], width: 2 }
-            },
-            label: "HAV"
-        },
-        {
-            value: "BRY",
-            symbol: {
-                type: "simple-fill",
-                color: [139, 0, 139, 0.2], // Dark magenta
-                outline: { color: [139, 0, 139, 1.0], width: 2 }
-            },
-            label: "BRY"
-        },
-        {
-            value: "SPP",
-            symbol: {
-                type: "simple-fill",
-                color: [32, 178, 170, 0.2], // Light sea green
-                outline: { color: [32, 178, 170, 1.0], width: 2 }
-            },
-            label: "SPP"
-        },
-        {
-            value: "VRN",
-            symbol: {
-                type: "simple-fill",
-                color: [205, 133, 63, 0.2], // Peru (brownish)
-                outline: { color: [205, 133, 63, 1.0], width: 2 }
-            },
-            label: "VRN"
-        },
-        {
-            value: "VIN",
-            symbol: {
-                type: "simple-fill",
-                color: [107, 91, 149, 0.2], // Purple-gray
-                outline: { color: [107, 91, 149, 1.0], width: 2 }
-            },
-            label: "VIN"
-        },
-        {
-            value: "WAN",
-            symbol: {
-                type: "simple-fill",
-                color: [0, 107, 84, 0.2], // Deep green
-                outline: { color: [0, 107, 84, 1.0], width: 2 }
-            },
-            label: "WAN"
-        },
-        {
-            value: "BEN",
-            symbol: {
-                type: "simple-fill",
-                color: [139, 0, 0, 0.2], // Dark red
-                outline: { color: [139, 0, 0, 1.0], width: 2 }
-            },
-            label: "BEN"
-        },
-        {
-            value: "RBN",
-            symbol: {
-                type: "simple-fill",
-                color: [70, 130, 180, 0.2], // Steel blue
-                outline: { color: [70, 130, 180, 1.0], width: 2 }
-            },
-            label: "RBN"
-        },
-        {
-            value: "WIN",
-            symbol: {
-                type: "simple-fill",
-                color: [255, 105, 180, 0.2], // Hot pink
-                outline: { color: [255, 105, 180, 1.0], width: 2 }
-            },
-            label: "WIN"
-        },
-        {
-            value: "NAV",
-            symbol: {
-                type: "simple-fill",
-                color: [0, 191, 255, 0.2], // Deep sky blue
-                outline: { color: [0, 191, 255, 1.0], width: 2 }
-            },
-            label: "NAV"
-        },
-        {
-            value: "DBS",
-            symbol: {
-                type: "simple-fill",
-                color: [153, 50, 204, 0.2], // Dark orchid
-                outline: { color: [153, 50, 204, 1.0], width: 2 }
-            },
-            label: "DBS"
-        },
-        {
-            value: "CBH",
-            symbol: {
-                type: "simple-fill",
-                color: [255, 127, 80, 0.2], // Coral
-                outline: { color: [255, 127, 80, 1.0], width: 2 }
-            },
-            label: "CBH"
-        },
-        {
-            value: "RUS",
-            symbol: {
-                type: "simple-fill",
-                color: [178, 34, 34, 0.2], // Fire brick
-                outline: { color: [178, 34, 34, 1.0], width: 2 }
-            },
-            label: "RUS"
-        },
-        {
-            value: "BE",
-            symbol: {
-                type: "simple-fill",
-                color: [72, 61, 139, 0.2], // Dark slate blue
-                outline: { color: [72, 61, 139, 1.0], width: 2 }
-            },
-            label: "BE"
-        },
-        {
-            value: "WA",
-            symbol: {
-                type: "simple-fill",
-                color: [34, 139, 34, 0.2], // Forest green
-                outline: { color: [34, 139, 34, 1.0], width: 2 }
-            },
-            label: "WA"
-        },
-        {
-            value: "RB",
-            symbol: {
-                type: "simple-fill",
-                color: [218, 165, 32, 0.2], // Goldenrod
-                outline: { color: [218, 165, 32, 1.0], width: 2 }
-            },
-            label: "RB"
-        }
-    ]
+        // Red group
+        { value: "AD", symbol: { type: "simple-fill", color: [211, 47, 47, 0.2], outline: { color: [211, 47, 47, 1], width: 2 } } },
+        // Blue group
+        { value: "BH", symbol: { type: "simple-fill", color: [25, 118, 210, 0.2], outline: { color: [25, 118, 210, 1], width: 2 } } },
+        { value: "EB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.2], outline: { color: [2, 136, 209, 1], width: 2 } } },
+        { value: "TB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.2], outline: { color: [2, 136, 209, 1], width: 2 } } },
+        { value: "TD", symbol: { type: "simple-fill", color: [25, 118, 210, 0.2], outline: { color: [25, 118, 210, 1], width: 2 } } },
+        // Green group
+        { value: "BL", symbol: { type: "simple-fill", color: [56, 142, 60, 0.2], outline: { color: [56, 142, 60, 1], width: 2 } } },
+        { value: "JC", symbol: { type: "simple-fill", color: [56, 142, 60, 0.2], outline: { color: [56, 142, 60, 1], width: 2 } } },
+        // Yellow/Gold group
+        { value: "BM", symbol: { type: "simple-fill", color: [251, 192, 45, 0.2], outline: { color: [251, 192, 45, 1], width: 2 } } },
+        { value: "FV", symbol: { type: "simple-fill", color: [175, 180, 43, 0.2], outline: { color: [175, 180, 43, 1], width: 2 } } },
+        { value: "HP", symbol: { type: "simple-fill", color: [125, 102, 8, 0.2], outline: { color: [125, 102, 8, 1], width: 2 } } },
+        // Pink/Purple group
+        { value: "ER", symbol: { type: "simple-fill", color: [194, 24, 91, 0.2], outline: { color: [194, 24, 91, 1], width: 2 } } },
+        { value: "SC", symbol: { type: "simple-fill", color: [142, 36, 170, 0.2], outline: { color: [142, 36, 170, 1], width: 2 } } },
+        // Cyan/Teal group
+        { value: "HE", symbol: { type: "simple-fill", color: [0, 151, 167, 0.2], outline: { color: [0, 151, 167, 1], width: 2 } } },
+        // Orange group
+        { value: "HV", symbol: { type: "simple-fill", color: [245, 124, 0, 0.2], outline: { color: [245, 124, 0, 1], width: 2 } } }
+    ],
+    // Fallback logic using Arcade for dynamic prefixes
+    visualVariables: []
 });
 
 const createMainLineFiberRenderer = () => ({
@@ -1409,14 +1221,14 @@ const createMSTFiberRenderer = () => ({
 
 // Fiber Plant popup templates
 const createFSAPopup = () => ({
-    title: 'FSA: {NAME}',
+    title: 'DA: {areaname}',
     content: [
         {
             type: 'fields',
             fieldInfos: [
-                { fieldName: 'NAME', label: 'Service Area Name', visible: true },
-                { fieldName: 'Area', label: 'Area (sq ft)', visible: true },
-                { fieldName: 'Status', label: 'Status', visible: true }
+                { fieldName: 'areaname', label: 'Area Name', visible: true },
+                { fieldName: 'distribution_area', label: 'Distribution Area', visible: true },
+                { fieldName: 'comments', label: 'Status', visible: true }
             ]
         }
     ]
@@ -1618,6 +1430,45 @@ const createMSTFiberPopup = () => ({
     ]
 });
 
+// Slack Loops renderer
+const createSlackLoopRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-marker',
+        style: 'circle',
+        color: [0, 200, 83, 0.8], // Bright green
+        size: 8,
+        outline: {
+            color: [255, 255, 255, 1],
+            width: 1.5
+        }
+    }
+});
+
+// Slack Loops popup
+const createSlackLoopPopup = () => ({
+    title: 'Slack Loop',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'structure', label: 'Structure ID', visible: true },
+                { fieldName: 'type', label: 'Type', visible: true },
+                { fieldName: 'cable', label: 'Cable', visible: true },
+                { fieldName: 'length', label: 'Length (ft)', visible: true }
+            ]
+        }
+    ]
+});
+
+// Slack Loops fields
+const createSlackLoopFields = () => [
+    { name: 'structure', type: 'string', alias: 'Structure ID' },
+    { name: 'type', type: 'string', alias: 'Type' },
+    { name: 'cable', type: 'string', alias: 'Cable' },
+    { name: 'length', type: 'double', alias: 'Length' }
+];
+
 // Vehicle labeling configuration (shows vehicle name at closer zooms)
 const createTruckLabeling = () => [
     {
@@ -1646,9 +1497,9 @@ const createTruckLabeling = () => [
 
 // Fiber Plant field definitions
 const createFSAFields = () => [
-    { name: 'NAME', type: 'string', alias: 'Service Area Name' },
-    { name: 'Area', type: 'double', alias: 'Area (sq ft)' },
-    { name: 'Status', type: 'string', alias: 'Status' }
+    { name: 'areaname', type: 'string', alias: 'Area Name' },
+    { name: 'distribution_area', type: 'string', alias: 'Distribution Area' },
+    { name: 'comments', type: 'string', alias: 'Status' }
 ];
 
 // FSA Labeling configuration for scale-dependent display
@@ -1667,7 +1518,7 @@ const createFSALabeling = () => [
         },
         labelPlacement: "always-horizontal",
         labelExpressionInfo: {
-            expression: "$feature.NAME"
+            expression: "$feature.areaname"
         },
         deconflictionStrategy: "static", // Enable collision detection to prevent overlap
         repeatLabel: false, // Don't repeat labels for the same feature
@@ -1904,10 +1755,23 @@ export const layerConfigs = {
         dataServiceMethod: () => infrastructureService.getNodeSites()
     },
 
+    // Sprout Huts Layer
+    sproutHuts: {
+        id: 'sprout-huts',
+        title: 'Sprout Huts',
+        dataSource: 'sprout_huts',
+        renderer: createSproutHutRenderer(),
+        popupTemplate: createSproutHutPopup(),
+        fields: createSproutHutFields(),
+        visible: true, // Visible by default as they are major landmarks
+        zOrder: 125, // Above node sites
+        dataServiceMethod: () => infrastructureService.getSproutHuts()
+    },
+
     // Fiber Plant Layers
     fsaBoundaries: {
         id: 'fsa-boundaries',
-        title: 'FSA Boundaries',
+        title: 'DA Boundaries',
         dataSource: 'fsa_boundaries',
         renderer: createFSARenderer(),
         popupTemplate: createFSAPopup(),
@@ -1930,17 +1794,7 @@ export const layerConfigs = {
         dataServiceMethod: () => infrastructureService.getMainLineFiber()
     },
 
-    mainLineOld: {
-        id: 'main-line-old',
-        title: 'Main Line Old',
-        dataSource: 'main_line_old',
-        renderer: createMainLineOldRenderer(),
-        popupTemplate: createMainLineOldPopup(),
-        fields: createMainLineOldFields(),
-        visible: false,
-        zOrder: 28, // Slightly below current main line
-        dataServiceMethod: () => infrastructureService.getMainLineOld()
-    },
+    // Removed mainLineOld layer configuration
 
     mstTerminals: {
         id: 'mst-terminals',
@@ -2000,6 +1854,21 @@ export const layerConfigs = {
         dataServiceMethod: () => infrastructureService.getMSTFiber()
     },
 
+    // Slack Loops Layer
+    slackLoops: {
+        id: 'slack-loops',
+        title: 'Slack Loops',
+        dataSource: 'slack_loops',
+        renderer: createSlackLoopRenderer(),
+        popupTemplate: createSlackLoopPopup(),
+        fields: createSlackLoopFields(),
+        visible: false,
+        zOrder: 55, // Between MST Terminals (50) and Splitters (60)
+        minScale: 24000,
+        maxScale: 0,
+        dataServiceMethod: () => infrastructureService.getSlackLoops()
+    },
+
     // Truck layers
     fiberTrucks: {
         id: 'fiber-trucks',
@@ -2032,7 +1901,8 @@ export const layerConfigs = {
         id: 'county-boundaries',
         title: 'County Boundaries',
         layerType: 'GeoJSONLayer',
-        dataUrl: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/ff-counties.geojson?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jMTRhMmVjMi05M2FlLTQ5MGItODRmZi1hMjg5MTgyOWJhMjYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJlc3JpLWZpbGVzL2ZmLWNvdW50aWVzLmdlb2pzb24iLCJpYXQiOjE3NTQ2MjIzNDIsImV4cCI6MjA2OTk4MjM0Mn0.j-_q73dD2iJvR20l7V93aIcUUcCGIbCjcynTqHLdf6I',
+        // dataUrl: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/ff-counties.geojson?token=...',
+        dataUrl: null, // Sprout Fiber county boundaries not yet available
         renderer: {
             type: 'simple',
             symbol: {
@@ -2048,7 +1918,7 @@ export const layerConfigs = {
             title: 'County Boundary',
             content: 'County boundary information'
         },
-        visible: true, // Load by default
+        visible: false, // Disabled until data is available
         zOrder: 1, // Above basemap, below most other layers
         fields: [] // Will be inferred from GeoJSON
     },
@@ -2069,7 +1939,19 @@ export const layerConfigs = {
 
 // Configuration-driven layer creation
 export const getLayerConfig = (layerId) => {
-    return layerConfigs[layerId];
+    // First try direct key lookup (camelCase)
+    if (layerConfigs[layerId]) {
+        return layerConfigs[layerId];
+    }
+    
+    // If not found, search by id property (kebab-case)
+    for (const key in layerConfigs) {
+        if (layerConfigs[key] && layerConfigs[key].id === layerId) {
+            return layerConfigs[key];
+        }
+    }
+    
+    return null;
 };
 
 export const getAllLayerIds = () => {

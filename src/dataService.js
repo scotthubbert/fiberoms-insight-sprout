@@ -126,6 +126,31 @@ export class SubscriberDataService {
         return Date.now().toString().slice(-8); // Last 8 digits of timestamp
     }
 
+    // Helper to map DB record to application schema
+    _mapDatabaseRecord(record) {
+        if (!record) return null;
+        return {
+            ...record,
+            // Map to standard fields expected by app
+            id: record.account || record.id, // Use account as ID if ID is missing
+            latitude: record.lat,
+            longitude: record.lon,
+            customer_name: record.name,
+            customer_number: String(record.account || ''),
+            address: record.address,
+            service_address: record.address, // Alias for GeoJSONTransformService
+            zip_code: record.postcode,
+            status: record.Status,
+            service_type: record.servicedesc || record.customertype,
+            last_update: record.last_updated || record.updated_at,
+            fiber_distance: record['Fiber Dist.'],
+            ta5k: record.TA5K,
+            remote_id: record.Remote_ID,
+            ont: record.ONT,
+            light: record.Light
+        };
+    }
+
     // Check if cached data is still valid
     isCacheValid(key) {
         const versionedKey = `${key}_${this.APP_VERSION}`;
@@ -200,11 +225,11 @@ export class SubscriberDataService {
 
             // Select all fields for feature layer creation
             const { data, error, count } = await supabase
-                .from('mfs')
+                .from('fiber_subscriber_status_live')
                 .select('*', { count: 'exact' })
-                .eq('status', 'Offline')
-                .not('latitude', 'is', null)
-                .not('longitude', 'is', null)
+                .eq('Status', 'Offline')
+                .not('lat', 'is', null)
+                .not('lon', 'is', null)
 
             if (isDevelopment) {
                 log.info('📊 Supabase response:')
@@ -231,10 +256,10 @@ export class SubscriberDataService {
                     }
                 }
                 // Dev guidance
-                log.warn('⚠️ Check that records exist with status="Offline" and coordinates present');
+                log.warn('⚠️ Check that records exist with Status="Offline" and coordinates present');
                 if (isDevelopment) {
-                    log.info('- Ensure status="Offline"')
-                    log.info('- Ensure latitude and longitude are not null')
+                    log.info('- Ensure Status="Offline"')
+                    log.info('- Ensure lat and lon are not null')
                 }
                 return {
                     count: 0,
@@ -248,8 +273,11 @@ export class SubscriberDataService {
             // Log first record for debugging in development only
             log.info('📋 Sample record:', data[0])
 
+            // Map data to application schema
+            const mappedData = data.map(r => this._mapDatabaseRecord(r));
+
             // Convert to GeoJSON features for ArcGIS
-            const features = geoJSONTransformService.convertToGeoJSONFeatures(data || [], 'offline')
+            const features = geoJSONTransformService.convertToGeoJSONFeatures(mappedData, 'offline')
 
             log.info('🗺️ Generated features:', features.length)
             if (isDevelopment && features.length > 0) {
@@ -260,7 +288,7 @@ export class SubscriberDataService {
 
             const result = {
                 count: count || 0,
-                data: data || [],
+                data: mappedData,
                 features: features,
                 lastUpdated: new Date().toISOString(),
                 fromCache: false
@@ -283,11 +311,11 @@ export class SubscriberDataService {
 
             // Select all fields for feature layer creation
             const { data, error, count } = await supabase
-                .from('mfs')
+                .from('fiber_subscriber_status_live')
                 .select('*', { count: 'exact' })
-                .eq('status', 'Online')
-                .not('latitude', 'is', null)
-                .not('longitude', 'is', null)
+                .eq('Status', 'Online')
+                .not('lat', 'is', null)
+                .not('lon', 'is', null)
 
             if (isDevelopment) {
                 log.info('📊 Online subscribers response:')
@@ -304,8 +332,8 @@ export class SubscriberDataService {
             if (!data || data.length === 0) {
                 log.warn('⚠️ No online subscribers found. Check your data:')
                 if (isDevelopment) {
-                    log.info('- Make sure you have records with status="Online"')
-                    log.info('- Make sure latitude and longitude are not null')
+                    log.info('- Make sure you have records with Status="Online"')
+                    log.info('- Make sure lat and lon are not null')
                 }
                 return {
                     count: 0,
@@ -316,14 +344,17 @@ export class SubscriberDataService {
                 }
             }
 
+            // Map data to application schema
+            const mappedData = data.map(r => this._mapDatabaseRecord(r));
+
             // Convert to GeoJSON features for ArcGIS
-            const features = geoJSONTransformService.convertToGeoJSONFeatures(data || [], 'online')
+            const features = geoJSONTransformService.convertToGeoJSONFeatures(mappedData, 'online')
 
             log.info('🗺️ Generated online features:', features.length)
 
             const result = {
                 count: count || 0,
-                data: data || [],
+                data: mappedData,
                 features: features,
                 lastUpdated: new Date().toISOString(),
                 fromCache: false
@@ -344,7 +375,7 @@ export class SubscriberDataService {
 
             // Select all fields for CSV export
             const { data, error, count } = await supabase
-                .from('mfs')
+                .from('fiber_subscriber_status_live')
                 .select('*', { count: 'exact' })
 
             if (isDevelopment) {
@@ -380,7 +411,7 @@ export class SubscriberDataService {
             log.info(`📊 Retrieved ${sortedData.length} subscribers for CSV export`)
 
             // No caching for realtime data
-            return sortedData
+            return sortedData.map(r => this._mapDatabaseRecord(r))
         } catch (error) {
             log.error('Failed to fetch all subscribers:', error)
             throw error
@@ -399,12 +430,12 @@ export class SubscriberDataService {
                 { count: onlineCount, error: onlineError },
                 { count: unknownCount, error: unknownError }
             ] = await Promise.all([
-                supabase.from('mfs').select('id', { count: 'exact', head: true }),
-                // Match status variants like 'Offline', 'offline', 'Offline ' etc.
-                supabase.from('mfs').select('id', { count: 'exact', head: true }).ilike('status', 'offline%'),
-                supabase.from('mfs').select('id', { count: 'exact', head: true }).ilike('status', 'online%'),
+                supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }),
+                // Match Status variants like 'Offline', 'offline', 'Offline ' etc.
+                supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }).ilike('Status', 'offline%'),
+                supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }).ilike('Status', 'online%'),
                 // Unknown includes null/empty/explicit 'Unknown'
-                supabase.from('mfs').select('id', { count: 'exact', head: true }).or('status.is.null,status.eq.,status.ilike.unknown%')
+                supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }).or('Status.is.null,Status.eq.,Status.ilike.unknown%')
             ])
 
             if (totalError || offlineError || onlineError || unknownError) {
@@ -464,36 +495,40 @@ export class SubscriberDataService {
 
             // Search across multiple fields using OR conditions
             // Use only columns that actually exist in the database schema
+            // Updated for Sprout Fiber schema: name, account, address, city
             const { data, error, count } = await supabase
-                .from('mfs')
+                .from('fiber_subscriber_status_live')
                 .select('*', { count: 'exact' })
-                .or(`name.ilike.%${searchTerm}%,account.ilike.%${searchTerm}%,service_address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,county.ilike.%${searchTerm}%`)
-                .not('latitude', 'is', null)
-                .not('longitude', 'is', null)
-                .neq('latitude', 0)
-                .neq('longitude', 0)
+                .or(`name.ilike.%${searchTerm}%,account.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`)
+                .not('lat', 'is', null)
+                .not('lon', 'is', null)
+                .neq('lat', 0)
+                .neq('lon', 0)
 
             if (error) {
                 log.error('❌ Error searching subscribers:', error)
                 throw error
             }
 
-            const results = data?.map(record => ({
-                id: record.id,
-                customer_name: record.name || 'Unknown',
-                customer_number: record.account || '',
-                address: record.service_address || '',
-                city: record.city || '',
-                state: record.state || '',
-                zip: record.zip_code || '',
-                phone_number: '', // No phone_number column in schema
-                status: record.status || 'Unknown',
-                latitude: record.latitude,
-                longitude: record.longitude,
-                county: record.county || '',
-                // Include full record for detailed view
-                fullRecord: record
-            })) || []
+            const results = (data || []).map(record => {
+                const mapped = this._mapDatabaseRecord(record);
+                return {
+                    ...mapped,
+                    // Ensure standard fields for search results display
+                    id: mapped.id,
+                    customer_name: mapped.customer_name || 'Unknown',
+                    customer_number: mapped.customer_number || '',
+                    address: mapped.address || '',
+                    city: mapped.city || '',
+                    state: mapped.state || '',
+                    zip: mapped.zip_code || '',
+                    status: mapped.status || 'Unknown',
+                    latitude: mapped.latitude,
+                    longitude: mapped.longitude,
+                    // Include full record for detailed view
+                    fullRecord: record
+                };
+            });
 
             const searchResult = {
                 results,
@@ -569,9 +604,9 @@ export class SubscriberDataService {
 
         try {
             const { data, error } = await supabase
-                .from('mfs')
+                .from('fiber_subscriber_status_live')
                 .select('*')
-                .eq('id', id)
+                .eq('account', id) // Assume ID is account number in new schema
                 .single()
 
             if (error) {
@@ -579,9 +614,11 @@ export class SubscriberDataService {
                 throw error
             }
 
+            const mappedData = this._mapDatabaseRecord(data);
+
             // Cache the result
-            this.setCache(cacheKey, data)
-            return data
+            this.setCache(cacheKey, mappedData)
+            return mappedData
 
         } catch (error) {
             log.error('Failed to fetch subscriber by ID:', error)
@@ -596,8 +633,8 @@ export class SubscriberDataService {
 
             // Test basic connection with a simple query
             const { data: tableData, error: tableError } = await supabase
-                .from('mfs')
-                .select('id')
+                .from('fiber_subscriber_status_live')
+                .select('account')
                 .limit(1)
 
             if (tableError) {
@@ -609,8 +646,8 @@ export class SubscriberDataService {
 
             // Test data availability
             const { data: sampleData, error: sampleError } = await supabase
-                .from('mfs')
-                .select('id, name, status, latitude, longitude')
+                .from('fiber_subscriber_status_live')
+                .select('name, Status, lat, lon')
                 .limit(5)
 
             if (sampleError) {
@@ -622,14 +659,14 @@ export class SubscriberDataService {
 
             // Check status values
             const { data: statusData, error: statusError } = await supabase
-                .from('mfs')
-                .select('status')
-                .not('status', 'is', null)
+                .from('fiber_subscriber_status_live')
+                .select('Status')
+                .not('Status', 'is', null)
                 .limit(10)
 
             if (!statusError && statusData) {
-                const uniqueStatuses = [...new Set(statusData.map(row => row.status))]
-                log.info('📋 Available status values:', uniqueStatuses)
+                const uniqueStatuses = [...new Set(statusData.map(row => row.Status))]
+                log.info('📋 Available Status values:', uniqueStatuses)
             }
 
             return true

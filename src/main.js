@@ -2,16 +2,6 @@
 // FiberOMS Insight PWA - Mobile-first fiber network management application
 // Features: Search functionality, layer management, theme switching
 
-// ============================================================================
-// AUTHENTICATION-FIRST ARCHITECTURE
-// Only essential auth services are imported here. All other imports are
-// deferred until after successful authentication to prevent data loading
-// and service initialization before the user is authenticated.
-// ============================================================================
-
-// Import ONLY authentication services (minimal imports)
-import { authService } from './services/AuthService.js';
-import { AuthContainer } from './ui/AuthContainer.js';
 import { createLogger } from './utils/logger.js';
 
 // Initialize logger for main module
@@ -44,60 +34,20 @@ if (import.meta.env.DEV) {
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize authentication FIRST
   try {
-    log.info('🔐 Checking authentication...');
-
-    const isAuthenticated = await authService.initialize();
-
-    if (isAuthenticated) {
-      // User is authenticated - load and initialize the app
-      log.info('✅ User authenticated, loading application...');
-      authService.showApp();
-
-      // Dynamically import and initialize the full application
-      await initializeAuthenticatedApp();
-    } else {
-      // User not authenticated - show sign-in UI only
-      log.info('ℹ️ User not authenticated, showing sign-in...');
-      authService.hideApp();
-
-      const authContainer = new AuthContainer();
-      await authContainer.init();
-
-      // Listen for authentication completion
-      document.addEventListener('authenticationComplete', async () => {
-        log.info('✅ Authentication complete, loading application...');
-
-        // Dynamically import and initialize the full application
-        await initializeAuthenticatedApp();
-      }, { once: true });
-    }
+    log.info('🚀 Initializing application...');
+    // Dynamically import and initialize the full application
+    await initializeApp();
   } catch (error) {
-    log.error('❌ Authentication initialization failed:', error);
-
-    // Show error message
-    const authContainer = document.getElementById('auth-container');
-    if (authContainer) {
-      authContainer.innerHTML = `
-        <div class="auth-error-page">
-          <calcite-notice kind="danger" open>
-            <div slot="title">Authentication Error</div>
-            <div slot="message">Failed to initialize authentication. Please refresh the page or contact support.</div>
-          </calcite-notice>
-          <calcite-button onclick="window.location.reload()">Reload Page</calcite-button>
-        </div>
-      `;
-      authContainer.style.display = 'flex';
-    }
+    log.error('❌ Application initialization failed:', error);
   }
 });
 
 /**
- * Initialize the full application after authentication is confirmed
+ * Initialize the full application
  * This function dynamically imports all heavy dependencies
  */
-async function initializeAuthenticatedApp() {
+async function initializeApp() {
   log.info('📦 Loading application modules...');
   // Load modules in parallel
   const [
@@ -109,8 +59,8 @@ async function initializeAuthenticatedApp() {
     { setupCalciteIconFallback },
     { setAssetPath },
     { Application },
-    { initSentryIfEnabled, captureError: sentryCaptureError, identifyUser: sentryIdentifyUser },
-    { initAnalytics, identifyUser: analyticsIdentifyUser, resetUser: analyticsResetUser },
+    { initSentryIfEnabled, captureError: sentryCaptureError },
+    { initAnalytics },
     _powerOutageStats  // Import but don't need the export
   ] = await Promise.all([
     // Core services
@@ -236,32 +186,11 @@ async function initializeAuthenticatedApp() {
       ImportedErrorService.subscribe((evt) => {
         if (evt.type === 'error' && evt.error) sentryCaptureError(evt.error, evt.context);
       });
-      
-      // Identify user for Sentry error tracking
-      const user = authService.getUser();
-      if (user) {
-        sentryIdentifyUser(user.id, {
-          email: user.primaryEmailAddress?.emailAddress,
-          username: user.username || user.firstName || 'unknown'
-        });
-      }
     }
   });
 
   // Initialize PostHog analytics (for user behavior tracking)
-  initAnalytics().then((enabled) => {
-    if (enabled) {
-      // Identify user for analytics
-      const user = authService.getUser();
-      if (user) {
-        analyticsIdentifyUser(user.id, {
-          email: user.primaryEmailAddress?.emailAddress,
-          username: user.username || user.firstName || 'unknown',
-          name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim()
-        });
-      }
-    }
-  });
+  initAnalytics();
 
   // Initialize PWA installer
   const pwaInstaller = new PWAInstaller();
@@ -296,37 +225,10 @@ async function initializeAuthenticatedApp() {
   log.info('🚀 Initializing Application...');
   window.app = new Application();
 
-  // Setup sign-out button
-  setupSignOutButton();
-
   // Expose debug functions
   setupDebugFunctions(log);
 
   log.info('✅ Application fully initialized');
-}
-
-/**
- * Setup sign-out button handler
- */
-function setupSignOutButton() {
-  const signOutButton = document.getElementById('sign-out-button');
-  if (signOutButton) {
-    signOutButton.addEventListener('click', async () => {
-      try {
-        log.info('🚪 User initiated sign-out');
-        
-        // Track sign-out event and reset analytics
-        const { trackEvent, resetUser } = await import('./services/AnalyticsService.js');
-        trackEvent('user_signed_out');
-        resetUser(); // Reset PostHog user identification
-        
-        await authService.signOut();
-      } catch (error) {
-        log.error('❌ Sign-out failed:', error);
-      }
-    });
-    log.info('✅ Sign-out button configured');
-  }
 }
 
 /**

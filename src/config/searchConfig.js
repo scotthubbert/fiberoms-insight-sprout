@@ -12,6 +12,30 @@
 
 // Available service area configurations
 const SERVICE_AREAS = {
+    // Sprout Fiber service area
+    sprout_fiber: {
+        name: 'Sprout Fiber Service Area',
+        region: 'Alabama, USA',
+        bounds: {
+            xmin: -87.5,   // Western bound
+            ymin: 33.5,    // Southern bound
+            xmax: -86.0,   // Eastern bound
+            ymax: 35.0,    // Northern bound
+            spatialReference: { wkid: 4326 } // WGS84
+        },
+        center: {
+            latitude: 34.1748,
+            longitude: -86.8436
+        },
+        searchSettings: {
+            maxResults: 8,
+            minCharacters: 3,
+            includeDefaultSources: true,
+            searchAllEnabled: false,
+            placeholder: 'Search addresses, places...'
+        }
+    },
+
     // Alabama Power Company service area (current deployment)
     freedom_fiber: {
         name: 'Freedom Fiber Service Area',
@@ -104,7 +128,7 @@ const SERVICE_AREAS = {
 };
 
 // Current deployment configuration - CHANGE THIS FOR DIFFERENT DEPLOYMENTS
-const CURRENT_SERVICE_AREA = 'freedom_fiber';
+const CURRENT_SERVICE_AREA = 'sprout_fiber';
 
 // Optional extent buffer (in degrees) to extend map constraints beyond service area
 // Set to 0 for no buffer. Recommended small buffer like 0.5-1.0 degrees if vehicles roam outside.

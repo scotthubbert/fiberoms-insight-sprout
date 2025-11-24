@@ -59,15 +59,7 @@
     </div>
   </noscript>
 
-  <!-- Authentication Container (shown when not authenticated) -->
-  <div id="auth-container" class="auth-container" style="display: flex;">
-    <div class="auth-loading">
-      <calcite-loader scale="l"></calcite-loader>
-      <p>Loading authentication...</p>
-    </div>
-  </div>
-
-  <div id="app" style="display: none;">
+  <div id="app">
     <!-- Calcite Shell Layout -->
     <calcite-shell>
       <!-- Header Navigation -->
@@ -92,8 +84,6 @@
             aria-label="Refresh dashboard"></calcite-button>
           <calcite-button id="theme-toggle" icon-start="brightness" appearance="transparent" scale="s"
             aria-label="Toggle theme"></calcite-button>
-          <calcite-button id="sign-out-button" icon-start="sign-out" appearance="transparent" scale="s"
-            aria-label="Sign out" title="Sign out"></calcite-button>
         </div>
       </calcite-navigation>
 
@@ -210,7 +200,7 @@
               <calcite-icon slot="icon" icon="utility-network"></calcite-icon>
 
               <calcite-list selection-mode="none">
-                <calcite-list-item label="FSA Boundaries" description="Service area boundaries">
+                <calcite-list-item label="DA Boundaries" description="Service area boundaries">
                   <calcite-icon slot="content-start" icon="polygon" class="icon-polygon-blue"></calcite-icon>
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
@@ -220,10 +210,7 @@
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
-                <calcite-list-item label="Main Line Old" description="Legacy fiber infrastructure">
-                  <calcite-icon slot="content-start" icon="line" class="icon-line-gray"></calcite-icon>
-                  <calcite-switch slot="content-end"></calcite-switch>
-                </calcite-list-item>
+                <!-- Main Line Old removed as it's not relevant for this ISP -->
 
                 <calcite-list-item label="MST Terminals" description="Multi-service terminals">
                   <calcite-icon slot="content-start" icon="circle" class="icon-circle-cyan"></calcite-icon>
@@ -606,7 +593,7 @@
         </calcite-block>
 
         <calcite-block heading="OSP" expanded>
-          <calcite-list-item label="FSA Boundaries" description="Service area boundaries" class="layer-toggle-item">
+          <calcite-list-item label="DA Boundaries" description="Service area boundaries" class="layer-toggle-item">
             <calcite-icon slot="content-start" icon="polygon" class="icon-polygon-blue"></calcite-icon>
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
@@ -616,10 +603,7 @@
             <calcite-switch slot="content-end"></calcite-switch>
           </calcite-list-item>
 
-          <calcite-list-item label="Main Line Old" description="Legacy fiber infrastructure" class="layer-toggle-item">
-            <calcite-icon slot="content-start" icon="line" class="icon-line-gray"></calcite-icon>
-            <calcite-switch slot="content-end"></calcite-switch>
-          </calcite-list-item>
+          <!-- Main Line Old removed -->
 
           <calcite-list-item label="MST Terminals" description="Multi-service terminals" class="layer-toggle-item">
             <calcite-icon slot="content-start" icon="circle" class="icon-circle-cyan"></calcite-icon>

@@ -48,6 +48,13 @@ export class InfrastructureService {
         log.info(`🔍 Checking cache for ${description} (key: ${cacheKey})...`);
         const cachedData = await cacheService.getCachedData(cacheKey);
         if (cachedData) {
+            console.log(`[OSP Debug] 📦 Using CACHED ${description} data from IndexedDB`);
+            console.log(`[OSP Debug] 📦 Cache key: ${cacheKey}`);
+            console.log(`[OSP Debug] 📦 Cached features count: ${cachedData.features?.length || 0}`);
+            if (cachedData.features && cachedData.features.length > 0) {
+                const sampleCached = cachedData.features[0];
+                console.log(`[OSP Debug] 📦 Sample cached feature props:`, Object.keys(sampleCached.properties || {}));
+            }
             log.info(`📦 Using cached ${description} data from IndexedDB`);
             cachedData.fromCache = true;
             return cachedData;
@@ -56,11 +63,22 @@ export class InfrastructureService {
         // Also check memory cache for very recent data
         if (this.isCacheValid(memoryKey)) {
             const memData = this.getCache(memoryKey);
+            console.log(`[OSP Debug] 📦 Using MEMORY cached ${description} data`);
+            console.log(`[OSP Debug] 📦 Memory cache key: ${memoryKey}`);
+            console.log(`[OSP Debug] 📦 Memory cached features count: ${memData.features?.length || 0}`);
             memData.fromCache = true;
             return memData;
         }
 
         try {
+            if (!url) {
+                throw new Error(`Configuration URL for ${description} is missing or invalid.`);
+            }
+
+            // Debug logging for OSP data sources
+            console.log(`[OSP Debug] 📡 Fetching ${description} data...`);
+            console.log(`[OSP Debug] 🔗 URL: ${url}`);
+
             log.info(`📡 Fetching ${description} data...`);
             const response = await fetch(url);
 
@@ -70,6 +88,38 @@ export class InfrastructureService {
 
             const geojson = await response.json();
             const processedFeatures = geojson.features || [];
+            
+            // Debug: Log sample of fetched data to verify it's Sprout Fiber data
+            if (processedFeatures.length > 0) {
+                const sampleFeature = processedFeatures[0];
+                console.log(`[OSP Debug] ✅ Fetched ${processedFeatures.length} features for ${description}`);
+                console.log(`[OSP Debug] 📊 Sample feature properties:`, Object.keys(sampleFeature.properties || {}));
+                console.log(`[OSP Debug] 📊 Sample feature (first 3 props):`, 
+                    Object.entries(sampleFeature.properties || {}).slice(0, 3).reduce((acc, [k, v]) => {
+                        acc[k] = v;
+                        return acc;
+                    }, {})
+                );
+                
+                // Check for Freedom Fiber indicators
+                const props = sampleFeature.properties || {};
+                const hasFreedomFiberIndicators = 
+                    props.NAME || props.ServiceArea || props.FSA_NAME || 
+                    (props.areaname && props.areaname.includes('FSA')) ||
+                    (props.distribution_area && !props.distribution_area.match(/^[A-Z]{2}-\d{2}-\d{4}$/));
+                
+                if (hasFreedomFiberIndicators) {
+                    console.warn(`[OSP Debug] ⚠️ WARNING: Data may contain Freedom Fiber indicators!`, {
+                        hasNAME: !!props.NAME,
+                        hasServiceArea: !!props.ServiceArea,
+                        hasFSA_NAME: !!props.FSA_NAME,
+                        areaname: props.areaname,
+                        distribution_area: props.distribution_area
+                    });
+                }
+            } else {
+                console.warn(`[OSP Debug] ⚠️ No features found in ${description} data`);
+            }
 
             const result = {
                 count: processedFeatures.length,
@@ -111,16 +161,25 @@ export class InfrastructureService {
     async getNodeSites() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.NODE_SITES,
-            'nodeSites',
+            'nodeSites_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
             'node_sites',
             'Node Sites'
+        );
+    }
+
+    async getSproutHuts() {
+        return this.fetchOSPData(
+            API_CONFIG.INFRASTRUCTURE.SPROUT_HUTS,
+            'sproutHuts_v2', // Versioned cache key
+            'sprout_huts',
+            'Sprout Huts'
         );
     }
 
     async getFSABoundaries() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.FSA_BOUNDARIES,
-            'fsa',
+            'fsa_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
             'fsa_boundaries',
             'FSA Boundaries'
         );
@@ -129,7 +188,7 @@ export class InfrastructureService {
     async getMainLineFiber() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.MAIN_LINE_FIBER,
-            'mainFiber',
+            'mainFiber_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
             'main_line_fiber',
             'Main Line Fiber'
         );
@@ -147,7 +206,7 @@ export class InfrastructureService {
     async getMSTTerminals() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.MST_TERMINALS,
-            'mstTerminals',
+            'mstTerminals_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
             'mst_terminals',
             'MST Terminals'
         );
@@ -156,7 +215,7 @@ export class InfrastructureService {
     async getSplitters() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.SPLITTERS,
-            'splitters',
+            'splitters_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
             'splitters',
             'Splitters'
         );
@@ -165,7 +224,7 @@ export class InfrastructureService {
     async getClosures() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.CLOSURES,
-            'closures',
+            'closures_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
             'closures',
             'Closures'
         );
@@ -174,9 +233,18 @@ export class InfrastructureService {
     async getMSTFiber() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.MST_FIBER,
-            'mstFiber',
+            'mstFiber_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
             'mst_fiber',
             'MST Fiber'
+        );
+    }
+
+    async getSlackLoops() {
+        return this.fetchOSPData(
+            API_CONFIG.INFRASTRUCTURE.SLACK_LOOPS,
+            'slackLoops_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
+            'slack_loops',
+            'Slack Loops'
         );
     }
 }

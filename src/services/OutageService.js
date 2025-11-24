@@ -8,6 +8,18 @@ export class OutageService {
     // Get APCo power outages from Supabase storage - REALTIME (no caching)
     async getApcoOutages() {
         try {
+            // Check if URL is configured
+            if (!API_CONFIG.OUTAGES.APCO) {
+                log.warn('⚠️ APCo outages URL not configured, returning empty result');
+                return {
+                    count: 0,
+                    data: [],
+                    features: [],
+                    lastUpdated: new Date().toISOString(),
+                    fromCache: false
+                };
+            }
+
             log.info('📡 Fetching APCo power outages from Supabase storage... (realtime - no cache)');
 
             let geojsonData;
@@ -126,6 +138,18 @@ export class OutageService {
     // Get Tombigbee power outages from Supabase storage - REALTIME (no caching)
     async getTombigbeeOutages() {
         try {
+            // Check if URL is configured
+            if (!API_CONFIG.OUTAGES.TOMBIGBEE) {
+                log.warn('⚠️ Tombigbee outages URL not configured, returning empty result');
+                return {
+                    count: 0,
+                    data: [],
+                    features: [],
+                    lastUpdated: new Date().toISOString(),
+                    fromCache: false
+                };
+            }
+
             log.info('📡 Fetching Tombigbee Electric power outages from Supabase storage... (realtime - no cache)');
 
             let geojsonData;

@@ -28,6 +28,7 @@ class CacheService {
     // Cache expiration times (in milliseconds)
     // OSP data changes very infrequently (once per year), so use long cache times
     this.CACHE_DURATION = {
+      // Legacy Freedom Fiber cache keys (kept for backward compatibility)
       fsa: 90 * 24 * 60 * 60 * 1000,        // 90 days for FSA boundaries
       mainFiber: 90 * 24 * 60 * 60 * 1000,  // 90 days for main fiber
       mainOld: 365 * 24 * 60 * 60 * 1000,   // 365 days for old main line (never changes)
@@ -35,7 +36,17 @@ class CacheService {
       mstTerminals: 30 * 24 * 60 * 60 * 1000, // 30 days for terminals
       closures: 30 * 24 * 60 * 60 * 1000,   // 30 days for closures
       splitters: 30 * 24 * 60 * 60 * 1000,  // 30 days for splitters
-      nodeSites: 90 * 24 * 60 * 60 * 1000   // 90 days for node sites
+      nodeSites: 90 * 24 * 60 * 60 * 1000,  // 90 days for node sites
+      // Sprout Fiber cache keys (v2)
+      fsa_sprout_v2: 90 * 24 * 60 * 60 * 1000,        // 90 days for DA boundaries
+      mainFiber_sprout_v2: 90 * 24 * 60 * 60 * 1000,  // 90 days for main fiber
+      mstTerminals_sprout_v2: 30 * 24 * 60 * 60 * 1000, // 30 days for terminals
+      mstFiber_sprout_v2: 90 * 24 * 60 * 60 * 1000,   // 90 days for MST fiber
+      closures_sprout_v2: 30 * 24 * 60 * 60 * 1000,   // 30 days for closures
+      splitters_sprout_v2: 30 * 24 * 60 * 60 * 1000,  // 30 days for splitters
+      slackLoops_sprout_v2: 30 * 24 * 60 * 60 * 1000, // 30 days for slack loops
+      nodeSites_sprout_v2: 90 * 24 * 60 * 60 * 1000,  // 90 days for node sites
+      sproutHuts_v2: 90 * 24 * 60 * 60 * 1000         // 90 days for Sprout Huts
     };
   }
 

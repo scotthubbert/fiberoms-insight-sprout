@@ -7,6 +7,7 @@ import { WidgetController } from '../services/WidgetController.js';
 // RainViewerService will be lazy-loaded
 import { subscriberDataService, pollingManager } from '../dataService.js';
 import { getLayerConfig } from '../config/layerConfigs.js';
+import { API_CONFIG } from '../config/apiConfig.js';
 import { getCurrentServiceArea, getServiceAreaBounds, getSearchSettings } from '../config/searchConfig.js';
 // geotabService will be lazy-loaded
 // CSVExportService will be lazy-loaded on demand (desktop-only feature)
@@ -266,6 +267,22 @@ export class Application {
                     loadingIndicator.showError('node-sites', 'Node Sites', 'Failed to create layer');
                 }
             }
+
+            // Sprout Huts Layer
+            const sproutHutsConfig = getLayerConfig('sproutHuts');
+            if (sproutHutsConfig) {
+                loadingIndicator.showLoading('sprout-huts', 'Sprout Huts');
+                const result = await this.createLayerFromConfig(sproutHutsConfig);
+                if (result && result.layer) {
+                    result.layer.visible = sproutHutsConfig.visible;
+                    this.services.mapController.addLayer(result.layer, sproutHutsConfig.zOrder);
+                    if (result.fromCache) loadingIndicator.showCached('sprout-huts', 'Sprout Huts');
+                    else loadingIndicator.showNetwork('sprout-huts', 'Sprout Huts');
+                } else {
+                    loadingIndicator.showError('sprout-huts', 'Sprout Huts', 'Failed to create layer');
+                }
+            }
+
             // Parallelize infrastructure layer loading
             await Promise.all([
                 this.initializeFiberPlantLayers(),
@@ -282,11 +299,12 @@ export class Application {
             const fiberPlantLayers = [
                 { key: 'fsaBoundaries', name: 'FSA Boundaries' },
                 { key: 'mainLineFiber', name: 'Main Line Fiber' },
-                { key: 'mainLineOld', name: 'Main Line Old' },
+                // { key: 'mainLineOld', name: 'Main Line Old' }, // Removed for Sprout Fiber
                 { key: 'mstTerminals', name: 'MST Terminals' },
                 { key: 'mstFiber', name: 'MST Fiber' },
                 { key: 'splitters', name: 'Splitters' },
-                { key: 'closures', name: 'Closures' }
+                { key: 'closures', name: 'Closures' },
+                { key: 'slackLoops', name: 'Slack Loops' }
             ];
             // Show loading indicators for all layers upfront
             for (const layerInfo of fiberPlantLayers) {
@@ -1015,6 +1033,42 @@ export class Application {
         if (!element || typeof checked !== 'boolean') { log.warn('Invalid layer toggle parameters'); return; }
         const layerId = this.getLayerIdFromElement(element);
 
+        // Debug logging for OSP layer troubleshooting
+        if (layerId) {
+            console.log(`[OSP Debug] 🔄 Toggling layer: ${layerId}, State: ${checked ? 'ON' : 'OFF'}`);
+            const config = getLayerConfig(layerId);
+            if (config) {
+                console.log(`[OSP Debug] 📋 Configuration for ${layerId}:`, {
+                    id: config.id,
+                    title: config.title,
+                    dataSource: config.dataSource,
+                    visible: config.visible,
+                    dataServiceMethod: config.dataServiceMethod ? 'Function exists' : 'Missing'
+                });
+                // Log the actual URL being used
+                if (config.dataServiceMethod) {
+                    try {
+                        // Check if it's an infrastructure service method
+                        const serviceName = config.dataServiceMethod.toString();
+                        if (serviceName.includes('getFSABoundaries')) {
+                            console.log(`[OSP Debug] 🔗 FSA Boundaries URL: ${API_CONFIG.INFRASTRUCTURE.FSA_BOUNDARIES}`);
+                        } else if (serviceName.includes('getMainLineFiber')) {
+                            console.log(`[OSP Debug] 🔗 Main Line Fiber URL: ${API_CONFIG.INFRASTRUCTURE.MAIN_LINE_FIBER}`);
+                        } else if (serviceName.includes('getMSTTerminals')) {
+                            console.log(`[OSP Debug] 🔗 MST Terminals URL: ${API_CONFIG.INFRASTRUCTURE.MST_TERMINALS}`);
+                        } else if (serviceName.includes('getMSTFiber')) {
+                            console.log(`[OSP Debug] 🔗 MST Fiber URL: ${API_CONFIG.INFRASTRUCTURE.MST_FIBER}`);
+                        }
+                    } catch (e) {
+                        console.warn(`[OSP Debug] Could not determine URL:`, e);
+                    }
+                }
+            } else {
+                console.warn(`[OSP Debug] ⚠️ No configuration found for layerId: ${layerId}`);
+                console.log(`[OSP Debug] Available config keys:`, Object.keys(layerConfigs));
+            }
+        }
+
         // Handle business filter separately (not a layer, but a filter on existing layers)
         if (layerId === 'business-internet-filter') {
             // Prevent re-entrancy during sync
@@ -1144,7 +1198,7 @@ export class Application {
         let labelText = '';
         if (listItem) labelText = listItem.getAttribute('label'); else if (label) labelText = label.textContent.trim();
         const mapping = {
-            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'node-sites', 'Weather Radar': 'rainviewer-radar', 'APCo Power Outages': 'apco-outages', 'Tombigbee Power Outages': 'tombigbee-outages', 'FSA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'MST Fiber': 'mst-fiber', 'Splitters': 'splitters', 'Closures': 'closures', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
+            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'node-sites', 'Weather Radar': 'rainviewer-radar', 'APCo Power Outages': 'apco-outages', 'Tombigbee Power Outages': 'tombigbee-outages', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'MST Fiber': 'mst-fiber', 'Splitters': 'splitters', 'Closures': 'closures', 'Slack Loops': 'slack-loops', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
         };
         return mapping[labelText] || null;
     }
@@ -1156,7 +1210,7 @@ export class Application {
 
     syncToggleStates(layerId, checked) {
         const labelMapping = {
-            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'node-sites': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'apco-outages': 'APCo Power Outages', 'tombigbee-outages': 'Tombigbee Power Outages', 'fsa-boundaries': 'FSA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'mst-fiber': 'MST Fiber', 'splitters': 'Splitters', 'closures': 'Closures', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
+            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'node-sites': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'apco-outages': 'APCo Power Outages', 'tombigbee-outages': 'Tombigbee Power Outages', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'mst-fiber': 'MST Fiber', 'splitters': 'Splitters', 'closures': 'Closures', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
         };
         if (layerId === 'apco-outages') {
             const apcoSwitches = document.querySelectorAll('.apco-toggle, #toggle-apco-outages');
