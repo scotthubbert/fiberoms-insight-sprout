@@ -109,7 +109,8 @@ async function initializeAuthenticatedApp() {
     { setupCalciteIconFallback },
     { setAssetPath },
     { Application },
-    { initSentryIfEnabled, captureError: sentryCaptureError },
+    { initSentryIfEnabled, captureError: sentryCaptureError, identifyUser: sentryIdentifyUser },
+    { initAnalytics, identifyUser: analyticsIdentifyUser, resetUser: analyticsResetUser },
     _powerOutageStats  // Import but don't need the export
   ] = await Promise.all([
     // Core services
@@ -122,6 +123,7 @@ async function initializeAuthenticatedApp() {
     import('@esri/calcite-components/dist/components'),
     import('./core/Application.js'),
     import('./services/SentryService.js'),
+    import('./services/AnalyticsService.js'),
     import('./components/PowerOutageStats.js'),
     // CalciteUI core (mobile + shared)
     import('@esri/calcite-components/dist/components/calcite-shell'),
@@ -228,12 +230,36 @@ async function initializeAuthenticatedApp() {
   // Setup icon fallback handling
   setupCalciteIconFallback();
 
-  // Initialize Sentry if enabled
+  // Initialize Sentry if enabled (for error tracking)
   initSentryIfEnabled().then((enabled) => {
     if (enabled) {
       ImportedErrorService.subscribe((evt) => {
         if (evt.type === 'error' && evt.error) sentryCaptureError(evt.error, evt.context);
       });
+      
+      // Identify user for Sentry error tracking
+      const user = authService.getUser();
+      if (user) {
+        sentryIdentifyUser(user.id, {
+          email: user.primaryEmailAddress?.emailAddress,
+          username: user.username || user.firstName || 'unknown'
+        });
+      }
+    }
+  });
+
+  // Initialize PostHog analytics (for user behavior tracking)
+  initAnalytics().then((enabled) => {
+    if (enabled) {
+      // Identify user for analytics
+      const user = authService.getUser();
+      if (user) {
+        analyticsIdentifyUser(user.id, {
+          email: user.primaryEmailAddress?.emailAddress,
+          username: user.username || user.firstName || 'unknown',
+          name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim()
+        });
+      }
     }
   });
 
@@ -288,6 +314,12 @@ function setupSignOutButton() {
     signOutButton.addEventListener('click', async () => {
       try {
         log.info('🚪 User initiated sign-out');
+        
+        // Track sign-out event and reset analytics
+        const { trackEvent, resetUser } = await import('./services/AnalyticsService.js');
+        trackEvent('user_signed_out');
+        resetUser(); // Reset PostHog user identification
+        
         await authService.signOut();
       } catch (error) {
         log.error('❌ Sign-out failed:', error);

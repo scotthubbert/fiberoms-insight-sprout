@@ -2,6 +2,7 @@
 
 import { subscriberDataService } from '../dataService.js';
 import { createLogger } from '../utils/logger.js';
+import { trackSearch } from '../services/AnalyticsService.js';
 
 // Initialize logger for this module
 const log = createLogger('HeaderSearch');
@@ -133,9 +134,24 @@ export class HeaderSearch {
             const targetInput = source === 'desktop' ? this.desktopSearchInput : this.searchInput;
             this.setSearchLoading(true, targetInput);
             const searchResult = await subscriberDataService.searchSubscribers(searchTerm);
+            
+            // Track search event
+            trackSearch(searchTerm, searchResult.results?.length || 0, {
+                source,
+                has_results: (searchResult.results?.length || 0) > 0
+            });
+            
             this.updateSearchResults(searchResult, targetInput);
         } catch (error) {
             log.error('Search failed:', error);
+            
+            // Track failed search
+            trackSearch(searchTerm, 0, {
+                source,
+                has_results: false,
+                error: error.message
+            });
+            
             this.showSearchError(source === 'desktop' ? this.desktopSearchInput : this.searchInput);
         } finally {
             this.setSearchLoading(false, source === 'desktop' ? this.desktopSearchInput : this.searchInput);

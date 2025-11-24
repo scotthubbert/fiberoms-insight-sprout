@@ -1190,6 +1190,13 @@ export class Application {
         const originalText = button.textContent;
         const originalIcon = button.getAttribute('icon-start');
         try {
+            // Track export initiation
+            const { trackExport, trackClick } = await import('../services/AnalyticsService.js');
+            trackClick(`export-${exportType}-csv`, {
+                section: 'dashboard',
+                export_type: exportType
+            });
+            
             button.setAttribute('loading', 'true');
             button.textContent = 'Preparing Download...';
             button.setAttribute('icon-start', 'loading');
@@ -1198,9 +1205,24 @@ export class Application {
             // Lazy-load CSV export service only when needed (desktop-only feature)
             const { CSVExportService } = await import('../utils/csvExport.js');
 
-            if (exportType === 'all') await CSVExportService.exportAllSubscribers();
-            else if (exportType === 'ta5k-reports') await CSVExportService.exportTA5KNodeReports();
-            else await CSVExportService.exportOfflineSubscribers();
+            let itemCount = 0;
+            if (exportType === 'all') {
+                const data = await subscriberDataService.getAllSubscribers();
+                itemCount = data?.length || 0;
+                await CSVExportService.exportAllSubscribers();
+            } else if (exportType === 'ta5k-reports') {
+                await CSVExportService.exportTA5KNodeReports();
+            } else {
+                const data = await subscriberDataService.getOfflineSubscribers();
+                itemCount = data?.length || 0;
+                await CSVExportService.exportOfflineSubscribers();
+            }
+            
+            // Track successful export
+            trackExport(exportType, {
+                item_count: itemCount,
+                success: true
+            });
             button.removeAttribute('loading');
             button.setAttribute('icon-start', 'check');
             button.textContent = 'Download Complete!';
@@ -1211,6 +1233,14 @@ export class Application {
             setTimeout(() => { this.resetCSVButton(button, originalText, originalIcon); }, 3000);
         } catch (error) {
             log.error('CSV download failed:', error);
+            
+            // Track failed export
+            const { trackExport } = await import('../services/AnalyticsService.js');
+            trackExport(exportType, {
+                success: false,
+                error: error.message
+            });
+            
             button.removeAttribute('loading');
             button.setAttribute('icon-start', 'exclamation-mark-triangle');
             button.textContent = 'Download Failed';

@@ -1,6 +1,8 @@
 // LayerPanel.js - Manages left shell panel navigation and content
 import { createLogger } from '../utils/logger.js';
 import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
+import { trackClick as trackClickSentry } from '../services/SentryService.js';
+import { trackClick, trackFeatureUsage } from '../services/AnalyticsService.js';
 
 // Initialize logger for this module
 const log = createLogger('LayerPanel');
@@ -104,6 +106,21 @@ export class LayerPanel {
                 const contentName = contentMap[actionId];
 
                 if (contentName) {
+                    // Track navigation click (both Sentry and PostHog)
+                    trackClickSentry(actionId, {
+                        section: 'navigation',
+                        content: contentName,
+                        actionText: action.text || ''
+                    });
+                    trackClick(actionId, {
+                        section: 'navigation',
+                        content: contentName,
+                        action_text: action.text || ''
+                    });
+                    trackFeatureUsage(`navigation_${contentName}`, {
+                        action_id: actionId
+                    });
+
                     // Update all action states
                     this.actions.forEach(a => a.active = false);
                     action.active = true;

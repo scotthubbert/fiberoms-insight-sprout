@@ -430,6 +430,12 @@ export class LayerManager {
             return false;
         }
 
+        // Track layer toggle
+        const { trackLayerToggle } = await import('../services/AnalyticsService.js');
+        trackLayerToggle(layerId, visible, {
+            layer_type: layer.type || 'unknown'
+        });
+
         // Set visibility on our stored layer reference
         layer.visible = visible;
         layer.listMode = visible ? 'show' : 'hide';
