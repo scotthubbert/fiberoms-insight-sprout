@@ -36,6 +36,12 @@ export class InfrastructureService {
         return this.cache.get(versionedKey);
     }
 
+    clearCache() {
+        this.cache.clear();
+        this.cacheExpiry.clear();
+        log.info('InfrastructureService memory cache cleared');
+    }
+
     // Generic OSP data fetcher with persistent caching
     async fetchOSPData(url, cacheKey, memoryKey, description) {
         // Check IndexedDB cache first
