@@ -411,14 +411,14 @@ export class MapController {
             'main-line-fiber': 30,
             'mst-fiber': 35,
             'closures': 40,
-            'node-sites': 40,
             'mst-terminals': 50,
             'apco-outages': 51,
-            'tombigbee-outages': 51,
+            'cullman-outages': 51,
             'splitters': 60,
             'offline-subscribers': 100,
             'fiber-outages': 120,
             'vehicles': 130,
+            'sprout-huts': 125, // Above vehicles and most other layers, below weather radar
             'weather-radar': 140
         };
         return zOrderMap[layerId] || 0;

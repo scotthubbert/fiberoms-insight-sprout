@@ -45,18 +45,18 @@ export class PowerOutageStatsComponent extends HTMLElement {
         super();
         this.outagesData = {
             apco: [],
-            tombigbee: []
+            cullman: []
         };
         this.isVisible = false;
         this.isInitialLoad = true;
         this.lastKnownCounts = {
             apco: null,
-            tombigbee: null
+            cullman: null
         };
         // Track individual outages by ID for specific notifications
         this.lastKnownOutages = {
             apco: new Set(),
-            tombigbee: new Set()
+            cullman: new Set()
         };
     }
 
@@ -86,14 +86,14 @@ export class PowerOutageStatsComponent extends HTMLElement {
     setupEventListeners() {
         // Listen for layer visibility changes
         document.addEventListener('layerVisibilityChanged', (event) => {
-            if (event.detail.layerId === 'apco-outages' || event.detail.layerId === 'tombigbee-outages') {
+            if (event.detail.layerId === 'apco-outages' || event.detail.layerId === 'cullman-outages') {
                 this.updateStats();
             }
         });
 
         // Listen for layer data updates (when polling updates the layers)
         document.addEventListener('layerDataUpdated', (event) => {
-            if (event.detail.layerId === 'apco-outages' || event.detail.layerId === 'tombigbee-outages') {
+            if (event.detail.layerId === 'apco-outages' || event.detail.layerId === 'cullman-outages') {
                 this.updateStats();
             }
         });
@@ -115,21 +115,21 @@ export class PowerOutageStatsComponent extends HTMLElement {
             // Get data from existing layers instead of fetching directly
             const layerManager = window.app?.services?.layerManager;
             let apcoData = { data: [] };
-            let tombigbeeData = { data: [] };
+            let cullmanData = { data: [] };
 
             if (layerManager) {
                 // Try to get data from existing layers first
                 const apcoLayer = layerManager.getLayer('apco-outages');
-                const tombigbeeLayer = layerManager.getLayer('tombigbee-outages');
+                const cullmanLayer = layerManager.getLayer('cullman-outages');
 
-                log.info(`🔌 Layer manager found. APCo layer: ${!!apcoLayer}, Tombigbee layer: ${!!tombigbeeLayer}`);
+                log.info(`🔌 Layer manager found. APCo layer: ${!!apcoLayer}, Cullman layer: ${!!cullmanLayer}`);
 
                 if (apcoLayer) {
                     log.info(`🔌 APCo layer details: graphics=${!!apcoLayer.graphics}, graphics.items=${apcoLayer.graphics?.items?.length || 'none'}`);
                 }
 
-                if (tombigbeeLayer) {
-                    log.info(`🔌 Tombigbee layer details: graphics=${!!tombigbeeLayer.graphics}, graphics.items=${tombigbeeLayer.graphics?.items?.length || 'none'}`);
+                if (cullmanLayer) {
+                    log.info(`🔌 Cullman layer details: graphics=${!!cullmanLayer.graphics}, graphics.items=${cullmanLayer.graphics?.items?.length || 'none'}`);
                 }
 
                 if (apcoLayer && apcoLayer.graphics && apcoLayer.graphics.items) {
@@ -175,11 +175,11 @@ export class PowerOutageStatsComponent extends HTMLElement {
                     log.info(`🔌 APCo deduplication: ${apcoLayer.graphics.items.length} graphics → ${apcoData.data.length} unique outages`);
                 }
 
-                if (tombigbeeLayer && tombigbeeLayer.graphics && tombigbeeLayer.graphics.items) {
+                if (cullmanLayer && cullmanLayer.graphics && cullmanLayer.graphics.items) {
                     // Extract data from layer graphics and deduplicate by outage_id
                     const outageMap = new Map();
 
-                    tombigbeeLayer.graphics.items.forEach(graphic => {
+                    cullmanLayer.graphics.items.forEach(graphic => {
                         const attributes = graphic.attributes || {};
                         const geometry = graphic.geometry;
 
@@ -214,44 +214,44 @@ export class PowerOutageStatsComponent extends HTMLElement {
                     });
 
                     // Convert map values to array
-                    tombigbeeData.data = Array.from(outageMap.values());
-                    log.info(`🔌 Tombigbee deduplication: ${tombigbeeLayer.graphics.items.length} graphics → ${tombigbeeData.data.length} unique outages`);
+                    cullmanData.data = Array.from(outageMap.values());
+                    log.info(`🔌 Cullman deduplication: ${cullmanLayer.graphics.items.length} graphics → ${cullmanData.data.length} unique outages`);
                 }
 
                 // If no layer data available, fall back to direct fetch (only during initialization)
-                if ((!apcoData.data || apcoData.data.length === 0) && (!tombigbeeData.data || tombigbeeData.data.length === 0)) {
+                if ((!apcoData.data || apcoData.data.length === 0) && (!cullmanData.data || cullmanData.data.length === 0)) {
                     log.info('🔌 No layer data available, fetching directly (initialization only)');
-                    log.info(`🔌 APCo layer data: ${apcoData.data?.length || 0} items, Tombigbee layer data: ${tombigbeeData.data?.length || 0} items`);
-                    const [fetchedApcoData, fetchedTombigbeeData] = await Promise.all([
+                    log.info(`🔌 APCo layer data: ${apcoData.data?.length || 0} items, Cullman layer data: ${cullmanData.data?.length || 0} items`);
+                    const [fetchedApcoData, fetchedCullmanData] = await Promise.all([
                         outageService.getApcoOutages(),
-                        outageService.getTombigbeeOutages()
+                        outageService.getCullmanOutages()
                     ]);
                     apcoData = fetchedApcoData;
-                    tombigbeeData = fetchedTombigbeeData;
+                    cullmanData = fetchedCullmanData;
                 } else {
-                    log.info(`🔌 Using layer data - APCo: ${apcoData.data?.length || 0} outages (deduplicated), Tombigbee: ${tombigbeeData.data?.length || 0} outages (deduplicated)`);
+                    log.info(`🔌 Using layer data - APCo: ${apcoData.data?.length || 0} outages (deduplicated), Cullman: ${cullmanData.data?.length || 0} outages (deduplicated)`);
                 }
             } else {
                 // Fallback for when layer manager is not available (early initialization)
                 log.info('🔌 Layer manager not available, fetching directly (early initialization)');
-                const [fetchedApcoData, fetchedTombigbeeData] = await Promise.all([
+                const [fetchedApcoData, fetchedCullmanData] = await Promise.all([
                     outageService.getApcoOutages(),
-                    outageService.getTombigbeeOutages()
+                    outageService.getCullmanOutages()
                 ]);
                 apcoData = fetchedApcoData;
-                tombigbeeData = fetchedTombigbeeData;
+                cullmanData = fetchedCullmanData;
             }
 
             this.outagesData.apco = apcoData.data || [];
-            this.outagesData.tombigbee = tombigbeeData.data || [];
+            this.outagesData.cullman = cullmanData.data || [];
 
             // Get current counts
             const currentApcoCount = this.outagesData.apco.length;
-            const currentTombigbeeCount = this.outagesData.tombigbee.length;
+            const currentCullmanCount = this.outagesData.cullman.length;
 
             // Track individual outages for specific notifications
             const currentApcoOutages = new Set(this.outagesData.apco.map(o => o.outage_id).filter(id => id));
-            const currentTombigbeeOutages = new Set(this.outagesData.tombigbee.map(o => o.outage_id).filter(id => id));
+            const currentCullmanOutages = new Set(this.outagesData.cullman.map(o => o.outage_id).filter(id => id));
 
             // Show notification for specific outage changes (new/removed outages only)
             if (!skipNotification && !this.isInitialLoad) {
@@ -263,18 +263,18 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 );
 
                 this.checkAndNotifyOutageChanges(
-                    'Tombigbee',
-                    this.lastKnownOutages.tombigbee,
-                    currentTombigbeeOutages,
-                    this.outagesData.tombigbee
+                    'Cullman',
+                    this.lastKnownOutages.cullman,
+                    currentCullmanOutages,
+                    this.outagesData.cullman
                 );
             }
 
             // Update stored counts and outage sets
             this.lastKnownCounts.apco = currentApcoCount;
-            this.lastKnownCounts.tombigbee = currentTombigbeeCount;
+            this.lastKnownCounts.cullman = currentCullmanCount;
             this.lastKnownOutages.apco = new Set(currentApcoOutages);
-            this.lastKnownOutages.tombigbee = new Set(currentTombigbeeOutages);
+            this.lastKnownOutages.cullman = new Set(currentCullmanOutages);
             this.isInitialLoad = false;
 
             this.renderStats();
@@ -311,10 +311,10 @@ export class PowerOutageStatsComponent extends HTMLElement {
         if (!statsContent) return;
 
         const apcoCount = this.outagesData.apco.length;
-        const tombigbeeCount = this.outagesData.tombigbee.length;
+        const cullmanCount = this.outagesData.cullman.length;
 
         const apcoCustomers = this.outagesData.apco.reduce((sum, outage) => sum + (outage.customers_affected || 0), 0);
-        const tombigbeeCustomers = this.outagesData.tombigbee.reduce((sum, outage) => sum + (outage.customers_affected || 0), 0);
+        const cullmanCustomers = this.outagesData.cullman.reduce((sum, outage) => sum + (outage.customers_affected || 0), 0);
 
         const currentTime = new Date().toLocaleTimeString('en-US', {
             hour: 'numeric',
@@ -325,21 +325,21 @@ export class PowerOutageStatsComponent extends HTMLElement {
         // Combine all outages, filter out resolved outages (0 customers), and sort by customer count (highest first)
         const allOutages = [
             ...this.outagesData.apco.map(o => ({ ...o, company: 'APCo' })),
-            ...this.outagesData.tombigbee.map(o => ({ ...o, company: 'Tombigbee' }))
+            ...this.outagesData.cullman.map(o => ({ ...o, company: 'Cullman' }))
         ]
             .filter(outage => (outage.customers_affected || 0) > 0) // Filter out resolved outages
             .sort((a, b) => (b.customers_affected || 0) - (a.customers_affected || 0));
 
         // Count filtered outages for display purposes
         const filteredApcoCount = this.outagesData.apco.filter(o => (o.customers_affected || 0) === 0).length;
-        const filteredTombigbeeCount = this.outagesData.tombigbee.filter(o => (o.customers_affected || 0) === 0).length;
-        const totalFiltered = filteredApcoCount + filteredTombigbeeCount;
+        const filteredCullmanCount = this.outagesData.cullman.filter(o => (o.customers_affected || 0) === 0).length;
+        const totalFiltered = filteredApcoCount + filteredCullmanCount;
 
         statsContent.innerHTML = `
             <!-- Static Summary Section -->
             <div class="power-stats-summary" style="margin-bottom: 16px; flex-shrink: 0;">
                 ${this.renderCompanySummary('APCo', apcoCount, apcoCustomers)}
-                ${this.renderCompanySummary('Tombigbee', tombigbeeCount, tombigbeeCustomers)}
+                ${this.renderCompanySummary('Cullman', cullmanCount, cullmanCustomers)}
                 <div style="text-align: center; font-size: 11px; color: var(--calcite-color-text-3); margin-top: 8px;">
                     Last updated: ${currentTime}
                 </div>
@@ -376,7 +376,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
     /**
      * Render company summary section with toggle controls
      * Mobile-optimized with proper touch targets (44px minimum)
-     * @param {string} company - Company identifier ('APCo' or 'Tombigbee')
+     * @param {string} company - Company identifier ('APCo' or 'Cullman')
      * @param {number} outageCount - Number of outages
      * @param {number} customerCount - Number of affected customers
      * @returns {string} HTML template for company summary
@@ -384,9 +384,9 @@ export class PowerOutageStatsComponent extends HTMLElement {
      */
     renderCompanySummary(company, outageCount, customerCount) {
         const bgColor = company === 'APCo' ? 'rgba(30, 95, 175, 0.1)' : 'rgba(74, 124, 89, 0.1)';
-        const layerId = company === 'APCo' ? 'apco-outages' : 'tombigbee-outages';
-        const logoPath = company === 'APCo' ? '/apco-logo.png' : '/tombigbee-logo.png';
-        const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Tombigbee Electric';
+        const layerId = company === 'APCo' ? 'apco-outages' : 'cullman-outages';
+        const logoPath = company === 'APCo' ? '/apco-logo.png' : 'https://cullmanec.com/sites/default/files/cullman_logo_black.png';
+        const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Cullman Electric';
 
         // Get the current visibility state of the layer
         let isChecked = true;
@@ -435,8 +435,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
      * @private
      */
     renderCalciteOutageItem(outage) {
-        const logoPath = outage.company === 'APCo' ? '/apco-logo.png' : '/tombigbee-logo.png';
-        const companyFullName = outage.company === 'APCo' ? 'Alabama Power' : 'Tombigbee Electric';
+        const logoPath = outage.company === 'APCo' ? '/apco-logo.png' : 'https://cullmanec.com/sites/default/files/cullman_logo_black.png';
+        const companyFullName = outage.company === 'APCo' ? 'Alabama Power' : 'Cullman Electric';
 
         return `
             <calcite-list-item
@@ -574,7 +574,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }
 
         try {
-            // Use consistent zoom level 15 for both APCo and Tombigbee outages
+            // Use consistent zoom level 15 for both APCo and Cullman outages
             await window.mapView.goTo({
                 center: [lng, lat],
                 zoom: 15
@@ -588,7 +588,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
             };
 
             const apcoLayer = window.app?.services?.layerManager?.getLayer('apco-outages');
-            const tombigbeeLayer = window.app?.services?.layerManager?.getLayer('tombigbee-outages');
+            const cullmanLayer = window.app?.services?.layerManager?.getLayer('cullman-outages');
 
             let targetLayer = null;
             let targetFeatures = [];
@@ -618,18 +618,18 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 }
             }
 
-            // Fallback to Tombigbee
-            if (!targetLayer && tombigbeeLayer && tombigbeeLayer.visible) {
-                if (typeof tombigbeeLayer.queryFeatures === 'function') {
-                    const tombigbeeResults = await tombigbeeLayer.queryFeatures({ where: `outage_id = '${outageId}'`, returnGeometry: true, outFields: ['*'] });
-                    if (tombigbeeResults?.features?.length) {
-                        targetLayer = tombigbeeLayer;
-                        targetFeatures = tombigbeeResults.features;
+            // Fallback to Cullman
+            if (!targetLayer && cullmanLayer && cullmanLayer.visible) {
+                if (typeof cullmanLayer.queryFeatures === 'function') {
+                    const cullmanResults = await cullmanLayer.queryFeatures({ where: `outage_id = '${outageId}'`, returnGeometry: true, outFields: ['*'] });
+                    if (cullmanResults?.features?.length) {
+                        targetLayer = cullmanLayer;
+                        targetFeatures = cullmanResults.features;
                     }
                 } else {
-                    const matches = collectMatchingGraphics(tombigbeeLayer);
+                    const matches = collectMatchingGraphics(cullmanLayer);
                     if (matches.length) {
-                        targetLayer = tombigbeeLayer;
+                        targetLayer = cullmanLayer;
                         targetFeatures = matches;
                     }
                 }
@@ -649,7 +649,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
     /**
      * Check for specific outage changes and notify users
      * Only notifies for new outages or resolved outages
-     * @param {string} company - Company name ('APCo' or 'Tombigbee')
+     * @param {string} company - Company name ('APCo' or 'Cullman')
      * @param {Set} previousOutages - Set of previous outage IDs
      * @param {Set} currentOutages - Set of current outage IDs
      * @param {Array} currentOutageData - Array of current outage objects
@@ -671,7 +671,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
     /**
      * Show specific notification for new or resolved outages
      * Production-ready user feedback system with detailed outage information
-     * @param {string} company - Company name ('APCo' or 'Tombigbee')
+     * @param {string} company - Company name ('APCo' or 'Cullman')
      * @param {Array} newOutages - Array of new outage IDs
      * @param {Array} resolvedOutages - Array of resolved outage IDs
      * @param {Array} currentOutageData - Array of current outage objects
@@ -684,7 +684,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
             existingNotice.remove();
         }
 
-        const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Tombigbee Electric';
+        const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Cullman Electric';
         let title = '';
         let message = '';
         let kind = 'info';
@@ -796,12 +796,12 @@ export class PowerOutageStatsComponent extends HTMLElement {
      * Production-ready user feedback system
      * @param {number} prevApco - Previous APCo outage count
      * @param {number} currApco - Current APCo outage count
-     * @param {number} prevTombigbee - Previous Tombigbee outage count
-     * @param {number} currTombigbee - Current Tombigbee outage count
+     * @param {number} prevCullman - Previous Cullman outage count
+     * @param {number} currCullman - Current Cullman outage count
      * @private
      * @deprecated Use checkAndNotifyOutageChanges instead for specific outage tracking
      */
-    showUpdateToast(prevApco, currApco, prevTombigbee, currTombigbee) {
+    showUpdateToast(prevApco, currApco, prevCullman, currCullman) {
         // Skip on mobile devices
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
             console.log('📱 Mobile outage notification skipped');
@@ -816,7 +816,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
 
         // Determine what changed
         const apcoChange = currApco - prevApco;
-        const tombigbeeChange = currTombigbee - prevTombigbee;
+        const cullmanChange = currCullman - prevCullman;
 
         let message = 'Power outage data updated: ';
         const changes = [];
@@ -826,9 +826,9 @@ export class PowerOutageStatsComponent extends HTMLElement {
             changes.push(`APCo ${changeText}`);
         }
 
-        if (tombigbeeChange !== 0) {
-            const changeText = tombigbeeChange > 0 ? `+${tombigbeeChange}` : `${tombigbeeChange}`;
-            changes.push(`Tombigbee ${changeText}`);
+        if (cullmanChange !== 0) {
+            const changeText = cullmanChange > 0 ? `+${cullmanChange}` : `${cullmanChange}`;
+            changes.push(`Cullman ${changeText}`);
         }
 
         if (changes.length === 0) {
@@ -844,7 +844,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
         const notice = document.createElement('calcite-notice');
         notice.id = 'outage-update-notice';
         notice.setAttribute('open', '');
-        notice.setAttribute('kind', apcoChange > 0 || tombigbeeChange > 0 ? 'warning' : 'success');
+        notice.setAttribute('kind', apcoChange > 0 || cullmanChange > 0 ? 'warning' : 'success');
         notice.setAttribute('closable', '');
         notice.setAttribute('icon', 'flash');
         notice.setAttribute('width', 'auto');

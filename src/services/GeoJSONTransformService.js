@@ -61,7 +61,7 @@ export class GeoJSONTransformService {
     /**
      * Convert power outage data to GeoJSON features with polygon support
      * @param {Array} data - Outage data
-     * @param {string} company - Company name (apco or tombigbee)
+     * @param {string} company - Company name (apco or cullman)
      * @param {Array} originalFeatures - Original GeoJSON features to preserve geometry
      * @returns {Array} Array of GeoJSON features
      */

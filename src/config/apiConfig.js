@@ -12,21 +12,19 @@ export const API_CONFIG = {
         MST_TERMINALS: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/sprout_plant//SFI_MST.geojson',
         // Splitters
         SPLITTERS: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/sprout_plant//SFI_Splitters.geojson',
-        // Closures
-        CLOSURES: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/sprout_plant//SFI_Closures.geojson',
+        // Closures - Mapped to Slack Loops data as requested
+        CLOSURES: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/sprout_plant/SFI_Slackloops.geojson',
         // Slack Loops (New)
         SLACK_LOOPS: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/sprout_plant//SFI_Slackloops.geojson',
-        
+
         // FSA / DA Boundaries
         FSA_BOUNDARIES: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/sprout_plant/SFI_DABoundaries.geojson',
-        
+
         // Legacy / Placeholder Data (Commented out to prevent Freedom Fiber data from loading)
-        // NODE_SITES: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/node-sites.geojson?token=...',
         // MAIN_LINE_OLD: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/fsa-data//networkOLD.geojson',
         // MST_FIBER: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/mst-fiber-overlay.geojson?token=...'
-        
+
         // Set to null/empty to prevent loading invalid data
-        NODE_SITES: null,
         MAIN_LINE_OLD: null,
         MST_FIBER: null
     },
@@ -38,8 +36,8 @@ export const API_CONFIG = {
         // APCO: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/outages.geojson',
         // Tombigbee Electric - Only relevant for Freedom Fiber area?
         // TOMBIGBEE: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/tec_outages.geojson'
-        
+
         APCO: null,
-        TOMBIGBEE: null
+        CULLMAN: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/cec_power_outages/outages/cullman_outages.geojson'
     }
 };

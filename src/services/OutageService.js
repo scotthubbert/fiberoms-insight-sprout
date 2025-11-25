@@ -128,6 +128,7 @@ export class OutageService {
                 data: [],
                 features: [],
                 lastUpdated: new Date().toISOString(),
+                fromCache: false,
                 error: true,
                 errorMessage: error.message,
                 fromCache: false
@@ -135,12 +136,12 @@ export class OutageService {
         }
     }
 
-    // Get Tombigbee power outages from Supabase storage - REALTIME (no caching)
-    async getTombigbeeOutages() {
+    // Get Cullman Electric power outages from Supabase storage - REALTIME (no caching)
+    async getCullmanOutages() {
         try {
             // Check if URL is configured
-            if (!API_CONFIG.OUTAGES.TOMBIGBEE) {
-                log.warn('⚠️ Tombigbee outages URL not configured, returning empty result');
+            if (!API_CONFIG.OUTAGES.CULLMAN) {
+                log.warn('⚠️ Cullman outages URL not configured, returning empty result');
                 return {
                     count: 0,
                     data: [],
@@ -150,22 +151,22 @@ export class OutageService {
                 };
             }
 
-            log.info('📡 Fetching Tombigbee Electric power outages from Supabase storage... (realtime - no cache)');
+            log.info('📡 Fetching Cullman Electric power outages from Supabase storage... (realtime - no cache)');
 
             let geojsonData;
 
             // Direct fetch from Supabase public URL
-            const response = await fetch(API_CONFIG.OUTAGES.TOMBIGBEE);
+            const response = await fetch(API_CONFIG.OUTAGES.CULLMAN);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             geojsonData = await response.json();
-            log.info('✅ Loaded Tombigbee outages from Supabase public URL');
+            log.info('✅ Loaded Cullman outages from Supabase public URL');
 
-            // Extract features and properties - handle Tombigbee direct format (not Kubra)
+            // Extract features and properties - handle Cullman direct format (CEC)
             const features = geojsonData.features || [];
             const outageData = features.map(feature => {
-                const props = feature.properties;
+                const props = feature.properties || {};
 
                 // Extract coordinates based on geometry type
                 let latitude, longitude;
@@ -185,20 +186,20 @@ export class OutageService {
                 }
 
                 // Determine crew status
-                let crewStatus = 'Reported';
-                if (props.crew_dispatched === true) {
+                let crewStatus = props.status || 'Reported';
+                if (props.crew_assigned === true) {
                     crewStatus = 'Dispatched';
                 } else if (props.verified === true) {
                     crewStatus = 'Verified';
                 }
 
                 // Get outage cause
-                const cause = props.verified_cause || props.suspected_cause || 'Unknown';
+                const cause = props.cause || props.suspected_cause || 'Unknown';
 
                 // Calculate duration from start time
                 let duration = '';
-                if (props.outage_start) {
-                    const startTime = new Date(props.outage_start);
+                if (props.start_time) {
+                    const startTime = new Date(props.start_time);
                     const now = new Date();
                     const diffMs = now - startTime;
                     const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -216,35 +217,40 @@ export class OutageService {
                     }
                 }
 
+                // Map fields based on useOutages.ts from reference project
                 return {
-                    id: props.outage_id || props.id,
+                    id: props.outage_id,
                     outage_id: props.outage_id,
-                    customers_affected: props.customers_out_now || 0,
+                    customers_affected: parseInt(props.customers_affected || 0),
                     cause: cause,
-                    start_time: props.outage_start ? new Date(props.outage_start).getTime() : null,
-                    estimated_restore: props.outage_end ? new Date(props.outage_end).getTime() : null,
+                    start_time: props.start_time ? new Date(props.start_time).getTime() : null,
+                    estimated_restore: props.estimated_restoration ? new Date(props.estimated_restoration).getTime() : null,
                     status: crewStatus,
                     outage_status: props.status || 'N/A',
-                    area_description: props.outage_name || 'Area Outage',
+                    area_description: props.outage_id || 'Area Outage', // useOutages.ts uses outage_id as name
                     comments: crewStatus,
-                    crew_on_site: props.crew_dispatched || false,
+                    crew_on_site: props.crew_assigned || false,
                     substation: props.substation || 'N/A',
                     feeder: props.feeder || 'N/A',
                     district: props.district || 'N/A',
-                    customers_restored: props.customers_restored || 0,
-                    initially_affected: props.customers_out_initially || props.customers_out_now || 0,
-                    equipment: props.outage_name || 'N/A',
-                    description: `Outage affecting ${props.customers_out_now || 0} customers`,
+                    customers_restored: parseInt(props.customers_restored || 0),
+                    initially_affected: parseInt(props.customers_affected || 0), // Assuming similar
+                    equipment: props.troubled_element || 'N/A',
+                    description: `Outage affecting ${props.customers_affected || 0} customers`,
                     last_update: props.last_update ? new Date(props.last_update).getTime() : null,
                     duration: duration,
                     latitude: latitude,
                     longitude: longitude,
+                    crew_responsible: props.crew_responsible,
+                    verified: props.verified,
+                    upline_element: props.upline_element,
+                    outaged_phase: props.outaged_phase,
                     ...props
                 };
             });
 
             // Convert to the expected format, preserving original geometries
-            const processedFeatures = geoJSONTransformService.convertPowerOutageToGeoJSONFeatures(outageData, 'tombigbee', features);
+            const processedFeatures = geoJSONTransformService.convertPowerOutageToGeoJSONFeatures(outageData, 'cullman', features);
 
             const result = {
                 count: outageData.length,
@@ -254,11 +260,11 @@ export class OutageService {
                 fromCache: false
             };
 
-            log.info('🔌 Tombigbee outages loaded:', result.count, 'outages');
+            log.info('🔌 Cullman outages loaded:', result.count, 'outages');
             return result;
 
         } catch (error) {
-            log.error('Failed to fetch Tombigbee outages:', error);
+            log.error('Failed to fetch Cullman outages:', error);
 
             // Return empty result as fallback
             return {
@@ -266,6 +272,7 @@ export class OutageService {
                 data: [],
                 features: [],
                 lastUpdated: new Date().toISOString(),
+                fromCache: false,
                 error: true,
                 errorMessage: error.message,
                 fromCache: false

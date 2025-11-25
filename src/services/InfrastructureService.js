@@ -158,15 +158,6 @@ export class InfrastructureService {
         }
     }
 
-    async getNodeSites() {
-        return this.fetchOSPData(
-            API_CONFIG.INFRASTRUCTURE.NODE_SITES,
-            'nodeSites_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
-            'node_sites',
-            'Node Sites'
-        );
-    }
-
     async getSproutHuts() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.SPROUT_HUTS,
@@ -179,7 +170,7 @@ export class InfrastructureService {
     async getFSABoundaries() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.FSA_BOUNDARIES,
-            'fsa_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
+            'fsa_sprout_v3', // Updated cache key to force refresh with new renderer
             'fsa_boundaries',
             'FSA Boundaries'
         );
@@ -224,7 +215,7 @@ export class InfrastructureService {
     async getClosures() {
         return this.fetchOSPData(
             API_CONFIG.INFRASTRUCTURE.CLOSURES,
-            'closures_sprout_v2', // Changed cache key to force refresh from Sprout Fiber data
+            'closures_slackloops_v1', // New cache key for Slack Loops data
             'closures',
             'Closures'
         );

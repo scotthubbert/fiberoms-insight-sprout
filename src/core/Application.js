@@ -4,6 +4,7 @@ import { MapController } from '../services/MapController.js';
 import { LayerManager } from '../services/LayerManager.js';
 import { PopupManager } from '../services/PopupManager.js';
 import { WidgetController } from '../services/WidgetController.js';
+import { hoverHighlightService } from '../services/HoverHighlightService.js';
 // RainViewerService will be lazy-loaded
 import { subscriberDataService, pollingManager } from '../dataService.js';
 import { getLayerConfig } from '../config/layerConfigs.js';
@@ -197,7 +198,7 @@ export class Application {
     async initializePowerOutageLayers() {
         try {
             loadingIndicator.showLoading('apco-outages', 'APCo Power Outages');
-            loadingIndicator.showLoading('tombigbee-outages', 'Tombigbee Power Outages');
+            loadingIndicator.showLoading('cullman-outages', 'Cullman Electric');
             const apcoConfig = getLayerConfig('apcoOutages');
             if (apcoConfig) {
                 const result = await this.createLayerFromConfig(apcoConfig);
@@ -213,25 +214,25 @@ export class Application {
                     loadingIndicator.showError('apco-outages', 'APCo Power Outages', 'Failed to load data');
                 }
             }
-            const tombigbeeConfig = getLayerConfig('tombigbeeOutages');
-            if (tombigbeeConfig) {
-                const result = await this.createLayerFromConfig(tombigbeeConfig);
+            const cullmanConfig = getLayerConfig('cullmanOutages');
+            if (cullmanConfig) {
+                const result = await this.createLayerFromConfig(cullmanConfig);
                 if (result && result.success) {
                     if (result.layer) {
-                        result.layer.visible = tombigbeeConfig.visible;
-                        this.services.mapController.addLayer(result.layer, tombigbeeConfig.zOrder);
-                        loadingIndicator.showNetwork('tombigbee-outages', 'Tombigbee Power Outages');
+                        result.layer.visible = cullmanConfig.visible;
+                        this.services.mapController.addLayer(result.layer, cullmanConfig.zOrder);
+                        loadingIndicator.showNetwork('cullman-outages', 'Cullman Electric');
                     } else if (result.isEmpty) {
-                        loadingIndicator.showEmpty('tombigbee-outages', 'Tombigbee Power Outages');
+                        loadingIndicator.showEmpty('cullman-outages', 'Cullman Electric');
                     }
                 } else {
-                    loadingIndicator.showError('tombigbee-outages', 'Tombigbee Power Outages', 'Failed to load data');
+                    loadingIndicator.showError('cullman-outages', 'Cullman Electric', 'Failed to load data');
                 }
             }
         } catch (error) {
             log.error('Failed to initialize power outage layers:', error);
             loadingIndicator.showError('apco-outages', 'APCo Power Outages', 'Failed to load');
-            loadingIndicator.showError('tombigbee-outages', 'Tombigbee Power Outages', 'Failed to load');
+            loadingIndicator.showError('cullman-outages', 'Cullman Electric', 'Failed to load');
         }
     }
 
@@ -254,19 +255,7 @@ export class Application {
                     loadingIndicator.showError('county-boundaries', 'County Boundaries', 'Failed to load');
                 }
             }
-            const nodeSitesConfig = getLayerConfig('nodeSites');
-            if (nodeSitesConfig) {
-                loadingIndicator.showLoading('node-sites', 'Node Sites');
-                const result = await this.createLayerFromConfig(nodeSitesConfig);
-                if (result && result.layer) {
-                    result.layer.visible = nodeSitesConfig.visible;
-                    this.services.mapController.addLayer(result.layer, nodeSitesConfig.zOrder);
-                    if (result.fromCache) loadingIndicator.showCached('node-sites', 'Node Sites');
-                    else loadingIndicator.showNetwork('node-sites', 'Node Sites');
-                } else {
-                    loadingIndicator.showError('node-sites', 'Node Sites', 'Failed to create layer');
-                }
-            }
+            // Node Sites loading disabled to prevent errors (replaced by Sprout Huts)
 
             // Sprout Huts Layer
             const sproutHutsConfig = getLayerConfig('sproutHuts');
@@ -276,6 +265,17 @@ export class Application {
                 if (result && result.layer) {
                     result.layer.visible = sproutHutsConfig.visible;
                     this.services.mapController.addLayer(result.layer, sproutHutsConfig.zOrder);
+                    
+                    // Ensure labels are applied after layer is added to map
+                    if (result.layer.labelingInfo && result.layer.labelingInfo.length > 0) {
+                        // Labels already set, just refresh
+                        setTimeout(() => {
+                            if (result.layer.visible) {
+                                result.layer.refresh();
+                            }
+                        }, 500);
+                    }
+                    
                     if (result.fromCache) loadingIndicator.showCached('sprout-huts', 'Sprout Huts');
                     else loadingIndicator.showNetwork('sprout-huts', 'Sprout Huts');
                 } else {
@@ -286,7 +286,7 @@ export class Application {
             // Parallelize infrastructure layer loading
             await Promise.all([
                 this.initializeFiberPlantLayers(),
-                this.initializeVehicleLayers()
+                // this.initializeVehicleLayers() // Vehicles panel hidden for now
             ]);
         } catch (error) {
             log.error('Failed to initialize infrastructure layers:', error);
@@ -301,9 +301,8 @@ export class Application {
                 { key: 'mainLineFiber', name: 'Main Line Fiber' },
                 // { key: 'mainLineOld', name: 'Main Line Old' }, // Removed for Sprout Fiber
                 { key: 'mstTerminals', name: 'MST Terminals' },
-                { key: 'mstFiber', name: 'MST Fiber' },
                 { key: 'splitters', name: 'Splitters' },
-                { key: 'closures', name: 'Closures' },
+                { key: 'closures', name: 'Slack Loops' },
                 { key: 'slackLoops', name: 'Slack Loops' }
             ];
             // Show loading indicators for all layers upfront
@@ -346,6 +345,13 @@ export class Application {
                 log.info(`📦 Batch ${Math.floor(i / batchSize) + 1} complete: ${results.filter(r => r.status === 'fulfilled').length}/${batch.length} layers loaded`);
             }
             log.info('🔌 Fiber plant layers initialization complete');
+            
+            // Initialize hover highlight service after fiber layers are loaded
+            if (this.services.mapController.view) {
+                setTimeout(() => {
+                    hoverHighlightService.initialize(this.services.mapController.view);
+                }, 500); // Small delay to ensure layers are fully ready
+            }
         } catch (error) {
             log.error('Failed to initialize fiber plant layers:', error);
         }
@@ -1092,7 +1098,7 @@ export class Application {
             return;
         }
 
-        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'node-sites', 'rainviewer-radar', 'apco-outages', 'tombigbee-outages', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'mst-fiber', 'splitters', 'closures', 'electric-trucks', 'fiber-trucks']);
+        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'sprout-huts', 'rainviewer-radar', 'apco-outages', 'cullman-outages', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'splitters', 'closures', 'electric-trucks', 'fiber-trucks']);
         if (!layerId || !VALID_LAYER_IDS.has(layerId)) { log.warn(`Invalid or unsupported layer ID: ${layerId}`); return; }
         if (layerId) {
             if (layerId === 'online-subscribers' && checked && !this.onlineLayerLoaded) {
@@ -1192,13 +1198,13 @@ export class Application {
             return 'business-internet-filter';
         }
         if (element.classList.contains('apco-toggle')) return 'apco-outages';
-        if (element.classList.contains('tombigbee-toggle')) return 'tombigbee-outages';
+        if (element.classList.contains('cullman-toggle')) return 'cullman-outages';
         const listItem = element.closest('calcite-list-item');
         const label = element.closest('calcite-label');
         let labelText = '';
         if (listItem) labelText = listItem.getAttribute('label'); else if (label) labelText = label.textContent.trim();
         const mapping = {
-            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'node-sites', 'Weather Radar': 'rainviewer-radar', 'APCo Power Outages': 'apco-outages', 'Tombigbee Power Outages': 'tombigbee-outages', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'MST Fiber': 'mst-fiber', 'Splitters': 'splitters', 'Closures': 'closures', 'Slack Loops': 'slack-loops', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
+            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'sprout-huts', 'Weather Radar': 'rainviewer-radar', 'APCo Power Outages': 'apco-outages', 'Cullman Electric': 'cullman-outages', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'Splitters': 'splitters', 'Slack Loops': 'closures', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
         };
         return mapping[labelText] || null;
     }
@@ -1210,14 +1216,14 @@ export class Application {
 
     syncToggleStates(layerId, checked) {
         const labelMapping = {
-            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'node-sites': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'apco-outages': 'APCo Power Outages', 'tombigbee-outages': 'Tombigbee Power Outages', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'mst-fiber': 'MST Fiber', 'splitters': 'Splitters', 'closures': 'Closures', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
+            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'sprout-huts': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'apco-outages': 'APCo Power Outages', 'cullman-outages': 'Cullman Electric', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'splitters': 'Splitters', 'closures': 'Slack Loops', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
         };
         if (layerId === 'apco-outages') {
             const apcoSwitches = document.querySelectorAll('.apco-toggle, #toggle-apco-outages');
             apcoSwitches.forEach(s => { s.checked = checked; });
-        } else if (layerId === 'tombigbee-outages') {
-            const tombigbeeSwitches = document.querySelectorAll('.tombigbee-toggle, #toggle-tombigbee-outages');
-            tombigbeeSwitches.forEach(s => { s.checked = checked; });
+        } else if (layerId === 'cullman-outages') {
+            const cullmanSwitches = document.querySelectorAll('.cullman-toggle, #toggle-cullman-outages');
+            cullmanSwitches.forEach(s => { s.checked = checked; });
         }
         const labelText = labelMapping[layerId]; if (!labelText) return;
         const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #vehicles-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
@@ -1377,24 +1383,24 @@ export class Application {
         log.info(`⚡ Starting power outage data polling (${isMobile ? 'mobile' : 'desktop'}: ${outagePollInterval / 1000}s interval)`);
         const handlePowerOutageUpdate = async (data) => {
             try {
-                if (data.apco && data.tombigbee) {
+                if (data.apco && data.cullman) {
                     if (!window._isManualRefresh) {
                         loadingIndicator.showLoading('apco-outages-update', 'APCo Power Outages');
-                        loadingIndicator.showLoading('tombigbee-outages-update', 'Tombigbee Power Outages');
+                        loadingIndicator.showLoading('cullman-outages-update', 'Cullman Electric');
                     }
                     const apcoLayer = this.services.layerManager.getLayer('apco-outages');
-                    const tombigbeeLayer = this.services.layerManager.getLayer('tombigbee-outages');
+                    const cullmanLayer = this.services.layerManager.getLayer('cullman-outages');
                     if (apcoLayer && data.apco) {
                         const apcoGeoJSON = { type: 'FeatureCollection', features: data.apco.features || [] };
                         await this.services.layerManager.updateLayerData('apco-outages', apcoGeoJSON);
                     }
                     if (data.apco && !window._isManualRefresh) loadingIndicator.showNetwork('apco-outages-update', 'APCo Power Outages');
-                    if (tombigbeeLayer && data.tombigbee) {
-                        const tombigbeeGeoJSON = { type: 'FeatureCollection', features: data.tombigbee.features || [] };
-                        await this.services.layerManager.updateLayerData('tombigbee-outages', tombigbeeGeoJSON);
+                    if (cullmanLayer && data.cullman) {
+                        const cullmanGeoJSON = { type: 'FeatureCollection', features: data.cullman.features || [] };
+                        await this.services.layerManager.updateLayerData('cullman-outages', cullmanGeoJSON);
                     }
-                    if (data.tombigbee && !window._isManualRefresh) loadingIndicator.showNetwork('tombigbee-outages-update', 'Tombigbee Power Outages');
-                    document.dispatchEvent(new CustomEvent('powerOutageDataUpdated', { detail: { apcoCount: data.apco?.count || 0, tombigbeeCount: data.tombigbee?.count || 0 } }));
+                    if (data.cullman && !window._isManualRefresh) loadingIndicator.showNetwork('cullman-outages-update', 'Cullman Electric');
+                    document.dispatchEvent(new CustomEvent('powerOutageDataUpdated', { detail: { apcoCount: data.apco?.count || 0, cullmanCount: data.cullman?.count || 0 } }));
                     const powerOutageStatsComponent = document.querySelector('power-outage-stats');
                     if (powerOutageStatsComponent) powerOutageStatsComponent.updateStats();
                 }
@@ -1403,7 +1409,7 @@ export class Application {
                 try { (await import('../services/ErrorService.js')).errorService.report(error, { module: 'Application', action: 'handlePowerOutageUpdate' }); } catch { }
                 if (!window._isManualRefresh) {
                     loadingIndicator.showError('apco-outages-update', 'APCo Power Outages', 'Update failed');
-                    loadingIndicator.showError('tombigbee-outages-update', 'Tombigbee Power Outages', 'Update failed');
+                    loadingIndicator.showError('cullman-outages-update', 'Cullman Electric', 'Update failed');
                 }
             }
         };
@@ -1433,9 +1439,9 @@ export class Application {
                 if (powerOutageStats) {
                     const prevApco = Math.floor(Math.random() * 10);
                     const currApco = prevApco + Math.floor(Math.random() * 5) - 2;
-                    const prevTombigbee = Math.floor(Math.random() * 10);
-                    const currTombigbee = prevTombigbee + Math.floor(Math.random() * 5) - 2;
-                    powerOutageStats.showUpdateToast(prevApco, Math.max(0, currApco), prevTombigbee, Math.max(0, currTombigbee));
+                    const prevCullman = Math.floor(Math.random() * 10);
+                    const currCullman = prevCullman + Math.floor(Math.random() * 5) - 2;
+                    powerOutageStats.showUpdateToast(prevApco, Math.max(0, currApco), prevCullman, Math.max(0, currCullman));
                 }
             });
         }
@@ -1588,6 +1594,10 @@ export class Application {
         if (this._measurementCleanupTimeout) {
             clearTimeout(this._measurementCleanupTimeout);
             this._measurementCleanupTimeout = null;
+        }
+        // Cleanup hover highlight service
+        if (hoverHighlightService) {
+            hoverHighlightService.destroy();
         }
         if (loadingIndicator) loadingIndicator.destroy();
         this._cleanupHandlers.forEach(handler => { try { handler(); } catch (error) { log.error('Cleanup handler error:', error); } });

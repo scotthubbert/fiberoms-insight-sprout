@@ -29,7 +29,7 @@ export class LayerManager {
             'county-boundaries': 1,
             'fsa-boundaries': 5,
             'apco-outages': 8,
-            'tombigbee-outages': 8,
+            'cullman-outages': 8,
             'online-subscribers': 10,
             'main-line-old': 28,
             'main-line-fiber': 30,
@@ -39,8 +39,8 @@ export class LayerManager {
             'splitters': 60,
             'offline-subscribers': 100,
             fiberOutages: 120,
-            'node-sites': 120,
             vehicles: 130,
+            'sprout-huts': 125, // Above vehicles and most other layers, below weather radar
             weatherRadar: 140
         };
     }
@@ -116,6 +116,31 @@ export class LayerManager {
             type: "application/json"
         }));
 
+        // Create LabelClass objects for node sites/sprout huts synchronously if needed
+        let labelingInfo = layerConfig.labelingInfo || [];
+        if (layerConfig.id === 'sprout-huts' && labelingInfo.length > 0) {
+            try {
+                // Import LabelClass synchronously (will be available by the time layer is created)
+                const LabelClassModule = await import('@arcgis/core/layers/support/LabelClass.js');
+                const LabelClass = LabelClassModule.default;
+                labelingInfo = labelingInfo.map(labelConfig => {
+                    return new LabelClass({
+                        symbol: labelConfig.symbol,
+                        labelPlacement: labelConfig.labelPlacement,
+                        labelExpressionInfo: labelConfig.labelExpressionInfo,
+                        deconflictionStrategy: labelConfig.deconflictionStrategy,
+                        repeatLabel: labelConfig.repeatLabel,
+                        removeDuplicateLabels: labelConfig.removeDuplicateLabels,
+                        maxScale: labelConfig.maxScale,
+                        minScale: labelConfig.minScale
+                    });
+                });
+                log.info(`${layerConfig.title} LabelClass objects created: ${labelingInfo.length} label class(es)`);
+            } catch (error) {
+                log.warn('Could not create LabelClass objects synchronously, will retry:', error);
+            }
+        }
+
         const layer = new GeoJSONLayer({
             id: layerConfig.id,
             url: blobUrl,
@@ -125,7 +150,7 @@ export class LayerManager {
             fields: layerConfig.fields, // Explicit field definitions to prevent inference warnings
             listMode: layerConfig.visible ? 'show' : 'hide',
             visible: layerConfig.visible !== undefined ? layerConfig.visible : true,
-            labelingInfo: layerConfig.labelingInfo || [],
+            labelingInfo: labelingInfo,
             minScale: layerConfig.minScale || 0, // Apply scale-dependent visibility
             maxScale: layerConfig.maxScale || 0  // 0 means no limit
         });
@@ -144,12 +169,60 @@ export class LayerManager {
             });
         }
 
+        // Verify labels are set for node sites/sprout huts after layer is ready
+        if (layerConfig.id === 'sprout-huts' && labelingInfo.length > 0) {
+            layer.when(async () => {
+                await layer.load();
+                const featureCount = layer.sourceJSON?.features?.length || 0;
+                log.info(`${layerConfig.title} layer loaded with ${featureCount} features`);
+                
+                // Verify labels are still set
+                if (layer.labelingInfo && layer.labelingInfo.length > 0) {
+                    log.info(`✅ ${layerConfig.title} labels verified: ${layer.labelingInfo.length} label class(es), expression: ${layer.labelingInfo[0]?.labelExpressionInfo?.expression || 'N/A'}`);
+                    // Refresh to ensure labels render
+                    if (layer.visible) {
+                        layer.refresh();
+                    }
+                } else {
+                    log.warn(`⚠️ ${layerConfig.title} labelingInfo is missing, reapplying...`);
+                    layer.labelingInfo = labelingInfo;
+                    if (layer.visible) {
+                        layer.refresh();
+                    }
+                }
+            });
+        }
+
         return layer;
     }
 
     // Create GeoJSON layer from URL
     async createGeoJSONLayerFromUrl(layerConfig) {
         try {
+            // Create LabelClass objects for node sites/sprout huts synchronously if needed
+            let labelingInfo = layerConfig.labelingInfo || [];
+            if (layerConfig.id === 'sprout-huts' && labelingInfo.length > 0) {
+                try {
+                    const LabelClassModule = await import('@arcgis/core/layers/support/LabelClass.js');
+                    const LabelClass = LabelClassModule.default;
+                    labelingInfo = labelingInfo.map(labelConfig => {
+                        return new LabelClass({
+                            symbol: labelConfig.symbol,
+                            labelPlacement: labelConfig.labelPlacement,
+                            labelExpressionInfo: labelConfig.labelExpressionInfo,
+                            deconflictionStrategy: labelConfig.deconflictionStrategy,
+                            repeatLabel: labelConfig.repeatLabel,
+                            removeDuplicateLabels: labelConfig.removeDuplicateLabels,
+                            maxScale: labelConfig.maxScale,
+                            minScale: labelConfig.minScale
+                        });
+                    });
+                    log.info(`${layerConfig.title} LabelClass objects created (URL-based): ${labelingInfo.length} label class(es)`);
+                } catch (error) {
+                    log.warn('Could not create LabelClass objects synchronously (URL-based), will retry:', error);
+                }
+            }
+
             const layer = new GeoJSONLayer({
                 id: layerConfig.id,
                 url: layerConfig.dataUrl,
@@ -159,13 +232,32 @@ export class LayerManager {
                 fields: layerConfig.fields, // Explicit field definitions to prevent inference warnings
                 listMode: layerConfig.visible ? 'show' : 'hide',
                 visible: layerConfig.visible !== undefined ? layerConfig.visible : true,
-                labelingInfo: layerConfig.labelingInfo || [],
+                labelingInfo: labelingInfo,
                 minScale: layerConfig.minScale || 0, // Apply scale-dependent visibility
                 maxScale: layerConfig.maxScale || 0  // 0 means no limit
             });
 
             this.layers.set(layerConfig.id, layer);
             this.layerConfigs.set(layerConfig.id, layerConfig);
+
+            // Verify labels are set for node sites/sprout huts after layer is ready (URL-based)
+            if (layerConfig.id === 'sprout-huts' && labelingInfo.length > 0) {
+                layer.when(async () => {
+                    await layer.load();
+                    if (layer.labelingInfo && layer.labelingInfo.length > 0) {
+                        log.info(`✅ ${layerConfig.title} labels verified (URL-based): ${layer.labelingInfo.length} label class(es)`);
+                        if (layer.visible) {
+                            layer.refresh();
+                        }
+                    } else {
+                        log.warn(`⚠️ ${layerConfig.title} labelingInfo is missing (URL-based), reapplying...`);
+                        layer.labelingInfo = labelingInfo;
+                        if (layer.visible) {
+                            layer.refresh();
+                        }
+                    }
+                });
+            }
 
             log.info(`✅ Created URL-based GeoJSON layer: ${layerConfig.id}`);
             return layer;
@@ -200,10 +292,10 @@ export class LayerManager {
                     }
                 }
             },
-            'tombigbee': {
+            'cullman': {
                 pointSymbol: {
                     type: 'picture-marker',
-                    url: '/tombigbee-logo.png',
+                    url: 'https://cullmanec.com/sites/default/files/cullman_logo_black.png',
                     width: '24px',
                     height: '24px'
                 },
@@ -219,7 +311,7 @@ export class LayerManager {
             }
         };
 
-        const company = layerConfig.id.includes('apco') ? 'apco' : 'tombigbee';
+        const company = layerConfig.id.includes('apco') ? 'apco' : 'cullman';
         const companyConfig = companyConfigs[company];
 
         let pointCount = 0, polygonCount = 0;
@@ -453,6 +545,17 @@ export class LayerManager {
                 mapLayer.visible = visible;
                 if (mapLayer.type === 'graphics') {
                     mapLayer.opacity = visible ? 1 : 0;
+                }
+                
+                // Reapply labels for node-sites/sprout-huts when it becomes visible
+                if ((layerId === 'node-sites' || layerId === 'sprout-huts') && visible && mapLayer.labelingInfo && mapLayer.labelingInfo.length > 0) {
+                    // Ensure labels are properly set
+                    setTimeout(() => {
+                        if (mapLayer.visible && mapLayer.labelingInfo) {
+                            mapLayer.refresh();
+                            log.info(`${layerId} labels refreshed after visibility change`);
+                        }
+                    }, 300);
                 }
             }
         }

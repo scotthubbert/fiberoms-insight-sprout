@@ -180,7 +180,7 @@ export class SubscriberDataService {
         // Realtime data types that are never cached
         const realtimeTypes = [
             'offlineSubscribers', 'onlineSubscribers',
-            'apcoOutages', 'tombigbeeOutages',
+            'apcoOutages', 'cullmanOutages',
             'fiberTrucks', 'electricTrucks'
         ];
 
@@ -190,7 +190,6 @@ export class SubscriberDataService {
 
         // Map data types to cache keys for infrastructure data that can be cached
         const cacheKeyMap = {
-            'nodeSites': 'nodeSites',
             'fsaBoundaries': 'fsa',
             'mainLineFiber': 'mainFiber',
             'mainLineOld': 'mainOld',
@@ -683,7 +682,7 @@ export class SubscriberDataService {
 
         // Only clear cache for infrastructure data that can be cached
         if (type === 'infrastructure' || type === 'all') {
-            keysToDelete.push('node_sites');
+            // Infrastructure cache clearing (no node_sites anymore)
         }
         if (type === 'fiber-plant' || type === 'all') {
             keysToDelete.push('fsa_boundaries', 'main_line_fiber', 'main_line_old', 'mst_terminals', 'mst_fiber', 'splitters', 'closures');
@@ -867,12 +866,12 @@ export class PollingManager {
             // For power outages, check if layers already have data to avoid redundant first update
             const layerManager = window.app?.services?.layerManager;
             const apcoLayer = layerManager?.getLayer('apco-outages');
-            const tombigbeeLayer = layerManager?.getLayer('tombigbee-outages');
+            const cullmanLayer = layerManager?.getLayer('cullman-outages');
             const hasApcoData = apcoLayer?.graphics?.length > 0;
-            const hasTombigbeeData = tombigbeeLayer?.graphics?.length > 0;
+            const hasCullmanData = cullmanLayer?.graphics?.length > 0;
 
             // If either layer already has data, skip the immediate first update
-            if (hasApcoData || hasTombigbeeData) {
+            if (hasApcoData || hasCullmanData) {
                 log.info('⚡ Skipping polling first update - power outage layers already have data');
                 this.isFirstUpdate.set(dataType, false);
                 // Start periodic polling immediately without first update
@@ -978,16 +977,16 @@ export class PollingManager {
                 case 'apco-outages':
                     data = await outageService.getApcoOutages()
                     break
-                case 'tombigbee-outages':
-                    data = await outageService.getTombigbeeOutages()
+                case 'cullman-outages':
+                    data = await outageService.getCullmanOutages()
                     break
                 case 'power-outages':
                     // Fetch both power company outages
-                    const [apco, tombigbee] = await Promise.all([
+                    const [apco, cullman] = await Promise.all([
                         outageService.getApcoOutages(),
-                        outageService.getTombigbeeOutages()
+                        outageService.getCullmanOutages()
                     ])
-                    data = { apco, tombigbee }
+                    data = { apco, cullman }
                     break
                 default:
                     log.warn(`Unknown data type for polling: ${dataType}`)

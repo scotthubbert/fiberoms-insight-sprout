@@ -1940,7 +1940,7 @@ calcite-list-item[style*="cursor: pointer"]:active {
   border-left: 3px solid #e74c3c;
 }
 
-.tombigbee-toggle {
+.cullman-toggle {
   border-left: 3px solid #27ae60;
 }
 
@@ -2990,7 +2990,7 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   );
 }
 
-.power-company-card[data-company="tombigbee"] {
+.power-company-card[data-company="cullman"] {
   --calcite-card-border-color: rgb(74, 124, 89);
   border-left: 4px solid rgb(74, 124, 89);
   background: linear-gradient(
@@ -3010,7 +3010,7 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   box-shadow: 0 4px 12px rgba(30, 95, 175, 0.15);
 }
 
-.power-company-card[data-company="tombigbee"]:hover {
+.power-company-card[data-company="cullman"]:hover {
   border-left-color: rgba(74, 124, 89, 0.9);
   background: linear-gradient(
     135deg,
@@ -3090,7 +3090,7 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   background-clip: text;
 }
 
-.power-company-card[data-company="tombigbee"] .counter-value {
+.power-company-card[data-company="cullman"] .counter-value {
   color: rgb(74, 124, 89);
   background: linear-gradient(
     135deg,
@@ -3266,6 +3266,10 @@ calcite-icon.status-icon-business::part(icon) {
 
 .icon-square-orange {
   color: rgb(255, 140, 0);
+}
+
+.icon-circle-green {
+  color: rgb(0, 200, 83);
 }
 
 .icon-flash-green {

@@ -235,9 +235,9 @@ const createPowerOutageRenderer = (company) => {
 
 // Power outage popup templates
 const createPowerOutagePopup = (company) => {
-    if (company === 'tombigbee') {
+    if (company === 'cullman') {
         return {
-            title: 'Tombigbee Outage',
+            title: 'Cullman Electric Outage',
             content: [
                 {
                     type: 'fields',
@@ -306,21 +306,6 @@ const createPowerOutagePopup = (company) => {
     }
 };
 
-// Node Sites renderer
-const createNodeSiteRenderer = () => ({
-    type: 'simple',
-    symbol: {
-        type: 'simple-marker',
-        style: 'diamond',
-        color: [255, 165, 0, 0.8], // Orange color for Network
-        size: 12,
-        outline: {
-            color: [255, 165, 0, 1],
-            width: 1
-        }
-    }
-});
-
 // Sprout Huts renderer
 const createSproutHutRenderer = () => ({
     type: 'simple',
@@ -366,468 +351,30 @@ const createSproutHutFields = () => [
     { name: 'id', type: 'string', alias: 'ID' }
 ];
 
-// Node Sites popup template with metrics
-const createNodeSitePopup = () => ({
-    title: '{Name}',
-    content: [
-        {
-            type: 'custom',
-            outFields: ['*'],
-            creator: function (feature) {
-                const attributes = feature.graphic.attributes;
-                const nodeSiteName = attributes.Name;
-
-                // Create container for popup content
-                const container = document.createElement('div');
-                container.style.cssText = 'padding: 0; font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;';
-
-                // Site name display
-                const siteNameDiv = document.createElement('div');
-                siteNameDiv.style.cssText = 'font-weight: 600; font-size: 16px; margin-bottom: 16px; color: var(--calcite-color-text-1); padding: 0 16px;';
-                siteNameDiv.textContent = nodeSiteName;
-                container.appendChild(siteNameDiv);
-
-                // Loading state
-                const loadingDiv = document.createElement('div');
-                loadingDiv.style.cssText = 'text-align: center; padding: 32px 16px; color: var(--calcite-color-text-3); background: var(--calcite-color-foreground-1); border: 1px solid var(--calcite-color-border-2); border-radius: 4px;';
-                loadingDiv.innerHTML = `
-                    <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid var(--calcite-color-border-2); border-top: 2px solid var(--calcite-color-brand); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <div style="margin-top: 12px; font-size: 14px; color: var(--calcite-color-text-2);">Loading metrics...</div>
-                    <style>
-                        @keyframes spin {
-                            0% { transform: rotate(0deg); }
-                            100% { transform: rotate(360deg); }
-                        }
-                    </style>
-                `;
-                container.appendChild(loadingDiv);
-
-                // Asynchronously load metrics
-                (async () => {
-                    try {
-                        // Import the service dynamically to avoid circular dependencies
-                        const { nodeSiteMetricsService } = await import('../services/NodeSiteMetricsService.js');
-                        const metrics = await nodeSiteMetricsService.getNodeSiteMetrics(nodeSiteName);
-
-                        // Remove loading state
-                        container.removeChild(loadingDiv);
-
-                        // Create metrics display
-                        // Note: Inline styles are required because ArcGIS popup content is isolated from global CSS.
-                        // These styles successfully penetrate the popup boundary and style both light DOM elements
-                        // and Calcite web components via CSS custom properties.
-                        const metricsDiv = document.createElement('div');
-                        metricsDiv.className = 'node-site-metrics';
-                        metricsDiv.innerHTML = `
-                            <style>
-                                .node-site-metrics {
-                                    font-family: var(--calcite-font-family);
-                                    max-width: 400px;
-                                }
-                                .node-metrics-card {
-                                    --calcite-card-background-color: var(--calcite-color-foreground-1);
-                                    --calcite-card-border-color: var(--calcite-color-border-2);
-                                    margin: 0;
-                                }
-                                .metrics-header {
-                                    display: flex;
-                                    align-items: center;
-                                    gap: var(--calcite-spacing-sm);
-                                    padding: var(--calcite-spacing-md);
-                                    background: var(--calcite-color-foreground-2);
-                                    border-bottom: 1px solid var(--calcite-color-border-2);
-                                }
-                                .metrics-header calcite-icon {
-                                    color: var(--calcite-color-text-2);
-                                }
-                                .metrics-title {
-                                    font-size: var(--calcite-font-size-0);
-                                    font-weight: var(--calcite-font-weight-medium);
-                                    color: var(--calcite-color-text-1);
-                                }
-                                .metrics-content {
-                                    padding: var(--calcite-spacing-md);
-                                }
-                                .metrics-counters {
-                                    display: flex;
-                                    gap: var(--calcite-spacing-sm);
-                                    margin-bottom: var(--calcite-spacing-md);
-                                }
-                                .metric-item {
-                                    flex: 1;
-                                    text-align: center;
-                                    padding: var(--calcite-spacing-sm);
-                                    border-radius: var(--calcite-border-radius);
-                                    background: var(--calcite-color-foreground-2);
-                                    border: 1px solid var(--calcite-color-border-3);
-                                }
-                                .metric-item[data-status="online"] {
-                                    border-color: var(--calcite-color-status-success);
-                                    border-width: 2px;
-                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(34, 197, 94, 0.08) 100%);
-                                    position: relative;
-                                    overflow: hidden;
-                                }
-                                .metric-item[data-status="offline"] {
-                                    border-color: var(--calcite-color-status-danger);
-                                    border-width: 2px;
-                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(239, 68, 68, 0.08) 100%);
-                                    position: relative;
-                                    overflow: hidden;
-                                }
-                                .metric-item[data-status="total"] {
-                                    border-color: var(--calcite-color-brand);
-                                    border-width: 2px;
-                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(25, 118, 210, 0.08) 100%);
-                                    position: relative;
-                                    overflow: hidden;
-                                }
-                                .metric-item[data-status="online"]::before {
-                                    content: "";
-                                    position: absolute;
-                                    top: 0;
-                                    left: 0;
-                                    right: 0;
-                                    height: 2px;
-                                    background: linear-gradient(90deg, var(--calcite-color-status-success) 0%, rgba(34, 197, 94, 0.6) 100%);
-                                }
-                                .metric-item[data-status="offline"]::before {
-                                    content: "";
-                                    position: absolute;
-                                    top: 0;
-                                    left: 0;
-                                    right: 0;
-                                    height: 2px;
-                                    background: linear-gradient(90deg, var(--calcite-color-status-danger) 0%, rgba(239, 68, 68, 0.6) 100%);
-                                }
-                                .metric-item[data-status="total"]::before {
-                                    content: "";
-                                    position: absolute;
-                                    top: 0;
-                                    left: 0;
-                                    right: 0;
-                                    height: 2px;
-                                    background: linear-gradient(90deg, var(--calcite-color-brand) 0%, rgba(25, 118, 210, 0.6) 100%);
-                                }
-                                .metric-value {
-                                    font-size: var(--calcite-font-size-2);
-                                    font-weight: var(--calcite-font-weight-bold);
-                                    font-family: var(--calcite-font-family-monospace);
-                                    line-height: var(--calcite-line-height-tight);
-                                    margin-bottom: var(--calcite-spacing-xs);
-                                }
-                                .metric-item[data-status="online"] .metric-value {
-                                    color: var(--calcite-color-status-success);
-                                }
-                                .metric-item[data-status="offline"] .metric-value {
-                                    color: var(--calcite-color-status-danger);
-                                }
-                                .metric-item[data-status="total"] .metric-value {
-                                    color: var(--calcite-color-text-1);
-                                }
-                                .metric-label {
-                                    font-size: var(--calcite-font-size--1);
-                                    color: var(--calcite-color-text-3);
-                                    text-transform: uppercase;
-                                    letter-spacing: var(--calcite-letter-spacing-wide);
-                                    font-weight: var(--calcite-font-weight-medium);
-                                }
-                                .metrics-progress {
-                                    margin: var(--calcite-spacing-md) 0;
-                                }
-                                .metrics-progress calcite-progress {
-                                    --calcite-progress-fill-color: var(--calcite-color-status-success);
-                                    --calcite-progress-track-color: var(--calcite-color-status-danger);
-                                }
-                                .metrics-legend {
-                                    display: flex;
-                                    justify-content: space-between;
-                                    gap: var(--calcite-spacing-md);
-                                    margin-bottom: var(--calcite-spacing-md);
-                                }
-                                .legend-item {
-                                    display: flex;
-                                    align-items: center;
-                                    gap: var(--calcite-spacing-xs);
-                                    font-size: var(--calcite-font-size--1);
-                                    color: var(--calcite-color-text-2);
-                                }
-                                .legend-item[data-status="online"] calcite-icon {
-                                    color: var(--calcite-color-status-success);
-                                }
-                                .legend-item[data-status="offline"] calcite-icon {
-                                    color: var(--calcite-color-status-danger);
-                                }
-                                .service-type-counters {
-                                    display: flex;
-                                    gap: var(--calcite-spacing-sm);
-                                    margin-bottom: var(--calcite-spacing-md);
-                                }
-                                .service-type-item {
-                                    flex: 1;
-                                    text-align: center;
-                                    padding: var(--calcite-spacing-sm);
-                                    border-radius: var(--calcite-border-radius);
-                                    background: var(--calcite-color-foreground-2);
-                                    border: 1px solid var(--calcite-color-border-3);
-                                    position: relative;
-                                    overflow: hidden;
-                                }
-                                .service-type-item[data-type="residential"] {
-                                    border-color: var(--calcite-color-info);
-                                    border-width: 2px;
-                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(59, 130, 246, 0.08) 100%);
-                                }
-                                .service-type-item[data-type="business"] {
-                                    border-color: var(--calcite-color-warning);
-                                    border-width: 2px;
-                                    background: linear-gradient(135deg, var(--calcite-color-foreground-2) 0%, rgba(245, 158, 11, 0.08) 100%);
-                                }
-                                .service-type-item[data-type="residential"]::before {
-                                    content: "";
-                                    position: absolute;
-                                    top: 0;
-                                    left: 0;
-                                    right: 0;
-                                    height: 2px;
-                                    background: linear-gradient(90deg, var(--calcite-color-info) 0%, rgba(59, 130, 246, 0.6) 100%);
-                                }
-                                .service-type-item[data-type="business"]::before {
-                                    content: "";
-                                    position: absolute;
-                                    top: 0;
-                                    left: 0;
-                                    right: 0;
-                                    height: 2px;
-                                    background: linear-gradient(90deg, var(--calcite-color-warning) 0%, rgba(245, 158, 11, 0.6) 100%);
-                                }
-                                .service-type-value {
-                                    font-size: var(--calcite-font-size-2);
-                                    font-weight: var(--calcite-font-weight-bold);
-                                    font-family: var(--calcite-font-family-monospace);
-                                    line-height: var(--calcite-line-height-tight);
-                                    margin-bottom: var(--calcite-spacing-xs);
-                                }
-                                .service-type-item[data-type="residential"] .service-type-value {
-                                    color: var(--calcite-color-info);
-                                }
-                                .service-type-item[data-type="business"] .service-type-value {
-                                    color: var(--calcite-color-warning);
-                                }
-                                .service-type-label {
-                                    font-size: var(--calcite-font-size--1);
-                                    color: var(--calcite-color-text-3);
-                                    text-transform: uppercase;
-                                    letter-spacing: var(--calcite-letter-spacing-wide);
-                                    font-weight: var(--calcite-font-weight-medium);
-                                }
-                                .health-status-card {
-                                    --calcite-card-background-color: var(--calcite-color-foreground-2);
-                                    --calcite-card-border-color: var(--calcite-color-border-2);
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: space-between;
-                                    padding: var(--calcite-spacing-sm);
-                                }
-                                .health-indicator {
-                                    display: flex;
-                                    align-items: center;
-                                    gap: var(--calcite-spacing-xs);
-                                }
-                                .health-label {
-                                    font-size: var(--calcite-font-size--1);
-                                    font-weight: var(--calcite-font-weight-medium);
-                                    color: var(--calcite-color-text-2);
-                                    text-transform: capitalize;
-                                }
-                                .recent-activity {
-                                    display: flex;
-                                    align-items: center;
-                                    gap: var(--calcite-spacing-xs);
-                                    font-size: var(--calcite-font-size--1);
-                                    color: var(--calcite-color-text-3);
-                                }
-                                .recent-activity calcite-icon {
-                                    color: var(--calcite-color-text-3);
-                                }
-                            </style>
-                             <calcite-card class="node-metrics-card">
-                                 <div class="metrics-header">
-                                     <calcite-icon icon="graph-time-series" scale="s"></calcite-icon>
-                                     <span class="metrics-title">Subscriber Metrics</span>
-                                 </div>
-                                 
-                                 <div class="metrics-content">
-                                     <div class="metrics-counters">
-                                         <div class="metric-item" data-status="online">
-                                             <div class="metric-value">${metrics.onlineSubscribers}</div>
-                                             <div class="metric-label">Online</div>
-                                         </div>
-                                         <div class="metric-item" data-status="offline">
-                                             <div class="metric-value">${metrics.offlineSubscribers}</div>
-                                             <div class="metric-label">Offline</div>
-                                         </div>
-                                         <div class="metric-item" data-status="total">
-                                             <div class="metric-value">${metrics.totalSubscribers}</div>
-                                             <div class="metric-label">Total</div>
-                                         </div>
-                                     </div>
-                                     
-                                     <div class="service-type-counters" style="margin-top: 16px;">
-                                         <div class="service-type-item" data-type="residential">
-                                             <div class="service-type-value">${metrics.residentialCount}</div>
-                                             <div class="service-type-label">Residential</div>
-                                         </div>
-                                         <div class="service-type-item" data-type="business">
-                                             <div class="service-type-value">${metrics.businessCount}</div>
-                                             <div class="service-type-label">Business</div>
-                                         </div>
-                                     </div>
-                                     
-                                     <div class="metrics-progress">
-                                         <calcite-progress type="determinate" value="${metrics.onlinePercentage}" text="${metrics.onlinePercentage}% Online"></calcite-progress>
-                                     </div>
-                                     
-                                     <div class="metrics-legend">
-                                         <div class="legend-item" data-status="online">
-                                             <calcite-icon icon="circle-filled" scale="s"></calcite-icon>
-                                             <span>${metrics.onlinePercentage}% Online</span>
-                                         </div>
-                                         <div class="legend-item" data-status="offline">
-                                             <calcite-icon icon="circle-filled" scale="s"></calcite-icon>
-                                             <span>${metrics.offlinePercentage}% Offline</span>
-                                         </div>
-                                     </div>
-                                     
-                                     <calcite-card class="health-status-card" data-health="${metrics.healthStatus}">
-                                         <div class="health-indicator">
-                                             <calcite-icon icon="circle-filled" scale="s" style="color: ${metrics.healthColor}"></calcite-icon>
-                                             <span class="health-label">${metrics.healthStatus}</span>
-                                         </div>
-                                         <div class="recent-activity">
-                                             <calcite-icon icon="clock" scale="s"></calcite-icon>
-                                             <span>${metrics.recentActivity} recent updates</span>
-                                         </div>
-                                     </calcite-card>
-                                     
-                                     ${metrics.ta5kNodes && metrics.ta5kNodes.length > 1 ? `
-                                         <div style="margin-top: 16px; border: 1px solid var(--calcite-color-border-2); background: var(--calcite-color-foreground-2); border-radius: 4px; overflow: hidden;">
-                                             <div style="padding: 12px; border-bottom: 1px solid var(--calcite-color-border-2); background: var(--calcite-color-foreground-1);">
-                                                 <div style="font-weight: 600; font-size: 12px; color: var(--calcite-color-text-1); display: flex; align-items: center;">
-                                                     <calcite-icon icon="organization" scale="s" style="margin-right: 6px; color: var(--calcite-color-text-3);"></calcite-icon>
-                                                     TA5K Node Breakdown (${metrics.ta5kNodes.length} nodes)
-                                                 </div>
-                                             </div>
-                                             <div style="padding: 12px;">
-                                                 ${Object.entries(metrics.ta5kBreakdown || {})
-                                    .map(([ta5k, data]) => `
-                                                         <div style="font-size: 11px; margin-bottom: 8px; padding: 8px; background: var(--calcite-color-foreground-1); border-radius: 2px; border: 1px solid var(--calcite-color-border-3);">
-                                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                                                 <span style="color: var(--calcite-color-text-1); font-weight: 500;">${ta5k}</span>
-                                                                 <span style="color: var(--calcite-color-text-3); font-family: monospace;">${data.total} total</span>
-                                                             </div>
-                                                             <div style="display: flex; justify-content: space-between; color: var(--calcite-color-text-3); font-family: monospace; font-size: 10px;">
-                                                                 <span>${data.online} online, ${data.offline} offline</span>
-                                                                 <span>${data.residential} residential, ${data.business} business</span>
-                                                             </div>
-                                                         </div>
-                                                     `).join('')}
-                                             </div>
-                                         </div>
-                                     ` : ''}
-                                 </div>
-                             </calcite-card>
-                             <!-- Note: Structure is correct - </div> closes metrics-content, </calcite-card> closes node-metrics-card -->
-                             
-                             <div style="font-size: 11px; color: var(--calcite-color-text-3); text-align: center; margin-top: 12px; padding: 8px 16px; opacity: 0.8;">
-                                 Last updated: ${new Date(metrics.lastUpdated).toLocaleString()}
-                             </div>
-                         `;
-
-                        container.appendChild(metricsDiv);
-
-                    } catch (error) {
-                        // Remove loading state
-                        if (container.contains(loadingDiv)) {
-                            container.removeChild(loadingDiv);
-                        }
-
-                        // Show error state
-                        const errorDiv = document.createElement('div');
-                        errorDiv.style.cssText = 'background: var(--calcite-color-status-danger-background); border: 1px solid var(--calcite-color-status-danger-border); padding: 16px; margin: 0; color: var(--calcite-color-status-danger-text); border-radius: 4px;';
-                        errorDiv.innerHTML = `
-                            <div style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center;">
-                                <calcite-icon icon="exclamation-mark-triangle" scale="s" style="margin-right: 8px; color: var(--calcite-color-status-danger);"></calcite-icon>
-                                Unable to load metrics
-                            </div>
-                            <div style="font-size: 12px; color: var(--calcite-color-text-3);">Please try refreshing the popup</div>
-                        `;
-                        container.appendChild(errorDiv);
-
-                        console.error('Error loading node site metrics:', error);
-                    }
-                })();
-
-                return container;
-            }
-        }
-    ],
-    actions: [
-        {
-            id: 'directions',
-            title: 'Get Directions',
-            icon: 'pin-tear',
-            type: 'button'
-        },
-        {
-            id: 'refresh-metrics',
-            title: 'Refresh Metrics',
-            icon: 'refresh',
-            type: 'button'
-        }
-    ]
-});
-
-// Node Sites labeling configuration
-const createNodeSiteLabeling = () => [
+// Sprout Huts labeling configuration
+const createSproutHutLabeling = () => [
     {
         symbol: {
             type: 'text',
-            color: [255, 255, 255],
+            color: [255, 255, 255], // White text for better aesthetics and readability
             font: {
                 family: 'Segoe UI, Arial, sans-serif',
-                size: 11,
+                size: 12,
                 weight: 'bold'
             },
-            backgroundColor: [40, 40, 40, 0.9],
-            borderLineColor: [255, 165, 0, 1],
-            borderLineSize: 2,
-            haloColor: [0, 0, 0, 0.8],
-            haloSize: 1,
-            callout: {
-                type: 'line',
-                color: [255, 165, 0, 1],
-                size: 2,
-                cap: 'round',
-                join: 'round'
-            }
+            haloColor: [0, 0, 0, 0.85], // Black halo
+            haloSize: 2
         },
-        labelPlacement: 'center-right',
+        labelPlacement: 'above-center',
         labelExpressionInfo: {
-            expression: '$feature.Name'
+            expression: '$feature.name'
         },
         deconflictionStrategy: 'none',
         repeatLabel: false,
-        removeDuplicateLabels: true,
+        removeDuplicateLabels: false,
         maxScale: 0,
-        minScale: 0,
-        priority: 'high'
+        minScale: 0
     }
-];
-
-// Node Sites field definitions
-const createNodeSiteFields = () => [
-    { name: 'Name', type: 'string', alias: 'Site Name' }
 ];
 
 // Power outage field definitions
@@ -962,111 +509,119 @@ const subscriberFields = [
 ];
 
 // Fiber Plant renderer configurations
+// DA (Distribution Area) colors matching reference repository
+// Uses Arcade expression to extract 2-letter prefix from areaname (e.g., "HE-18-2434" -> "HE")
 const createFSARenderer = () => ({
     type: "unique-value",
-    field: "areaname",
+    // When using valueExpression, don't specify field property
+    // Extract first 2 characters from areaname (e.g., "HE-18-2434" -> "HE")
+    valueExpression: "IIf(IsEmpty($feature.areaname), 'Unknown', Upper(Left(Text($feature.areaname), 2)))",
     defaultSymbol: {
         type: "simple-fill",
-        color: [170, 170, 170, 0.2], // Default gray
-        outline: { color: [170, 170, 170, 1.0], width: 2 }
+        color: [204, 204, 204, 0.5], // Default gray (#CCCCCC) with higher opacity for visibility
+        outline: { color: [204, 204, 204, 1.0], width: 2 }
     },
     // Generate a distinct color palette for the areas
-    // This matches the Mapbox style logic from the reference app
+    // This matches the Mapbox style logic from the reference app (/Users/scotthubbert/Developer/clients/sprout-fiber/insight)
     uniqueValueInfos: [
-        // Red group
-        { value: "AD", symbol: { type: "simple-fill", color: [211, 47, 47, 0.2], outline: { color: [211, 47, 47, 1], width: 2 } } },
+        // Red group - AD
+        { value: "AD", symbol: { type: "simple-fill", color: [211, 47, 47, 0.5], outline: { color: [211, 47, 47, 1], width: 2 } } },
         // Blue group
-        { value: "BH", symbol: { type: "simple-fill", color: [25, 118, 210, 0.2], outline: { color: [25, 118, 210, 1], width: 2 } } },
-        { value: "EB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.2], outline: { color: [2, 136, 209, 1], width: 2 } } },
-        { value: "TB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.2], outline: { color: [2, 136, 209, 1], width: 2 } } },
-        { value: "TD", symbol: { type: "simple-fill", color: [25, 118, 210, 0.2], outline: { color: [25, 118, 210, 1], width: 2 } } },
+        { value: "BH", symbol: { type: "simple-fill", color: [25, 118, 210, 0.5], outline: { color: [25, 118, 210, 1], width: 2 } } },
+        { value: "EB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.5], outline: { color: [2, 136, 209, 1], width: 2 } } },
+        { value: "TB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.5], outline: { color: [2, 136, 209, 1], width: 2 } } },
+        { value: "TD", symbol: { type: "simple-fill", color: [25, 118, 210, 0.5], outline: { color: [25, 118, 210, 1], width: 2 } } },
         // Green group
-        { value: "BL", symbol: { type: "simple-fill", color: [56, 142, 60, 0.2], outline: { color: [56, 142, 60, 1], width: 2 } } },
-        { value: "JC", symbol: { type: "simple-fill", color: [56, 142, 60, 0.2], outline: { color: [56, 142, 60, 1], width: 2 } } },
+        { value: "BL", symbol: { type: "simple-fill", color: [56, 142, 60, 0.5], outline: { color: [56, 142, 60, 1], width: 2 } } },
+        { value: "JC", symbol: { type: "simple-fill", color: [56, 142, 60, 0.5], outline: { color: [56, 142, 60, 1], width: 2 } } },
         // Yellow/Gold group
-        { value: "BM", symbol: { type: "simple-fill", color: [251, 192, 45, 0.2], outline: { color: [251, 192, 45, 1], width: 2 } } },
-        { value: "FV", symbol: { type: "simple-fill", color: [175, 180, 43, 0.2], outline: { color: [175, 180, 43, 1], width: 2 } } },
-        { value: "HP", symbol: { type: "simple-fill", color: [125, 102, 8, 0.2], outline: { color: [125, 102, 8, 1], width: 2 } } },
+        { value: "BM", symbol: { type: "simple-fill", color: [251, 192, 45, 0.5], outline: { color: [251, 192, 45, 1], width: 2 } } },
+        { value: "FV", symbol: { type: "simple-fill", color: [175, 180, 43, 0.5], outline: { color: [175, 180, 43, 1], width: 2 } } },
+        { value: "HP", symbol: { type: "simple-fill", color: [125, 102, 8, 0.5], outline: { color: [125, 102, 8, 1], width: 2 } } },
         // Pink/Purple group
-        { value: "ER", symbol: { type: "simple-fill", color: [194, 24, 91, 0.2], outline: { color: [194, 24, 91, 1], width: 2 } } },
-        { value: "SC", symbol: { type: "simple-fill", color: [142, 36, 170, 0.2], outline: { color: [142, 36, 170, 1], width: 2 } } },
+        { value: "ER", symbol: { type: "simple-fill", color: [194, 24, 91, 0.5], outline: { color: [194, 24, 91, 1], width: 2 } } },
+        { value: "SC", symbol: { type: "simple-fill", color: [142, 36, 170, 0.5], outline: { color: [142, 36, 170, 1], width: 2 } } },
         // Cyan/Teal group
-        { value: "HE", symbol: { type: "simple-fill", color: [0, 151, 167, 0.2], outline: { color: [0, 151, 167, 1], width: 2 } } },
+        { value: "HE", symbol: { type: "simple-fill", color: [0, 151, 167, 0.5], outline: { color: [0, 151, 167, 1], width: 2 } } },
         // Orange group
-        { value: "HV", symbol: { type: "simple-fill", color: [245, 124, 0, 0.2], outline: { color: [245, 124, 0, 1], width: 2 } } }
+        { value: "HV", symbol: { type: "simple-fill", color: [245, 124, 0, 0.5], outline: { color: [245, 124, 0, 1], width: 2 } } },
+        // Unknown/Default
+        { value: "Unknown", symbol: { type: "simple-fill", color: [204, 204, 204, 0.5], outline: { color: [204, 204, 204, 1.0], width: 2 } } }
     ],
     // Fallback logic using Arcade for dynamic prefixes
     visualVariables: []
 });
 
-const createMainLineFiberRenderer = () => ({
-    type: 'unique-value',
-    field: 'FIBERCOUNT',
-    defaultSymbol: {
-        type: 'simple-line',
-        color: [165, 42, 42, 0.8], // Brown default
-        width: 3,
-        cap: 'round',
-        join: 'round'
-    },
-    uniqueValueInfos: [
-        {
-            value: 12,
-            symbol: {
-                type: 'simple-line',
-                color: [0, 255, 0, 0.8], // Green for 12 fibers
-                width: 2,
-                cap: 'round',
-                join: 'round'
-            },
-            label: '12 Fibers'
-        },
-        {
-            value: 24,
-            symbol: {
-                type: 'simple-line',
-                color: [255, 255, 0, 0.8], // Yellow for 24 fibers
-                width: 3,
-                cap: 'round',
-                join: 'round'
-            },
-            label: '24 Fibers'
-        },
-        {
-            value: 48,
-            symbol: {
-                type: 'simple-line',
-                color: [255, 165, 0, 0.8], // Orange for 48 fibers
-                width: 4,
-                cap: 'round',
-                join: 'round'
-            },
-            label: '48 Fibers'
-        },
-        {
-            value: 96,
-            symbol: {
-                type: 'simple-line',
-                color: [139, 69, 19, 0.8], // Brown for 96 fibers
-                width: 5,
-                cap: 'round',
-                join: 'round'
-            },
-            label: '96 Fibers'
-        },
-        {
-            value: 144,
-            symbol: {
-                type: 'simple-line',
-                color: [255, 0, 0, 0.8], // Red for 144 fibers
-                width: 6,
-                cap: 'round',
-                join: 'round'
-            },
-            label: '144 Fibers'
-        }
-    ]
+// Helper function to create fiber line symbol with optional dash pattern
+const createFiberLineSymbol = (color, width, isUnderground = false) => ({
+    type: 'simple-line',
+    color: color,
+    width: width,
+    cap: 'round',
+    join: 'round',
+    style: isUnderground ? 'dash' : 'solid' // Dash pattern for underground cables
 });
+
+// Main Line Fiber renderer - matching reference repository color codes
+// Uses unique-value renderer with Arcade expression to handle both fiber_count and placement
+const createMainLineFiberRenderer = () => {
+    const fiberCounts = [1, 4, 6, 8, 12, 24, 48, 72, 96, 144];
+    const colors = {
+        1: [32, 178, 170, 0.8],    // Light Sea Green (#20B2AA)
+        4: [153, 50, 204, 0.8],    // Purple (#9932CC)
+        6: [255, 140, 0, 0.8],     // Dark Orange (#FF8C00)
+        8: [70, 130, 180, 0.8],    // Steel Blue (#4682B4)
+        12: [0, 255, 0, 0.8],      // Green (#00ff00)
+        24: [255, 255, 0, 0.8],    // Yellow (#ffff00)
+        48: [255, 165, 0, 0.8],    // Orange (#ffa500)
+        72: [0, 191, 255, 0.8],    // Deep Sky Blue (#00BFFF)
+        96: [139, 69, 19, 0.8],    // Brown (#8b4513)
+        144: [255, 0, 0, 0.8]      // Red (#ff0000)
+    };
+    const widths = {
+        1: 2, 4: 2, 6: 2, 8: 2, 12: 2,
+        24: 3, 48: 4, 72: 4, 96: 5, 144: 6
+    };
+
+    const uniqueValueInfos = [];
+    
+    // Create entries for each fiber count with both aerial (solid) and underground (dashed) styles
+    fiberCounts.forEach(count => {
+        const color = colors[count];
+        const width = widths[count];
+        const label = count === 1 ? '1 Fiber' : `${count} Fibers`;
+        
+        // Aerial (solid line)
+        uniqueValueInfos.push({
+            value: `${count}_Aerial`,
+            symbol: createFiberLineSymbol(color, width, false),
+            label: `${label} (Aerial)`
+        });
+        
+        // Underground (dashed line) - handle various underground placement values
+        uniqueValueInfos.push({
+            value: `${count}_Underground`,
+            symbol: createFiberLineSymbol(color, width, true),
+            label: `${label} (Underground)`
+        });
+    });
+
+    return {
+        type: 'unique-value',
+        field: 'fiber_count',
+        valueExpression: `
+            var count = $feature.fiber_count;
+            var placement = Upper(Text($feature.placement));
+            if (placement == 'UNDERGROUND' || placement == 'BURIED') {
+                return count + '_Underground';
+            } else {
+                return count + '_Aerial';
+            }
+        `,
+        defaultSymbol: createFiberLineSymbol([0, 0, 255, 0.8], 3, false), // Blue default
+        uniqueValueInfos: uniqueValueInfos
+    };
+};
 
 const createMainLineOldRenderer = () => ({
     type: 'unique-value',
@@ -1198,12 +753,12 @@ const createClosureRenderer = () => ({
     type: 'simple',
     symbol: {
         type: 'simple-marker',
-        style: 'square',
-        color: [255, 140, 0, 0.8], // Orange
+        style: 'circle',
+        color: [0, 200, 83, 0.8], // Bright green (Slack Loops style)
         size: 8,
         outline: {
-            color: [255, 140, 0, 1],
-            width: 2
+            color: [255, 255, 255, 1],
+            width: 1.5
         }
     }
 });
@@ -1235,17 +790,17 @@ const createFSAPopup = () => ({
 });
 
 const createMainLineFiberPopup = () => ({
-    title: 'Main Line Fiber - {FIBERCOUNT} Fibers',
+    title: 'Fiber Cable - {fiber_count} Fibers',
     content: [
         {
             type: 'fields',
             fieldInfos: [
-                { fieldName: 'FIBERCOUNT', label: 'Fiber Count', visible: true },
-                { fieldName: 'CABLE_NAME', label: 'Cable Name', visible: true },
-                { fieldName: 'PLACEMENTT', label: 'Placement Type', visible: true },
-                { fieldName: 'CABLETYPE', label: 'Cable Type', visible: true },
-                { fieldName: 'CALCULATED', label: 'Calculated Length', visible: true, format: { places: 2 } },
-                { fieldName: 'MEASUREDLE', label: 'Measured Length', visible: true, format: { places: 2 } }
+                { fieldName: 'fiber_count', label: 'Fiber Count', visible: true },
+                { fieldName: 'cable_name', label: 'Cable Name', visible: true },
+                { fieldName: 'cable_category', label: 'Category', visible: true },
+                { fieldName: 'placement', label: 'Placement', visible: true },
+                { fieldName: 'used_for', label: 'Used For', visible: true },
+                { fieldName: 'distribution_area', label: 'Distribution Area', visible: true }
             ]
         }
     ],
@@ -1284,7 +839,7 @@ const createMainLineOldPopup = () => ({
 });
 
 const createMSTTerminalPopup = () => ({
-    title: 'MST Terminal: {STRUCTURE_}',
+    title: 'Type: MST',
     content: [
         {
             type: 'custom',
@@ -1296,16 +851,13 @@ const createMSTTerminalPopup = () => ({
                 const container = document.createElement('div');
                 container.style.cssText = 'padding: 0; font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;';
 
-                // Field configuration with null handling
+                // Field configuration with null handling - matching actual field names from data
                 const fieldsConfig = [
-                    { fieldName: 'CLLI', label: 'CLLI Code' },
-                    { fieldName: 'STRUCTURE_', label: 'Structure ID' },
-                    { fieldName: 'EQUIP_FRAB', label: 'Equipment FRAB' },
-                    { fieldName: 'MODELNUMBE', label: 'Model Number' },
-                    { fieldName: 'LOCID', label: 'Location ID' },
-                    { fieldName: 'OUTPUTPORT', label: 'Output Ports' },
-                    { fieldName: 'GPSLATITUD', label: 'GPS Latitude', format: { places: 8 } },
-                    { fieldName: 'GPSLONGITU', label: 'GPS Longitude', format: { places: 8 } }
+                    { fieldName: 'distributi', label: 'DA' },
+                    { fieldName: 'equipmentn', label: 'EQUIP_FRAB' },
+                    { fieldName: 'modelnumbe', label: 'Model Number' },
+                    { fieldName: 'outputport', label: 'Output Port Count' },
+                    { fieldName: 'partnumber', label: 'Part Number' }
                 ];
 
                 // Create fields table
@@ -1323,10 +875,13 @@ const createMSTTerminalPopup = () => ({
                     const valueCell = document.createElement('td');
                     valueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1); word-break: break-word;';
 
-                    const value = attributes[field.fieldName];
+                    // Check both lowercase and uppercase field names for compatibility
+                    const value = attributes[field.fieldName] || 
+                                 attributes[field.fieldName.toUpperCase()] ||
+                                 attributes[field.fieldName.toLowerCase()];
 
-                    if (value === null || value === undefined || value === '') {
-                        valueCell.innerHTML = '<span style="color: var(--calcite-color-text-3); font-style: italic;">Not Available in Dataset</span>';
+                    if (value === null || value === undefined || value === '' || (typeof value === 'string' && value.trim() === '')) {
+                        valueCell.innerHTML = '<span style="color: var(--calcite-color-text-3); font-style: italic;">N/A</span>';
                     } else {
                         let displayValue = value.toString();
 
@@ -1342,6 +897,59 @@ const createMSTTerminalPopup = () => ({
                     row.appendChild(valueCell);
                     table.appendChild(row);
                 });
+
+                // Add coordinates row if geometry is available
+                if (feature.graphic.geometry) {
+                    const geometry = feature.graphic.geometry;
+                    let latitude, longitude;
+                    
+                    // Handle different geometry types and coordinate systems
+                    if (geometry.type === 'point') {
+                        // ArcGIS Point geometry uses x (longitude) and y (latitude) or longitude/latitude properties
+                        longitude = geometry.longitude !== undefined ? geometry.longitude : geometry.x;
+                        latitude = geometry.latitude !== undefined ? geometry.latitude : geometry.y;
+                    } else if (geometry.coordinates && Array.isArray(geometry.coordinates)) {
+                        // GeoJSON format: [longitude, latitude]
+                        [longitude, latitude] = geometry.coordinates;
+                    }
+                    
+                    if (latitude !== undefined && longitude !== undefined) {
+                        const coordRow = document.createElement('tr');
+                        coordRow.style.cssText = 'border-bottom: 1px solid var(--calcite-color-border-3);';
+                        
+                        const coordLabelCell = document.createElement('td');
+                        coordLabelCell.style.cssText = 'padding: 8px 12px; font-weight: 600; color: var(--calcite-color-text-2); width: 40%; vertical-align: top;';
+                        coordLabelCell.textContent = 'Coordinates';
+                        
+                        const coordValueCell = document.createElement('td');
+                        coordValueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1); word-break: break-word;';
+                        coordValueCell.textContent = `${latitude.toFixed(14)}, ${longitude.toFixed(14)}`;
+                        
+                        coordRow.appendChild(coordLabelCell);
+                        coordRow.appendChild(coordValueCell);
+                        table.appendChild(coordRow);
+
+                        // Add Maps Link
+                        const mapsRow = document.createElement('tr');
+                        const mapsLabelCell = document.createElement('td');
+                        mapsLabelCell.style.cssText = 'padding: 8px 12px; font-weight: 600; color: var(--calcite-color-text-2); width: 40%; vertical-align: top;';
+                        mapsLabelCell.textContent = 'Maps Link';
+                        
+                        const mapsValueCell = document.createElement('td');
+                        mapsValueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1);';
+                        const mapsLink = document.createElement('a');
+                        mapsLink.href = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+                        mapsLink.target = '_blank';
+                        mapsLink.rel = 'noopener noreferrer';
+                        mapsLink.textContent = mapsLink.href;
+                        mapsLink.style.cssText = 'color: var(--calcite-color-brand); text-decoration: underline;';
+                        mapsValueCell.appendChild(mapsLink);
+                        
+                        mapsRow.appendChild(mapsLabelCell);
+                        mapsRow.appendChild(mapsValueCell);
+                        table.appendChild(mapsRow);
+                    }
+                }
 
                 container.appendChild(table);
 
@@ -1395,24 +1003,9 @@ const createSplitterPopup = () => ({
 });
 
 const createClosurePopup = () => ({
-    title: 'Closure: {STRUCTURE_}',
-    content: [
-        {
-            type: 'fields',
-            fieldInfos: [
-                { fieldName: 'STRUCTURE_', label: 'Structure ID', visible: true },
-                { fieldName: 'CLLI', label: 'CLLI Code', visible: true }
-            ]
-        }
-    ],
-    actions: [
-        {
-            id: 'directions',
-            title: 'Get Directions',
-            icon: 'pin-tear',
-            type: 'button'
-        }
-    ]
+    title: 'Slack Loop Item',
+    content: 'This is a slack loop item',
+    actions: []
 });
 
 const createMSTFiberPopup = () => ({
@@ -1529,12 +1122,12 @@ const createFSALabeling = () => [
 ];
 
 const createMainLineFiberFields = () => [
-    { name: 'FIBERCOUNT', type: 'integer', alias: 'Fiber Count' },
-    { name: 'CABLE_NAME', type: 'string', alias: 'Cable Name' },
-    { name: 'PLACEMENTT', type: 'string', alias: 'Placement Type' },
-    { name: 'CABLETYPE', type: 'string', alias: 'Cable Type' },
-    { name: 'CALCULATED', type: 'double', alias: 'Calculated Length' },
-    { name: 'MEASUREDLE', type: 'double', alias: 'Measured Length' }
+    { name: 'fiber_count', type: 'integer', alias: 'Fiber Count' },
+    { name: 'cable_name', type: 'string', alias: 'Cable Name' },
+    { name: 'cable_category', type: 'string', alias: 'Category' },
+    { name: 'placement', type: 'string', alias: 'Placement' },
+    { name: 'used_for', type: 'string', alias: 'Used For' },
+    { name: 'distribution_area', type: 'string', alias: 'Distribution Area' }
 ];
 
 const createMainLineOldFields = () => [
@@ -1546,14 +1139,11 @@ const createMainLineOldFields = () => [
 ];
 
 const createMSTTerminalFields = () => [
-    { name: 'CLLI', type: 'string', alias: 'CLLI Code' },
-    { name: 'STRUCTURE_', type: 'string', alias: 'Structure ID' },
-    { name: 'EQUIP_FRAB', type: 'string', alias: 'Equipment FRAB' },
-    { name: 'MODELNUMBE', type: 'string', alias: 'Model Number' },
-    { name: 'LOCID', type: 'string', alias: 'Location ID' },
-    { name: 'GPSLATITUD', type: 'double', alias: 'GPS Latitude' },
-    { name: 'GPSLONGITU', type: 'double', alias: 'GPS Longitude' },
-    { name: 'OUTPUTPORT', type: 'integer', alias: 'Output Ports' }
+    { name: 'distributi', type: 'string', alias: 'DA' },
+    { name: 'equipmentn', type: 'string', alias: 'EQUIP_FRAB' },
+    { name: 'modelnumbe', type: 'string', alias: 'Model Number' },
+    { name: 'outputport', type: 'integer', alias: 'Output Port Count' },
+    { name: 'partnumber', type: 'string', alias: 'Part Number' }
 ];
 
 const createSplitterFields = () => [
@@ -1729,30 +1319,16 @@ export const layerConfigs = {
         dataServiceMethod: () => outageService.getApcoOutages()
     },
 
-    tombigbeeOutages: {
-        id: 'tombigbee-outages',
-        title: 'Tombigbee Power Outages',
-        dataSource: 'tombigbee_outages',
-        renderer: createPowerOutageRenderer('tombigbee'),
-        popupTemplate: createPowerOutagePopup('tombigbee'),
+    cullmanOutages: {
+        id: 'cullman-outages',
+        title: 'Cullman Electric',
+        dataSource: 'cullman_outages',
+        renderer: createPowerOutageRenderer('cullman'),
+        popupTemplate: createPowerOutagePopup('cullman'),
         fields: createPowerOutageFields(),
         visible: true,
         zOrder: 8, // Below subscriber points and clusters
-        dataServiceMethod: () => outageService.getTombigbeeOutages()
-    },
-
-    // Node Sites Layer
-    nodeSites: {
-        id: 'node-sites',
-        title: 'Node Sites',
-        dataSource: 'node_sites',
-        renderer: createNodeSiteRenderer(),
-        popupTemplate: createNodeSitePopup(),
-        fields: createNodeSiteFields(),
-        labelingInfo: createNodeSiteLabeling(),
-        visible: false,
-        zOrder: 120,
-        dataServiceMethod: () => infrastructureService.getNodeSites()
+        dataServiceMethod: () => outageService.getCullmanOutages()
     },
 
     // Sprout Huts Layer
@@ -1763,6 +1339,7 @@ export const layerConfigs = {
         renderer: createSproutHutRenderer(),
         popupTemplate: createSproutHutPopup(),
         fields: createSproutHutFields(),
+        labelingInfo: createSproutHutLabeling(),
         visible: true, // Visible by default as they are major landmarks
         zOrder: 125, // Above node sites
         dataServiceMethod: () => infrastructureService.getSproutHuts()
@@ -1829,7 +1406,7 @@ export const layerConfigs = {
 
     closures: {
         id: 'closures',
-        title: 'Closures',
+        title: 'Slack Loops',
         dataSource: 'closures',
         renderer: createClosureRenderer(),
         popupTemplate: createClosurePopup(),
