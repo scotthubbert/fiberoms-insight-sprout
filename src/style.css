@@ -1556,11 +1556,11 @@ arcgis-distance-measurement-2d {
 
 /* Enhanced styling for subscriber layer controls with exact map colors */
 #layers-content calcite-list-item[label="Online Subscribers"] {
-  --calcite-list-item-color-active: rgb(34, 197, 94);
-  border-left: 3px solid rgb(34, 197, 94);
+  --calcite-list-item-color-active: rgb(50, 255, 50);
+  border-left: 3px solid rgb(50, 255, 50);
   background: linear-gradient(
     90deg,
-    rgba(34, 197, 94, 0.08) 0%,
+    rgba(50, 255, 50, 0.08) 0%,
     var(--calcite-color-foreground-1) 100%
   );
   position: relative;
@@ -1570,10 +1570,10 @@ arcgis-distance-measurement-2d {
 #layers-content calcite-list-item[label="Online Subscribers"]:hover {
   background: linear-gradient(
     90deg,
-    rgba(34, 197, 94, 0.12) 0%,
+    rgba(50, 255, 50, 0.12) 0%,
     var(--calcite-color-foreground-2) 100%
   );
-  border-left-color: rgba(34, 197, 94, 0.9);
+  border-left-color: rgba(50, 255, 50, 0.9);
 }
 
 #layers-content calcite-list-item[label="Offline Subscribers"] {

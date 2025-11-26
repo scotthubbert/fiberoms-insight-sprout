@@ -19,7 +19,7 @@ if (import.meta.env.DEV) {
           log.info('🧹 Unregistered service worker in dev mode');
         }
       }
-      
+
       // Clear all caches
       const cacheNames = await caches.keys();
       for (const cacheName of cacheNames) {
@@ -140,7 +140,7 @@ async function initializeApp() {
 
   // Set Calcite assets path
   const assetsPath = import.meta.env.PROD
-    ? '/calcite/assets'
+    ? '/dev/insight/calcite/assets'
     : '/node_modules/@esri/calcite-components/dist/calcite/assets';
   log.info('🎨 Setting CalciteUI asset path:', assetsPath);
   setAssetPath(assetsPath);

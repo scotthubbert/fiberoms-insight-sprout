@@ -486,7 +486,7 @@ export class HeaderSearch {
 
                 let centerColor, centerSize, outlineWidth;
                 if (isOnline) {
-                    centerColor = [34, 197, 94, 1];
+                    centerColor = [50, 255, 50, 1]; // Brighter green for better visibility
                     centerSize = 6;
                     outlineWidth = 1;
                 } else {
@@ -511,7 +511,7 @@ export class HeaderSearch {
                         geometry: point,
                         symbol: new SimpleMarkerSymbol({
                             style: 'circle',
-                            color: isOnline ? [34, 197, 94, 0.8] : [220, 38, 38, 0.8],
+                            color: isOnline ? [50, 255, 50, 0.9] : [220, 38, 38, 0.8], // Brighter green for online
                             size: isOnline ? 6 : 8,
                             outline: { color: centerColor, width: isOnline ? 1 : 2 }
                         })

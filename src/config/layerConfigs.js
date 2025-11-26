@@ -10,7 +10,7 @@ const createOfflineRenderer = () => ({
         type: 'simple-marker',
         style: 'circle',
         color: [220, 38, 38, 0.8], // Default red for non-business internet
-        size: 10,
+        size: 12,
         outline: {
             color: [220, 38, 38, 1],
             width: 2
@@ -23,7 +23,7 @@ const createOfflineRenderer = () => ({
                 type: 'simple-marker',
                 style: 'circle',
                 color: [147, 51, 234, 0.8], // Purple center for offline business internet
-                size: 10,
+                size: 12,
                 outline: {
                     color: [220, 38, 38, 1], // Red outline for offline business internet
                     width: 2
@@ -31,15 +31,16 @@ const createOfflineRenderer = () => ({
             }
         }
     ],
-    // Scale-dependent sizing to prevent cluttering at different zoom levels
+    // Scale-dependent sizing with smooth interpolation to prevent cluttering at different zoom levels
     visualVariables: [{
         type: "size",
         valueExpression: "$view.scale",
         stops: [
-            { value: 80000, size: 10 },      // Zoom 14 and closer: Full size
+            { value: 80000, size: 12 },      // Zoom 14 and closer: Full size
             { value: 1000000, size: 6 },     // Zoom 10-13: Smaller size
             { value: 10000000, size: 3 }     // Zoom 6-9: Tiny size
-        ]
+        ],
+        interpolation: "linear"  // Smooth interpolation between zoom levels
     }]
 });
 
@@ -49,10 +50,10 @@ const createOnlineRenderer = () => ({
     defaultSymbol: {
         type: 'simple-marker',
         style: 'circle',
-        color: [34, 197, 94, 0.8], // Default green for non-business internet
-        size: 8,
+        color: [50, 255, 50, 0.9], // Brighter green for better visibility on satellite view
+        size: 10,
         outline: {
-            color: [34, 197, 94, 1],
+            color: [0, 200, 0, 1], // Darker green outline for contrast
             width: 1
         }
     },
@@ -63,7 +64,7 @@ const createOnlineRenderer = () => ({
                 type: 'simple-marker',
                 style: 'circle',
                 color: [147, 51, 234, 0.8], // Purple for online business internet
-                size: 8,
+                size: 10,
                 outline: {
                     color: [147, 51, 234, 1], // Purple outline for online business internet
                     width: 1
@@ -71,15 +72,16 @@ const createOnlineRenderer = () => ({
             }
         }
     ],
-    // Scale-dependent sizing to prevent cluttering at different zoom levels
+    // Scale-dependent sizing with smooth interpolation to prevent cluttering at different zoom levels
     visualVariables: [{
         type: "size",
         valueExpression: "$view.scale",
         stops: [
-            { value: 80000, size: 8 },       // Zoom 14 and closer: Full size
+            { value: 80000, size: 10 },      // Zoom 14 and closer: Full size
             { value: 1000000, size: 4 },     // Zoom 10-13: Smaller size
             { value: 10000000, size: 2 }     // Zoom 6-9: Tiny size
-        ]
+        ],
+        interpolation: "linear"  // Smooth interpolation between zoom levels
     }]
 });
 
@@ -178,9 +180,9 @@ const createOnlineClusterConfig = () => ({
         symbol: {
             type: 'simple-marker',
             style: 'circle',
-            color: [34, 197, 94, 0.8], // Green for online
+            color: [50, 255, 50, 0.9], // Brighter green for online (matches main renderer)
             outline: {
-                color: [34, 197, 94, 1],
+                color: [0, 200, 0, 1], // Darker green outline for contrast
                 width: 2
             }
         },
@@ -196,25 +198,7 @@ const createOnlineClusterConfig = () => ({
                 { value: 1000, size: '40px' }
             ]
         }]
-    },
-    labelingInfo: [{
-        deconflictionStrategy: 'none',
-        labelExpressionInfo: {
-            expression: '$feature.cluster_count > 1 ? Text($feature.cluster_count) : ""'
-        },
-        symbol: {
-            type: 'text',
-            color: 'white',
-            font: {
-                weight: 'bold',
-                family: 'Noto Sans',
-                size: '11px'
-            },
-            haloColor: [0, 0, 0, 0.8],
-            haloSize: 1
-        },
-        labelPlacement: 'center-center'
-    }]
+    }
 });
 
 // Sprout Huts renderer
@@ -223,7 +207,7 @@ const createSproutHutRenderer = () => ({
     symbol: {
         type: 'simple-marker',
         style: 'square',
-        color: [0, 128, 0, 0.8], // Green color for Huts
+        color: [255, 140, 0, 0.8], // Orange color for Huts (APWA communication standard)
         size: 14,
         outline: {
             color: [255, 255, 255, 1],
@@ -470,20 +454,20 @@ const createMainLineFiberRenderer = () => {
     };
 
     const uniqueValueInfos = [];
-    
+
     // Create entries for each fiber count with both aerial (solid) and underground (dashed) styles
     fiberCounts.forEach(count => {
         const color = colors[count];
         const width = widths[count];
         const label = count === 1 ? '1 Fiber' : `${count} Fibers`;
-        
+
         // Aerial (solid line)
         uniqueValueInfos.push({
             value: `${count}_Aerial`,
             symbol: createFiberLineSymbol(color, width, false),
             label: `${label} (Aerial)`
         });
-        
+
         // Underground (dashed line) - handle various underground placement values
         uniqueValueInfos.push({
             value: `${count}_Underground`,
@@ -634,7 +618,7 @@ const createPoleRenderer = () => ({
             width: 2
         }
     },
-    // Scale-dependent sizing to prevent cluttering at different zoom levels
+    // Scale-dependent sizing with smooth interpolation to prevent cluttering at different zoom levels
     visualVariables: [{
         type: "size",
         valueExpression: "$view.scale",
@@ -642,7 +626,8 @@ const createPoleRenderer = () => ({
             { value: 80000, size: 8 },      // Zoom 14 and closer: Full size
             { value: 1000000, size: 5 },    // Zoom 10-13: Smaller size
             { value: 10000000, size: 3 }    // Zoom 6-9: Tiny size
-        ]
+        ],
+        interpolation: "linear"  // Smooth interpolation between zoom levels
     }]
 });
 
@@ -787,9 +772,9 @@ const createMSTTerminalPopup = () => ({
                     valueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1); word-break: break-word;';
 
                     // Check both lowercase and uppercase field names for compatibility
-                    const value = attributes[field.fieldName] || 
-                                 attributes[field.fieldName.toUpperCase()] ||
-                                 attributes[field.fieldName.toLowerCase()];
+                    const value = attributes[field.fieldName] ||
+                        attributes[field.fieldName.toUpperCase()] ||
+                        attributes[field.fieldName.toLowerCase()];
 
                     if (value === null || value === undefined || value === '' || (typeof value === 'string' && value.trim() === '')) {
                         valueCell.innerHTML = '<span style="color: var(--calcite-color-text-3); font-style: italic;">N/A</span>';
@@ -813,7 +798,7 @@ const createMSTTerminalPopup = () => ({
                 if (feature.graphic.geometry) {
                     const geometry = feature.graphic.geometry;
                     let latitude, longitude;
-                    
+
                     // Handle different geometry types and coordinate systems
                     if (geometry.type === 'point') {
                         // ArcGIS Point geometry uses x (longitude) and y (latitude) or longitude/latitude properties
@@ -823,19 +808,19 @@ const createMSTTerminalPopup = () => ({
                         // GeoJSON format: [longitude, latitude]
                         [longitude, latitude] = geometry.coordinates;
                     }
-                    
+
                     if (latitude !== undefined && longitude !== undefined) {
                         const coordRow = document.createElement('tr');
                         coordRow.style.cssText = 'border-bottom: 1px solid var(--calcite-color-border-3);';
-                        
+
                         const coordLabelCell = document.createElement('td');
                         coordLabelCell.style.cssText = 'padding: 8px 12px; font-weight: 600; color: var(--calcite-color-text-2); width: 40%; vertical-align: top;';
                         coordLabelCell.textContent = 'Coordinates';
-                        
+
                         const coordValueCell = document.createElement('td');
                         coordValueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1); word-break: break-word;';
                         coordValueCell.textContent = `${latitude.toFixed(14)}, ${longitude.toFixed(14)}`;
-                        
+
                         coordRow.appendChild(coordLabelCell);
                         coordRow.appendChild(coordValueCell);
                         table.appendChild(coordRow);
@@ -845,7 +830,7 @@ const createMSTTerminalPopup = () => ({
                         const mapsLabelCell = document.createElement('td');
                         mapsLabelCell.style.cssText = 'padding: 8px 12px; font-weight: 600; color: var(--calcite-color-text-2); width: 40%; vertical-align: top;';
                         mapsLabelCell.textContent = 'Maps Link';
-                        
+
                         const mapsValueCell = document.createElement('td');
                         mapsValueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1);';
                         const mapsLink = document.createElement('a');
@@ -855,7 +840,7 @@ const createMSTTerminalPopup = () => ({
                         mapsLink.textContent = mapsLink.href;
                         mapsLink.style.cssText = 'color: var(--calcite-color-brand); text-decoration: underline;';
                         mapsValueCell.appendChild(mapsLink);
-                        
+
                         mapsRow.appendChild(mapsLabelCell);
                         mapsRow.appendChild(mapsValueCell);
                         table.appendChild(mapsRow);
@@ -1417,14 +1402,14 @@ export const layerConfigs = {
         id: 'cec-service-boundary',
         title: 'CEC Service Boundary',
         layerType: 'GeoJSONLayer',
-        dataUrl: '/CEC_Service_Boundary.geojson',
+        dataUrl: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/sprout_plant/CEC_Service_Boundary.geojson',
         renderer: {
             type: 'simple',
             symbol: {
                 type: 'simple-fill',
                 style: 'none', // No fill, just outline
                 outline: {
-                    color: [0, 112, 192, 0.9], // Blue outline for service boundary
+                    color: [128, 128, 128, 0.9], // Grey outline for service boundary (works in light and dark mode)
                     width: 2.5
                 }
             }
@@ -1485,14 +1470,14 @@ export const getLayerConfig = (layerId) => {
     if (layerConfigs[layerId]) {
         return layerConfigs[layerId];
     }
-    
+
     // If not found, search by id property (kebab-case)
     for (const key in layerConfigs) {
         if (layerConfigs[key] && layerConfigs[key].id === layerId) {
             return layerConfigs[key];
         }
     }
-    
+
     return null;
 };
 

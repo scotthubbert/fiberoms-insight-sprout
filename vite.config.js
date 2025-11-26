@@ -21,7 +21,6 @@ function getBuildInfo() {
     console.warn('Git information not available, using defaults');
   }
 
-  // Read package.json version
   const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
 
   return {
@@ -38,6 +37,10 @@ function getBuildInfo() {
 const buildInfo = getBuildInfo();
 
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production'
+    ? '/dev/insight/'
+    : '/',
+
   test: {
     environment: 'jsdom',
     setupFiles: ['./tests/setup.js'],
@@ -72,15 +75,12 @@ export default defineConfig({
     ]
   },
   plugins: [
-    // Copy essential assets for production build
     viteStaticCopy({
       targets: [
-        // Copy ALL CalciteUI assets (complete approach)
         {
           src: 'node_modules/@esri/calcite-components/dist/calcite/assets/**/*',
           dest: 'calcite/assets'
         },
-        // Copy ArcGIS theme CSS files for proper theming
         {
           src: 'node_modules/@arcgis/core/assets/esri/themes/light/main.css',
           dest: 'assets/esri/themes/light'
@@ -89,16 +89,14 @@ export default defineConfig({
           src: 'node_modules/@arcgis/core/assets/esri/themes/dark/main.css',
           dest: 'assets/esri/themes/dark'
         },
-        // Copy ArcGIS fonts for proper text rendering
         {
           src: 'node_modules/@arcgis/core/assets/esri/themes/base/fonts/**/*',
           dest: 'assets/esri/themes/base/fonts'
         }
       ]
     }),
-    // Node.js polyfills for Supabase compatibility
+
     nodePolyfills({
-      // Only polyfill what Supabase needs
       include: ['stream', 'util', 'buffer', 'process', 'http'],
       globals: {
         Buffer: true,
@@ -106,22 +104,23 @@ export default defineConfig({
         process: true
       }
     }),
-    // Only use SSL in production or when explicitly requested
+
     ...(process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS ? [basicSsl()] : []),
-    // Pre-compress assets with Brotli for faster serving (best compression)
+
     viteCompression({
       algorithm: 'brotliCompress',
       ext: '.br',
-      threshold: 1024, // Only compress files > 1KB
+      threshold: 1024,
       deleteOriginFile: false
     }),
-    // Pre-compress assets with Gzip for broader compatibility
+
     viteCompression({
       algorithm: 'gzip',
       ext: '.gz',
       threshold: 1024,
       deleteOriginFile: false
     }),
+
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'icons/*.png', 'icons/*.svg'],
@@ -136,23 +135,22 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         cleanupOutdatedCaches: true,
-        skipWaiting: false,  // Changed: Prevents mid-session crashes from auto-updates
+        skipWaiting: false,
         clientsClaim: true,
-        // Add revision info to ensure cache busting
         dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
-        // Navigation fallback for SPA
-        navigateFallback: '/index.html',
+
+        // ✅ REQUIRED FIX FOR NON-ROOT DEPLOYMENT
+        navigateFallback: '/dev/insight/index.html',
+
         navigateFallbackDenylist: [/^\/(api|storage)\//],
-        // Disable navigation preload completely
         navigationPreload: false,
-        // Add custom service worker code
+
         additionalManifestEntries: [],
         mode: 'production',
-        // Add custom cache headers
+
         manifestTransforms: [
           (manifestEntries) => {
             const manifest = manifestEntries.map(entry => {
-              // Force revision for HTML files
               if (entry.url.endsWith('.html')) {
                 entry.revision = Date.now().toString();
               }
@@ -161,13 +159,12 @@ export default defineConfig({
             return { manifest };
           }
         ],
+
         runtimeCaching: [
-          // Skip service worker caching for OSP GeoJSON data - handled by IndexedDB
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/(public|sign)\/(fsa-data|esri-files)\/.*\.geojson/i,
             handler: 'NetworkOnly',
             options: {
-              // Let our IndexedDB cache handle these files
               cacheName: 'osp-geojson-skip',
               fetchOptions: {
                 mode: 'cors'
@@ -181,7 +178,7 @@ export default defineConfig({
               cacheName: 'arcgis-js-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+                maxAgeSeconds: 60 * 60 * 24 * 7
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -202,7 +199,7 @@ export default defineConfig({
               cacheName: 'arcgis-basemap-cache',
               expiration: {
                 maxEntries: 5000,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 30
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -223,7 +220,7 @@ export default defineConfig({
               cacheName: 'supabase-api-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 5 // 5 minutes
+                maxAgeSeconds: 60 * 5
               },
               cacheableResponse: {
                 statuses: [0, 200, 204]
@@ -240,7 +237,7 @@ export default defineConfig({
         ]
       }
     }),
-    // Plugin to disable caching in development
+
     {
       name: 'no-cache-headers',
       configureServer(server) {
@@ -253,14 +250,17 @@ export default defineConfig({
       }
     }
   ],
+
   server: {
     https: process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS,
     host: true
   },
+
   preview: {
     https: false,
     host: true
   },
+
   build: {
     target: 'es2020',
     sourcemap: false,
@@ -270,42 +270,20 @@ export default defineConfig({
     rollupOptions: {
       external: [],
       output: {
-        // Ensure consistent hashing for better caching
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Split ArcGIS into granular chunks for better caching and parallel loading
             if (/@arcgis\/core\//.test(id)) {
-              // Core ArcGIS modules - essential map functionality
-              if (/\/(config|intl|request|kernel|core)/.test(id)) {
-                return 'vendor_arcgis-core';
-              }
-              // Geometry and spatial operations
-              if (/\/geometry\//.test(id)) {
-                return 'vendor_arcgis-geometry';
-              }
-              // Layers - lazy loaded when needed
-              if (/\/layers\//.test(id)) {
-                return 'vendor_arcgis-layers';
-              }
-              // Everything else from @arcgis/core
+              if (/\/(config|intl|request|kernel|core)/.test(id)) return 'vendor_arcgis-core';
+              if (/\/geometry\//.test(id)) return 'vendor_arcgis-geometry';
+              if (/\/layers\//.test(id)) return 'vendor_arcgis-layers';
               return 'vendor_arcgis-other';
             }
-            // ArcGIS Map Components - widgets loaded on demand
-            if (/@arcgis\/map-components/.test(id)) {
-              return 'vendor_arcgis-widgets';
-            }
-            // Calcite UI components
-            if (/@esri\/calcite-components/.test(id)) {
-              return 'vendor_calcite';
-            }
-            // Supabase
-            if (/@supabase\//.test(id)) {
-              return 'vendor_supabase';
-            }
-            // Other vendor dependencies
+            if (/@arcgis\/map-components/.test(id)) return 'vendor_arcgis-widgets';
+            if (/@esri\/calcite-components/.test(id)) return 'vendor_calcite';
+            if (/@supabase\//.test(id)) return 'vendor_supabase';
             return 'vendor_other';
           }
         }
@@ -325,9 +303,7 @@ export default defineConfig({
       ]
     },
     chunkSizeWarningLimit: 1000,
-    // Generate manifest for tracking file versions
     manifest: true,
-    // Ensure CSS is extracted with hash
     cssCodeSplit: true
   }
 });
