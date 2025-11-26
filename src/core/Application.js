@@ -162,10 +162,8 @@ export class Application {
 
         this.initialLoadComplete = true;
         this.startSubscriberPolling();
-        this.startPowerOutagePolling();
         const triggerImmediateRefresh = () => {
             try { this.pollingManager.performUpdate('subscribers'); } catch { }
-            try { this.pollingManager.performUpdate('power-outages'); } catch { }
         };
         document.addEventListener('visibilitychange', () => { if (!document.hidden) triggerImmediateRefresh(); });
         window.addEventListener('online', triggerImmediateRefresh);
@@ -187,52 +185,10 @@ export class Application {
                 }
             }
             log.info('📊 Online subscribers configured for on-demand loading (saves ~2.7MB)');
-            await this.initializePowerOutageLayers();
         } catch (error) {
             log.error('Failed to initialize subscriber layers:', error);
             loadingIndicator.showError('offline-subscribers', 'Offline Subscribers', 'Failed to load');
             loadingIndicator.showError('online-subscribers', 'Online Subscribers', 'Failed to load');
-        }
-    }
-
-    async initializePowerOutageLayers() {
-        try {
-            loadingIndicator.showLoading('apco-outages', 'APCo Power Outages');
-            loadingIndicator.showLoading('cullman-outages', 'Cullman Electric');
-            const apcoConfig = getLayerConfig('apcoOutages');
-            if (apcoConfig) {
-                const result = await this.createLayerFromConfig(apcoConfig);
-                if (result && result.success) {
-                    if (result.layer) {
-                        result.layer.visible = apcoConfig.visible;
-                        this.services.mapController.addLayer(result.layer, apcoConfig.zOrder);
-                        loadingIndicator.showNetwork('apco-outages', 'APCo Power Outages');
-                    } else if (result.isEmpty) {
-                        loadingIndicator.showEmpty('apco-outages', 'APCo Power Outages');
-                    }
-                } else {
-                    loadingIndicator.showError('apco-outages', 'APCo Power Outages', 'Failed to load data');
-                }
-            }
-            const cullmanConfig = getLayerConfig('cullmanOutages');
-            if (cullmanConfig) {
-                const result = await this.createLayerFromConfig(cullmanConfig);
-                if (result && result.success) {
-                    if (result.layer) {
-                        result.layer.visible = cullmanConfig.visible;
-                        this.services.mapController.addLayer(result.layer, cullmanConfig.zOrder);
-                        loadingIndicator.showNetwork('cullman-outages', 'Cullman Electric');
-                    } else if (result.isEmpty) {
-                        loadingIndicator.showEmpty('cullman-outages', 'Cullman Electric');
-                    }
-                } else {
-                    loadingIndicator.showError('cullman-outages', 'Cullman Electric', 'Failed to load data');
-                }
-            }
-        } catch (error) {
-            log.error('Failed to initialize power outage layers:', error);
-            loadingIndicator.showError('apco-outages', 'APCo Power Outages', 'Failed to load');
-            loadingIndicator.showError('cullman-outages', 'Cullman Electric', 'Failed to load');
         }
     }
 
@@ -495,13 +451,6 @@ export class Application {
             checkbox.addEventListener('calciteCheckboxChange', (e) => {
                 this.handleLayerToggle(e.target, e.target.checked);
             });
-        });
-        document.addEventListener('powerOutageToggle', async (e) => {
-            const { layerId, visible } = e.detail;
-            if (layerId && this.services.layerManager) {
-                await this.services.layerManager.toggleLayerVisibility(layerId, visible);
-                log.info(`⚡ Power outage layer toggled: ${layerId} = ${visible}`);
-            }
         });
         // Add listeners to switches in .layer-toggle-item elements that don't have their own ID-based listeners
         const switches = document.querySelectorAll('.layer-toggle-item calcite-switch');
@@ -1098,7 +1047,7 @@ export class Application {
             return;
         }
 
-        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'sprout-huts', 'rainviewer-radar', 'apco-outages', 'cullman-outages', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'splitters', 'closures', 'electric-trucks', 'fiber-trucks']);
+        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'sprout-huts', 'rainviewer-radar', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'splitters', 'closures', 'electric-trucks', 'fiber-trucks']);
         if (!layerId || !VALID_LAYER_IDS.has(layerId)) { log.warn(`Invalid or unsupported layer ID: ${layerId}`); return; }
         if (layerId) {
             if (layerId === 'online-subscribers' && checked && !this.onlineLayerLoaded) {
@@ -1197,14 +1146,12 @@ export class Application {
         if (element.id === 'business-internet-filter-switch' || element.id === 'mobile-business-internet-filter-switch') {
             return 'business-internet-filter';
         }
-        if (element.classList.contains('apco-toggle')) return 'apco-outages';
-        if (element.classList.contains('cullman-toggle')) return 'cullman-outages';
         const listItem = element.closest('calcite-list-item');
         const label = element.closest('calcite-label');
         let labelText = '';
         if (listItem) labelText = listItem.getAttribute('label'); else if (label) labelText = label.textContent.trim();
         const mapping = {
-            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'sprout-huts', 'Weather Radar': 'rainviewer-radar', 'APCo Power Outages': 'apco-outages', 'Cullman Electric': 'cullman-outages', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'Splitters': 'splitters', 'Slack Loops': 'closures', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
+            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'sprout-huts', 'Weather Radar': 'rainviewer-radar', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'Splitters': 'splitters', 'Slack Loops': 'closures', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
         };
         return mapping[labelText] || null;
     }
@@ -1216,15 +1163,8 @@ export class Application {
 
     syncToggleStates(layerId, checked) {
         const labelMapping = {
-            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'sprout-huts': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'apco-outages': 'APCo Power Outages', 'cullman-outages': 'Cullman Electric', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'splitters': 'Splitters', 'closures': 'Slack Loops', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
+            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'sprout-huts': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'splitters': 'Splitters', 'closures': 'Slack Loops', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
         };
-        if (layerId === 'apco-outages') {
-            const apcoSwitches = document.querySelectorAll('.apco-toggle, #toggle-apco-outages');
-            apcoSwitches.forEach(s => { s.checked = checked; });
-        } else if (layerId === 'cullman-outages') {
-            const cullmanSwitches = document.querySelectorAll('.cullman-toggle, #toggle-cullman-outages');
-            cullmanSwitches.forEach(s => { s.checked = checked; });
-        }
         const labelText = labelMapping[layerId]; if (!labelText) return;
         const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #vehicles-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');
         desktopCheckboxes.forEach(checkbox => {
@@ -1334,12 +1274,6 @@ export class Application {
                         await this.services.mobileTabBar.updateMobileSubscriberStatistics();
                     }
 
-                    // Also refresh power outage stats without notification
-                    const powerStats = document.querySelector('power-outage-stats');
-                    if (powerStats && typeof powerStats.updateStats === 'function') {
-                        await powerStats.updateStats(true); // Skip notification
-                    }
-
                     // Simulate brief loading for user feedback
                     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -1367,82 +1301,6 @@ export class Application {
                 const prevOnline = Math.floor(Math.random() * 20000) + 20000;
                 const currOnline = prevOnline - (currOffline - prevOffline);
                 if (window.app) window.app.showSubscriberUpdateToast(prevOffline, Math.max(0, currOffline), prevOnline, Math.max(0, currOnline));
-            });
-        }
-    }
-
-    startPowerOutagePolling() {
-        // Detect mobile device - use longer intervals to save battery
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-            window.innerWidth <= 768;
-
-        // Mobile: 5 minutes (users typically don't leave app running)
-        // Desktop: 1 minute (users monitor actively)
-        const outagePollInterval = isMobile ? 300000 : 60000;
-
-        log.info(`⚡ Starting power outage data polling (${isMobile ? 'mobile' : 'desktop'}: ${outagePollInterval / 1000}s interval)`);
-        const handlePowerOutageUpdate = async (data) => {
-            try {
-                if (data.apco && data.cullman) {
-                    if (!window._isManualRefresh) {
-                        loadingIndicator.showLoading('apco-outages-update', 'APCo Power Outages');
-                        loadingIndicator.showLoading('cullman-outages-update', 'Cullman Electric');
-                    }
-                    const apcoLayer = this.services.layerManager.getLayer('apco-outages');
-                    const cullmanLayer = this.services.layerManager.getLayer('cullman-outages');
-                    if (apcoLayer && data.apco) {
-                        const apcoGeoJSON = { type: 'FeatureCollection', features: data.apco.features || [] };
-                        await this.services.layerManager.updateLayerData('apco-outages', apcoGeoJSON);
-                    }
-                    if (data.apco && !window._isManualRefresh) loadingIndicator.showNetwork('apco-outages-update', 'APCo Power Outages');
-                    if (cullmanLayer && data.cullman) {
-                        const cullmanGeoJSON = { type: 'FeatureCollection', features: data.cullman.features || [] };
-                        await this.services.layerManager.updateLayerData('cullman-outages', cullmanGeoJSON);
-                    }
-                    if (data.cullman && !window._isManualRefresh) loadingIndicator.showNetwork('cullman-outages-update', 'Cullman Electric');
-                    document.dispatchEvent(new CustomEvent('powerOutageDataUpdated', { detail: { apcoCount: data.apco?.count || 0, cullmanCount: data.cullman?.count || 0 } }));
-                    const powerOutageStatsComponent = document.querySelector('power-outage-stats');
-                    if (powerOutageStatsComponent) powerOutageStatsComponent.updateStats();
-                }
-            } catch (error) {
-                log.error('Failed to handle power outage update:', error);
-                try { (await import('../services/ErrorService.js')).errorService.report(error, { module: 'Application', action: 'handlePowerOutageUpdate' }); } catch { }
-                if (!window._isManualRefresh) {
-                    loadingIndicator.showError('apco-outages-update', 'APCo Power Outages', 'Update failed');
-                    loadingIndicator.showError('cullman-outages-update', 'Cullman Electric', 'Update failed');
-                }
-            }
-        };
-        this.pollingManager.startPolling('power-outages', handlePowerOutageUpdate, outagePollInterval);
-        const refreshPowerButton = document.getElementById('refresh-power-outages');
-        if (refreshPowerButton) {
-            refreshPowerButton.addEventListener('click', async () => {
-                log.info('⚡ Manual power outage refresh triggered');
-                refreshPowerButton.setAttribute('loading', '');
-                try {
-                    window._isManualRefresh = true;
-                    subscriberDataService.refreshData('outages');
-                    const powerStats = document.querySelector('power-outage-stats');
-                    if (powerStats && typeof powerStats.updateStats === 'function') await powerStats.updateStats(true);
-                    await this.pollingManager.performUpdate('power-outages');
-                } finally {
-                    refreshPowerButton.removeAttribute('loading');
-                    window._isManualRefresh = false;
-                }
-            });
-        }
-        const testButton = document.getElementById('test-outage-update');
-        if (testButton && typeof isDevelopment !== 'undefined' && isDevelopment) {
-            testButton.style.display = 'block';
-            testButton.addEventListener('click', () => {
-                const powerOutageStats = document.querySelector('power-outage-stats');
-                if (powerOutageStats) {
-                    const prevApco = Math.floor(Math.random() * 10);
-                    const currApco = prevApco + Math.floor(Math.random() * 5) - 2;
-                    const prevCullman = Math.floor(Math.random() * 10);
-                    const currCullman = prevCullman + Math.floor(Math.random() * 5) - 2;
-                    powerOutageStats.showUpdateToast(prevApco, Math.max(0, currApco), prevCullman, Math.max(0, currCullman));
-                }
             });
         }
     }

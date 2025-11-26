@@ -118,11 +118,6 @@ export class DashboardManager {
                 await window.app.updateSubscriberStatistics();
             }
 
-            // Also refresh power outage stats without notification
-            const powerStats = document.querySelector('power-outage-stats');
-            if (powerStats && typeof powerStats.updateStats === 'function') {
-                await powerStats.updateStats(true); // Skip notification
-            }
 
             // Simulate brief loading for user feedback
             await new Promise(resolve => setTimeout(resolve, 500));

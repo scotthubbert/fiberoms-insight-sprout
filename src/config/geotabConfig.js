@@ -94,8 +94,8 @@ export const TRUCK_LAYER_DEFAULTS = {
 
     // Visual settings
     colors: {
-        fiber: [30, 95, 175, 0.9],     // Alabama Power blue
-        electric: [74, 124, 89, 0.9]   // Tombigbee green
+        fiber: [30, 95, 175, 0.9],     // Fiber blue
+        electric: [74, 124, 89, 0.9]   // Electric green
     },
 
     sizes: {

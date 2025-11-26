@@ -31,13 +31,7 @@ export const API_CONFIG = {
 
     // Supabase Storage URLs for Power Outage Data
     OUTAGES: {
-        // Legacy Freedom Fiber outage data (Disabled)
-        // APCo (Alabama Power) - Only relevant for Freedom Fiber area?
-        // APCO: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/outages.geojson',
-        // Tombigbee Electric - Only relevant for Freedom Fiber area?
-        // TOMBIGBEE: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/geojson-files/tec_outages.geojson'
-
-        APCO: null,
+        // Cullman Electric power outages
         CULLMAN: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/cec_power_outages/outages/cullman_outages.geojson'
     }
 };

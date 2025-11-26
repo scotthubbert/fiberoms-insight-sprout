@@ -1,7 +1,6 @@
 // layerConfigs.js - Open/Closed: Extend through configuration
 import { subscriberDataService } from '../dataService.js';
 import { infrastructureService } from '../services/InfrastructureService.js';
-import { outageService } from '../services/OutageService.js';
 
 // Renderer configurations
 const createOfflineRenderer = () => ({
@@ -218,94 +217,6 @@ const createOnlineClusterConfig = () => ({
     }]
 });
 
-// Power outage renderers - not used when using GraphicsLayer
-const createPowerOutageRenderer = (company) => {
-    // This renderer is not used since GraphicsLayer handles symbols individually
-    // Kept for compatibility with layer config structure
-    return {
-        type: 'simple',
-        symbol: {
-            type: 'simple-marker',
-            style: 'circle',
-            color: [255, 0, 0],
-            size: 8
-        }
-    };
-};
-
-// Power outage popup templates
-const createPowerOutagePopup = (company) => {
-    if (company === 'cullman') {
-        return {
-            title: 'Cullman Electric Outage',
-            content: [
-                {
-                    type: 'fields',
-                    fieldInfos: [
-                        { fieldName: 'customers_affected', label: 'Customers Affected', visible: true },
-                        { fieldName: 'status', label: 'Crew Status', visible: true },
-                        {
-                            fieldName: 'start_time',
-                            label: 'Outage Started',
-                            visible: true,
-                            format: {
-                                dateFormat: 'short-date-short-time'
-                            }
-                        },
-                        { fieldName: 'duration', label: 'Duration', visible: true },
-                        { fieldName: 'outage_status', label: 'Status', visible: true },
-                        { fieldName: 'customers_restored', label: 'Customers Restored', visible: true },
-                        { fieldName: 'initially_affected', label: 'Initially Affected', visible: true },
-                        { fieldName: 'equipment', label: 'Equipment', visible: true },
-                        { fieldName: 'description', label: 'Description', visible: true },
-                        { fieldName: 'outage_id', label: 'Outage ID', visible: true },
-                        { fieldName: 'substation', label: 'Substation', visible: true },
-                        { fieldName: 'feeder', label: 'Feeder', visible: true },
-                        { fieldName: 'district', label: 'District', visible: true },
-                        {
-                            fieldName: 'last_update',
-                            label: 'Last Update',
-                            visible: true,
-                            format: {
-                                dateFormat: 'short-date-short-time'
-                            }
-                        }
-                    ]
-                }
-            ]
-        };
-    } else {
-        // APCo format - keeping original for now
-        return {
-            title: `Alabama Power Company - {outage_id}`,
-            content: [
-                {
-                    type: 'fields',
-                    fieldInfos: [
-                        { fieldName: 'outage_id', label: 'Outage ID', visible: true },
-                        { fieldName: 'customers_affected', label: 'Customers Affected', visible: true },
-                        { fieldName: 'status', label: 'Status', visible: true },
-                        { fieldName: 'cause', label: 'Cause', visible: true },
-                        { fieldName: 'estimated_restore', label: 'Estimated Restore', visible: true },
-                        { fieldName: 'start_time', label: 'Start Time', visible: true },
-                        { fieldName: 'area_description', label: 'Area', visible: true },
-                        { fieldName: 'comments', label: 'Status Details', visible: true },
-                        { fieldName: 'crew_on_site', label: 'Crew On Site', visible: true }
-                    ]
-                }
-            ],
-            actions: [
-                {
-                    id: 'copy-outage-info',
-                    title: 'Copy Outage Info',
-                    icon: 'duplicate',
-                    type: 'button'
-                }
-            ]
-        };
-    }
-};
-
 // Sprout Huts renderer
 const createSproutHutRenderer = () => ({
     type: 'simple',
@@ -375,31 +286,6 @@ const createSproutHutLabeling = () => [
         maxScale: 0,
         minScale: 0
     }
-];
-
-// Power outage field definitions
-const createPowerOutageFields = () => [
-    { name: 'outage_id', type: 'string', alias: 'Outage ID' },
-    { name: 'customers_affected', type: 'integer', alias: 'Customers Affected' },
-    { name: 'cause', type: 'string', alias: 'Cause' },
-    { name: 'start_time', type: 'date', alias: 'Start Time' },
-    { name: 'estimated_restore', type: 'date', alias: 'Estimated Restore' },
-    { name: 'status', type: 'string', alias: 'Crew Status' },
-    { name: 'outage_status', type: 'string', alias: 'Status' },
-    { name: 'area_description', type: 'string', alias: 'Area Description' },
-    { name: 'comments', type: 'string', alias: 'Status Details' },
-    { name: 'crew_on_site', type: 'string', alias: 'Crew On Site' },
-    { name: 'customers_restored', type: 'integer', alias: 'Customers Restored' },
-    { name: 'initially_affected', type: 'integer', alias: 'Initially Affected' },
-    { name: 'equipment', type: 'string', alias: 'Equipment' },
-    { name: 'description', type: 'string', alias: 'Description' },
-    { name: 'substation', type: 'string', alias: 'Substation' },
-    { name: 'feeder', type: 'string', alias: 'Feeder' },
-    { name: 'district', type: 'string', alias: 'District' },
-    { name: 'last_update', type: 'date', alias: 'Last Update' },
-    { name: 'duration', type: 'string', alias: 'Duration' },
-    { name: 'latitude', type: 'double', alias: 'Latitude' },
-    { name: 'longitude', type: 'double', alias: 'Longitude' }
 ];
 
 // Enhanced popup templates for field workers (updated for actual database schema)
@@ -1168,8 +1054,8 @@ const createMSTFiberFields = () => [
 // Truck renderer configurations (with proper visual variables for smooth updates)
 const createTruckRenderer = (truckType) => {
     const colors = {
-        fiber: [30, 95, 175, 0.9],     // Alabama Power blue
-        electric: [74, 124, 89, 0.9]   // Tombigbee green
+        fiber: [30, 95, 175, 0.9],     // Fiber blue
+        electric: [74, 124, 89, 0.9]   // Electric green
     };
 
     const color = colors[truckType] || [128, 128, 128, 0.9]; // Default gray
@@ -1304,31 +1190,6 @@ export const layerConfigs = {
         visible: false,
         zOrder: 10,  // Changed from 0 to ensure it's above basemap
         dataServiceMethod: () => subscriberDataService.getOnlineSubscribers()
-    },
-
-    // Power Outages Layers
-    apcoOutages: {
-        id: 'apco-outages',
-        title: 'APCo Power Outages',
-        dataSource: 'apco_outages',
-        renderer: createPowerOutageRenderer('apco'),
-        popupTemplate: createPowerOutagePopup('apco'),
-        fields: createPowerOutageFields(),
-        visible: true,
-        zOrder: 8, // Below subscriber points and clusters
-        dataServiceMethod: () => outageService.getApcoOutages()
-    },
-
-    cullmanOutages: {
-        id: 'cullman-outages',
-        title: 'Cullman Electric',
-        dataSource: 'cullman_outages',
-        renderer: createPowerOutageRenderer('cullman'),
-        popupTemplate: createPowerOutagePopup('cullman'),
-        fields: createPowerOutageFields(),
-        visible: true,
-        zOrder: 8, // Below subscriber points and clusters
-        dataServiceMethod: () => outageService.getCullmanOutages()
     },
 
     // Sprout Huts Layer

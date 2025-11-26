@@ -3,7 +3,6 @@ import { cacheService } from './services/CacheService.js'
 import { createLogger } from './utils/logger.js'
 import { geoJSONTransformService } from './services/GeoJSONTransformService.js'
 import { infrastructureService } from './services/InfrastructureService.js'
-import { outageService } from './services/OutageService.js'
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -180,7 +179,6 @@ export class SubscriberDataService {
         // Realtime data types that are never cached
         const realtimeTypes = [
             'offlineSubscribers', 'onlineSubscribers',
-            'apcoOutages', 'cullmanOutages',
             'fiberTrucks', 'electricTrucks'
         ];
 
@@ -862,30 +860,6 @@ export class PollingManager {
             setTimeout(() => {
                 this.performUpdate(dataType)
             }, 5000)
-        } else if (dataType === 'power-outages') {
-            // For power outages, check if layers already have data to avoid redundant first update
-            const layerManager = window.app?.services?.layerManager;
-            const apcoLayer = layerManager?.getLayer('apco-outages');
-            const cullmanLayer = layerManager?.getLayer('cullman-outages');
-            const hasApcoData = apcoLayer?.graphics?.length > 0;
-            const hasCullmanData = cullmanLayer?.graphics?.length > 0;
-
-            // If either layer already has data, skip the immediate first update
-            if (hasApcoData || hasCullmanData) {
-                log.info('⚡ Skipping polling first update - power outage layers already have data');
-                this.isFirstUpdate.set(dataType, false);
-                // Start periodic polling immediately without first update
-                const intervalId = setInterval(() => {
-                    this.performUpdate(dataType)
-                }, interval)
-                this.pollingIntervals.set(dataType, intervalId)
-                return;
-            }
-
-            // Wait 3 seconds before first check to ensure layer state is accurate
-            setTimeout(() => {
-                this.performUpdate(dataType)
-            }, 3000)
         } else {
             // Perform immediate update for other data types
             this.performUpdate(dataType)
@@ -973,20 +947,6 @@ export class PollingManager {
                     }
 
                     data = { offline, online }
-                    break
-                case 'apco-outages':
-                    data = await outageService.getApcoOutages()
-                    break
-                case 'cullman-outages':
-                    data = await outageService.getCullmanOutages()
-                    break
-                case 'power-outages':
-                    // Fetch both power company outages
-                    const [apco, cullman] = await Promise.all([
-                        outageService.getApcoOutages(),
-                        outageService.getCullmanOutages()
-                    ])
-                    data = { apco, cullman }
                     break
                 default:
                     log.warn(`Unknown data type for polling: ${dataType}`)

@@ -17,15 +17,15 @@ const SERVICE_AREAS = {
         name: 'Sprout Fiber Service Area',
         region: 'Alabama, USA',
         bounds: {
-            xmin: -87.5,   // Western bound
-            ymin: 33.5,    // Southern bound
-            xmax: -86.0,   // Eastern bound
-            ymax: 35.0,    // Northern bound
+            xmin: -87.35,  // Western bound (shifted southwest to center)
+            ymin: 33.80,   // Southern bound (shifted southwest to center)
+            xmax: -86.50,  // Eastern bound (shifted southwest to center)
+            ymax: 34.45,   // Northern bound (shifted southwest to center)
             spatialReference: { wkid: 4326 } // WGS84
         },
         center: {
-            latitude: 34.1748,
-            longitude: -86.8436
+            latitude: 34.125,   // Shifted south
+            longitude: -86.925  // Shifted west
         },
         searchSettings: {
             maxResults: 8,
@@ -36,7 +36,7 @@ const SERVICE_AREAS = {
         }
     },
 
-    // Alabama Power Company service area (current deployment)
+    // Freedom Fiber service area
     freedom_fiber: {
         name: 'Freedom Fiber Service Area',
         region: 'Alabama, USA',

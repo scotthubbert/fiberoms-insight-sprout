@@ -60,8 +60,7 @@ async function initializeApp() {
     { setAssetPath },
     { Application },
     { initSentryIfEnabled, captureError: sentryCaptureError },
-    { initAnalytics },
-    _powerOutageStats  // Import but don't need the export
+    { initAnalytics }
   ] = await Promise.all([
     // Core services
     import('./services/ErrorService.js'),
@@ -74,7 +73,6 @@ async function initializeApp() {
     import('./core/Application.js'),
     import('./services/SentryService.js'),
     import('./services/AnalyticsService.js'),
-    import('./components/PowerOutageStats.js'),
     // CalciteUI core (mobile + shared)
     import('@esri/calcite-components/dist/components/calcite-shell'),
     import('@esri/calcite-components/dist/components/calcite-navigation'),
@@ -174,6 +172,13 @@ async function initializeApp() {
     // Load on transition to desktop
     mqDesktop.addEventListener('change', (e) => { if (e.matches) loadDesktopCalcite(); });
   }
+
+  // Load PowerOutageStats component (custom element for power outage panel)
+  import('./components/PowerOutageStats.js').then(() => {
+    log.info('✅ PowerOutageStats component loaded');
+  }).catch(err => {
+    log.warn('⚠️ PowerOutageStats component failed to load:', err);
+  });
 
   log.info('✅ Core components loaded; desktop Calcite will load on demand');
 

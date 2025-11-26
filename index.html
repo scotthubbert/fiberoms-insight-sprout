@@ -17,7 +17,7 @@
   <!-- PWA Meta Tags -->
   <meta name="application-name" content="FiberOMS Insight - Sprout">
   <meta name="description" content="Mobile-first fiber optic network management for ISPs">
-  <meta name="keywords" content="fiber optic, network management, ISP, field technician, outage management">
+  <meta name="keywords" content="fiber optic, network management, ISP, field technician">
   <meta name="author" content="FiberOMS Development Team">
 
   <title>FiberOMS Insight</title>
@@ -87,8 +87,8 @@
         </div>
       </calcite-navigation>
 
-      <!-- Mobile Map Overlay for Outage Count -->
-      <div id="mobile-outage-overlay" class="mobile-only">
+      <!-- Mobile Map Overlay for Offline Count -->
+      <div id="mobile-offline-overlay" class="mobile-only">
         <calcite-chip scale="l" appearance="outline" id="mobile-metrics-chip">
           <span id="mobile-offline-count">0</span>
         </calcite-chip>
@@ -102,10 +102,9 @@
             <calcite-action id="layers-action" text="Subscribers" icon="users" active></calcite-action>
             <calcite-action id="osp-action" text="OSP" icon="utility-network"></calcite-action>
             <calcite-action id="vehicles-action" text="Vehicles" icon="car" hidden></calcite-action>
-            <calcite-action id="power-outages-action" text="Power Outages" icon="camera-flash-off"></calcite-action>
           </calcite-action-group>
           <calcite-action-group>
-
+            <calcite-action id="power-outages-action" text="Power Outages" icon="camera-flash-off"></calcite-action>
             <calcite-action id="network-parent-action" text="Network" icon="linkChart"></calcite-action>
             <calcite-action id="tools-action" text="Tools" icon="wrench"></calcite-action>
           </calcite-action-group>
@@ -285,28 +284,6 @@
                 </calcite-button>
               </div>
             </calcite-block>
-            <calcite-block heading="Network Map" collapsible expanded>
-              <calcite-icon slot="icon" icon="map"></calcite-icon>
-              <div id="prtg-container">
-                <div id="prtg-warning" class="prtg-warning-container">
-                  <calcite-notice open kind="warning" icon="exclamation-mark-triangle">
-                    <div slot="title">PRTG Connection</div>
-                    <div slot="message">
-                      To view the PRTG network map, you must first accept the security certificate from the server.
-                    </div>
-                  </calcite-notice>
-                  <calcite-button id="open-prtg" class="prtg-button-primary" width="full">
-                    Accept Certificate
-                  </calcite-button>
-                  <calcite-button id="reload-prtg" class="prtg-button-secondary" width="full" appearance="outline">
-                    Reload Frame
-                  </calcite-button>
-                </div>
-                <iframe id="prtg-iframe" width="100%" height="750" frameborder="0" class="prtg-iframe-hidden"
-                  src="about:blank">
-                </iframe>
-              </div>
-            </calcite-block>
           </div>
 
 
@@ -412,8 +389,6 @@
           icon-start="utility-network"></calcite-segmented-control-item>
         <calcite-segmented-control-item id="tab-vehicles" value="vehicles" icon-start="car"
           hidden></calcite-segmented-control-item>
-        <calcite-segmented-control-item id="tab-power" value="power"
-          icon-start="camera-flash-off"></calcite-segmented-control-item>
         <calcite-segmented-control-item id="tab-other" value="other" icon-start="apps"></calcite-segmented-control-item>
       </calcite-segmented-control>
     </calcite-shell>
@@ -645,18 +620,6 @@
           <calcite-button width="full" icon-start="refresh" appearance="outline">Refresh Vehicle
             Locations</calcite-button>
         </calcite-block>
-      </div>
-    </calcite-dialog>
-
-    <calcite-dialog id="mobile-power-sheet" class="mobile-only" width-scale="l" scale="l">
-      <div slot="header" class="dialog-header">
-        <span class="dialog-title">Power Outages</span>
-        <calcite-button appearance="transparent" kind="neutral" scale="s" icon-start="x" class="dialog-close-btn"
-          aria-label="Close"></calcite-button>
-      </div>
-      <div slot="content">
-        <!-- Power Outage Stats Component -->
-        <power-outage-stats id="mobile-power-stats"></power-outage-stats>
       </div>
     </calcite-dialog>
 

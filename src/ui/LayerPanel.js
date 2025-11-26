@@ -19,8 +19,8 @@ export class LayerPanel {
         this.layersContent = document.getElementById('layers-content');
         this.ospContent = document.getElementById('osp-content');
         this.vehiclesContent = document.getElementById('vehicles-content');
-        this.powerOutagesContent = document.getElementById('power-outages-content');
         this.searchContent = document.getElementById('search-content');
+        this.powerOutagesContent = document.getElementById('power-outages-content');
         this.networkParentContent = document.getElementById('network-parent-content');
         this.toolsContent = document.getElementById('tools-content');
         this.infoContent = document.getElementById('info-content');
@@ -41,7 +41,6 @@ export class LayerPanel {
 
         this.setupActionBarNavigation();
         this.setupCacheManagement();
-        this.setupPrtgIframe();
 
         // Show layers content by default
         this.showContent('layers');
@@ -95,8 +94,8 @@ export class LayerPanel {
                     'layers-action': 'layers',
                     'osp-action': 'osp',
                     'vehicles-action': 'vehicles',
-                    'power-outages-action': 'power-outages',
                     'search-action': 'search',
+                    'power-outages-action': 'power-outages',
                     'network-parent-action': 'network-parent',
                     'tools-action': 'tools',
                     'info-action': 'info'
@@ -141,8 +140,8 @@ export class LayerPanel {
         if (this.layersContent) this.layersContent.hidden = true;
         if (this.ospContent) this.ospContent.hidden = true;
         if (this.vehiclesContent) this.vehiclesContent.hidden = true;
-        if (this.powerOutagesContent) this.powerOutagesContent.hidden = true;
         if (this.searchContent) this.searchContent.hidden = true;
+        if (this.powerOutagesContent) this.powerOutagesContent.hidden = true;
         if (this.networkParentContent) this.networkParentContent.hidden = true;
         if (this.toolsContent) this.toolsContent.hidden = true;
         if (this.infoContent) this.infoContent.hidden = true;
@@ -169,16 +168,16 @@ export class LayerPanel {
                 this.updateVehicleStatus();
                 this.loadSimpleVehicleList();
                 break;
-            case 'power-outages':
-                if (this.powerOutagesContent) {
-                    this.powerOutagesContent.hidden = false;
-                    this.powerOutagesContent.style.display = '';
-                }
-                break;
             case 'search':
                 if (this.searchContent) {
                     this.searchContent.hidden = false;
                     this.searchContent.style.display = '';
+                }
+                break;
+            case 'power-outages':
+                if (this.powerOutagesContent) {
+                    this.powerOutagesContent.hidden = false;
+                    this.powerOutagesContent.style.display = '';
                 }
                 break;
             case 'network-parent':
@@ -1539,30 +1538,6 @@ export class LayerPanel {
         }
     }
 
-    setupPrtgIframe() {
-        const openPrtgBtn = document.getElementById('open-prtg');
-        const reloadPrtgBtn = document.getElementById('reload-prtg');
-        const prtgIframe = document.getElementById('prtg-iframe');
-        const prtgWarning = document.getElementById('prtg-warning');
-
-        const prtgUrl = 'https://139.60.151.250/public/mapshow.htm?id=11824&mapid=1314418B-78B5-4F47-94B1-C2E2DA6EC55A';
-
-        if (openPrtgBtn) {
-            openPrtgBtn.addEventListener('click', () => {
-                window.open(prtgUrl, '_blank');
-            });
-        }
-
-        if (reloadPrtgBtn) {
-            reloadPrtgBtn.addEventListener('click', () => {
-                if (prtgIframe && prtgWarning) {
-                    prtgIframe.src = prtgUrl;
-                    prtgIframe.style.display = 'block';
-                    prtgWarning.style.display = 'none';
-                }
-            });
-        }
-    }
 }
 
 

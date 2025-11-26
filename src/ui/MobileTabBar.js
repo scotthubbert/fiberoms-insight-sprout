@@ -72,12 +72,12 @@ export class MobileTabBar {
         const mobileMetricsChip = document.getElementById('mobile-metrics-chip');
         if (mobileMetricsChip) {
             mobileMetricsChip.addEventListener('click', () => {
-                // Open the mobile power outages dialog
-                const powerDialog = document.getElementById('mobile-power-sheet');
-                if (powerDialog) {
+                // Open the mobile subscribers dialog to show offline count details
+                const subscribersDialog = document.getElementById('mobile-subscribers-sheet');
+                if (subscribersDialog) {
                     this.closeCurrentPanel(); // Close any open panels first
-                    powerDialog.open = true;
-                    this.currentDialog = powerDialog;
+                    subscribersDialog.open = true;
+                    this.currentDialog = subscribersDialog;
                     this.closeButton.classList.add('show');
                 }
             });

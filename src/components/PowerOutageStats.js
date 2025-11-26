@@ -4,17 +4,13 @@
  * Follows SOLID principles and Calcite Design System
  * 
  * @component PowerOutageStatsComponent
- * @author FiberOMS Development Team
- * @version 1.0.0
  */
 
-import { subscriberDataService } from '../dataService.js';
 import { outageService } from '../services/OutageService.js';
 import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
 
 /**
  * Production logging utility - only warnings and errors in production
- * @type {Object}
  */
 const isDevelopment = import.meta.env.DEV;
 const log = {
@@ -37,33 +33,22 @@ const log = {
  * @extends HTMLElement
  */
 export class PowerOutageStatsComponent extends HTMLElement {
-    /**
-     * Initialize component with default state
-     * @constructor
-     */
     constructor() {
         super();
         this.outagesData = {
-            apco: [],
             cullman: []
         };
         this.isVisible = false;
         this.isInitialLoad = true;
         this.lastKnownCounts = {
-            apco: null,
             cullman: null
         };
         // Track individual outages by ID for specific notifications
         this.lastKnownOutages = {
-            apco: new Set(),
             cullman: new Set()
         };
     }
 
-    /**
-     * Component lifecycle - called when element is added to DOM
-     * Sets up initial render, event listeners, and data fetching
-     */
     connectedCallback() {
         this.render();
         this.setupEventListeners();
@@ -71,7 +56,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
         // Delay initial stats update to allow layers to initialize first
         setTimeout(() => {
             this.updateStats();
-        }, 2000); // 2 second delay to allow layer initialization
+        }, 2000);
 
         // Ensure component is ready for layer interaction
         setTimeout(() => {
@@ -79,21 +64,17 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }, 500);
     }
 
-    /**
-     * Set up event listeners for layer visibility changes
-     * @private
-     */
     setupEventListeners() {
         // Listen for layer visibility changes
         document.addEventListener('layerVisibilityChanged', (event) => {
-            if (event.detail.layerId === 'apco-outages' || event.detail.layerId === 'cullman-outages') {
+            if (event.detail.layerId === 'cullman-outages') {
                 this.updateStats();
             }
         });
 
         // Listen for layer data updates (when polling updates the layers)
         document.addEventListener('layerDataUpdated', (event) => {
-            if (event.detail.layerId === 'apco-outages' || event.detail.layerId === 'cullman-outages') {
+            if (event.detail.layerId === 'cullman-outages') {
                 this.updateStats();
             }
         });
@@ -104,75 +85,19 @@ export class PowerOutageStatsComponent extends HTMLElement {
         });
     }
 
-    /**
-     * Update outage statistics and handle notifications
-     * Gets data from existing layers instead of fetching directly
-     * @param {boolean} skipNotification - Whether to skip showing update notifications
-     * @returns {Promise<void>}
-     */
     async updateStats(skipNotification = false) {
         try {
             // Get data from existing layers instead of fetching directly
             const layerManager = window.app?.services?.layerManager;
-            let apcoData = { data: [] };
             let cullmanData = { data: [] };
 
             if (layerManager) {
-                // Try to get data from existing layers first
-                const apcoLayer = layerManager.getLayer('apco-outages');
                 const cullmanLayer = layerManager.getLayer('cullman-outages');
 
-                log.info(`🔌 Layer manager found. APCo layer: ${!!apcoLayer}, Cullman layer: ${!!cullmanLayer}`);
-
-                if (apcoLayer) {
-                    log.info(`🔌 APCo layer details: graphics=${!!apcoLayer.graphics}, graphics.items=${apcoLayer.graphics?.items?.length || 'none'}`);
-                }
+                log.info(`🔌 Layer manager found. Cullman layer: ${!!cullmanLayer}`);
 
                 if (cullmanLayer) {
                     log.info(`🔌 Cullman layer details: graphics=${!!cullmanLayer.graphics}, graphics.items=${cullmanLayer.graphics?.items?.length || 'none'}`);
-                }
-
-                if (apcoLayer && apcoLayer.graphics && apcoLayer.graphics.items) {
-                    // Extract data from layer graphics and deduplicate by outage_id
-                    const outageMap = new Map();
-
-                    apcoLayer.graphics.items.forEach(graphic => {
-                        const attributes = graphic.attributes || {};
-                        const geometry = graphic.geometry;
-
-                        // Use outage_id as key for deduplication
-                        const outageId = attributes.outage_id || attributes.id || 'unknown';
-
-                        // Skip if we already have this outage (prevents double counting)
-                        if (outageMap.has(outageId)) {
-                            return;
-                        }
-
-                        // Handle different geometry types
-                        let latitude, longitude;
-                        if (geometry) {
-                            if (geometry.type === 'point') {
-                                latitude = geometry.latitude || geometry.y;
-                                longitude = geometry.longitude || geometry.x;
-                            } else if (geometry.type === 'polygon' && geometry.centroid) {
-                                latitude = geometry.centroid.latitude || geometry.centroid.y;
-                                longitude = geometry.centroid.longitude || geometry.centroid.x;
-                            } else if (geometry.extent) {
-                                latitude = geometry.extent.center.latitude || geometry.extent.center.y;
-                                longitude = geometry.extent.center.longitude || geometry.extent.center.x;
-                            }
-                        }
-
-                        outageMap.set(outageId, {
-                            ...attributes,
-                            latitude: latitude || attributes.latitude,
-                            longitude: longitude || attributes.longitude
-                        });
-                    });
-
-                    // Convert map values to array
-                    apcoData.data = Array.from(outageMap.values());
-                    log.info(`🔌 APCo deduplication: ${apcoLayer.graphics.items.length} graphics → ${apcoData.data.length} unique outages`);
                 }
 
                 if (cullmanLayer && cullmanLayer.graphics && cullmanLayer.graphics.items) {
@@ -183,15 +108,12 @@ export class PowerOutageStatsComponent extends HTMLElement {
                         const attributes = graphic.attributes || {};
                         const geometry = graphic.geometry;
 
-                        // Use outage_id as key for deduplication
                         const outageId = attributes.outage_id || attributes.id || 'unknown';
 
-                        // Skip if we already have this outage (prevents double counting)
                         if (outageMap.has(outageId)) {
                             return;
                         }
 
-                        // Handle different geometry types
                         let latitude, longitude;
                         if (geometry) {
                             if (geometry.type === 'point') {
@@ -213,55 +135,30 @@ export class PowerOutageStatsComponent extends HTMLElement {
                         });
                     });
 
-                    // Convert map values to array
                     cullmanData.data = Array.from(outageMap.values());
                     log.info(`🔌 Cullman deduplication: ${cullmanLayer.graphics.items.length} graphics → ${cullmanData.data.length} unique outages`);
                 }
 
-                // If no layer data available, fall back to direct fetch (only during initialization)
-                if ((!apcoData.data || apcoData.data.length === 0) && (!cullmanData.data || cullmanData.data.length === 0)) {
+                // If no layer data available, fall back to direct fetch
+                if (!cullmanData.data || cullmanData.data.length === 0) {
                     log.info('🔌 No layer data available, fetching directly (initialization only)');
-                    log.info(`🔌 APCo layer data: ${apcoData.data?.length || 0} items, Cullman layer data: ${cullmanData.data?.length || 0} items`);
-                    const [fetchedApcoData, fetchedCullmanData] = await Promise.all([
-                        outageService.getApcoOutages(),
-                        outageService.getCullmanOutages()
-                    ]);
-                    apcoData = fetchedApcoData;
-                    cullmanData = fetchedCullmanData;
+                    cullmanData = await outageService.getCullmanOutages();
                 } else {
-                    log.info(`🔌 Using layer data - APCo: ${apcoData.data?.length || 0} outages (deduplicated), Cullman: ${cullmanData.data?.length || 0} outages (deduplicated)`);
+                    log.info(`🔌 Using layer data - Cullman: ${cullmanData.data?.length || 0} outages (deduplicated)`);
                 }
             } else {
-                // Fallback for when layer manager is not available (early initialization)
+                // Fallback for when layer manager is not available
                 log.info('🔌 Layer manager not available, fetching directly (early initialization)');
-                const [fetchedApcoData, fetchedCullmanData] = await Promise.all([
-                    outageService.getApcoOutages(),
-                    outageService.getCullmanOutages()
-                ]);
-                apcoData = fetchedApcoData;
-                cullmanData = fetchedCullmanData;
+                cullmanData = await outageService.getCullmanOutages();
             }
 
-            this.outagesData.apco = apcoData.data || [];
             this.outagesData.cullman = cullmanData.data || [];
 
-            // Get current counts
-            const currentApcoCount = this.outagesData.apco.length;
             const currentCullmanCount = this.outagesData.cullman.length;
-
-            // Track individual outages for specific notifications
-            const currentApcoOutages = new Set(this.outagesData.apco.map(o => o.outage_id).filter(id => id));
             const currentCullmanOutages = new Set(this.outagesData.cullman.map(o => o.outage_id).filter(id => id));
 
-            // Show notification for specific outage changes (new/removed outages only)
+            // Show notification for specific outage changes
             if (!skipNotification && !this.isInitialLoad) {
-                this.checkAndNotifyOutageChanges(
-                    'APCo',
-                    this.lastKnownOutages.apco,
-                    currentApcoOutages,
-                    this.outagesData.apco
-                );
-
                 this.checkAndNotifyOutageChanges(
                     'Cullman',
                     this.lastKnownOutages.cullman,
@@ -270,10 +167,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 );
             }
 
-            // Update stored counts and outage sets
-            this.lastKnownCounts.apco = currentApcoCount;
             this.lastKnownCounts.cullman = currentCullmanCount;
-            this.lastKnownOutages.apco = new Set(currentApcoOutages);
             this.lastKnownOutages.cullman = new Set(currentCullmanOutages);
             this.isInitialLoad = false;
 
@@ -284,11 +178,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }
     }
 
-    /**
-     * Initial render with loading state
-     * Mobile-first design with proper loading indicators
-     * @private
-     */
     render() {
         this.innerHTML = `
             <div class="power-outage-stats-container" style="padding: 4px 0; height: 100%; display: flex; flex-direction: column;">
@@ -302,18 +191,11 @@ export class PowerOutageStatsComponent extends HTMLElement {
         `;
     }
 
-    /**
-     * Render statistics with mobile-first responsive design
-     * @private
-     */
     renderStats() {
         const statsContent = this.querySelector('.stats-content');
         if (!statsContent) return;
 
-        const apcoCount = this.outagesData.apco.length;
         const cullmanCount = this.outagesData.cullman.length;
-
-        const apcoCustomers = this.outagesData.apco.reduce((sum, outage) => sum + (outage.customers_affected || 0), 0);
         const cullmanCustomers = this.outagesData.cullman.reduce((sum, outage) => sum + (outage.customers_affected || 0), 0);
 
         const currentTime = new Date().toLocaleTimeString('en-US', {
@@ -322,23 +204,19 @@ export class PowerOutageStatsComponent extends HTMLElement {
             hour12: true
         });
 
-        // Combine all outages, filter out resolved outages (0 customers), and sort by customer count (highest first)
+        // Combine all outages, filter out resolved outages, and sort by customer count
         const allOutages = [
-            ...this.outagesData.apco.map(o => ({ ...o, company: 'APCo' })),
             ...this.outagesData.cullman.map(o => ({ ...o, company: 'Cullman' }))
         ]
-            .filter(outage => (outage.customers_affected || 0) > 0) // Filter out resolved outages
+            .filter(outage => (outage.customers_affected || 0) > 0)
             .sort((a, b) => (b.customers_affected || 0) - (a.customers_affected || 0));
 
-        // Count filtered outages for display purposes
-        const filteredApcoCount = this.outagesData.apco.filter(o => (o.customers_affected || 0) === 0).length;
         const filteredCullmanCount = this.outagesData.cullman.filter(o => (o.customers_affected || 0) === 0).length;
-        const totalFiltered = filteredApcoCount + filteredCullmanCount;
+        const totalFiltered = filteredCullmanCount;
 
         statsContent.innerHTML = `
             <!-- Static Summary Section -->
             <div class="power-stats-summary" style="margin-bottom: 16px; flex-shrink: 0;">
-                ${this.renderCompanySummary('APCo', apcoCount, apcoCustomers)}
                 ${this.renderCompanySummary('Cullman', cullmanCount, cullmanCustomers)}
                 <div style="text-align: center; font-size: 11px; color: var(--calcite-color-text-3); margin-top: 8px;">
                     Last updated: ${currentTime}
@@ -373,22 +251,12 @@ export class PowerOutageStatsComponent extends HTMLElement {
         this.setupOutageListeners();
     }
 
-    /**
-     * Render company summary section with toggle controls
-     * Mobile-optimized with proper touch targets (44px minimum)
-     * @param {string} company - Company identifier ('APCo' or 'Cullman')
-     * @param {number} outageCount - Number of outages
-     * @param {number} customerCount - Number of affected customers
-     * @returns {string} HTML template for company summary
-     * @private
-     */
     renderCompanySummary(company, outageCount, customerCount) {
-        const bgColor = company === 'APCo' ? 'rgba(30, 95, 175, 0.1)' : 'rgba(74, 124, 89, 0.1)';
-        const layerId = company === 'APCo' ? 'apco-outages' : 'cullman-outages';
-        const logoPath = company === 'APCo' ? '/apco-logo.png' : 'https://cullmanec.com/sites/default/files/cullman_logo_black.png';
-        const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Cullman Electric';
+        const bgColor = 'rgba(74, 124, 89, 0.1)';
+        const layerId = 'cullman-outages';
+        const logoPath = 'https://cullmanec.com/sites/default/files/cullman_logo_black.png';
+        const companyFullName = 'Cullman Electric';
 
-        // Get the current visibility state of the layer
         let isChecked = true;
         try {
             const layer = window.app?.services?.layerManager?.getLayer(layerId);
@@ -396,12 +264,11 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 isChecked = layer.visible;
             }
         } catch (error) {
-            // Layer might not be loaded yet, use default
             log.warn(`Layer ${layerId} not found, using default visibility`);
         }
 
         return `
-            <calcite-card class="power-company-card" data-company="${company.toLowerCase()}">
+            <calcite-card class="power-company-card" data-company="cullman">
                 <div class="company-header">
                     <div class="company-info">
                         <img src="${logoPath}" alt="${company} Logo" class="company-logo">
@@ -427,16 +294,9 @@ export class PowerOutageStatsComponent extends HTMLElement {
         `;
     }
 
-    /**
-     * Render individual outage item using Calcite List component
-     * Mobile-first design with proper touch targets
-     * @param {Object} outage - Outage data object
-     * @returns {string} HTML template for outage list item
-     * @private
-     */
     renderCalciteOutageItem(outage) {
-        const logoPath = outage.company === 'APCo' ? '/apco-logo.png' : 'https://cullmanec.com/sites/default/files/cullman_logo_black.png';
-        const companyFullName = outage.company === 'APCo' ? 'Alabama Power' : 'Cullman Electric';
+        const logoPath = 'https://cullmanec.com/sites/default/files/cullman_logo_black.png';
+        const companyFullName = 'Cullman Electric';
 
         return `
             <calcite-list-item
@@ -453,13 +313,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
         `;
     }
 
-    /**
-     * Set up event listeners for outage interactions
-     * Handles both new calcite-list-item clicks and legacy button clicks
-     * @private
-     */
     setupOutageListeners() {
-        // Clickable outage items (primary interaction)
+        // Clickable outage items
         const clickableOutages = this.querySelectorAll('.clickable-outage');
         clickableOutages.forEach(item => {
             item.addEventListener('click', (e) => {
@@ -474,28 +329,9 @@ export class PowerOutageStatsComponent extends HTMLElement {
             });
         });
 
-        // Legacy locate outage buttons (backward compatibility)
-        const locateButtons = this.querySelectorAll('.locate-outage');
-        locateButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const outageItem = button.closest('.outage-item');
-                if (outageItem) {
-                    const lat = parseFloat(outageItem.dataset.lat);
-                    const lng = parseFloat(outageItem.dataset.lng);
-                    const outageId = outageItem.dataset.outageId;
-
-                    if (lat && lng && window.mapView) {
-                        this.flyToOutage(lat, lng, outageId);
-                    }
-                }
-            });
-        });
-
         // Refresh button event listener
         const refreshButton = this.querySelector('#refresh-power-outages');
         if (refreshButton) {
-            // Remove existing listeners to prevent duplicates
             const newRefreshButton = refreshButton.cloneNode(true);
             refreshButton.parentNode.replaceChild(newRefreshButton, refreshButton);
 
@@ -504,17 +340,9 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 newRefreshButton.setAttribute('loading', '');
 
                 try {
-                    // Set global flag to skip notifications during manual refresh
                     window._isManualRefresh = true;
+                    await this.updateStats(true);
 
-                    // Clear cache for power outage data
-                    const subscriberDataService = await import('../dataService.js').then(m => m.subscriberDataService);
-                    subscriberDataService.refreshData('outages');
-
-                    // Update power outage stats without notification
-                    await this.updateStats(true); // Skip notification
-
-                    // Trigger polling manager update if available
                     if (window.app?.pollingManager) {
                         await window.app.pollingManager.performUpdate('power-outages');
                     }
@@ -522,7 +350,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
                     log.error('Failed to refresh outage data:', error);
                 } finally {
                     newRefreshButton.removeAttribute('loading');
-                    // Clear manual refresh flag
                     window._isManualRefresh = false;
                 }
             });
@@ -532,7 +359,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
         setTimeout(() => {
             const toggleSwitches = this.querySelectorAll('.power-company-toggle');
             toggleSwitches.forEach(toggle => {
-                // Remove existing listeners to prevent duplicates
                 const newToggle = toggle.cloneNode(true);
                 toggle.parentNode.replaceChild(newToggle, toggle);
 
@@ -547,7 +373,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
                                 log.error(`Failed to toggle ${newToggle.dataset.company} layer visibility`);
                             }
                         } else {
-                            // Fallback: dispatch custom event
                             document.dispatchEvent(new CustomEvent('powerOutageToggle', {
                                 detail: { layerId, visible: isChecked }
                             }));
@@ -560,13 +385,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }, 100);
     }
 
-    /**
-     * Navigate to outage location on map with appropriate zoom level
-     * @param {number} lat - Latitude coordinate
-     * @param {number} lng - Longitude coordinate
-     * @param {string} outageId - Unique outage identifier
-     * @returns {Promise<void>}
-     */
     async flyToOutage(lat, lng, outageId) {
         if (!window.mapView) {
             log.error('Map view not available');
@@ -574,20 +392,11 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }
 
         try {
-            // Use consistent zoom level 15 for both APCo and Cullman outages
             await window.mapView.goTo({
                 center: [lng, lat],
                 zoom: 15
             });
 
-            // Find and show popup for the outage
-            const point = {
-                type: 'point',
-                longitude: lng,
-                latitude: lat
-            };
-
-            const apcoLayer = window.app?.services?.layerManager?.getLayer('apco-outages');
             const cullmanLayer = window.app?.services?.layerManager?.getLayer('cullman-outages');
 
             let targetLayer = null;
@@ -601,25 +410,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
                 });
             };
 
-            // Prefer APCo if visible and has matching features
-            if (apcoLayer && apcoLayer.visible) {
-                if (typeof apcoLayer.queryFeatures === 'function') {
-                    const apcoResults = await apcoLayer.queryFeatures({ where: `outage_id = '${outageId}'`, returnGeometry: true, outFields: ['*'] });
-                    if (apcoResults?.features?.length) {
-                        targetLayer = apcoLayer;
-                        targetFeatures = apcoResults.features;
-                    }
-                } else {
-                    const matches = collectMatchingGraphics(apcoLayer);
-                    if (matches.length) {
-                        targetLayer = apcoLayer;
-                        targetFeatures = matches;
-                    }
-                }
-            }
-
-            // Fallback to Cullman
-            if (!targetLayer && cullmanLayer && cullmanLayer.visible) {
+            if (cullmanLayer && cullmanLayer.visible) {
                 if (typeof cullmanLayer.queryFeatures === 'function') {
                     const cullmanResults = await cullmanLayer.queryFeatures({ where: `outage_id = '${outageId}'`, returnGeometry: true, outFields: ['*'] });
                     if (cullmanResults?.features?.length) {
@@ -646,57 +437,32 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }
     }
 
-    /**
-     * Check for specific outage changes and notify users
-     * Only notifies for new outages or resolved outages
-     * @param {string} company - Company name ('APCo' or 'Cullman')
-     * @param {Set} previousOutages - Set of previous outage IDs
-     * @param {Set} currentOutages - Set of current outage IDs
-     * @param {Array} currentOutageData - Array of current outage objects
-     * @private
-     */
     checkAndNotifyOutageChanges(company, previousOutages, currentOutages, currentOutageData) {
-        // Find new outages
         const newOutages = [...currentOutages].filter(id => !previousOutages.has(id));
-
-        // Find resolved outages
         const resolvedOutages = [...previousOutages].filter(id => !currentOutages.has(id));
 
-        // Only notify if there are actual new or resolved outages
         if (newOutages.length > 0 || resolvedOutages.length > 0) {
             this.showSpecificOutageNotification(company, newOutages, resolvedOutages, currentOutageData);
         }
     }
 
-    /**
-     * Show specific notification for new or resolved outages
-     * Production-ready user feedback system with detailed outage information
-     * @param {string} company - Company name ('APCo' or 'Cullman')
-     * @param {Array} newOutages - Array of new outage IDs
-     * @param {Array} resolvedOutages - Array of resolved outage IDs
-     * @param {Array} currentOutageData - Array of current outage objects
-     * @private
-     */
     showSpecificOutageNotification(company, newOutages, resolvedOutages, currentOutageData) {
-        // Remove any existing notice
         const existingNotice = document.querySelector('#outage-update-notice');
         if (existingNotice) {
             existingNotice.remove();
         }
 
-        const companyFullName = company === 'APCo' ? 'Alabama Power' : 'Cullman Electric';
+        const companyFullName = 'Cullman Electric';
         let title = '';
         let message = '';
         let kind = 'info';
 
-        // Build notification content
         const notifications = [];
 
         if (newOutages.length > 0) {
-            kind = 'warning'; // New outages are concerning
+            kind = 'warning';
 
             if (newOutages.length === 1) {
-                // Single new outage - show specific details
                 const outage = currentOutageData.find(o => o.outage_id === newOutages[0]);
                 if (outage) {
                     const customersAffected = outage.customers_affected || 0;
@@ -706,7 +472,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
                     notifications.push(`New ${companyFullName} outage reported`);
                 }
             } else {
-                // Multiple new outages - show summary
                 const totalCustomers = newOutages.reduce((sum, id) => {
                     const outage = currentOutageData.find(o => o.outage_id === id);
                     return sum + (outage?.customers_affected || 0);
@@ -717,7 +482,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
 
         if (resolvedOutages.length > 0) {
             if (kind !== 'warning') {
-                kind = 'success'; // Resolved outages are good news
+                kind = 'success';
             }
 
             if (resolvedOutages.length === 1) {
@@ -727,7 +492,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
             }
         }
 
-        // Set title and message
         if (newOutages.length > 0 && resolvedOutages.length > 0) {
             title = 'Power Outage Updates';
         } else if (newOutages.length > 0) {
@@ -744,10 +508,8 @@ export class PowerOutageStatsComponent extends HTMLElement {
             return;
         }
 
-        // Use shared notice container
         const noticeContainer = getOrCreateNoticeContainer();
 
-        // Create notice
         const notice = document.createElement('calcite-notice');
         notice.id = 'outage-update-notice';
         notice.setAttribute('open', '');
@@ -769,7 +531,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
 
         noticeContainer.appendChild(notice);
 
-        // Listen for close event
         notice.addEventListener('calciteNoticeClose', () => {
             notice.remove();
             if (noticeContainer.children.length === 0) {
@@ -777,7 +538,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
             }
         });
 
-        // Auto-remove after 8 seconds (longer for more detailed messages)
         setTimeout(() => {
             if (document.body.contains(notice)) {
                 notice.setAttribute('open', 'false');
@@ -791,104 +551,6 @@ export class PowerOutageStatsComponent extends HTMLElement {
         }, 8000);
     }
 
-    /**
-     * Show update notification toast for outage changes (DEPRECATED - kept for backward compatibility)
-     * Production-ready user feedback system
-     * @param {number} prevApco - Previous APCo outage count
-     * @param {number} currApco - Current APCo outage count
-     * @param {number} prevCullman - Previous Cullman outage count
-     * @param {number} currCullman - Current Cullman outage count
-     * @private
-     * @deprecated Use checkAndNotifyOutageChanges instead for specific outage tracking
-     */
-    showUpdateToast(prevApco, currApco, prevCullman, currCullman) {
-        // Skip on mobile devices
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
-            console.log('📱 Mobile outage notification skipped');
-            return;
-        }
-
-        // Remove any existing notice
-        const existingNotice = document.querySelector('#outage-update-notice');
-        if (existingNotice) {
-            existingNotice.remove();
-        }
-
-        // Determine what changed
-        const apcoChange = currApco - prevApco;
-        const cullmanChange = currCullman - prevCullman;
-
-        let message = 'Power outage data updated: ';
-        const changes = [];
-
-        if (apcoChange !== 0) {
-            const changeText = apcoChange > 0 ? `+${apcoChange}` : `${apcoChange}`;
-            changes.push(`APCo ${changeText}`);
-        }
-
-        if (cullmanChange !== 0) {
-            const changeText = cullmanChange > 0 ? `+${cullmanChange}` : `${cullmanChange}`;
-            changes.push(`Cullman ${changeText}`);
-        }
-
-        if (changes.length === 0) {
-            message = 'Power outage data refreshed';
-        } else {
-            message += changes.join(', ');
-        }
-
-        // Use shared notice container
-        const noticeContainer = getOrCreateNoticeContainer();
-
-        // Create notice
-        const notice = document.createElement('calcite-notice');
-        notice.id = 'outage-update-notice';
-        notice.setAttribute('open', '');
-        notice.setAttribute('kind', apcoChange > 0 || cullmanChange > 0 ? 'warning' : 'success');
-        notice.setAttribute('closable', '');
-        notice.setAttribute('icon', 'flash');
-        notice.setAttribute('width', 'auto');
-
-        const titleDiv = document.createElement('div');
-        titleDiv.slot = 'title';
-        titleDiv.textContent = 'Outage Update';
-
-        const messageDiv = document.createElement('div');
-        messageDiv.slot = 'message';
-        messageDiv.textContent = message;
-
-        notice.appendChild(titleDiv);
-        notice.appendChild(messageDiv);
-
-        noticeContainer.appendChild(notice);
-
-        // Listen for close event
-        notice.addEventListener('calciteNoticeClose', () => {
-            notice.remove();
-            if (noticeContainer.children.length === 0) {
-                noticeContainer.remove();
-            }
-        });
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (document.body.contains(notice)) {
-                notice.setAttribute('open', 'false');
-                setTimeout(() => {
-                    notice.remove();
-                    if (noticeContainer.children.length === 0) {
-                        noticeContainer.remove();
-                    }
-                }, 300);
-            }
-        }, 5000);
-    }
-
-    /**
-     * Render error state with user-friendly message
-     * Production-ready error handling
-     * @private
-     */
     renderError() {
         const statsContent = this.querySelector('.stats-content');
         if (statsContent) {
@@ -904,4 +566,5 @@ export class PowerOutageStatsComponent extends HTMLElement {
 }
 
 // Register the custom element
-customElements.define('power-outage-stats', PowerOutageStatsComponent); 
+customElements.define('power-outage-stats', PowerOutageStatsComponent);
+

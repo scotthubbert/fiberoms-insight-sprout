@@ -28,8 +28,6 @@ export class LayerManager {
             rainViewerRadar: -10,
             'county-boundaries': 1,
             'fsa-boundaries': 5,
-            'apco-outages': 8,
-            'cullman-outages': 8,
             'online-subscribers': 10,
             'main-line-old': 28,
             'main-line-fiber': 30,
@@ -38,7 +36,6 @@ export class LayerManager {
             'mst-terminals': 50,
             'splitters': 60,
             'offline-subscribers': 100,
-            fiberOutages: 120,
             vehicles: 130,
             'sprout-huts': 125, // Above vehicles and most other layers, below weather radar
             weatherRadar: 140
@@ -80,11 +77,6 @@ export class LayerManager {
         if (!data?.features?.length) {
             log.warn(`No features available for layer: ${layerConfig.id}`);
             return null;
-        }
-
-        // Special handling for power outage layers with polygon support
-        if (layerConfig.id.includes('outages')) {
-            return this.createPowerOutageLayer(layerConfig, data);
         }
 
         // Special handling for truck layers - use FeatureLayer for smooth updates
@@ -266,139 +258,6 @@ export class LayerManager {
             errorService.report(error, { module: 'LayerManager', action: 'createGeoJSONLayerFromUrl', id: layerConfig?.id });
             return null;
         }
-    }
-
-    // Create power outage layer using GraphicsLayer for mixed geometry support
-    async createPowerOutageLayer(layerConfig, data) {
-        const originalFeatures = data.features;
-        const graphics = [];
-
-        // Company symbol configurations
-        const companyConfigs = {
-            'apco': {
-                pointSymbol: {
-                    type: 'picture-marker',
-                    url: '/apco-logo.png',
-                    width: '24px',
-                    height: '24px'
-                },
-                polygonSymbol: {
-                    type: 'simple-fill',
-                    color: [30, 95, 175, 0.4],
-                    outline: {
-                        color: [20, 75, 145],
-                        width: 3,
-                        style: 'solid'
-                    }
-                }
-            },
-            'cullman': {
-                pointSymbol: {
-                    type: 'picture-marker',
-                    url: 'https://cullmanec.com/sites/default/files/cullman_logo_black.png',
-                    width: '24px',
-                    height: '24px'
-                },
-                polygonSymbol: {
-                    type: 'simple-fill',
-                    color: [74, 124, 89, 0.4],
-                    outline: {
-                        color: [54, 104, 69],
-                        width: 3,
-                        style: 'solid'
-                    }
-                }
-            }
-        };
-
-        const company = layerConfig.id.includes('apco') ? 'apco' : 'cullman';
-        const companyConfig = companyConfigs[company];
-
-        let pointCount = 0, polygonCount = 0;
-
-        // Process each feature
-        for (const feature of originalFeatures) {
-            if (!feature.geometry) continue;
-
-            let arcgisGeometry;
-            let symbol;
-            const attributes = { ...feature.properties };
-
-            if (feature.geometry.type === 'Point') {
-                arcgisGeometry = new Point({
-                    longitude: feature.geometry.coordinates[0],
-                    latitude: feature.geometry.coordinates[1],
-                    spatialReference: { wkid: 4326 }
-                });
-                symbol = companyConfig.pointSymbol;
-                pointCount++;
-
-            } else if (feature.geometry.type === 'Polygon') {
-                arcgisGeometry = new Polygon({
-                    rings: feature.geometry.coordinates,
-                    spatialReference: { wkid: 4326 }
-                });
-                symbol = companyConfig.polygonSymbol;
-                polygonCount++;
-
-                // Create polygon graphic
-                const polygonGraphic = new Graphic({
-                    geometry: arcgisGeometry,
-                    symbol: symbol,
-                    attributes: attributes,
-                    popupTemplate: layerConfig.popupTemplate
-                });
-                graphics.push(polygonGraphic);
-
-                // Add centroid logo
-                try {
-                    const centroid = arcgisGeometry.centroid;
-                    if (centroid) {
-                        const centroidGraphic = new Graphic({
-                            geometry: centroid,
-                            symbol: companyConfig.pointSymbol,
-                            attributes: {
-                                ...attributes,
-                                _is_centroid: true
-                            },
-                            popupTemplate: layerConfig.popupTemplate
-                        });
-                        graphics.push(centroidGraphic);
-                    }
-                } catch (error) {
-                    log.error('Failed to create centroid:', error);
-                    errorService.report(error, { module: 'LayerManager', action: 'createPowerOutageLayer' });
-                }
-                continue;
-            }
-
-            // Create point graphic
-            if (arcgisGeometry && symbol) {
-                const graphic = new Graphic({
-                    geometry: arcgisGeometry,
-                    symbol: symbol,
-                    attributes: attributes,
-                    popupTemplate: layerConfig.popupTemplate
-                });
-                graphics.push(graphic);
-            }
-        }
-
-        // Create GraphicsLayer
-        const layer = new GraphicsLayer({
-            id: layerConfig.id,
-            title: layerConfig.title,
-            graphics: graphics,
-            listMode: layerConfig.visible ? 'show' : 'hide',
-            visible: layerConfig.visible !== undefined ? layerConfig.visible : true
-        });
-
-        log.info(`✅ Created ${layerConfig.title} with ${graphics.length} graphics (${pointCount} points, ${polygonCount} polygons)`);
-
-        this.layers.set(layerConfig.id, layer);
-        this.layerConfigs.set(layerConfig.id, layerConfig);
-
-        return layer;
     }
 
     // Create truck FeatureLayer for smooth real-time updates
@@ -603,12 +462,7 @@ export class LayerManager {
                 return this.smoothTruckUpdate(layerId, truckData);
             }
 
-            // Power outages use GraphicsLayer
-            if (layer.type === 'graphics') {
-                return this.updateGraphicsLayer(layerId, config, newData);
-            }
-
-            // GeoJSON fallback
+            // GeoJSON layers
             if (layer.type === 'geojson') {
                 return this.updateGeoJSONLayer(layerId, config, newData);
             }
@@ -653,58 +507,6 @@ export class LayerManager {
 
             this.updateDebounceTimers.set(layerId, timer);
         });
-    }
-
-    // Update GraphicsLayer using remove/re-add pattern (same as GeoJSONLayer)
-    async updateGraphicsLayer(layerId, config, newData) {
-        const map = this.getMapForLayer(layerId);
-        if (!map) {
-            log.warn(`No map found for layer ${layerId}`);
-            return false;
-        }
-
-        // Get old layer to preserve visibility state and definition expression
-        const oldLayer = this.layers.get(layerId);
-        let wasVisible = false;
-        let definitionExpression = null;
-
-        if (oldLayer) {
-            // Preserve the visibility state
-            wasVisible = oldLayer.visible;
-            
-            // Preserve the definition expression (for future filter support)
-            definitionExpression = oldLayer.definitionExpression;
-
-            // Remove old layer from map
-            map.remove(oldLayer);
-            log.info(`🗑️ Removed old ${layerId} layer from map`);
-        }
-
-        // Create new layer with updated data and preserved visibility
-        const newConfig = {
-            ...config,
-            dataSource: newData,
-            visible: wasVisible  // Preserve visibility state
-        };
-
-        const newLayer = await this.createPowerOutageLayer(newConfig, newData);
-
-        if (newLayer) {
-            // Add to map at correct position
-            const zOrder = this.getZOrder(layerId);
-            map.add(newLayer, zOrder);
-            
-            // Restore definition expression if it existed
-            if (definitionExpression) {
-                newLayer.definitionExpression = definitionExpression;
-                log.info(`✅ Restored definition expression for ${layerId}: ${definitionExpression}`);
-            }
-
-            log.info(`✅ Re-added ${layerId} layer with ${newLayer.graphics.length} graphics, visible: ${wasVisible}`);
-            return true;
-        }
-
-        return false;
     }
 
     // Update GeoJSONLayer by recreating it

@@ -59,9 +59,9 @@ export class GeoJSONTransformService {
     }
 
     /**
-     * Convert power outage data to GeoJSON features with polygon support
-     * @param {Array} data - Outage data
-     * @param {string} company - Company name (apco or cullman)
+     * Convert power outage data to GeoJSON features for ArcGIS layer
+     * @param {Array} data - Outage data array
+     * @param {string} company - Company identifier (e.g., 'cullman')
      * @param {Array} originalFeatures - Original GeoJSON features to preserve geometry
      * @returns {Array} Array of GeoJSON features
      */
@@ -104,7 +104,6 @@ export class GeoJSONTransformService {
                     status: record.status || 'Active',
                     area_description: record.area_description || '',
                     company: company,
-
                     latitude: record.latitude || null,
                     longitude: record.longitude || null,
                     // Include all original fields

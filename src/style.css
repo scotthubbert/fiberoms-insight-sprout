@@ -441,59 +441,12 @@ calcite-dialog.mobile-only [slot="content"] {
   }
 }
 
-/* Power Outages Content Container - Flex Layout */
-#power-outages-content {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
 /* Block actions (refresh button, etc) */
 .block-actions {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--calcite-color-border-3);
   flex-shrink: 0; /* Prevent the button area from shrinking */
-}
-
-/* Power outage stats scrollbar styling */
-.stats-content,
-.outages-list {
-  scrollbar-width: thin;
-  scrollbar-color: var(--calcite-color-border-1)
-    var(--calcite-color-foreground-2);
-}
-
-.stats-content::-webkit-scrollbar,
-.outages-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.stats-content::-webkit-scrollbar-track,
-.outages-list::-webkit-scrollbar-track {
-  background: var(--calcite-color-foreground-2);
-  border-radius: 4px;
-}
-
-.stats-content::-webkit-scrollbar-thumb,
-.outages-list::-webkit-scrollbar-thumb {
-  background: var(--calcite-color-border-1);
-  border-radius: 4px;
-}
-
-.stats-content::-webkit-scrollbar-thumb:hover,
-.outages-list::-webkit-scrollbar-thumb:hover {
-  background: var(--calcite-color-border-2);
-}
-
-/* Outage item hover effect */
-.outage-item:hover {
-  background-color: var(--calcite-color-foreground-2);
-}
-
-/* Remove last border on last outage item */
-.outage-item:last-child {
-  border-bottom: none;
 }
 
 /* Ensure mobile toolbar is always visible on mobile */
@@ -1936,10 +1889,6 @@ calcite-list-item[style*="cursor: pointer"]:active {
   flex-shrink: 0;
 }
 
-.apco-toggle {
-  border-left: 3px solid #e74c3c;
-}
-
 .cullman-toggle {
   border-left: 3px solid #27ae60;
 }
@@ -2980,16 +2929,6 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   box-shadow: var(--calcite-shadow-1);
 }
 
-.power-company-card[data-company="apco"] {
-  --calcite-card-border-color: rgb(30, 95, 175);
-  border-left: 4px solid rgb(30, 95, 175);
-  background: linear-gradient(
-    135deg,
-    var(--calcite-color-foreground-1) 0%,
-    rgba(30, 95, 175, 0.06) 100%
-  );
-}
-
 .power-company-card[data-company="cullman"] {
   --calcite-card-border-color: rgb(74, 124, 89);
   border-left: 4px solid rgb(74, 124, 89);
@@ -2998,16 +2937,6 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
     var(--calcite-color-foreground-1) 0%,
     rgba(74, 124, 89, 0.06) 100%
   );
-}
-
-.power-company-card[data-company="apco"]:hover {
-  border-left-color: rgba(30, 95, 175, 0.9);
-  background: linear-gradient(
-    135deg,
-    var(--calcite-color-foreground-1) 0%,
-    rgba(30, 95, 175, 0.1) 100%
-  );
-  box-shadow: 0 4px 12px rgba(30, 95, 175, 0.15);
 }
 
 .power-company-card[data-company="cullman"]:hover {
@@ -3078,18 +3007,6 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
 }
 
 /* Enhanced counter colors based on company */
-.power-company-card[data-company="apco"] .counter-value {
-  color: rgb(30, 95, 175);
-  background: linear-gradient(
-    135deg,
-    rgb(30, 95, 175) 0%,
-    rgba(30, 95, 175, 0.8) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 .power-company-card[data-company="cullman"] .counter-value {
   color: rgb(74, 124, 89);
   background: linear-gradient(
