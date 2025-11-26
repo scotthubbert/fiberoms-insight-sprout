@@ -27,6 +27,19 @@ export class OutageService {
             // Direct fetch from Supabase public URL
             const response = await fetch(API_CONFIG.OUTAGES.CULLMAN);
             if (!response.ok) {
+                // Handle 400/404 errors gracefully - file may not exist yet
+                if (response.status === 400 || response.status === 404) {
+                    log.warn(`⚠️ Cullman outages file not found (HTTP ${response.status}) - returning empty result`);
+                    return {
+                        count: 0,
+                        data: [],
+                        features: [],
+                        lastUpdated: new Date().toISOString(),
+                        fromCache: false,
+                        error: true,
+                        errorMessage: `File not found (HTTP ${response.status})`
+                    };
+                }
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             geojsonData = await response.json();

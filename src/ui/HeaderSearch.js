@@ -1,6 +1,8 @@
 // HeaderSearch.js - Manages search functionality across desktop and mobile interfaces
+// Enhanced with client-side fuzzy search using Fuse.js
 
 import { subscriberDataService } from '../dataService.js';
+import { enhancedSearchService } from '../services/EnhancedSearchService.js';
 import { createLogger } from '../utils/logger.js';
 import { trackSearch } from '../services/AnalyticsService.js';
 
@@ -25,6 +27,11 @@ export class HeaderSearch {
         await customElements.whenDefined('calcite-autocomplete');
         await customElements.whenDefined('calcite-autocomplete-item');
         await customElements.whenDefined('calcite-input');
+
+        // Initialize enhanced search service in background
+        enhancedSearchService.initialize().catch(error => {
+            log.warn('Enhanced search service initialization failed, falling back to server-side search:', error);
+        });
 
         this.setupEventListeners();
     }
@@ -119,7 +126,8 @@ export class HeaderSearch {
             return;
         }
 
-        if (searchTerm.length < 4) {
+        // Reduced minimum length to 2 characters (matching React implementation)
+        if (searchTerm.length < 2) {
             this.clearSearchResults(source);
             return;
         }
@@ -133,12 +141,79 @@ export class HeaderSearch {
         try {
             const targetInput = source === 'desktop' ? this.desktopSearchInput : this.searchInput;
             this.setSearchLoading(true, targetInput);
-            const searchResult = await subscriberDataService.searchSubscribers(searchTerm);
+            
+            let searchResult;
+            
+            // Try enhanced search first (client-side fuzzy search)
+            try {
+                await enhancedSearchService.initialize();
+                searchResult = await enhancedSearchService.search(searchTerm);
+                
+                // Map enhanced search results to expected format
+                searchResult.results = searchResult.results.map(item => {
+                    // Handle different result types
+                    if (item.type === 'pole') {
+                        return {
+                            id: item.wmElementN || `pole-${item.latitude}-${item.longitude}`,
+                            name: item.name,
+                            wmElementN: item.wmElementN,
+                            type: 'pole',
+                            latitude: item.latitude,
+                            longitude: item.longitude,
+                            // For display
+                            customer_name: `Pole: ${item.name}`,
+                            ...item.originalData
+                        };
+                    } else if (item.type === 'mst') {
+                        return {
+                            id: item.equipmentname || `mst-${item.latitude}-${item.longitude}`,
+                            name: item.name,
+                            equipmentname: item.equipmentname,
+                            type: 'mst',
+                            latitude: item.latitude,
+                            longitude: item.longitude,
+                            // For display
+                            customer_name: `MST: ${item.name}`,
+                            ...item.originalData
+                        };
+                    } else {
+                        // Subscriber result
+                        return {
+                            id: item.account || item.id,
+                            customer_name: item.name,
+                            customer_number: item.account,
+                            address: item.address || item.originalData?.address,
+                            city: item.city || item.originalData?.city,
+                            state: item.state || item.originalData?.state,
+                            zip: item.postcode || item.originalData?.postcode,
+                            zip_code: item.postcode || item.originalData?.postcode,
+                            status: item.status,
+                            latitude: item.latitude,
+                            longitude: item.longitude,
+                            // Include all original data
+                            ...item.originalData
+                        };
+                    }
+                });
+            } catch (enhancedError) {
+                log.warn('Enhanced search failed, falling back to server-side search:', enhancedError);
+                // Fallback to server-side search
+                searchResult = await subscriberDataService.searchSubscribers(searchTerm);
+                
+                // Check if search returned an error (e.g., table not configured)
+                if (searchResult.error) {
+                    log.warn('Search returned error:', searchResult.error);
+                    // Show no results instead of error for graceful degradation
+                    this.updateSearchResults({ results: [], searchTerm }, targetInput);
+                    return;
+                }
+            }
             
             // Track search event
             trackSearch(searchTerm, searchResult.results?.length || 0, {
                 source,
-                has_results: (searchResult.results?.length || 0) > 0
+                has_results: (searchResult.results?.length || 0) > 0,
+                search_type: searchResult.searchType || 'server'
             });
             
             this.updateSearchResults(searchResult, targetInput);
@@ -174,9 +249,20 @@ export class HeaderSearch {
             item.setAttribute('text-label', label || 'Unknown');
             const description = this.formatEnhancedDescription(result);
             item.setAttribute('description', description || '');
-            item.setAttribute('data-status', result.status || 'unknown');
-            const statusColor = result.status === 'Online' ? 'success' : 'danger';
-            item.innerHTML = `<calcite-icon slot="icon" icon="person" style="color: var(--calcite-color-status-${statusColor});"></calcite-icon>`;
+            
+            // Set icon and styling based on result type
+            if (result.type === 'pole') {
+                item.setAttribute('data-type', 'pole');
+                item.innerHTML = `<calcite-icon slot="icon" icon="pin" style="color: #8B4513;"></calcite-icon>`;
+            } else if (result.type === 'mst') {
+                item.setAttribute('data-type', 'mst');
+                item.innerHTML = `<calcite-icon slot="icon" icon="network" style="color: #4B8EF5;"></calcite-icon>`;
+            } else {
+                item.setAttribute('data-status', result.status || 'unknown');
+                const statusColor = result.status === 'Online' ? 'success' : 'danger';
+                item.innerHTML = `<calcite-icon slot="icon" icon="person" style="color: var(--calcite-color-status-${statusColor});"></calcite-icon>`;
+            }
+            
             item._resultData = result;
             targetInput.appendChild(item);
         });
@@ -184,7 +270,15 @@ export class HeaderSearch {
 
     formatSearchResultLabel(result) {
         if (!result) return 'Unknown';
-        return String(result.customer_name || 'Unnamed Customer');
+        
+        // Handle different result types
+        if (result.type === 'pole') {
+            return `Pole: ${result.wmElementN || result.name || 'Unknown Pole'}`;
+        } else if (result.type === 'mst') {
+            return `MST: ${result.equipmentname || result.name || 'Unknown MST'}`;
+        }
+        
+        return String(result.customer_name || result.name || 'Unnamed Customer');
     }
 
     formatSearchResultDescription(result) {
@@ -207,6 +301,25 @@ export class HeaderSearch {
 
     formatEnhancedDescription(result) {
         if (!result) return 'No details available';
+        
+        // Handle different result types
+        if (result.type === 'pole') {
+            const parts = [];
+            if (result.wmElementN) parts.push(`ID: ${result.wmElementN}`);
+            if (result.latitude && result.longitude) {
+                parts.push(`Coordinates: ${result.latitude.toFixed(6)}, ${result.longitude.toFixed(6)}`);
+            }
+            return parts.join(' • ') || 'No details available';
+        } else if (result.type === 'mst') {
+            const parts = [];
+            if (result.equipmentname) parts.push(`Equipment: ${result.equipmentname}`);
+            if (result.latitude && result.longitude) {
+                parts.push(`Coordinates: ${result.latitude.toFixed(6)}, ${result.longitude.toFixed(6)}`);
+            }
+            return parts.join(' • ') || 'No details available';
+        }
+        
+        // Subscriber result
         const parts = [];
         if (result.customer_name) parts.push(String(result.customer_name));
         if (result.customer_number) parts.push(String(result.customer_number));
@@ -267,8 +380,96 @@ export class HeaderSearch {
         window.mapView.center = [parseFloat(result.longitude), parseFloat(result.latitude)];
         window.mapView.zoom = Math.max(window.mapView.zoom, 16);
 
-        this.showLocationIndicator(point, result);
-        this.showLayerPopup(result, point);
+        // Show appropriate indicator based on result type
+        if (result.type === 'pole' || result.type === 'mst') {
+            this.showInfrastructureIndicator(point, result);
+        } else {
+            this.showLocationIndicator(point, result);
+            this.showLayerPopup(result, point);
+        }
+    }
+
+    showInfrastructureIndicator(point, result) {
+        if (!window.mapView) return;
+        this.clearLocationIndicator();
+        
+        import('@arcgis/core/Graphic').then(({ default: Graphic }) => {
+            import('@arcgis/core/symbols/SimpleMarkerSymbol').then(({ default: SimpleMarkerSymbol }) => {
+                const indicatorGraphics = [];
+                
+                // Different colors for different types
+                let centerColor, centerSize, outlineColor;
+                if (result.type === 'pole') {
+                    centerColor = [139, 69, 19, 1]; // Brown for poles
+                    centerSize = 10;
+                    outlineColor = [255, 255, 255, 1];
+                } else if (result.type === 'mst') {
+                    centerColor = [75, 142, 245, 1]; // Blue for MSTs
+                    centerSize = 10;
+                    outlineColor = [255, 255, 255, 1];
+                }
+
+                const centerDot = new Graphic({
+                    geometry: point,
+                    symbol: new SimpleMarkerSymbol({
+                        style: 'circle',
+                        color: centerColor,
+                        size: centerSize,
+                        outline: { color: outlineColor, width: 2 }
+                    })
+                });
+
+                const ring = new Graphic({
+                    geometry: point,
+                    symbol: new SimpleMarkerSymbol({
+                        style: 'circle',
+                        color: [0, 0, 0, 0],
+                        size: 45,
+                        outline: { color: centerColor, width: 3 }
+                    })
+                });
+
+                indicatorGraphics.push(ring);
+                indicatorGraphics.push(centerDot);
+                indicatorGraphics.forEach(graphic => window.mapView.graphics.add(graphic));
+                this.currentIndicatorGraphics = indicatorGraphics;
+                
+                // Show popup with infrastructure details
+                this.showInfrastructurePopup(result, point);
+                
+                setTimeout(() => this.clearLocationIndicator(), 10000);
+            });
+        });
+    }
+
+    showInfrastructurePopup(result, point) {
+        if (!window.mapView) return;
+        
+        let title, content;
+        if (result.type === 'pole') {
+            title = `Pole: ${result.wmElementN || 'Unknown'}`;
+            content = `
+                <div class="search-result-popup">
+                    <p><strong>Pole ID:</strong> ${result.wmElementN || 'N/A'}</p>
+                    <p><strong>Coordinates:</strong> ${result.latitude?.toFixed(6)}, ${result.longitude?.toFixed(6)}</p>
+                </div>
+            `;
+        } else if (result.type === 'mst') {
+            title = `MST: ${result.equipmentname || 'Unknown'}`;
+            content = `
+                <div class="search-result-popup">
+                    <p><strong>Equipment:</strong> ${result.equipmentname || 'N/A'}</p>
+                    <p><strong>Coordinates:</strong> ${result.latitude?.toFixed(6)}, ${result.longitude?.toFixed(6)}</p>
+                    ${result.originalData?.distributi ? `<p><strong>DA:</strong> ${result.originalData.distributi}</p>` : ''}
+                </div>
+            `;
+        }
+        
+        window.mapView.openPopup({
+            title: title,
+            content: content,
+            location: point
+        });
     }
 
     showLocationIndicator(point, result) {
@@ -482,7 +683,8 @@ export class HeaderSearch {
             this.clearMobileSearchResults();
             return;
         }
-        if (searchTerm.length < 4) {
+        // Reduced minimum length to 2 characters (matching React implementation)
+        if (searchTerm.length < 2) {
             this.clearMobileSearchResults();
             return;
         }
@@ -493,7 +695,65 @@ export class HeaderSearch {
 
     async performMobileSearch(searchTerm) {
         try {
-            const searchResult = await subscriberDataService.searchSubscribers(searchTerm);
+            let searchResult;
+            
+            // Try enhanced search first (client-side fuzzy search)
+            try {
+                await enhancedSearchService.initialize();
+                searchResult = await enhancedSearchService.search(searchTerm);
+                
+                // Map enhanced search results to expected format
+                searchResult.results = searchResult.results.map(item => {
+                    // Handle different result types
+                    if (item.type === 'pole') {
+                        return {
+                            id: item.wmElementN || `pole-${item.latitude}-${item.longitude}`,
+                            name: item.name,
+                            wmElementN: item.wmElementN,
+                            type: 'pole',
+                            latitude: item.latitude,
+                            longitude: item.longitude,
+                            // For display
+                            customer_name: `Pole: ${item.name}`,
+                            ...item.originalData
+                        };
+                    } else if (item.type === 'mst') {
+                        return {
+                            id: item.equipmentname || `mst-${item.latitude}-${item.longitude}`,
+                            name: item.name,
+                            equipmentname: item.equipmentname,
+                            type: 'mst',
+                            latitude: item.latitude,
+                            longitude: item.longitude,
+                            // For display
+                            customer_name: `MST: ${item.name}`,
+                            ...item.originalData
+                        };
+                    } else {
+                        // Subscriber result
+                        return {
+                            id: item.account || item.id,
+                            customer_name: item.name,
+                            customer_number: item.account,
+                            address: item.address || item.originalData?.address,
+                            city: item.city || item.originalData?.city,
+                            state: item.state || item.originalData?.state,
+                            zip: item.postcode || item.originalData?.postcode,
+                            zip_code: item.postcode || item.originalData?.postcode,
+                            status: item.status,
+                            latitude: item.latitude,
+                            longitude: item.longitude,
+                            // Include all original data
+                            ...item.originalData
+                        };
+                    }
+                });
+            } catch (enhancedError) {
+                log.warn('Enhanced mobile search failed, falling back to server-side search:', enhancedError);
+                // Fallback to server-side search
+                searchResult = await subscriberDataService.searchSubscribers(searchTerm);
+            }
+            
             this.updateMobileSearchResults(searchResult);
         } catch (error) {
             log.error('Mobile search failed:', error);
@@ -545,7 +805,7 @@ export class HeaderSearch {
             this.handleMobileSearchSelection(firstResultItem._resultData);
             return;
         }
-        if (searchTerm && searchTerm.length >= 4) {
+        if (searchTerm && searchTerm.length >= 2) {
             try {
                 const searchResult = await subscriberDataService.searchSubscribers(searchTerm);
                 if (searchResult.results && searchResult.results.length > 0) {

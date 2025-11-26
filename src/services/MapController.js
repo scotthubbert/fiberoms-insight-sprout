@@ -131,8 +131,8 @@ export class MapController {
                     // Load projection engine
                     await projectOperator.load();
 
-                    // Project the extent using the new operator
-                    constraintGeometry = projectOperator.project(this.calculatedExtent, viewSR);
+                    // Project the extent using the new operator - method is 'execute' in ArcGIS 4.32+
+                    constraintGeometry = projectOperator.execute(this.calculatedExtent, viewSR);
 
                     if (constraintGeometry) {
                         log.info('✅ Constraint geometry projected successfully');

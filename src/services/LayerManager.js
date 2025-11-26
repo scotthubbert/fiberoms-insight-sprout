@@ -33,6 +33,7 @@ export class LayerManager {
             'main-line-fiber': 30,
             'mst-fiber': 35,
             'closures': 40,
+            'poles': 45, // Between closures (40) and MST terminals (50)
             'mst-terminals': 50,
             'splitters': 60,
             'offline-subscribers': 100,
@@ -61,8 +62,14 @@ export class LayerManager {
     // Create GeoJSON layer (existing functionality)
     async createGeoJSONLayer(layerConfig) {
         // Check if this is a URL-based layer
-        if (layerConfig.dataUrl) {
+        if (layerConfig.layerType === 'GeoJSONLayer' && layerConfig.dataUrl) {
             return this.createGeoJSONLayerFromUrl(layerConfig);
+        }
+        
+        // Skip URL-based layers with null dataUrl
+        if (layerConfig.layerType === 'GeoJSONLayer' && !layerConfig.dataUrl && !layerConfig.dataSource) {
+            log.warn(`⚠️ Skipping layer ${layerConfig.id} - no data source available`);
+            return null;
         }
 
         // Use the data directly if provided, otherwise fetch it
@@ -190,6 +197,12 @@ export class LayerManager {
 
     // Create GeoJSON layer from URL
     async createGeoJSONLayerFromUrl(layerConfig) {
+        // Early return if no URL is provided
+        if (!layerConfig.dataUrl) {
+            log.warn(`⚠️ Skipping layer ${layerConfig.id} - no dataUrl configured`);
+            return null;
+        }
+
         try {
             // Create LabelClass objects for node sites/sprout huts synchronously if needed
             let labelingInfo = layerConfig.labelingInfo || [];

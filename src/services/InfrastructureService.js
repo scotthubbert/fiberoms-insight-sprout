@@ -1,6 +1,8 @@
 import { cacheService } from './CacheService.js';
 import { createLogger } from '../utils/logger.js';
 import { API_CONFIG } from '../config/apiConfig.js';
+import { supabase } from '../dataService.js';
+import { geoJSONTransformService } from './GeoJSONTransformService.js';
 
 const log = createLogger('InfrastructureService');
 
@@ -237,6 +239,117 @@ export class InfrastructureService {
             'slack_loops',
             'Slack Loops'
         );
+    }
+
+    /**
+     * Get poles from Supabase and convert to GeoJSON
+     * Poles are stored in sfi_poles table with latitude/longitude fields
+     */
+    async getPoles() {
+        const cacheKey = 'poles_sprout_v1';
+        const memoryKey = 'poles';
+
+        // Check IndexedDB cache first
+        log.info(`🔍 Checking cache for Poles (key: ${cacheKey})...`);
+        const cachedData = await cacheService.getCachedData(cacheKey);
+        if (cachedData) {
+            log.info(`📦 Using cached Poles data from IndexedDB`);
+            cachedData.fromCache = true;
+            return cachedData;
+        }
+
+        // Also check memory cache
+        if (this.isCacheValid(memoryKey)) {
+            const memData = this.getCache(memoryKey);
+            memData.fromCache = true;
+            return memData;
+        }
+
+        try {
+            log.info('📡 Fetching Poles from Supabase...');
+            
+            const { data, error } = await supabase
+                .from('sfi_poles')
+                .select('*')
+                .not('latitude', 'is', null)
+                .not('longitude', 'is', null);
+
+            if (error) {
+                log.error('❌ Error fetching poles:', error);
+                throw error;
+            }
+
+            if (!data || data.length === 0) {
+                log.warn('⚠️ No poles found in database');
+                return {
+                    count: 0,
+                    features: [],
+                    lastUpdated: new Date().toISOString(),
+                    fromCache: false
+                };
+            }
+
+            // Convert to GeoJSON features
+            const features = data.map((pole, index) => {
+                const lat = pole.latitude;
+                const lng = pole.longitude;
+
+                if (!lat || !lng) {
+                    return null;
+                }
+
+                return {
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [parseFloat(lng), parseFloat(lat)]
+                    },
+                    properties: {
+                        objectId: pole.id || index,
+                        wmElementN: pole.wmElementN || '',
+                        latitude: lat,
+                        longitude: lng,
+                        // Include all original fields
+                        ...pole
+                    }
+                };
+            }).filter(feature => feature !== null);
+
+            const result = {
+                count: features.length,
+                features: features,
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
+            };
+
+            // Store in both caches
+            this.setCache(memoryKey, result);
+            await cacheService.setCachedData(cacheKey, result);
+
+            log.info(`✅ Fetched ${features.length} poles`);
+            return result;
+
+        } catch (error) {
+            log.error('Failed to fetch poles:', error);
+            // Return cached data if available
+            const fallbackData = cachedData || this.getCache(memoryKey);
+            if (fallbackData) {
+                log.warn('⚠️ Using stale cached poles data due to fetch error');
+                return {
+                    ...fallbackData,
+                    error: true,
+                    errorMessage: error.message,
+                    fromCache: true
+                };
+            }
+            return {
+                count: 0,
+                features: [],
+                lastUpdated: new Date().toISOString(),
+                error: true,
+                errorMessage: error.message
+            };
+        }
     }
 }
 

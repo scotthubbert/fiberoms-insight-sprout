@@ -1496,6 +1496,7 @@ export class LayerPanel {
             'mstTerminals': 'MST Terminals',
             'closures': 'Closures',
             'splitters': 'Splitters',
+            'poles': 'Poles',
             'nodeSites': 'Node Sites'
         };
         return names[dataType] || dataType;

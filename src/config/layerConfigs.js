@@ -404,35 +404,35 @@ const createFSARenderer = () => ({
     valueExpression: "IIf(IsEmpty($feature.areaname), 'Unknown', Upper(Left(Text($feature.areaname), 2)))",
     defaultSymbol: {
         type: "simple-fill",
-        color: [204, 204, 204, 0.5], // Default gray (#CCCCCC) with higher opacity for visibility
-        outline: { color: [204, 204, 204, 1.0], width: 2 }
+        color: [204, 204, 204, 0.1], // Very low fill opacity - mainly show lines
+        outline: { color: [204, 204, 204, 1.0], width: 3 } // Increased width for better visibility
     },
     // Generate a distinct color palette for the areas
     // This matches the Mapbox style logic from the reference app (/Users/scotthubbert/Developer/clients/sprout-fiber/insight)
     uniqueValueInfos: [
         // Red group - AD
-        { value: "AD", symbol: { type: "simple-fill", color: [211, 47, 47, 0.5], outline: { color: [211, 47, 47, 1], width: 2 } } },
+        { value: "AD", symbol: { type: "simple-fill", color: [211, 47, 47, 0.1], outline: { color: [211, 47, 47, 1], width: 3 } } },
         // Blue group
-        { value: "BH", symbol: { type: "simple-fill", color: [25, 118, 210, 0.5], outline: { color: [25, 118, 210, 1], width: 2 } } },
-        { value: "EB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.5], outline: { color: [2, 136, 209, 1], width: 2 } } },
-        { value: "TB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.5], outline: { color: [2, 136, 209, 1], width: 2 } } },
-        { value: "TD", symbol: { type: "simple-fill", color: [25, 118, 210, 0.5], outline: { color: [25, 118, 210, 1], width: 2 } } },
+        { value: "BH", symbol: { type: "simple-fill", color: [25, 118, 210, 0.1], outline: { color: [25, 118, 210, 1], width: 3 } } },
+        { value: "EB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.1], outline: { color: [2, 136, 209, 1], width: 3 } } },
+        { value: "TB", symbol: { type: "simple-fill", color: [2, 136, 209, 0.1], outline: { color: [2, 136, 209, 1], width: 3 } } },
+        { value: "TD", symbol: { type: "simple-fill", color: [25, 118, 210, 0.1], outline: { color: [25, 118, 210, 1], width: 3 } } },
         // Green group
-        { value: "BL", symbol: { type: "simple-fill", color: [56, 142, 60, 0.5], outline: { color: [56, 142, 60, 1], width: 2 } } },
-        { value: "JC", symbol: { type: "simple-fill", color: [56, 142, 60, 0.5], outline: { color: [56, 142, 60, 1], width: 2 } } },
+        { value: "BL", symbol: { type: "simple-fill", color: [56, 142, 60, 0.1], outline: { color: [56, 142, 60, 1], width: 3 } } },
+        { value: "JC", symbol: { type: "simple-fill", color: [56, 142, 60, 0.1], outline: { color: [56, 142, 60, 1], width: 3 } } },
         // Yellow/Gold group
-        { value: "BM", symbol: { type: "simple-fill", color: [251, 192, 45, 0.5], outline: { color: [251, 192, 45, 1], width: 2 } } },
-        { value: "FV", symbol: { type: "simple-fill", color: [175, 180, 43, 0.5], outline: { color: [175, 180, 43, 1], width: 2 } } },
-        { value: "HP", symbol: { type: "simple-fill", color: [125, 102, 8, 0.5], outline: { color: [125, 102, 8, 1], width: 2 } } },
+        { value: "BM", symbol: { type: "simple-fill", color: [251, 192, 45, 0.1], outline: { color: [251, 192, 45, 1], width: 3 } } },
+        { value: "FV", symbol: { type: "simple-fill", color: [175, 180, 43, 0.1], outline: { color: [175, 180, 43, 1], width: 3 } } },
+        { value: "HP", symbol: { type: "simple-fill", color: [125, 102, 8, 0.1], outline: { color: [125, 102, 8, 1], width: 3 } } },
         // Pink/Purple group
-        { value: "ER", symbol: { type: "simple-fill", color: [194, 24, 91, 0.5], outline: { color: [194, 24, 91, 1], width: 2 } } },
-        { value: "SC", symbol: { type: "simple-fill", color: [142, 36, 170, 0.5], outline: { color: [142, 36, 170, 1], width: 2 } } },
+        { value: "ER", symbol: { type: "simple-fill", color: [194, 24, 91, 0.1], outline: { color: [194, 24, 91, 1], width: 3 } } },
+        { value: "SC", symbol: { type: "simple-fill", color: [142, 36, 170, 0.1], outline: { color: [142, 36, 170, 1], width: 3 } } },
         // Cyan/Teal group
-        { value: "HE", symbol: { type: "simple-fill", color: [0, 151, 167, 0.5], outline: { color: [0, 151, 167, 1], width: 2 } } },
+        { value: "HE", symbol: { type: "simple-fill", color: [0, 151, 167, 0.1], outline: { color: [0, 151, 167, 1], width: 3 } } },
         // Orange group
-        { value: "HV", symbol: { type: "simple-fill", color: [245, 124, 0, 0.5], outline: { color: [245, 124, 0, 1], width: 2 } } },
+        { value: "HV", symbol: { type: "simple-fill", color: [245, 124, 0, 0.1], outline: { color: [245, 124, 0, 1], width: 3 } } },
         // Unknown/Default
-        { value: "Unknown", symbol: { type: "simple-fill", color: [204, 204, 204, 0.5], outline: { color: [204, 204, 204, 1.0], width: 2 } } }
+        { value: "Unknown", symbol: { type: "simple-fill", color: [204, 204, 204, 0.1], outline: { color: [204, 204, 204, 1.0], width: 3 } } }
     ],
     // Fallback logic using Arcade for dynamic prefixes
     visualVariables: []
@@ -620,6 +620,31 @@ const createMSTTerminalLabeling = () => [
         maxScale: 0
     }
 ];
+
+// Pole renderer - brown color matching React implementation
+const createPoleRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-marker',
+        style: 'circle',
+        color: [139, 69, 19, 0.8], // Brown (#8B4513) matching React version
+        size: 8,
+        outline: {
+            color: [139, 69, 19, 1],
+            width: 2
+        }
+    },
+    // Scale-dependent sizing to prevent cluttering at different zoom levels
+    visualVariables: [{
+        type: "size",
+        valueExpression: "$view.scale",
+        stops: [
+            { value: 80000, size: 8 },      // Zoom 14 and closer: Full size
+            { value: 1000000, size: 5 },    // Zoom 10-13: Smaller size
+            { value: 10000000, size: 3 }    // Zoom 6-9: Tiny size
+        ]
+    }]
+});
 
 const createSplitterRenderer = () => ({
     type: 'simple',
@@ -865,6 +890,35 @@ const createMSTTerminalPopup = () => ({
     ]
 });
 
+// Pole popup template
+const createPolePopup = () => ({
+    title: 'Pole: {wmElementN}',
+    content: [
+        {
+            type: 'fields',
+            fieldInfos: [
+                { fieldName: 'wmElementN', label: 'Pole ID', visible: true },
+                { fieldName: 'latitude', label: 'Latitude', visible: true, format: { places: 6 } },
+                { fieldName: 'longitude', label: 'Longitude', visible: true, format: { places: 6 } }
+            ]
+        }
+    ],
+    actions: [
+        {
+            id: 'copy-info',
+            title: 'Copy Pole Info',
+            icon: 'duplicate',
+            type: 'button'
+        },
+        {
+            id: 'directions',
+            title: 'Get Directions',
+            icon: 'pin-tear',
+            type: 'button'
+        }
+    ]
+});
+
 const createSplitterPopup = () => ({
     title: 'Splitter: {STRUCTURE_}',
     content: [
@@ -1037,6 +1091,14 @@ const createSplitterFields = () => [
     { name: 'CLLI', type: 'string', alias: 'CLLI Code' },
     { name: 'EQUIP_FRAB', type: 'string', alias: 'Equipment FRAB' },
     { name: 'OUTPUTPORT', type: 'integer', alias: 'Output Port Count' }
+];
+
+// Pole fields
+const createPoleFields = () => [
+    { name: 'wmElementN', type: 'string', alias: 'Pole ID' },
+    { name: 'latitude', type: 'double', alias: 'Latitude' },
+    { name: 'longitude', type: 'double', alias: 'Longitude' },
+    { name: 'id', type: 'oid', alias: 'Object ID' }
 ];
 
 const createClosureFields = () => [
@@ -1263,6 +1325,22 @@ export const layerConfigs = {
         minScale: 24000,  // Hide when zoomed out beyond this scale
         maxScale: 0,      // No limit on zooming in
         dataServiceMethod: () => infrastructureService.getSplitters()
+    },
+
+    // Poles Layer
+    poles: {
+        id: 'poles',
+        title: 'Poles',
+        dataSource: 'poles',
+        renderer: createPoleRenderer(),
+        popupTemplate: createPolePopup(),
+        fields: createPoleFields(),
+        visible: false,
+        zOrder: 45, // Between closures (40) and MST terminals (50)
+        // Only show when zoomed in past zoom level 15 (street level)
+        minScale: 24000,  // Hide when zoomed out beyond this scale
+        maxScale: 0,      // No limit on zooming in
+        dataServiceMethod: () => infrastructureService.getPoles()
     },
 
     closures: {

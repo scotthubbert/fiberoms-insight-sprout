@@ -195,7 +195,8 @@ export class Application {
     async initializeInfrastructureLayers() {
         try {
             const countyBoundariesConfig = getLayerConfig('countyBoundaries');
-            if (countyBoundariesConfig) {
+            // Skip county boundaries if no dataUrl is configured
+            if (countyBoundariesConfig && countyBoundariesConfig.dataUrl) {
                 loadingIndicator.showLoading('county-boundaries', 'County Boundaries');
                 try {
                     const layer = await this.services.layerManager.createLayer(countyBoundariesConfig);
@@ -210,6 +211,9 @@ export class Application {
                     log.error('Failed to initialize County Boundaries layer:', error);
                     loadingIndicator.showError('county-boundaries', 'County Boundaries', 'Failed to load');
                 }
+            } else if (countyBoundariesConfig && !countyBoundariesConfig.dataUrl) {
+                // Silently skip if dataUrl is not configured (not an error)
+                log.info('Skipping County Boundaries layer - no dataUrl configured');
             }
             // Node Sites loading disabled to prevent errors (replaced by Sprout Huts)
 
@@ -258,6 +262,7 @@ export class Application {
                 // { key: 'mainLineOld', name: 'Main Line Old' }, // Removed for Sprout Fiber
                 { key: 'mstTerminals', name: 'MST Terminals' },
                 { key: 'splitters', name: 'Splitters' },
+                { key: 'poles', name: 'Poles' },
                 { key: 'closures', name: 'Slack Loops' },
                 { key: 'slackLoops', name: 'Slack Loops' }
             ];
@@ -1013,6 +1018,8 @@ export class Application {
                             console.log(`[OSP Debug] 🔗 MST Terminals URL: ${API_CONFIG.INFRASTRUCTURE.MST_TERMINALS}`);
                         } else if (serviceName.includes('getMSTFiber')) {
                             console.log(`[OSP Debug] 🔗 MST Fiber URL: ${API_CONFIG.INFRASTRUCTURE.MST_FIBER}`);
+                        } else if (serviceName.includes('getPoles')) {
+                            console.log(`[OSP Debug] 🔗 Poles: Fetched from Supabase sfi_poles table`);
                         }
                     } catch (e) {
                         console.warn(`[OSP Debug] Could not determine URL:`, e);
@@ -1047,7 +1054,7 @@ export class Application {
             return;
         }
 
-        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'sprout-huts', 'rainviewer-radar', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'splitters', 'closures', 'electric-trucks', 'fiber-trucks']);
+        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'sprout-huts', 'rainviewer-radar', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'splitters', 'poles', 'closures', 'electric-trucks', 'fiber-trucks']);
         if (!layerId || !VALID_LAYER_IDS.has(layerId)) { log.warn(`Invalid or unsupported layer ID: ${layerId}`); return; }
         if (layerId) {
             if (layerId === 'online-subscribers' && checked && !this.onlineLayerLoaded) {
@@ -1151,7 +1158,7 @@ export class Application {
         let labelText = '';
         if (listItem) labelText = listItem.getAttribute('label'); else if (label) labelText = label.textContent.trim();
         const mapping = {
-            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'sprout-huts', 'Weather Radar': 'rainviewer-radar', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'Splitters': 'splitters', 'Slack Loops': 'closures', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
+            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'sprout-huts', 'Weather Radar': 'rainviewer-radar', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'Splitters': 'splitters', 'Poles': 'poles', 'Slack Loops': 'closures', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
         };
         return mapping[labelText] || null;
     }
@@ -1163,7 +1170,7 @@ export class Application {
 
     syncToggleStates(layerId, checked) {
         const labelMapping = {
-            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'sprout-huts': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'splitters': 'Splitters', 'closures': 'Slack Loops', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
+            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'sprout-huts': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'splitters': 'Splitters', 'poles': 'Poles', 'closures': 'Slack Loops', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
         };
         const labelText = labelMapping[layerId]; if (!labelText) return;
         const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #vehicles-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');

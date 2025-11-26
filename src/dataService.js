@@ -493,16 +493,36 @@ export class SubscriberDataService {
             // Search across multiple fields using OR conditions
             // Use only columns that actually exist in the database schema
             // Updated for Sprout Fiber schema: name, account, address, city
-            const { data, error, count } = await supabase
+            // Note: account is bigint, so we need to handle it differently - use text() function or separate query
+            const isNumeric = /^\d+$/.test(searchTerm.trim());
+            
+            let query = supabase
                 .from('fiber_subscriber_status_live')
-                .select('*', { count: 'exact' })
-                .or(`name.ilike.%${searchTerm}%,account.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`)
+                .select('*', { count: 'exact' });
+
+            // Build OR condition - account and MapNumber fields need special handling since they're bigint
+            // Search across multiple text fields: name, address, city, postcode, TA5K, Remote_ID, servicedesc
+            if (isNumeric) {
+                // If search term is numeric, search account and MapNumber with exact match (eq) for better performance
+                // Also search text fields that might contain numbers (postcode, TA5K, Remote_ID)
+                query = query.or(`name.ilike.%${searchTerm}%,account.eq.${searchTerm},address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,postcode.ilike.%${searchTerm}%,TA5K.ilike.%${searchTerm}%,Remote_ID.ilike.%${searchTerm}%,MapNumber.eq.${searchTerm}`);
+            } else {
+                // If search term is not numeric, search all text fields (skip account and MapNumber bigint fields)
+                query = query.or(`name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,postcode.ilike.%${searchTerm}%,TA5K.ilike.%${searchTerm}%,Remote_ID.ilike.%${searchTerm}%,servicedesc.ilike.%${searchTerm}%`);
+            }
+
+            const { data, error, count } = await query
                 .not('lat', 'is', null)
                 .not('lon', 'is', null)
                 .neq('lat', 0)
                 .neq('lon', 0)
 
             if (error) {
+                // Handle specific error codes gracefully
+                if (error.code === 'PGRST116' || error.message?.includes('404') || error.code === '42P01') {
+                    log.warn('⚠️ Subscriber table not found or not accessible. Check Supabase configuration.')
+                    return { results: [], count: 0, error: 'Table not configured' }
+                }
                 log.error('❌ Error searching subscribers:', error)
                 throw error
             }
@@ -541,6 +561,11 @@ export class SubscriberDataService {
             return searchResult
 
         } catch (error) {
+            // Check if this is a 404/connection error and handle gracefully
+            if (error?.message?.includes('404') || error?.code === 'PGRST116') {
+                log.warn('⚠️ Subscriber search failed - table may not be configured correctly')
+                return { results: [], count: 0, error: 'Search unavailable' }
+            }
             log.error('Failed to search subscribers:', error)
             throw error
         }

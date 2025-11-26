@@ -3181,6 +3181,10 @@ calcite-icon.status-icon-business::part(icon) {
   color: rgb(128, 0, 128);
 }
 
+.icon-pin-brown {
+  color: rgb(139, 69, 19);
+}
+
 .icon-square-orange {
   color: rgb(255, 140, 0);
 }
