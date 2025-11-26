@@ -41,7 +41,7 @@ export class LayerManager {
             'offline-subscribers': 100,
             'electric-offline-subscribers': 101, // Just above regular offline subscribers
             vehicles: 130,
-            'sprout-huts': 125, // Above vehicles and most other layers, below weather radar
+            'sprout-huts': 150, // Above all subscriber clusters to prevent UI conflicts
             weatherRadar: 140
         };
     }
@@ -279,12 +279,26 @@ export class LayerManager {
     // Create empty GeoJSON layer that can be updated later
     async createEmptyGeoJSONLayer(layerConfig) {
         try {
-            // Create empty GeoJSON blob
+            // Create empty GeoJSON with a dummy polygon feature to help ArcGIS understand geometry type
+            // This prevents the "table feature layer can't be displayed" error
+            // The dummy feature will be replaced when real data arrives
             const emptyGeoJSON = {
                 type: "FeatureCollection",
-                features: []
+                features: [
+                    {
+                        type: "Feature",
+                        geometry: {
+                            type: "Polygon",
+                            coordinates: [[[-180, -90], [-180, 90], [180, 90], [180, -90], [-180, -90]]]
+                        },
+                        properties: {
+                            _dummy: true // Mark as dummy so it can be filtered out if needed
+                        }
+                    }
+                ]
             };
 
+            // Create blob URL for the GeoJSON
             const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(emptyGeoJSON)], {
                 type: "application/json"
             }));
@@ -295,7 +309,7 @@ export class LayerManager {
                 renderer: layerConfig.renderer,
                 popupTemplate: layerConfig.popupTemplate,
                 featureReduction: layerConfig.featureReduction,
-                fields: layerConfig.fields,
+                fields: layerConfig.fields || [],
                 listMode: layerConfig.visible ? 'show' : 'hide',
                 visible: layerConfig.visible !== undefined ? layerConfig.visible : true,
                 labelingInfo: layerConfig.labelingInfo || [],

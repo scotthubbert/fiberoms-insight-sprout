@@ -254,7 +254,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
     renderCompanySummary(company, outageCount, customerCount) {
         const bgColor = 'rgba(74, 124, 89, 0.1)';
         const layerId = 'cullman-outages';
-        const logoPath = 'https://cullmanec.com/sites/default/files/cullman_logo_black.png';
+        const logoPath = 'https://cullmanec.com/sites/default/files/NRECA_Circle_Transparent_0.png';
         const companyFullName = 'Cullman Electric';
 
         let isChecked = true;
@@ -295,7 +295,7 @@ export class PowerOutageStatsComponent extends HTMLElement {
     }
 
     renderCalciteOutageItem(outage) {
-        const logoPath = 'https://cullmanec.com/sites/default/files/cullman_logo_black.png';
+        const logoPath = 'https://cullmanec.com/sites/default/files/NRECA_Circle_Transparent_0.png';
         const companyFullName = 'Cullman Electric';
 
         return `

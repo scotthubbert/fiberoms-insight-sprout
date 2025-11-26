@@ -93,24 +93,51 @@ export class GeoJSONTransformService {
                 };
             }
 
+            // Preserve all original properties from the record, ensuring field names match GeoJSON
+            // Convert timestamps back to ISO strings for popup display
+            const convertTimestampToISO = (timestamp) => {
+                if (!timestamp) return null;
+                if (typeof timestamp === 'number') {
+                    return new Date(timestamp).toISOString();
+                }
+                return timestamp; // Already a string
+            };
+
+            // Convert boolean values to strings for ArcGIS compatibility
+            const convertBooleanToString = (value) => {
+                if (value === true || value === 'true') return 'Yes';
+                if (value === false || value === 'false') return 'No';
+                return value ? String(value) : '';
+            };
+
+            const properties = {
+                objectId: record.id || index,
+                outage_id: record.outage_id || `${company}-${index}`,
+                customers_affected: record.customers_affected || 0,
+                cause: record.cause || null,
+                start_time: convertTimestampToISO(record.start_time) || record.start_time || null,
+                estimated_restoration: convertTimestampToISO(record.estimated_restoration || record.estimated_restore) || null,
+                estimated_restore: convertTimestampToISO(record.estimated_restore || record.estimated_restoration) || null, // Support both field names
+                status: record.status || record.outage_status || '',
+                crew_assigned: convertBooleanToString(record.crew_assigned || record.crew_on_site || false),
+                is_planned: convertBooleanToString(record.is_planned || false),
+                last_update: convertTimestampToISO(record.last_update) || record.last_update || null,
+                area_description: record.area_description || '',
+                company: company,
+                latitude: record.latitude || null,
+                longitude: record.longitude || null,
+                // Include all original fields from record (this preserves any additional fields)
+                // But override with converted values above
+                ...record,
+                // Override boolean fields with string versions
+                crew_assigned: convertBooleanToString(record.crew_assigned || record.crew_on_site || false),
+                is_planned: convertBooleanToString(record.is_planned || false)
+            };
+
             return {
                 type: 'Feature',
                 geometry: geometry,
-                properties: {
-                    objectId: record.id || index,
-                    outage_id: record.outage_id || `${company}-${index}`,
-                    customers_affected: record.customers_affected || 0,
-                    cause: record.cause || 'Unknown',
-                    start_time: record.start_time || new Date().toISOString(),
-                    estimated_restore: record.estimated_restore || null,
-                    status: record.status || 'Active',
-                    area_description: record.area_description || '',
-                    company: company,
-                    latitude: record.latitude || null,
-                    longitude: record.longitude || null,
-                    // Include all original fields
-                    ...record
-                }
+                properties: properties
             };
         }).filter(feature => feature !== null);
     }

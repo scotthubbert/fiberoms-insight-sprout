@@ -100,18 +100,23 @@ export class OutageService {
                 }
 
                 // Map fields based on useOutages.ts from reference project
+                // Preserve original property names from GeoJSON for popup display
                 return {
                     id: props.outage_id,
                     outage_id: props.outage_id,
                     customers_affected: parseInt(props.customers_affected || 0),
                     cause: cause,
-                    start_time: props.start_time ? new Date(props.start_time).getTime() : null,
-                    estimated_restore: props.estimated_restoration ? new Date(props.estimated_restoration).getTime() : null,
+                    // Keep dates as ISO strings for popup compatibility (ArcGIS can format these)
+                    start_time: props.start_time || null,
+                    estimated_restoration: props.estimated_restoration || null,
+                    estimated_restore: props.estimated_restoration || null, // Alias for compatibility
                     status: crewStatus,
                     outage_status: props.status || 'N/A',
                     area_description: props.outage_id || 'Area Outage',
                     comments: crewStatus,
+                    crew_assigned: props.crew_assigned || false,
                     crew_on_site: props.crew_assigned || false,
+                    is_planned: props.is_planned || false,
                     substation: props.substation || 'N/A',
                     feeder: props.feeder || 'N/A',
                     district: props.district || 'N/A',
@@ -119,7 +124,7 @@ export class OutageService {
                     initially_affected: parseInt(props.customers_affected || 0),
                     equipment: props.troubled_element || 'N/A',
                     description: `Outage affecting ${props.customers_affected || 0} customers`,
-                    last_update: props.last_update ? new Date(props.last_update).getTime() : null,
+                    last_update: props.last_update || null,
                     duration: duration,
                     latitude: latitude,
                     longitude: longitude,
@@ -127,6 +132,7 @@ export class OutageService {
                     verified: props.verified,
                     upline_element: props.upline_element,
                     outaged_phase: props.outaged_phase,
+                    // Include all original properties from GeoJSON (preserves field names)
                     ...props
                 };
             });

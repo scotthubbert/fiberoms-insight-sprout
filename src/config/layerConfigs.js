@@ -117,8 +117,8 @@ const createOfflineClusterConfig = () => ({
     type: 'cluster',
     clusterRadius: '60px',
     // Performance: Set min/max size for better rendering performance
-    clusterMinSize: '12px',
-    clusterMaxSize: '54px',
+    clusterMinSize: '24px',
+    clusterMaxSize: '108px',
     // Disable clustering at high zoom levels where individual features are more useful
     maxScale: 50000,
     popupTemplate: {
@@ -151,12 +151,12 @@ const createOfflineClusterConfig = () => ({
                 type: 'size',
                 field: 'cluster_count',
                 stops: [
-                    { value: 1, size: '12px' },      // Single offline subscriber
-                    { value: 5, size: '18px' },      // Small cluster
-                    { value: 10, size: '24px' },     // Medium cluster
-                    { value: 25, size: '32px' },     // Large cluster
-                    { value: 50, size: '42px' },     // Very large cluster
-                    { value: 100, size: '54px' }     // Massive cluster
+                    { value: 1, size: '24px' },      // Single offline subscriber
+                    { value: 5, size: '36px' },      // Small cluster
+                    { value: 10, size: '48px' },     // Medium cluster
+                    { value: 25, size: '64px' },     // Large cluster
+                    { value: 50, size: '84px' },     // Very large cluster
+                    { value: 100, size: '108px' }     // Massive cluster
                 ]
             }
         ]
@@ -173,10 +173,10 @@ const createOfflineClusterConfig = () => ({
                 font: {
                     weight: 'bold',
                     family: 'Noto Sans',
-                    size: '12px'
+                    size: '24px'
                 },
                 haloColor: [0, 0, 0, 0.8],
-                haloSize: 1
+                haloSize: 2
             },
             labelPlacement: 'center-center'
         }
@@ -187,8 +187,8 @@ const createOfflineClusterConfig = () => ({
 const createOnlineClusterConfig = () => ({
     type: 'cluster',
     clusterRadius: '45px', // Smaller radius for denser data
-    clusterMinSize: '10px',
-    clusterMaxSize: '40px',
+    clusterMinSize: '20px',
+    clusterMaxSize: '80px',
     // Disable clustering at street level zoom for detail work
     maxScale: 80000, // Only show individual points when zoomed to ~zoom level 14
     popupTemplate: {
@@ -217,15 +217,82 @@ const createOnlineClusterConfig = () => ({
             type: 'size',
             field: 'cluster_count',
             stops: [
-                { value: 1, size: '10px' },
-                { value: 10, size: '16px' },
-                { value: 50, size: '22px' },
-                { value: 100, size: '28px' },
-                { value: 500, size: '34px' },
-                { value: 1000, size: '40px' }
+                { value: 1, size: '20px' },
+                { value: 10, size: '32px' },
+                { value: 50, size: '44px' },
+                { value: 100, size: '56px' },
+                { value: 500, size: '68px' },
+                { value: 1000, size: '80px' }
             ]
         }]
     }
+});
+
+// Electric Offline cluster configuration - yellow to match electric offline markers
+const createElectricOfflineClusterConfig = () => ({
+    type: 'cluster',
+    clusterRadius: '60px',
+    clusterMinSize: '24px',
+    clusterMaxSize: '108px',
+    // Disable clustering at high zoom levels where individual features are more useful
+    maxScale: 50000,
+    popupTemplate: {
+        title: 'Electric Offline Subscribers Cluster',
+        content: 'This cluster represents <b>{cluster_count}</b> electric offline subscribers in this area.',
+        fieldInfos: [
+            {
+                fieldName: 'cluster_count',
+                format: {
+                    places: 0,
+                    digitSeparator: true
+                }
+            }
+        ]
+    },
+    renderer: {
+        type: 'simple',
+        symbol: {
+            type: 'simple-marker',
+            style: 'circle',
+            color: [255, 193, 7, 0.9], // Yellow for electric offline (matches main renderer)
+            outline: {
+                color: [255, 152, 0, 1], // Darker yellow/orange outline for contrast
+                width: 2
+            }
+        },
+        visualVariables: [{
+            type: 'size',
+            field: 'cluster_count',
+            stops: [
+                { value: 1, size: '24px' },
+                { value: 5, size: '36px' },
+                { value: 10, size: '48px' },
+                { value: 25, size: '64px' },
+                { value: 50, size: '84px' },
+                { value: 100, size: '108px' }
+            ]
+        }]
+    },
+    labelingInfo: [
+        {
+            deconflictionStrategy: 'none',
+            labelExpressionInfo: {
+                expression: '$feature.cluster_count'
+            },
+            symbol: {
+                type: 'text',
+                color: 'white',
+                font: {
+                    weight: 'bold',
+                    family: 'Noto Sans',
+                    size: '24px'
+                },
+                haloColor: [0, 0, 0, 0.8],
+                haloSize: 2
+            },
+            labelPlacement: 'center-center'
+        }
+    ]
 });
 
 // Sprout Huts renderer
@@ -1275,7 +1342,7 @@ export const layerConfigs = {
         dataSource: 'electric_offline_subscribers',
         renderer: createElectricOfflineRenderer(),
         popupTemplate: createSubscriberPopup('offline'),
-        featureReduction: createOfflineClusterConfig(), // Use same clustering as offline
+        featureReduction: createElectricOfflineClusterConfig(), // Yellow cluster configuration
         fields: subscriberFields,
         visible: true, // Visible by default
         zOrder: 101, // Just above regular offline subscribers
@@ -1292,7 +1359,7 @@ export const layerConfigs = {
         fields: createSproutHutFields(),
         labelingInfo: createSproutHutLabeling(),
         visible: true, // Visible by default as they are major landmarks
-        zOrder: 125, // Above node sites
+        zOrder: 150, // Above all subscriber clusters to prevent UI conflicts
         dataServiceMethod: () => infrastructureService.getSproutHuts()
     },
 
@@ -1527,19 +1594,71 @@ export const layerConfigs = {
                 {
                     type: 'fields',
                     fieldInfos: [
+                        { fieldName: 'outage_id', label: 'Outage ID' },
                         { fieldName: 'customers_affected', label: 'Customers Affected' },
-                        { fieldName: 'status', label: 'Status' },
+                        {
+                            fieldName: 'status',
+                            label: 'Status',
+                            format: {
+                                places: 0,
+                                digitSeparator: false
+                            }
+                        },
                         { fieldName: 'cause', label: 'Cause' },
-                        { fieldName: 'start_time', label: 'Start Time' },
-                        { fieldName: 'estimated_restoration', label: 'Estimated Restoration' },
-                        { fieldName: 'crew_assigned', label: 'Crew Assigned' }
+                        {
+                            fieldName: 'start_time',
+                            label: 'Start Time',
+                            format: {
+                                dateFormat: 'short-date-long-time'
+                            }
+                        },
+                        {
+                            fieldName: 'estimated_restoration',
+                            label: 'Estimated Restoration',
+                            format: {
+                                dateFormat: 'short-date-long-time'
+                            }
+                        },
+                        {
+                            fieldName: 'estimated_restore',
+                            label: 'Estimated Restoration',
+                            format: {
+                                dateFormat: 'short-date-long-time'
+                            }
+                        },
+                        {
+                            fieldName: 'crew_assigned',
+                            label: 'Crew Assigned'
+                        },
+                        {
+                            fieldName: 'is_planned',
+                            label: 'Planned Outage'
+                        },
+                        {
+                            fieldName: 'last_update',
+                            label: 'Last Update',
+                            format: {
+                                dateFormat: 'short-date-long-time'
+                            }
+                        }
                     ]
                 }
             ]
         },
         visible: true, // Visible by default
         zOrder: 2, // Below all markers and OSP data, above service boundaries
-        fields: [] // Will be inferred from GeoJSON
+        fields: [
+            { name: 'outage_id', type: 'string', alias: 'Outage ID' },
+            { name: 'customers_affected', type: 'integer', alias: 'Customers Affected' },
+            { name: 'status', type: 'string', alias: 'Status' },
+            { name: 'cause', type: 'string', alias: 'Cause' },
+            { name: 'start_time', type: 'date', alias: 'Start Time' },
+            { name: 'estimated_restoration', type: 'date', alias: 'Estimated Restoration' },
+            { name: 'estimated_restore', type: 'date', alias: 'Estimated Restoration' }, // Alternative field name
+            { name: 'crew_assigned', type: 'string', alias: 'Crew Assigned' }, // Boolean stored as string
+            { name: 'is_planned', type: 'string', alias: 'Planned Outage' }, // Boolean stored as string
+            { name: 'last_update', type: 'date', alias: 'Last Update' }
+        ]
     }
 
     // Additional layers can be added here as needed

@@ -28,7 +28,7 @@ export class MapController {
             try {
                 // Hide visually but keep layout (will be shown after extent is applied)
                 this.mapElement.style.visibility = 'hidden';
-                
+
                 // Set extent directly on map element as property (preferred over attribute for complex objects)
                 if (this.calculatedExtentBase) {
                     // Set as property - ArcGIS map component accepts Extent objects directly
@@ -108,7 +108,7 @@ export class MapController {
                                     xmax = Math.max(xmax, lng);
                                     ymax = Math.max(ymax, lat);
                                 };
-                                
+
                                 // Handle both Polygon and MultiPolygon geometries
                                 if (feature.geometry.type === 'Polygon') {
                                     // Polygon: array of rings, each ring is array of [lng, lat] points
@@ -125,7 +125,7 @@ export class MapController {
                                 }
                             }
                         });
-                        
+
                         if (xmin !== Infinity) {
                             // Add small buffer (5% on each side) for better view
                             const xBuffer = (xmax - xmin) * 0.05;
@@ -272,19 +272,19 @@ export class MapController {
             // Set initial extent - check if already correct to avoid double zoom
             // Since extent was already set on mapElement before view initialized, we may not need to set it again
             const initialTarget = this.calculatedExtentBase || this.calculatedExtent;
-            
+
             // Check if current extent is already close to target (within 1% tolerance)
             const currentExtent = this.view.extent;
             let needsExtentUpdate = true;
             if (currentExtent && initialTarget) {
                 const widthDiff = Math.abs(currentExtent.width - initialTarget.width) / initialTarget.width;
                 const heightDiff = Math.abs(currentExtent.height - initialTarget.height) / initialTarget.height;
-                const centerDiff = currentExtent.center && initialTarget.center ? 
+                const centerDiff = currentExtent.center && initialTarget.center ?
                     Math.sqrt(
                         Math.pow(currentExtent.center.longitude - initialTarget.center.longitude, 2) +
                         Math.pow(currentExtent.center.latitude - initialTarget.center.latitude, 2)
                     ) : 0;
-                
+
                 // If extent is already very close (within 1% and center within 0.01 degrees), skip update
                 if (widthDiff < 0.01 && heightDiff < 0.01 && centerDiff < 0.01) {
                     needsExtentUpdate = false;
@@ -296,7 +296,7 @@ export class MapController {
                     });
                 }
             }
-            
+
             console.log('[ZOOM DEBUG] Step 3: About to apply bounds', {
                 needsExtentUpdate,
                 currentViewExtent: currentExtent ? {
@@ -318,19 +318,19 @@ export class MapController {
                 } : null,
                 currentZoom: this.view.zoom
             });
-            
+
             if (needsExtentUpdate) {
                 try {
                     // Expose initial extent for other modules (e.g., search widget)
                     const toJson = (ext) => (ext && typeof ext.toJSON === 'function') ? ext.toJSON() : ext;
                     window.initialMapExtent = toJson(initialTarget);
-                    
+
                     // Set extent directly (no goTo with padding) since final extent was already calculated with padding
                     // This ensures single zoom operation
                     const beforeZoom = this.view.zoom;
                     this.view.extent = initialTarget;
                     const afterZoom = this.view.zoom;
-                    
+
                     console.log('[ZOOM DEBUG] Step 4: Extent set directly', {
                         beforeZoom,
                         afterZoom,
@@ -344,7 +344,7 @@ export class MapController {
                             height: this.view.extent.height
                         } : null
                     });
-                    
+
                     log.info('✅ Extent set directly (no double zoom)');
                 } catch (error) {
                     console.error('[ZOOM DEBUG] Step 4 ERROR: Failed to set extent directly', error);
@@ -377,7 +377,7 @@ export class MapController {
                     });
                 } catch (_) { }
             }
-            
+
             // Mark bounds as applied to prevent duplicate calls
             this._boundsApplied = true;
             // Map already visible for progressive loading - extent set (single zoom)
@@ -464,7 +464,7 @@ export class MapController {
 
         // Show map immediately for progressive loading (extent already set on element, so no world view flash)
         // Components will load progressively in the background
-        try { 
+        try {
             if (this.mapElement) {
                 this.mapElement.style.visibility = 'visible';
                 log.info('✅ Map visible - progressive component loading enabled');
@@ -490,11 +490,11 @@ export class MapController {
                 // Check if extent is already correct before applying bounds
                 const currentExtent = view.extent;
                 const targetExtent = this.calculatedExtentBase || this.calculatedExtent;
-                
+
                 if (currentExtent && targetExtent) {
                     const widthDiff = Math.abs(currentExtent.width - targetExtent.width) / targetExtent.width;
                     const heightDiff = Math.abs(currentExtent.height - targetExtent.height) / targetExtent.height;
-                    
+
                     // If extent is already very close (within 2%), skip applying bounds to avoid double zoom
                     if (widthDiff < 0.02 && heightDiff < 0.02) {
                         console.log('[ZOOM DEBUG] Skipping applyServiceAreaBounds - extent already correct', {
@@ -507,7 +507,7 @@ export class MapController {
                         return;
                     }
                 }
-                
+
                 await this.applyServiceAreaBounds();
             } catch (error) {
                 log.error('MapController: Map view ready error:', error);
@@ -672,8 +672,9 @@ export class MapController {
             'mst-terminals': 50,
             'splitters': 60,
             'offline-subscribers': 100,
+            'electric-offline-subscribers': 101, // Just above regular offline subscribers
             'vehicles': 130,
-            'sprout-huts': 125, // Above vehicles and most other layers, below weather radar
+            'sprout-huts': 150, // Above all subscriber clusters to prevent UI conflicts
             'weather-radar': 140
         };
         return zOrderMap[layerId] || 0;
