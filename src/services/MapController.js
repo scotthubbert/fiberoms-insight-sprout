@@ -16,31 +16,41 @@ export class MapController {
         this.mapElement = document.getElementById('map');
         this.view = null;
         this.map = null;
+        this._boundsApplied = false; // Guard to prevent multiple bounds applications
     }
 
     async initialize() {
         // Pre-calculate bounds before waiting for map to be ready
-        this.prepareServiceAreaBounds();
+        await this.prepareServiceAreaBounds();
 
-        // Prevent initial world-view flash by setting initial state early and hiding map until bounds are applied
+        // Set initial extent on map element BEFORE view initializes (prevents world-view flash)
         if (this.mapElement) {
             try {
-                // Hide visually but keep layout
+                // Hide visually but keep layout (will be shown after extent is applied)
                 this.mapElement.style.visibility = 'hidden';
-                // Prime initial extent/center on the custom element before view creation
-                if (this.calculatedExtentBase || this.calculatedExtent) {
-                    const initial = this.calculatedExtentBase || this.calculatedExtent;
-                    this.mapElement.extent = initial; // property assignment preferred over attribute for complex objects
-                    // Also provide a center hint for components that read attributes
-                    if (this.calculatedCenter?.length === 2) {
-                        this.mapElement.setAttribute('center', `${this.calculatedCenter[0]},${this.calculatedCenter[1]}`);
-                    }
+                
+                // Set extent directly on map element as property (preferred over attribute for complex objects)
+                if (this.calculatedExtentBase) {
+                    // Set as property - ArcGIS map component accepts Extent objects directly
+                    console.log('[ZOOM DEBUG] Step 1: Setting extent on mapElement BEFORE view init', {
+                        extent: this.calculatedExtentBase,
+                        xmin: this.calculatedExtentBase.xmin,
+                        ymin: this.calculatedExtentBase.ymin,
+                        xmax: this.calculatedExtentBase.xmax,
+                        ymax: this.calculatedExtentBase.ymax,
+                        width: this.calculatedExtentBase.width,
+                        height: this.calculatedExtentBase.height
+                    });
+                    this.mapElement.extent = this.calculatedExtentBase;
+                    log.info('✅ Set initial extent on map element (DA boundaries)');
                 } else if (this.calculatedCenter?.length === 2) {
-                    // Global fallback
+                    // Fallback to center if extent not available
                     this.mapElement.setAttribute('center', `${this.calculatedCenter[0]},${this.calculatedCenter[1]}`);
-                    this.mapElement.setAttribute('zoom', '6');
+                    this.mapElement.setAttribute('zoom', '10'); // Reasonable zoom level
                 }
-            } catch (_) { /* no-op */ }
+            } catch (error) {
+                log.warn('Failed to set initial extent on map element:', error);
+            }
         }
 
         await this.waitForMapReady();
@@ -49,8 +59,9 @@ export class MapController {
         this.applyTheme();
 
         // Fallback: ensure bounds are applied even if timing issues occur
+        // Only check if bounds haven't been applied yet
         setTimeout(async () => {
-            if (this.view && this.view.extent && this.view.extent.width > 180) {
+            if (!this._boundsApplied && this.view && this.view.extent && this.view.extent.width > 180) {
                 log.warn('MapController: Applying bounds fallback - detected world view');
                 await this.applyServiceAreaBounds();
             }
@@ -69,19 +80,107 @@ export class MapController {
     }
 
     // Pre-calculate service area bounds and center (called before map initialization)
-    prepareServiceAreaBounds() {
+    async prepareServiceAreaBounds() {
         const bufferedBounds = getServiceAreaBounds();        // for constraints
         const baseBounds = getServiceAreaBoundsBase();         // for initial/home
         const serviceArea = getCurrentServiceArea();
 
-        // Store both extents when available
-        this.calculatedExtent = bufferedBounds ? new Extent(bufferedBounds) : null;
-        this.calculatedExtentBase = baseBounds ? new Extent(baseBounds) : null;
+        // Try to load DA boundaries and calculate extent from them for initial view
+        let daExtent = null;
+        try {
+            const { API_CONFIG } = await import('../config/apiConfig.js');
+            const daUrl = API_CONFIG.INFRASTRUCTURE.FSA_BOUNDARIES;
+            if (daUrl) {
+                const response = await fetch(daUrl);
+                if (response.ok) {
+                    const geojson = await response.json();
+                    const features = geojson.features || [];
+                    if (features.length > 0) {
+                        // Calculate extent from all DA boundary features
+                        let xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -Infinity;
+                        features.forEach(feature => {
+                            if (feature.geometry && feature.geometry.coordinates) {
+                                const coords = feature.geometry.coordinates;
+                                const processPoint = (point) => {
+                                    const [lng, lat] = point;
+                                    xmin = Math.min(xmin, lng);
+                                    ymin = Math.min(ymin, lat);
+                                    xmax = Math.max(xmax, lng);
+                                    ymax = Math.max(ymax, lat);
+                                };
+                                
+                                // Handle both Polygon and MultiPolygon geometries
+                                if (feature.geometry.type === 'Polygon') {
+                                    // Polygon: array of rings, each ring is array of [lng, lat] points
+                                    coords.forEach(ring => {
+                                        ring.forEach(point => processPoint(point));
+                                    });
+                                } else if (feature.geometry.type === 'MultiPolygon') {
+                                    // MultiPolygon: array of polygons, each polygon is array of rings
+                                    coords.forEach(polygon => {
+                                        polygon.forEach(ring => {
+                                            ring.forEach(point => processPoint(point));
+                                        });
+                                    });
+                                }
+                            }
+                        });
+                        
+                        if (xmin !== Infinity) {
+                            // Add small buffer (5% on each side) for better view
+                            const xBuffer = (xmax - xmin) * 0.05;
+                            const yBuffer = (ymax - ymin) * 0.05;
+                            daExtent = {
+                                xmin: xmin - xBuffer,
+                                ymin: ymin - yBuffer,
+                                xmax: xmax + xBuffer,
+                                ymax: ymax + yBuffer,
+                                spatialReference: { wkid: 4326 }
+                            };
+                            log.info('✅ Calculated extent from DA boundaries');
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            log.warn('Failed to load DA boundaries for extent calculation, using service area bounds:', error);
+        }
 
-        if (baseBounds) {
-            // Calculate center from base (unbuffered) extent for initial zoom
-            const centerLng = (baseBounds.xmin + baseBounds.xmax) / 2;
-            const centerLat = (baseBounds.ymin + baseBounds.ymax) / 2;
+        // Use DA extent for initial view if available, otherwise fall back to service area bounds
+        const initialBounds = daExtent || baseBounds;
+        const bufferedInitialBounds = daExtent ? {
+            ...daExtent,
+            xmin: daExtent.xmin - 0.01,
+            ymin: daExtent.ymin - 0.01,
+            xmax: daExtent.xmax + 0.01,
+            ymax: daExtent.ymax + 0.01
+        } : bufferedBounds;
+
+        // Calculate final extent with padding (20px equivalent in degrees) - this is the final zoom level
+        // We'll use this as the initial extent to avoid double zoom
+        let finalExtent = initialBounds;
+        if (initialBounds) {
+            // Add padding equivalent to 20px on each side (roughly 0.001 degrees per 100px at zoom 10)
+            // More conservative padding for better initial view
+            const paddingDegrees = 0.002; // Small padding for better view
+            finalExtent = {
+                ...initialBounds,
+                xmin: initialBounds.xmin - paddingDegrees,
+                ymin: initialBounds.ymin - paddingDegrees,
+                xmax: initialBounds.xmax + paddingDegrees,
+                ymax: initialBounds.ymax + paddingDegrees,
+                spatialReference: initialBounds.spatialReference || { wkid: 4326 }
+            };
+        }
+
+        // Store extents - use final extent (with padding) as the initial extent
+        this.calculatedExtent = bufferedInitialBounds ? new Extent(bufferedInitialBounds) : null;
+        this.calculatedExtentBase = finalExtent ? new Extent(finalExtent) : null; // Final extent with padding is the base
+
+        if (initialBounds) {
+            // Calculate center from initial extent
+            const centerLng = (initialBounds.xmin + initialBounds.xmax) / 2;
+            const centerLat = (initialBounds.ymin + initialBounds.ymax) / 2;
             this.calculatedCenter = [centerLng, centerLat];
         } else {
             // Use configured center for global deployments
@@ -96,9 +195,15 @@ export class MapController {
             return;
         }
 
+        // Prevent multiple bounds applications (causes double zoom)
+        if (this._boundsApplied) {
+            log.info('MapController: Bounds already applied, skipping duplicate call');
+            return;
+        }
+
         // Prepare bounds if not already done
         if (this.calculatedExtent === undefined) {
-            this.prepareServiceAreaBounds();
+            await this.prepareServiceAreaBounds();
         }
 
         // Prefer snapped zoom on mobile for performance and UX
@@ -164,27 +269,118 @@ export class MapController {
                 log.warn('⚠️  NO constraint geometry applied (projection failed)');
             }
 
-            // Set initial extent with immediate positioning
+            // Set initial extent - check if already correct to avoid double zoom
+            // Since extent was already set on mapElement before view initialized, we may not need to set it again
             const initialTarget = this.calculatedExtentBase || this.calculatedExtent;
-            try {
-                // Expose initial extent for other modules (e.g., search widget)
-                const toJson = (ext) => (ext && typeof ext.toJSON === 'function') ? ext.toJSON() : ext;
-                window.initialMapExtent = toJson(initialTarget);
-            } catch (_) { }
-            this.view.goTo(initialTarget, {
-                animate: false,
-                duration: 0
-            }).catch(error => {
-                log.error('MapController: Failed to apply service area bounds via goTo, using fallback:', error);
-                // Fallback: set extent directly
-                try {
-                    this.view.extent = initialTarget;
-                } catch (fallbackError) {
-                    log.error('MapController: Extent fallback also failed:', fallbackError);
+            
+            // Check if current extent is already close to target (within 1% tolerance)
+            const currentExtent = this.view.extent;
+            let needsExtentUpdate = true;
+            if (currentExtent && initialTarget) {
+                const widthDiff = Math.abs(currentExtent.width - initialTarget.width) / initialTarget.width;
+                const heightDiff = Math.abs(currentExtent.height - initialTarget.height) / initialTarget.height;
+                const centerDiff = currentExtent.center && initialTarget.center ? 
+                    Math.sqrt(
+                        Math.pow(currentExtent.center.longitude - initialTarget.center.longitude, 2) +
+                        Math.pow(currentExtent.center.latitude - initialTarget.center.latitude, 2)
+                    ) : 0;
+                
+                // If extent is already very close (within 1% and center within 0.01 degrees), skip update
+                if (widthDiff < 0.01 && heightDiff < 0.01 && centerDiff < 0.01) {
+                    needsExtentUpdate = false;
+                    console.log('[ZOOM DEBUG] Step 3: Extent already correct, skipping update', {
+                        currentZoom: this.view.zoom,
+                        widthDiff: (widthDiff * 100).toFixed(2) + '%',
+                        heightDiff: (heightDiff * 100).toFixed(2) + '%',
+                        centerDiff: centerDiff.toFixed(4)
+                    });
                 }
-            }).finally(() => {
-                try { if (this.mapElement) this.mapElement.style.visibility = 'visible'; } catch (_) { }
+            }
+            
+            console.log('[ZOOM DEBUG] Step 3: About to apply bounds', {
+                needsExtentUpdate,
+                currentViewExtent: currentExtent ? {
+                    xmin: currentExtent.xmin,
+                    ymin: currentExtent.ymin,
+                    xmax: currentExtent.xmax,
+                    ymax: currentExtent.ymax,
+                    width: currentExtent.width,
+                    height: currentExtent.height,
+                    zoom: this.view.zoom
+                } : null,
+                targetExtent: initialTarget ? {
+                    xmin: initialTarget.xmin,
+                    ymin: initialTarget.ymin,
+                    xmax: initialTarget.xmax,
+                    ymax: initialTarget.ymax,
+                    width: initialTarget.width,
+                    height: initialTarget.height
+                } : null,
+                currentZoom: this.view.zoom
             });
+            
+            if (needsExtentUpdate) {
+                try {
+                    // Expose initial extent for other modules (e.g., search widget)
+                    const toJson = (ext) => (ext && typeof ext.toJSON === 'function') ? ext.toJSON() : ext;
+                    window.initialMapExtent = toJson(initialTarget);
+                    
+                    // Set extent directly (no goTo with padding) since final extent was already calculated with padding
+                    // This ensures single zoom operation
+                    const beforeZoom = this.view.zoom;
+                    this.view.extent = initialTarget;
+                    const afterZoom = this.view.zoom;
+                    
+                    console.log('[ZOOM DEBUG] Step 4: Extent set directly', {
+                        beforeZoom,
+                        afterZoom,
+                        zoomChanged: beforeZoom !== afterZoom,
+                        newExtent: this.view.extent ? {
+                            xmin: this.view.extent.xmin,
+                            ymin: this.view.extent.ymin,
+                            xmax: this.view.extent.xmax,
+                            ymax: this.view.extent.ymax,
+                            width: this.view.extent.width,
+                            height: this.view.extent.height
+                        } : null
+                    });
+                    
+                    log.info('✅ Extent set directly (no double zoom)');
+                } catch (error) {
+                    console.error('[ZOOM DEBUG] Step 4 ERROR: Failed to set extent directly', error);
+                    log.error('MapController: Failed to set extent directly, using goTo fallback:', error);
+                    // Fallback: use goTo if direct assignment fails
+                    try {
+                        const beforeZoom = this.view.zoom;
+                        console.log('[ZOOM DEBUG] Step 4 FALLBACK: Using goTo', { beforeZoom });
+                        this.view.goTo(initialTarget, {
+                            animate: false,
+                            duration: 0
+                        }).then(() => {
+                            console.log('[ZOOM DEBUG] Step 4 FALLBACK: goTo completed', {
+                                afterZoom: this.view.zoom,
+                                zoomChanged: beforeZoom !== this.view.zoom
+                            });
+                        });
+                    } catch (fallbackError) {
+                        console.error('[ZOOM DEBUG] Step 4 FALLBACK ERROR:', fallbackError);
+                        log.error('MapController: Extent fallback also failed:', fallbackError);
+                    }
+                }
+            } else {
+                // Extent already correct, just expose it for other modules
+                try {
+                    const toJson = (ext) => (ext && typeof ext.toJSON === 'function') ? ext.toJSON() : ext;
+                    window.initialMapExtent = toJson(currentExtent || initialTarget);
+                    console.log('[ZOOM DEBUG] Step 4: Skipped extent update (already correct)', {
+                        zoom: this.view.zoom
+                    });
+                } catch (_) { }
+            }
+            
+            // Mark bounds as applied to prevent duplicate calls
+            this._boundsApplied = true;
+            // Map already visible for progressive loading - extent set (single zoom)
             log.info(`✅ Map constrained to ${serviceArea.name}`);
         } else {
             // Global deployment - no geographic constraints, just center the view
@@ -203,7 +399,9 @@ export class MapController {
             }).catch(error => {
                 log.error('MapController: Failed to center global view:', error);
             }).finally(() => {
-                try { if (this.mapElement) this.mapElement.style.visibility = 'visible'; } catch (_) { }
+                // Mark bounds as applied to prevent duplicate calls
+                this._boundsApplied = true;
+                // Map already visible for progressive loading - centering complete
             });
             log.info(`✅ Map configured for ${serviceArea.name} (global deployment)`);
         }
@@ -243,6 +441,36 @@ export class MapController {
         this.map = view.map;
         window.mapView = view; // For theme management
 
+        // Log initial view state
+        console.log('[ZOOM DEBUG] Step 2: Map view is ready', {
+            currentExtent: view.extent ? {
+                xmin: view.extent.xmin,
+                ymin: view.extent.ymin,
+                xmax: view.extent.xmax,
+                ymax: view.extent.ymax,
+                width: view.extent.width,
+                height: view.extent.height,
+                zoom: view.zoom
+            } : null,
+            zoom: view.zoom,
+            center: view.center ? [view.center.longitude, view.center.latitude] : null,
+            mapElementExtent: this.mapElement.extent ? {
+                xmin: this.mapElement.extent.xmin,
+                ymin: this.mapElement.extent.ymin,
+                xmax: this.mapElement.extent.xmax,
+                ymax: this.mapElement.extent.ymax
+            } : null
+        });
+
+        // Show map immediately for progressive loading (extent already set on element, so no world view flash)
+        // Components will load progressively in the background
+        try { 
+            if (this.mapElement) {
+                this.mapElement.style.visibility = 'visible';
+                log.info('✅ Map visible - progressive component loading enabled');
+            }
+        } catch (_) { }
+
         // Configure popup NOW that view exists
         this.configurePopup();
 
@@ -255,15 +483,39 @@ export class MapController {
             log.error('Error applying theme on map ready:', error);
         }
 
-        // Apply service area bounds when view is ready
-        when(() => view.stationary, async () => {
+        // Apply service area bounds when view is ready (happens in background, map already visible)
+        // But only if extent wasn't already set correctly on mapElement
+        reactiveUtils.when(() => view.stationary, async () => {
+            // Check if extent is already correct before applying bounds
+            const currentExtent = view.extent;
+            const targetExtent = this.calculatedExtentBase || this.calculatedExtent;
+            
+            if (currentExtent && targetExtent) {
+                const widthDiff = Math.abs(currentExtent.width - targetExtent.width) / targetExtent.width;
+                const heightDiff = Math.abs(currentExtent.height - targetExtent.height) / targetExtent.height;
+                
+                // If extent is already very close (within 2%), skip applying bounds to avoid double zoom
+                if (widthDiff < 0.02 && heightDiff < 0.02) {
+                    console.log('[ZOOM DEBUG] Skipping applyServiceAreaBounds - extent already correct', {
+                        currentZoom: view.zoom,
+                        widthDiff: (widthDiff * 100).toFixed(2) + '%',
+                        heightDiff: (heightDiff * 100).toFixed(2) + '%'
+                    });
+                    // Mark as applied to prevent fallback from triggering
+                    this._boundsApplied = true;
+                    return;
+                }
+            }
+            
             await this.applyServiceAreaBounds();
         }).catch(error => {
             log.error('MapController: Map view ready error:', error);
-            // Fallback: try to apply bounds anyway
-            setTimeout(async () => {
-                await this.applyServiceAreaBounds();
-            }, 2000);
+            // Fallback: try to apply bounds anyway (only if not already applied)
+            if (!this._boundsApplied) {
+                setTimeout(async () => {
+                    await this.applyServiceAreaBounds();
+                }, 2000);
+            }
         });
     }
 

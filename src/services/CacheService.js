@@ -28,7 +28,7 @@ class CacheService {
     // Cache expiration times (in milliseconds)
     // OSP data changes very infrequently (once per year), so use long cache times
     this.CACHE_DURATION = {
-      // Legacy Freedom Fiber cache keys (kept for backward compatibility)
+      // Legacy cache keys (kept for backward compatibility)
       fsa: 90 * 24 * 60 * 60 * 1000,        // 90 days for FSA boundaries
       mainFiber: 90 * 24 * 60 * 60 * 1000,  // 90 days for main fiber
       mainOld: 365 * 24 * 60 * 60 * 1000,   // 365 days for old main line (never changes)

@@ -23,8 +23,8 @@
   <title>FiberOMS Insight</title>
 
   <!-- Progressive Web App Icons -->
-  <link rel="icon" type="image/x-icon" href="/icons/ff.ico">
-  <link rel="apple-touch-icon" href="/icons/ff.ico">
+  <link rel="icon" type="image/png" href="https://www.sproutfiberinternet.com/wp-content/uploads/2024/03/cropped-Sprout-favicon-color-32x32.png">
+  <link rel="apple-touch-icon" href="https://www.sproutfiberinternet.com/wp-content/uploads/2024/03/cropped-Sprout-favicon-color-32x32.png">
   <link rel="manifest" href="/manifest.json">
 
   <!-- Performance Optimization -->
@@ -64,7 +64,11 @@
     <calcite-shell>
       <!-- Header Navigation -->
       <calcite-navigation slot="header" class="unified-header">
-        <calcite-navigation-logo slot="logo" heading="FiberOMS Insight" thumbnail=""></calcite-navigation-logo>
+        <div slot="logo" class="brand-logo-container">
+          <img src="https://www.sproutfiberinternet.com/wp-content/uploads/2025/03/CEC-Sprout-horizontal-with-CEC-logo-01-legacy@2x.png" 
+               alt="Sprout Fiber" 
+               class="brand-logo">
+        </div>
         <div slot="content-center" class="navigation-content-center">
           <div class="search-section">
             <calcite-autocomplete id="header-search"
@@ -162,7 +166,7 @@
                 </calcite-list-item>
 
                 <calcite-list-item label="Business Internet Only" description="Filter to show only business subscribers"
-                  class="layer-toggle-item">
+                  class="layer-toggle-item" hidden>
                   <calcite-icon slot="content-start" icon="organization" class="status-icon-business"
                     style="color: #9333ea;"></calcite-icon>
                   <calcite-switch slot="content-end" id="business-internet-filter-switch"></calcite-switch>
@@ -540,7 +544,7 @@
           </calcite-list-item>
 
           <calcite-list-item label="Business Internet Only" description="Filter to show only business subscribers"
-            class="layer-toggle-item">
+            class="layer-toggle-item" hidden>
             <calcite-icon slot="content-start" icon="organization" class="status-icon-business"
               style="color: #9333ea;"></calcite-icon>
             <calcite-switch slot="content-end" id="mobile-business-internet-filter-switch"></calcite-switch>

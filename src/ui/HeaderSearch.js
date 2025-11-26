@@ -304,12 +304,8 @@ export class HeaderSearch {
         
         // Handle different result types
         if (result.type === 'pole') {
-            const parts = [];
-            if (result.wmElementN) parts.push(`ID: ${result.wmElementN}`);
-            if (result.latitude && result.longitude) {
-                parts.push(`Coordinates: ${result.latitude.toFixed(6)}, ${result.longitude.toFixed(6)}`);
-            }
-            return parts.join(' • ') || 'No details available';
+            // Only show pole ID, not coordinates (reduces data transfer)
+            return result.wmElementN ? `Pole ID: ${result.wmElementN}` : 'No details available';
         } else if (result.type === 'mst') {
             const parts = [];
             if (result.equipmentname) parts.push(`Equipment: ${result.equipmentname}`);

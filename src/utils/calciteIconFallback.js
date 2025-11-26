@@ -44,13 +44,13 @@ export function setupCalciteIconFallback() {
       // If there's an alternative, try to update the icon
       if (alternativeIcons[iconName]) {
         const iconElement = event.target;
-        if (iconElement) {
+        if (iconElement && typeof iconElement.setAttribute === 'function') {
           iconElement.setAttribute('icon', alternativeIcons[iconName]);
         }
       } else {
         // Use generic fallback icon
         const iconElement = event.target;
-        if (iconElement) {
+        if (iconElement && typeof iconElement.setAttribute === 'function') {
           iconElement.setAttribute('icon', FALLBACK_ICON);
         }
       }
@@ -84,8 +84,10 @@ export function setupCalciteIconFallback() {
 
         // Find and replace all instances of the failing icon
         document.querySelectorAll(`calcite-icon[icon="${iconName}"]`).forEach(icon => {
-          icon.setAttribute('icon', replacement);
-          log.warn(`Replaced ${iconName} with ${replacement} icon`);
+          if (icon && typeof icon.setAttribute === 'function') {
+            icon.setAttribute('icon', replacement);
+            log.warn(`Replaced ${iconName} with ${replacement} icon`);
+          }
         });
 
         // Trigger custom event for other potential handlers

@@ -108,9 +108,10 @@ export class DashboardManager {
             subscriberDataService.clearCache();
             infrastructureService.clearCache();
 
-            // Perform polling manager update for subscribers data
+            // Perform polling manager update for subscribers and power outages data
             if (window.app?.pollingManager) {
                 await window.app.pollingManager.performUpdate('subscribers');
+                await window.app.pollingManager.performUpdate('power-outages');
             }
 
             // Use consolidated update method to prevent duplicate fetches

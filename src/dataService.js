@@ -973,6 +973,11 @@ export class PollingManager {
 
                     data = { offline, online }
                     break
+                case 'power-outages':
+                    // Import outageService dynamically to avoid circular dependencies
+                    const { outageService } = await import('./services/OutageService.js')
+                    data = await outageService.getCullmanOutages()
+                    break
                 default:
                     log.warn(`Unknown data type for polling: ${dataType}`)
                     return

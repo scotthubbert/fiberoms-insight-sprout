@@ -36,30 +36,6 @@ const SERVICE_AREAS = {
         }
     },
 
-    // Freedom Fiber service area
-    freedom_fiber: {
-        name: 'Freedom Fiber Service Area',
-        region: 'Alabama, USA',
-        bounds: {
-            xmin: -88.3319638467807,   // Western bound (SW longitude)
-            ymin: 33.440523708494564,  // Southern bound (SW latitude)
-            xmax: -87.35488507018964,  // Eastern bound (NE longitude)
-            ymax: 34.73445506886154,   // Northern bound (NE latitude)
-            spatialReference: { wkid: 4326 } // WGS84
-        },
-        center: {
-            latitude: 34.087489,  // Calculated center latitude
-            longitude: -87.843374 // Calculated center longitude
-        },
-        searchSettings: {
-            maxResults: 8,
-            minCharacters: 3,
-            includeDefaultSources: true,
-            searchAllEnabled: false,
-            placeholder: 'Search addresses, places...'
-        }
-    },
-
     // Example: Georgia service area (template for future deployments)
     georgia_example: {
         name: 'Georgia Service Area Example',

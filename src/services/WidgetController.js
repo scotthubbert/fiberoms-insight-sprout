@@ -1,12 +1,12 @@
 import { createLogger } from '../utils/logger.js';
 import { getCurrentServiceArea, getServiceAreaBounds, getSearchSettings } from '../config/searchConfig.js';
+import LocatorSearchSource from '@arcgis/core/widgets/Search/LocatorSearchSource.js';
 
 const log = createLogger('WidgetController');
 
 export class WidgetController {
     constructor(mapController) {
         this.mapController = mapController;
-        this._searchWidgetListener = null;
     }
 
     // Idle scheduler reused across paths
@@ -61,7 +61,8 @@ export class WidgetController {
                 log.info('[MAP-UI] ✅ Map view already ready, injecting widgets');
             }
 
-            // Search widget - load FIRST
+            // Search widget with localized and world geocoding sources
+            // Load search widget asynchronously (non-blocking) to prevent hanging on mobile devices
             const loadSearchWidget = async () => {
                 try {
                     if (!customElements.get('arcgis-search')) {
@@ -69,33 +70,87 @@ export class WidgetController {
                         log.info('[MAP-UI] ✅ Search component loaded');
                     }
                     if (!mapEl.querySelector('arcgis-search')) {
-                        const s = document.createElement('arcgis-search');
-                        s.setAttribute('slot', 'top-right');
-                        s.setAttribute('include-default-sources', 'true');
-                        s.setAttribute('max-results', '8');
-                        s.setAttribute('min-characters', '3');
-                        s.setAttribute('search-all-enabled', 'false');
-                        s.setAttribute('placeholder', 'Search addresses, places...');
+                        const searchEl = document.createElement('arcgis-search');
+                        searchEl.setAttribute('slot', 'top-right');
+                        searchEl.setAttribute('include-default-sources-disabled', '');
                         if (mapEl.firstChild) {
-                            mapEl.insertBefore(s, mapEl.firstChild);
+                            mapEl.insertBefore(searchEl, mapEl.firstChild);
                         } else {
-                            mapEl.appendChild(s);
+                            mapEl.appendChild(searchEl);
                         }
                         log.info('[MAP-UI] ✅ Search widget added to map');
-                        try {
-                            await s.componentOnReady();
-                            log.info('[MAP-UI] ✅ Search component ready, visible:', !s.hidden, 'display:', getComputedStyle(s).display);
-                            if (this.mapController?.view) {
-                                this.configureSearchWidget();
-                            } else {
-                                setTimeout(() => {
-                                    if (this.mapController?.view) {
-                                        this.configureSearchWidget();
-                                    }
-                                }, 1000);
-                            }
-                        } catch (error) {
-                            log.error('[MAP-UI] Search widget ready error:', error);
+
+                        // Wait for component with timeout to prevent hanging on mobile
+                        const componentReadyPromise = searchEl.componentOnReady();
+                        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3000));
+                        await Promise.race([componentReadyPromise, timeoutPromise]);
+
+                        const searchSettings = getSearchSettings();
+                        const serviceArea = getCurrentServiceArea();
+                        const bounds = getServiceAreaBounds();
+
+                        if (bounds) {
+                            const searchExtent = {
+                                xmin: bounds.xmin,
+                                ymin: bounds.ymin,
+                                xmax: bounds.xmax,
+                                ymax: bounds.ymax,
+                                spatialReference: { wkid: 4326 }
+                            };
+
+                            const centerLat = (bounds.ymin + bounds.ymax) / 2;
+                            const centerLon = (bounds.xmin + bounds.xmax) / 2;
+
+                            // Primary: Service area-focused geocoding
+                            const localSource = new LocatorSearchSource({
+                                name: 'Local Geocoding Service',
+                                url: 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer',
+                                singleLineFieldName: 'SingleLine',
+                                placeholder: searchSettings.placeholder || 'Find address or place',
+                                countryCode: 'US',
+                                suggestionsEnabled: true,
+                                minSuggestCharacters: searchSettings.minCharacters ?? 3,
+                                maxResults: searchSettings.maxResults ?? 8,
+                                location: {
+                                    x: centerLon,
+                                    y: centerLat,
+                                    spatialReference: { wkid: 4326 }
+                                },
+                                searchExtent,
+                                filter: { geometry: searchExtent },
+                                withinViewEnabled: true,
+                                localSearchOptions: {
+                                    distance: 25000,
+                                    minScale: 300000
+                                },
+                                suffix: ' Alabama',
+                                zoomScale: 24000
+                            });
+
+                            // Secondary: Global geocoding fallback
+                            const worldSource = new LocatorSearchSource({
+                                name: 'ArcGIS World Geocoding Service',
+                                url: 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer',
+                                singleLineFieldName: 'SingleLine',
+                                placeholder: 'Search worldwide...',
+                                suggestionsEnabled: true,
+                                minSuggestCharacters: searchSettings.minCharacters ?? 3,
+                                maxResults: searchSettings.maxResults ?? 8
+                            });
+
+                            // Use setTimeout to defer sources assignment, allowing component to fully initialize
+                            setTimeout(() => {
+                                try {
+                                    searchEl.sources = [localSource, worldSource];
+                                    log.info('[MAP-UI] ✅ Search configured:', serviceArea.name, '-', searchEl.sources.length, 'sources');
+                                } catch (err) {
+                                    log.error('[MAP-UI] Failed to assign search sources:', err);
+                                }
+                            }, 500);
+                        } else {
+                            // Fallback: Use default sources if no bounds configured
+                            searchEl.setAttribute('include-default-sources', 'true');
+                            log.info('[MAP-UI] ✅ Search configured with default sources (no bounds)');
                         }
                     }
                 } catch (error) {
@@ -103,7 +158,8 @@ export class WidgetController {
                 }
             };
 
-            await loadSearchWidget();
+            // Don't await - let search widget load in parallel to prevent blocking map initialization
+            loadSearchWidget().catch(err => log.error('[MAP-UI] Search widget async error:', err));
 
             // Verify widgets were added and check visibility
             setTimeout(() => {
@@ -241,100 +297,4 @@ export class WidgetController {
         this.addMqChange(fsMq, ensureFullscreen);
     }
 
-    configureSearchWidget() {
-        const searchWidget = document.querySelector('arcgis-search');
-        if (!searchWidget || !this.mapController.view) {
-            console.warn('Search widget or map view not available for configuration');
-            return;
-        }
-
-        const serviceArea = getCurrentServiceArea();
-        const initialExtent = (typeof window !== 'undefined' && window.initialMapExtent) ? window.initialMapExtent : null;
-        const bounds = initialExtent || this.mapController?.calculatedExtentBase || this.mapController?.calculatedExtent || getServiceAreaBounds();
-        const searchSettings = getSearchSettings();
-
-        try {
-            if (searchSettings.placeholder) {
-                searchWidget.setAttribute('placeholder', searchSettings.placeholder);
-            }
-
-            if (this._searchWidgetListener) {
-                searchWidget.removeEventListener('arcgisReady', this._searchWidgetListener);
-                this._searchWidgetListener = null;
-            }
-
-            const applyBoundsToSources = () => {
-                const widget = searchWidget.widget;
-                if (!widget || !widget.allSources) return;
-
-                if (bounds) {
-                    const searchExtent = {
-                        type: 'extent',
-                        xmin: bounds.xmin,
-                        ymin: bounds.ymin,
-                        xmax: bounds.xmax,
-                        ymax: bounds.ymax,
-                        spatialReference: bounds.spatialReference || { wkid: 4326 }
-                    };
-                    widget.searchExtent = searchExtent;
-
-                    const centerLat = (bounds.ymin + bounds.ymax) / 2;
-                    const centerLon = (bounds.xmin + bounds.xmax) / 2;
-
-                    widget.allSources.forEach(source => {
-                        if (!source.locator) return;
-
-                        source.location = {
-                            type: 'point',
-                            latitude: centerLat,
-                            longitude: centerLon,
-                            spatialReference: { wkid: 4326 }
-                        };
-
-                        source.countryCode = 'US';
-                        source.searchExtent = searchExtent;
-                        source.withinViewEnabled = true;
-                        source.localSearchDisabled = false;
-                        source.localSearchOptions = {
-                            distance: 50000,
-                            minScale: 300000
-                        };
-
-                        if (source.zoomScale == null) {
-                            source.zoomScale = 24000;
-                        }
-                    });
-
-                    console.info('✅ Search configured with local preference:', {
-                        area: serviceArea.name,
-                        extent: searchExtent
-                    });
-                } else {
-                    widget.searchExtent = null;
-                    widget.allSources.forEach(source => {
-                        if (!source.locator) return;
-
-                        if (source.location) delete source.location;
-                        if (source.countryCode) delete source.countryCode;
-                        if (source.localSearchOptions) delete source.localSearchOptions;
-                        if (source.searchExtent) delete source.searchExtent;
-
-                        if (source.hasOwnProperty('withinViewEnabled')) {
-                            source.withinViewEnabled = false;
-                        }
-                        if (source.hasOwnProperty('localSearchDisabled')) {
-                            source.localSearchDisabled = false;
-                        }
-                    });
-                    console.info('✅ Search configured for global search (no local preference)');
-                }
-            };
-
-            this._searchWidgetListener = applyBoundsToSources;
-            searchWidget.addEventListener('arcgisReady', applyBoundsToSources, { once: true });
-            if (searchWidget.widget && searchWidget.widget.allSources) applyBoundsToSources();
-        } catch (error) {
-            log.error(`Failed to configure search widget with ${serviceArea.name} bounds:`, error);
-        }
-    }
 }

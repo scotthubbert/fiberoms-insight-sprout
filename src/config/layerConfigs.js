@@ -269,7 +269,7 @@ const createSproutHutLabeling = () => [
             type: 'text',
             color: [255, 255, 255], // White text for better aesthetics and readability
             font: {
-                family: 'Segoe UI, Arial, sans-serif',
+                family: 'Arial', // Single font name to avoid ArcGIS font loading issues
                 size: 12,
                 weight: 'bold'
             },
@@ -599,7 +599,7 @@ const createMSTTerminalLabeling = () => [
             type: 'text',
             color: [255, 255, 255], // White text for high contrast
             font: {
-                family: 'Segoe UI, Arial, sans-serif',
+                family: 'Arial', // Single font name to avoid ArcGIS font loading issues
                 size: 12, // Increased from 10px for better readability
                 weight: 'bold'
             },

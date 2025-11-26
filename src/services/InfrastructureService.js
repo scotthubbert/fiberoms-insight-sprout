@@ -90,28 +90,28 @@ export class InfrastructureService {
 
             const geojson = await response.json();
             const processedFeatures = geojson.features || [];
-            
+
             // Debug: Log sample of fetched data to verify it's Sprout Fiber data
             if (processedFeatures.length > 0) {
                 const sampleFeature = processedFeatures[0];
                 console.log(`[OSP Debug] ✅ Fetched ${processedFeatures.length} features for ${description}`);
                 console.log(`[OSP Debug] 📊 Sample feature properties:`, Object.keys(sampleFeature.properties || {}));
-                console.log(`[OSP Debug] 📊 Sample feature (first 3 props):`, 
+                console.log(`[OSP Debug] 📊 Sample feature (first 3 props):`,
                     Object.entries(sampleFeature.properties || {}).slice(0, 3).reduce((acc, [k, v]) => {
                         acc[k] = v;
                         return acc;
                     }, {})
                 );
-                
-                // Check for Freedom Fiber indicators
+
+                // Check for legacy/incorrect data format indicators
                 const props = sampleFeature.properties || {};
-                const hasFreedomFiberIndicators = 
-                    props.NAME || props.ServiceArea || props.FSA_NAME || 
+                const hasLegacyIndicators =
+                    props.NAME || props.ServiceArea || props.FSA_NAME ||
                     (props.areaname && props.areaname.includes('FSA')) ||
                     (props.distribution_area && !props.distribution_area.match(/^[A-Z]{2}-\d{2}-\d{4}$/));
-                
-                if (hasFreedomFiberIndicators) {
-                    console.warn(`[OSP Debug] ⚠️ WARNING: Data may contain Freedom Fiber indicators!`, {
+
+                if (hasLegacyIndicators) {
+                    console.warn(`[OSP Debug] ⚠️ WARNING: Data may contain legacy format indicators!`, {
                         hasNAME: !!props.NAME,
                         hasServiceArea: !!props.ServiceArea,
                         hasFSA_NAME: !!props.FSA_NAME,
@@ -267,7 +267,7 @@ export class InfrastructureService {
 
         try {
             log.info('📡 Fetching Poles from Supabase...');
-            
+
             const { data, error } = await supabase
                 .from('sfi_poles')
                 .select('*')

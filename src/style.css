@@ -122,6 +122,33 @@ calcite-navigation.unified-header calcite-navigation-logo {
   color: var(--calcite-color-brand);
 }
 
+/* Brand Logo Container */
+.brand-logo-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: var(--calcite-spacing-sm) var(--calcite-spacing-md);
+}
+
+.brand-logo {
+  height: 40px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+}
+
+/* Mobile responsive brand logo */
+@media (max-width: 768px) {
+  .brand-logo-container {
+    padding: var(--calcite-spacing-xs) var(--calcite-spacing-sm);
+  }
+  
+  .brand-logo {
+    height: 32px;
+    max-width: 150px;
+  }
+}
+
 /* Content Center - Contains Search and Metrics */
 calcite-navigation.unified-header .navigation-content-center {
   display: flex;

@@ -147,7 +147,7 @@ export class Application {
             this.services.popupManager.initialize(this.services.mapController.view);
         }
 
-        this.services.widgetController.configureSearchWidget();
+        // Search widget configuration is now handled in WidgetController.loadWidgets()
 
         setTimeout(() => {
             if (this.services.mapController.view) {
@@ -162,8 +162,10 @@ export class Application {
 
         this.initialLoadComplete = true;
         this.startSubscriberPolling();
+        this.startPowerOutagePolling();
         const triggerImmediateRefresh = () => {
             try { this.pollingManager.performUpdate('subscribers'); } catch { }
+            try { this.pollingManager.performUpdate('power-outages'); } catch { }
         };
         document.addEventListener('visibilitychange', () => { if (!document.hidden) triggerImmediateRefresh(); });
         window.addEventListener('online', triggerImmediateRefresh);
@@ -1312,6 +1314,61 @@ export class Application {
         }
     }
 
+    startPowerOutagePolling() {
+        // Detect mobile device - use longer intervals to save battery
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            window.innerWidth <= 768;
+
+        // Mobile: 5 minutes (users typically don't leave app running)
+        // Desktop: 1 minute (users monitor actively)
+        const outagePollInterval = isMobile ? 300000 : 60000;
+
+        log.info(`⚡ Starting power outage data polling (${isMobile ? 'mobile' : 'desktop'}: ${outagePollInterval / 1000}s interval)`);
+        const handlePowerOutageUpdate = async (data) => {
+            try {
+                if (data && data.features) {
+                    if (!window._isManualRefresh) {
+                        loadingIndicator.showLoading('cullman-outages-update', 'Cullman Power Outages');
+                    }
+                    const cullmanLayer = this.services.layerManager.getLayer('cullman-outages');
+                    if (cullmanLayer && data) {
+                        // Convert to GeoJSON format for layer update
+                        const cullmanGeoJSON = { 
+                            type: 'FeatureCollection', 
+                            features: data.features || [] 
+                        };
+                        await this.services.layerManager.updateLayerData('cullman-outages', cullmanGeoJSON);
+                    }
+                    if (data && !window._isManualRefresh) {
+                        loadingIndicator.showNetwork('cullman-outages-update', 'Cullman Power Outages');
+                    }
+                    // Dispatch event for PowerOutageStats component to update
+                    document.dispatchEvent(new CustomEvent('powerOutageDataUpdated', { 
+                        detail: { 
+                            cullmanCount: data?.count || 0 
+                        } 
+                    }));
+                    const powerOutageStatsComponent = document.querySelector('power-outage-stats');
+                    if (powerOutageStatsComponent && powerOutageStatsComponent.updateStats) {
+                        powerOutageStatsComponent.updateStats(true);
+                    }
+                }
+            } catch (error) {
+                log.error('Failed to handle power outage update:', error);
+                try { 
+                    (await import('../services/ErrorService.js')).errorService.report(error, { 
+                        module: 'Application', 
+                        action: 'handlePowerOutageUpdate' 
+                    }); 
+                } catch { }
+                if (!window._isManualRefresh) {
+                    loadingIndicator.showError('cullman-outages-update', 'Cullman Power Outages', 'Update failed');
+                }
+            }
+        };
+        this.pollingManager.startPolling('power-outages', handlePowerOutageUpdate, outagePollInterval);
+    }
+
     async initializeGeotabService() {
         if (!this.geotabEnabled) {
             log.warn('🚛 GeotabService is disabled (VITE_GEOTAB_ENABLED=false)');
@@ -1439,14 +1496,6 @@ export class Application {
             } catch (error) {
                 log.error('Error destroying PopupManager:', error);
             }
-        }
-        // Bug 2 fix: Remove search widget listener to prevent memory leak
-        if (this._searchWidgetListener) {
-            // Bug 1 fix: Use querySelector('arcgis-search') to match configureSearchWidget() pattern
-            // The search widget is created dynamically without an ID, so getElementById won't work
-            const searchWidget = document.querySelector('arcgis-search');
-            if (searchWidget) searchWidget.removeEventListener('arcgisReady', this._searchWidgetListener);
-            this._searchWidgetListener = null;
         }
         // Bug 1 fix: Remove distance measurement tool listener to prevent memory leak
         if (this._distanceToolListener) {

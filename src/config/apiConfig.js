@@ -20,7 +20,7 @@ export const API_CONFIG = {
         // FSA / DA Boundaries
         FSA_BOUNDARIES: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/sprout_plant/SFI_DABoundaries.geojson',
 
-        // Legacy / Placeholder Data (Commented out to prevent Freedom Fiber data from loading)
+        // Legacy / Placeholder Data (Commented out to prevent loading invalid data)
         // MAIN_LINE_OLD: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/fsa-data//networkOLD.geojson',
         // MST_FIBER: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/sign/esri-files/mst-fiber-overlay.geojson?token=...'
 
@@ -32,6 +32,6 @@ export const API_CONFIG = {
     // Supabase Storage URLs for Power Outage Data
     OUTAGES: {
         // Cullman Electric power outages
-        CULLMAN: 'https://edgylwgzemacxrehvxcs.supabase.co/storage/v1/object/public/cec_power_outages/outages/cullman_outages.geojson'
+        CULLMAN: 'https://crguystmaihtfdttybkf.supabase.co/storage/v1/object/public/cec_power_outages/outages/cullman_outages.geojson'
     }
 };

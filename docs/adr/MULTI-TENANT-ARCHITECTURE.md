@@ -54,7 +54,7 @@ const CONFIG = {
     
     // ISP-specific configurations
     isps: {
-        isp1: { /* Freedom Fiber config */ },
+        isp1: { /* Sprout Fiber config */ },
         isp2: { /* Sprout Fiber config */ },
         isp3: { /* Flash Fiber config */ }
     }

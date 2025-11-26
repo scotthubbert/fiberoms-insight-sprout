@@ -191,7 +191,9 @@ export class EnhancedSearchService {
      */
     async searchPoles(term) {
         try {
-            let query = supabase.from('sfi_poles').select('*');
+            // Only select fields needed for search results and navigation (reduces data transfer)
+            // Note: sfi_poles table doesn't have an 'id' column, only wmElementN, latitude, longitude
+            let query = supabase.from('sfi_poles').select('wmElementN, latitude, longitude');
 
             // If searching with a specific pole ID pattern
             if (/^[pP]?\d+$/.test(term)) {
@@ -220,7 +222,12 @@ export class EnhancedSearchService {
                 type: 'pole',
                 latitude: item.latitude || 0,
                 longitude: item.longitude || 0,
-                originalData: { ...item }
+                // Store minimal original data (only what we fetched)
+                originalData: { 
+                    wmElementN: item.wmElementN,
+                    latitude: item.latitude,
+                    longitude: item.longitude
+                }
             }));
         } catch (error) {
             log.error('Error in pole search:', error);
