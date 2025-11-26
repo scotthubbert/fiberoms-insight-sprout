@@ -486,35 +486,41 @@ export class MapController {
         // Apply service area bounds when view is ready (happens in background, map already visible)
         // But only if extent wasn't already set correctly on mapElement
         reactiveUtils.when(() => view.stationary, async () => {
-            // Check if extent is already correct before applying bounds
-            const currentExtent = view.extent;
-            const targetExtent = this.calculatedExtentBase || this.calculatedExtent;
-            
-            if (currentExtent && targetExtent) {
-                const widthDiff = Math.abs(currentExtent.width - targetExtent.width) / targetExtent.width;
-                const heightDiff = Math.abs(currentExtent.height - targetExtent.height) / targetExtent.height;
+            try {
+                // Check if extent is already correct before applying bounds
+                const currentExtent = view.extent;
+                const targetExtent = this.calculatedExtentBase || this.calculatedExtent;
                 
-                // If extent is already very close (within 2%), skip applying bounds to avoid double zoom
-                if (widthDiff < 0.02 && heightDiff < 0.02) {
-                    console.log('[ZOOM DEBUG] Skipping applyServiceAreaBounds - extent already correct', {
-                        currentZoom: view.zoom,
-                        widthDiff: (widthDiff * 100).toFixed(2) + '%',
-                        heightDiff: (heightDiff * 100).toFixed(2) + '%'
-                    });
-                    // Mark as applied to prevent fallback from triggering
-                    this._boundsApplied = true;
-                    return;
+                if (currentExtent && targetExtent) {
+                    const widthDiff = Math.abs(currentExtent.width - targetExtent.width) / targetExtent.width;
+                    const heightDiff = Math.abs(currentExtent.height - targetExtent.height) / targetExtent.height;
+                    
+                    // If extent is already very close (within 2%), skip applying bounds to avoid double zoom
+                    if (widthDiff < 0.02 && heightDiff < 0.02) {
+                        console.log('[ZOOM DEBUG] Skipping applyServiceAreaBounds - extent already correct', {
+                            currentZoom: view.zoom,
+                            widthDiff: (widthDiff * 100).toFixed(2) + '%',
+                            heightDiff: (heightDiff * 100).toFixed(2) + '%'
+                        });
+                        // Mark as applied to prevent fallback from triggering
+                        this._boundsApplied = true;
+                        return;
+                    }
                 }
-            }
-            
-            await this.applyServiceAreaBounds();
-        }).catch(error => {
-            log.error('MapController: Map view ready error:', error);
-            // Fallback: try to apply bounds anyway (only if not already applied)
-            if (!this._boundsApplied) {
-                setTimeout(async () => {
-                    await this.applyServiceAreaBounds();
-                }, 2000);
+                
+                await this.applyServiceAreaBounds();
+            } catch (error) {
+                log.error('MapController: Map view ready error:', error);
+                // Fallback: try to apply bounds anyway (only if not already applied)
+                if (!this._boundsApplied) {
+                    setTimeout(async () => {
+                        try {
+                            await this.applyServiceAreaBounds();
+                        } catch (fallbackError) {
+                            log.error('MapController: Fallback bounds application also failed:', fallbackError);
+                        }
+                    }, 2000);
+                }
             }
         });
     }
