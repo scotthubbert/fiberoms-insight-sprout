@@ -26,6 +26,7 @@ export class LayerManager {
         // Layer z-order configuration
         this.zOrder = {
             rainViewerRadar: -10,
+            'cec-service-boundary': 0,
             'county-boundaries': 1,
             'fsa-boundaries': 5,
             'online-subscribers': 10,

@@ -196,6 +196,25 @@ export class Application {
 
     async initializeInfrastructureLayers() {
         try {
+            // CEC Service Boundary - Visual reference layer
+            const cecServiceBoundaryConfig = getLayerConfig('cecServiceBoundary');
+            if (cecServiceBoundaryConfig && cecServiceBoundaryConfig.dataUrl) {
+                loadingIndicator.showLoading('cec-service-boundary', 'CEC Service Boundary');
+                try {
+                    const layer = await this.services.layerManager.createLayer(cecServiceBoundaryConfig);
+                    if (layer) {
+                        layer.visible = cecServiceBoundaryConfig.visible;
+                        this.services.mapController.addLayer(layer, cecServiceBoundaryConfig.zOrder);
+                        loadingIndicator.showNetwork('cec-service-boundary', 'CEC Service Boundary');
+                    } else {
+                        loadingIndicator.showError('cec-service-boundary', 'CEC Service Boundary', 'Failed to create layer');
+                    }
+                } catch (error) {
+                    log.error('Failed to initialize CEC Service Boundary layer:', error);
+                    loadingIndicator.showError('cec-service-boundary', 'CEC Service Boundary', 'Failed to load');
+                }
+            }
+
             const countyBoundariesConfig = getLayerConfig('countyBoundaries');
             // Skip county boundaries if no dataUrl is configured
             if (countyBoundariesConfig && countyBoundariesConfig.dataUrl) {
@@ -1056,6 +1075,12 @@ export class Application {
             return;
         }
 
+        // Prevent toggling CEC Service Boundary - it's always visible as a reference layer
+        if (layerId === 'cec-service-boundary') {
+            log.info('CEC Service Boundary is always visible and cannot be toggled');
+            return;
+        }
+        
         const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'sprout-huts', 'rainviewer-radar', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'splitters', 'poles', 'closures', 'electric-trucks', 'fiber-trucks']);
         if (!layerId || !VALID_LAYER_IDS.has(layerId)) { log.warn(`Invalid or unsupported layer ID: ${layerId}`); return; }
         if (layerId) {
@@ -1160,7 +1185,7 @@ export class Application {
         let labelText = '';
         if (listItem) labelText = listItem.getAttribute('label'); else if (label) labelText = label.textContent.trim();
         const mapping = {
-            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'sprout-huts', 'Weather Radar': 'rainviewer-radar', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'Splitters': 'splitters', 'Poles': 'poles', 'Slack Loops': 'closures', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
+            'Online Subscribers': 'online-subscribers', 'Offline Subscribers': 'offline-subscribers', 'Node Sites': 'sprout-huts', 'Weather Radar': 'rainviewer-radar', 'CEC Service Boundary': 'cec-service-boundary', 'DA Boundaries': 'fsa-boundaries', 'Main Line Fiber': 'main-line-fiber', 'Main Line Old': 'main-line-old', 'MST Terminals': 'mst-terminals', 'Splitters': 'splitters', 'Poles': 'poles', 'Slack Loops': 'closures', 'Electric Trucks': 'electric-trucks', 'Fiber Trucks': 'fiber-trucks'
         };
         return mapping[labelText] || null;
     }
@@ -1172,7 +1197,7 @@ export class Application {
 
     syncToggleStates(layerId, checked) {
         const labelMapping = {
-            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'sprout-huts': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'splitters': 'Splitters', 'poles': 'Poles', 'closures': 'Slack Loops', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
+            'offline-subscribers': 'Offline Subscribers', 'online-subscribers': 'Online Subscribers', 'sprout-huts': 'Node Sites', 'rainviewer-radar': 'Weather Radar', 'cec-service-boundary': 'CEC Service Boundary', 'fsa-boundaries': 'DA Boundaries', 'main-line-fiber': 'Main Line Fiber', 'main-line-old': 'Main Line Old', 'mst-terminals': 'MST Terminals', 'splitters': 'Splitters', 'poles': 'Poles', 'closures': 'Slack Loops', 'slack-loops': 'Slack Loops', 'electric-trucks': 'Electric Trucks', 'fiber-trucks': 'Fiber Trucks'
         };
         const labelText = labelMapping[layerId]; if (!labelText) return;
         const desktopCheckboxes = document.querySelectorAll('#layers-content calcite-checkbox, #osp-content calcite-checkbox, #vehicles-content calcite-checkbox, #network-parent-content calcite-checkbox, #tools-content calcite-checkbox');

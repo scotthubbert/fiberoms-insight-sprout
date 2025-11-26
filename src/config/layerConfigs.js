@@ -1412,6 +1412,32 @@ export const layerConfigs = {
         dataServiceMethod: () => subscriberDataService.getElectricTrucks()
     },
 
+    // CEC Service Boundary Layer (Visual Reference)
+    cecServiceBoundary: {
+        id: 'cec-service-boundary',
+        title: 'CEC Service Boundary',
+        layerType: 'GeoJSONLayer',
+        dataUrl: '/CEC_Service_Boundary.geojson',
+        renderer: {
+            type: 'simple',
+            symbol: {
+                type: 'simple-fill',
+                style: 'none', // No fill, just outline
+                outline: {
+                    color: [0, 112, 192, 0.9], // Blue outline for service boundary
+                    width: 2.5
+                }
+            }
+        },
+        popupTemplate: {
+            title: 'CEC Service Boundary',
+            content: 'Cullman Electric Cooperative service area boundary'
+        },
+        visible: true, // Visible by default as visual reference
+        zOrder: 0, // Above basemap, below all other layers
+        fields: [] // Will be inferred from GeoJSON
+    },
+
     // County Boundaries Layer
     countyBoundaries: {
         id: 'county-boundaries',
