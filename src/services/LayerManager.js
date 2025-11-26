@@ -28,6 +28,7 @@ export class LayerManager {
             rainViewerRadar: -10,
             'cec-service-boundary': 0,
             'county-boundaries': 1,
+            'cullman-outages': 2, // Power outages below all markers and OSP data
             'fsa-boundaries': 5,
             'online-subscribers': 10,
             'main-line-old': 28,
@@ -38,6 +39,7 @@ export class LayerManager {
             'mst-terminals': 50,
             'splitters': 60,
             'offline-subscribers': 100,
+            'electric-offline-subscribers': 101, // Just above regular offline subscribers
             vehicles: 130,
             'sprout-huts': 125, // Above vehicles and most other layers, below weather radar
             weatherRadar: 140
@@ -66,7 +68,7 @@ export class LayerManager {
         if (layerConfig.layerType === 'GeoJSONLayer' && layerConfig.dataUrl) {
             return this.createGeoJSONLayerFromUrl(layerConfig);
         }
-        
+
         // Skip URL-based layers with null dataUrl
         if (layerConfig.layerType === 'GeoJSONLayer' && !layerConfig.dataUrl && !layerConfig.dataSource) {
             log.warn(`⚠️ Skipping layer ${layerConfig.id} - no data source available`);
@@ -175,7 +177,7 @@ export class LayerManager {
                 await layer.load();
                 const featureCount = layer.sourceJSON?.features?.length || 0;
                 log.info(`${layerConfig.title} layer loaded with ${featureCount} features`);
-                
+
                 // Verify labels are still set
                 if (layer.labelingInfo && layer.labelingInfo.length > 0) {
                     log.info(`✅ ${layerConfig.title} labels verified: ${layer.labelingInfo.length} label class(es), expression: ${layer.labelingInfo[0]?.labelExpressionInfo?.expression || 'N/A'}`);
@@ -270,6 +272,46 @@ export class LayerManager {
         } catch (error) {
             log.error(`Failed to create URL-based GeoJSON layer ${layerConfig.id}:`, error);
             errorService.report(error, { module: 'LayerManager', action: 'createGeoJSONLayerFromUrl', id: layerConfig?.id });
+            return null;
+        }
+    }
+
+    // Create empty GeoJSON layer that can be updated later
+    async createEmptyGeoJSONLayer(layerConfig) {
+        try {
+            // Create empty GeoJSON blob
+            const emptyGeoJSON = {
+                type: "FeatureCollection",
+                features: []
+            };
+
+            const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(emptyGeoJSON)], {
+                type: "application/json"
+            }));
+
+            const layer = new GeoJSONLayer({
+                id: layerConfig.id,
+                url: blobUrl,
+                renderer: layerConfig.renderer,
+                popupTemplate: layerConfig.popupTemplate,
+                featureReduction: layerConfig.featureReduction,
+                fields: layerConfig.fields,
+                listMode: layerConfig.visible ? 'show' : 'hide',
+                visible: layerConfig.visible !== undefined ? layerConfig.visible : true,
+                labelingInfo: layerConfig.labelingInfo || [],
+                minScale: layerConfig.minScale || 0,
+                maxScale: layerConfig.maxScale || 0
+            });
+
+            this.layers.set(layerConfig.id, layer);
+            this.layerConfigs.set(layerConfig.id, layerConfig);
+            this.blobUrls.set(layerConfig.id, blobUrl);
+
+            log.info(`✅ Created empty GeoJSON layer: ${layerConfig.id} (ready for updates)`);
+            return layer;
+        } catch (error) {
+            log.error(`Failed to create empty GeoJSON layer ${layerConfig.id}:`, error);
+            errorService.report(error, { module: 'LayerManager', action: 'createEmptyGeoJSONLayer', id: layerConfig?.id });
             return null;
         }
     }
@@ -419,7 +461,7 @@ export class LayerManager {
                 if (mapLayer.type === 'graphics') {
                     mapLayer.opacity = visible ? 1 : 0;
                 }
-                
+
                 // Reapply labels for node-sites/sprout-huts when it becomes visible
                 if ((layerId === 'node-sites' || layerId === 'sprout-huts') && visible && mapLayer.labelingInfo && mapLayer.labelingInfo.length > 0) {
                     // Ensure labels are properly set
@@ -532,8 +574,10 @@ export class LayerManager {
         }
 
         // If incoming dataset is empty, keep existing layer to avoid wiping markers due to transient backend empties
+        // Exception: Allow empty updates for power outages (outages can be resolved)
         const incomingCount = newData?.features?.length || 0;
-        if (incomingCount === 0) {
+        const isPowerOutageLayer = layerId.includes('outages');
+        if (incomingCount === 0 && !isPowerOutageLayer) {
             log.warn(`⚠️ Skipping ${layerId} update: incoming feature count is 0 (preserving existing markers)`);
             return true;
         }
@@ -546,7 +590,7 @@ export class LayerManager {
         if (oldLayer) {
             // Preserve the visibility state
             wasVisible = oldLayer.visible;
-            
+
             // Preserve the definition expression (for filters like Business Internet Only)
             definitionExpression = oldLayer.definitionExpression;
 
@@ -578,13 +622,14 @@ export class LayerManager {
             // Set visibility and definition expression after a small delay to ensure layer is properly initialized
             setTimeout(() => {
                 newLayer.visible = wasVisible;
-                
+
                 // Restore definition expression if it existed
+                // This preserves filters like Business Internet and Electric Offline
                 if (definitionExpression) {
                     newLayer.definitionExpression = definitionExpression;
                     log.info(`✅ Restored definition expression for ${layerId}: ${definitionExpression}`);
                 }
-                
+
                 log.info(`✅ Set visibility for ${layerId} to ${wasVisible}`);
 
                 // Force refresh if visible

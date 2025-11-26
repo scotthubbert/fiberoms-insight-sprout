@@ -139,6 +139,14 @@
                   </div>
                   <div slot="title" id="offline-count-display">--</div>
                 </calcite-card>
+
+                <calcite-card class="status-card status-card-electric-offline">
+                  <div slot="subtitle" class="status-electric-offline">
+                    <calcite-icon icon="circle" scale="s"></calcite-icon>
+                    <span>Electric Offline</span>
+                  </div>
+                  <div slot="title" id="electric-offline-count-display">--</div>
+                </calcite-card>
               </div>
 
               <!-- Last Updated Info -->
@@ -163,6 +171,13 @@
                 <calcite-list-item label="Offline Subscribers" description="Show disconnected subscribers on map">
                   <calcite-icon slot="content-start" icon="circle" class="status-icon-danger"></calcite-icon>
                   <calcite-switch slot="content-end" id="offline-subscribers-switch" checked></calcite-switch>
+                </calcite-list-item>
+
+                <calcite-list-item label="Electric Offline"
+                  description="Show offline subscribers with electric outages">
+                  <calcite-icon slot="content-start" icon="circle" class="status-icon-electric-offline"
+                    style="color: #ffc107;"></calcite-icon>
+                  <calcite-switch slot="content-end" id="electric-offline-switch" checked></calcite-switch>
                 </calcite-list-item>
 
                 <calcite-list-item label="Business Internet Only" description="Filter to show only business subscribers"
@@ -519,6 +534,14 @@
                 <span>Offline</span>
               </div>
               <div class="mobile-status-count" id="mobile-offline-count-display">--</div>
+            </div>
+
+            <div class="mobile-status-card mobile-status-card-electric-offline">
+              <div class="mobile-status-label">
+                <calcite-icon icon="circle" scale="s"></calcite-icon>
+                <span>Electric Offline</span>
+              </div>
+              <div class="mobile-status-count" id="mobile-electric-offline-count-display">--</div>
             </div>
           </div>
 

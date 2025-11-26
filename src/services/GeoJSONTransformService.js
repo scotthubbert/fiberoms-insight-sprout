@@ -32,6 +32,8 @@ export class GeoJSONTransformService {
                     // Core properties for display
                     objectId: record.id || index,
                     status: record.status || status,
+                    // Preserve Status field (capital S) from database for renderer
+                    Status: record.Status || record.status || status,
 
                     // Map database fields to display fields (using actual schema)
                     customer_name: record.name || 'Unknown',
@@ -51,7 +53,7 @@ export class GeoJSONTransformService {
                         record.zip_code || ''
                     ].filter(part => part && part.toString().trim() !== '').join(', '),
 
-                    // Include all original fields
+                    // Include all original fields (this preserves electricOut, Status, etc.)
                     ...record
                 }
             };
@@ -72,7 +74,7 @@ export class GeoJSONTransformService {
             // Get the original GeoJSON feature to preserve geometry
             const originalFeature = originalFeatures[index];
             let geometry;
-            
+
             if (originalFeature && originalFeature.geometry) {
                 geometry = originalFeature.geometry;
             } else {

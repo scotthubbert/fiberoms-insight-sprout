@@ -1519,6 +1519,19 @@ arcgis-distance-measurement-2d {
   font-weight: var(--calcite-font-weight-bold);
 }
 
+.status-card-electric-offline [slot="subtitle"] {
+  color: #ffc107; /* Yellow for electric offline */
+}
+
+.status-card-electric-offline [slot="title"] {
+  color: #ffc107; /* Yellow for electric offline */
+  font-weight: var(--calcite-font-weight-bold);
+}
+
+.status-icon-electric-offline {
+  color: #ffc107 !important; /* Yellow for electric offline */
+}
+
 /* Actions container styling */
 .actions-container {
   display: flex;
@@ -1831,6 +1844,14 @@ calcite-list-item[style*="cursor: pointer"]:active {
 
 .mobile-status-card-offline .mobile-status-count {
   color: var(--calcite-color-status-danger);
+}
+
+.mobile-status-card-electric-offline .mobile-status-label {
+  color: #ffc107; /* Yellow for electric offline */
+}
+
+.mobile-status-card-electric-offline .mobile-status-count {
+  color: #ffc107; /* Yellow for electric offline */
 }
 
 /* Mobile responsive adjustments */

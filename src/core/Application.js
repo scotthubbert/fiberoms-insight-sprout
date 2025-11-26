@@ -175,6 +175,7 @@ export class Application {
 
     async initializeSubscriberLayers() {
         try {
+            // Initialize offline subscribers layer
             loadingIndicator.showLoading('offline-subscribers', 'Offline Subscribers');
             const offlineConfig = getLayerConfig('offlineSubscribers');
             if (offlineConfig) {
@@ -186,10 +187,25 @@ export class Application {
                     loadingIndicator.showError('offline-subscribers', 'Offline Subscribers', 'Failed to create layer');
                 }
             }
+
+            // Initialize electric offline subscribers layer
+            loadingIndicator.showLoading('electric-offline-subscribers', 'Electric Offline Subscribers');
+            const electricOfflineConfig = getLayerConfig('electricOfflineSubscribers');
+            if (electricOfflineConfig) {
+                const result = await this.createLayerFromConfig(electricOfflineConfig);
+                if (result && result.layer) {
+                    this.services.mapController.addLayer(result.layer, electricOfflineConfig.zOrder);
+                    loadingIndicator.showNetwork('electric-offline-subscribers', 'Electric Offline Subscribers');
+                } else {
+                    loadingIndicator.showError('electric-offline-subscribers', 'Electric Offline Subscribers', 'Failed to create layer');
+                }
+            }
+
             log.info('📊 Online subscribers configured for on-demand loading (saves ~2.7MB)');
         } catch (error) {
             log.error('Failed to initialize subscriber layers:', error);
             loadingIndicator.showError('offline-subscribers', 'Offline Subscribers', 'Failed to load');
+            loadingIndicator.showError('electric-offline-subscribers', 'Electric Offline Subscribers', 'Failed to load');
             loadingIndicator.showError('online-subscribers', 'Online Subscribers', 'Failed to load');
         }
     }
@@ -246,7 +262,7 @@ export class Application {
                 if (result && result.layer) {
                     result.layer.visible = sproutHutsConfig.visible;
                     this.services.mapController.addLayer(result.layer, sproutHutsConfig.zOrder);
-                    
+
                     // Ensure labels are applied after layer is added to map
                     if (result.layer.labelingInfo && result.layer.labelingInfo.length > 0) {
                         // Labels already set, just refresh
@@ -256,11 +272,26 @@ export class Application {
                             }
                         }, 500);
                     }
-                    
+
                     if (result.fromCache) loadingIndicator.showCached('sprout-huts', 'Sprout Huts');
                     else loadingIndicator.showNetwork('sprout-huts', 'Sprout Huts');
                 } else {
                     loadingIndicator.showError('sprout-huts', 'Sprout Huts', 'Failed to create layer');
+                }
+            }
+
+            // Initialize Power Outage Layer (empty, will be populated by polling)
+            const cullmanOutagesConfig = getLayerConfig('cullmanOutages');
+            if (cullmanOutagesConfig) {
+                try {
+                    const layer = await this.services.layerManager.createEmptyGeoJSONLayer(cullmanOutagesConfig);
+                    if (layer) {
+                        layer.visible = cullmanOutagesConfig.visible;
+                        this.services.mapController.addLayer(layer, cullmanOutagesConfig.zOrder);
+                        log.info('✅ Power outage layer initialized (empty, ready for updates)');
+                    }
+                } catch (error) {
+                    log.error('Failed to initialize power outage layer:', error);
                 }
             }
 
@@ -327,7 +358,7 @@ export class Application {
                 log.info(`📦 Batch ${Math.floor(i / batchSize) + 1} complete: ${results.filter(r => r.status === 'fulfilled').length}/${batch.length} layers loaded`);
             }
             log.info('🔌 Fiber plant layers initialization complete');
-            
+
             // Initialize hover highlight service after fiber layers are loaded
             if (this.services.mapController.view) {
                 setTimeout(() => {
@@ -487,7 +518,8 @@ export class Application {
                 'online-subscribers-switch',
                 'offline-subscribers-switch',
                 'business-internet-filter-switch',
-                'mobile-business-internet-filter-switch'
+                'mobile-business-internet-filter-switch',
+                'electric-offline-switch'
             ];
 
             if (!handledByIdSwitches.includes(switchElement.id)) {
@@ -917,12 +949,14 @@ export class Application {
         const offlineSwitch = document.getElementById('offline-subscribers-switch');
         const businessFilterSwitch = document.getElementById('business-internet-filter-switch');
         const mobileBusinessFilterSwitch = document.getElementById('mobile-business-internet-filter-switch');
+        const electricOfflineSwitch = document.getElementById('electric-offline-switch');
 
         // All switches use the same pattern
         if (onlineSwitch) onlineSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
         if (offlineSwitch) offlineSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
         if (businessFilterSwitch) businessFilterSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
         if (mobileBusinessFilterSwitch) mobileBusinessFilterSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
+        if (electricOfflineSwitch) electricOfflineSwitch.addEventListener('calciteSwitchChange', (e) => { this.handleLayerToggle(e.target, e.target.checked); });
 
         this.setupLayerSwitchesForAllSections();
         this.setupClickableListItems();
@@ -969,9 +1003,11 @@ export class Application {
             this.services.dashboard.updateLastUpdatedTime();
             const onlineCountEl = document.getElementById('online-count-display');
             const offlineCountEl = document.getElementById('offline-count-display');
+            const electricOfflineCountEl = document.getElementById('electric-offline-count-display');
             const lastUpdatedEl = document.getElementById('last-updated-display');
             if (onlineCountEl) onlineCountEl.textContent = summary.online?.toLocaleString() || '0';
             if (offlineCountEl) offlineCountEl.textContent = summary.offline?.toLocaleString() || '0';
+            if (electricOfflineCountEl) electricOfflineCountEl.textContent = summary.electricOffline?.toLocaleString() || '0';
             if (lastUpdatedEl) {
                 const lastUpdated = summary.lastUpdated ? new Date(summary.lastUpdated).toLocaleString() : 'Never';
                 lastUpdatedEl.textContent = `Last updated: ${lastUpdated}`;
@@ -981,9 +1017,11 @@ export class Application {
             this.services.dashboard.updateOfflineCount(0);
             const onlineCountEl = document.getElementById('online-count-display');
             const offlineCountEl = document.getElementById('offline-count-display');
+            const electricOfflineCountEl = document.getElementById('electric-offline-count-display');
             const lastUpdatedEl = document.getElementById('last-updated-display');
             if (onlineCountEl) onlineCountEl.textContent = '--';
             if (offlineCountEl) offlineCountEl.textContent = '--';
+            if (electricOfflineCountEl) electricOfflineCountEl.textContent = '--';
             if (lastUpdatedEl) lastUpdatedEl.textContent = 'Last updated: Error loading data';
         }
     }
@@ -1048,7 +1086,6 @@ export class Application {
                 }
             } else {
                 console.warn(`[OSP Debug] ⚠️ No configuration found for layerId: ${layerId}`);
-                console.log(`[OSP Debug] Available config keys:`, Object.keys(layerConfigs));
             }
         }
 
@@ -1075,13 +1112,27 @@ export class Application {
             return;
         }
 
+        // Handle electric offline layer toggle (separate layer, like online/offline)
+        if (layerId === 'electric-offline-subscribers') {
+            // This is now a separate layer, handle it like other subscriber layers
+            const electricOfflineLayer = this.services.layerManager.getLayer('electric-offline-subscribers');
+            if (electricOfflineLayer) {
+                await this.services.layerManager.toggleLayerVisibility('electric-offline-subscribers', checked);
+                this.syncToggleStates('electric-offline-subscribers', checked);
+            } else {
+                // Layer doesn't exist yet, might need to be created
+                log.warn('Electric offline layer not found, may need initialization');
+            }
+            return;
+        }
+
         // Prevent toggling CEC Service Boundary - it's always visible as a reference layer
         if (layerId === 'cec-service-boundary') {
             log.info('CEC Service Boundary is always visible and cannot be toggled');
             return;
         }
-        
-        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'sprout-huts', 'rainviewer-radar', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'splitters', 'poles', 'closures', 'electric-trucks', 'fiber-trucks']);
+
+        const VALID_LAYER_IDS = new Set(['offline-subscribers', 'online-subscribers', 'electric-offline-subscribers', 'sprout-huts', 'rainviewer-radar', 'fsa-boundaries', 'main-line-fiber', 'main-line-old', 'mst-terminals', 'splitters', 'poles', 'closures', 'electric-trucks', 'fiber-trucks']);
         if (!layerId || !VALID_LAYER_IDS.has(layerId)) { log.warn(`Invalid or unsupported layer ID: ${layerId}`); return; }
         if (layerId) {
             if (layerId === 'online-subscribers' && checked && !this.onlineLayerLoaded) {
@@ -1123,6 +1174,9 @@ export class Application {
                 }
             } else {
                 await this.services.layerManager.toggleLayerVisibility(layerId, checked);
+                // Note: Do NOT reapply electric offline filter when toggling offline-subscribers layer
+                // The "Offline Subscribers" toggle controls layer visibility only
+                // The "Electric Offline" toggle controls the filter independently
             }
             this.syncToggleStates(layerId, checked);
             const layerDisplayName = this.getLayerDisplayName(layerId);
@@ -1173,9 +1227,11 @@ export class Application {
         }
     }
 
+
     getLayerIdFromElement(element) {
         if (element.id === 'online-subscribers-switch') return 'online-subscribers';
         if (element.id === 'offline-subscribers-switch') return 'offline-subscribers';
+        if (element.id === 'electric-offline-switch') return 'electric-offline-subscribers';
         // Business filter switches - return consistent identifier
         if (element.id === 'business-internet-filter-switch' || element.id === 'mobile-business-internet-filter-switch') {
             return 'business-internet-filter';
@@ -1224,7 +1280,7 @@ export class Application {
                 mobileButton.setAttribute('appearance', newVisibility ? 'solid' : 'outline');
             }
             if (this.services.mobileTabBar) this.services.mobileTabBar.closeCurrentPanel();
-            log.info(`🌧️ Mobile radar toggled: ${newVisibility}`);
+            log.info(`🌧️ Mobile radar toggled: ${newVisibility} `);
         }
     }
 
@@ -1237,21 +1293,28 @@ export class Application {
         // Desktop: 30 seconds (users monitor actively)
         const subscriberPollInterval = isMobile ? 300000 : 30000;
 
-        log.info(`🔄 Starting subscriber data polling (${isMobile ? 'mobile' : 'desktop'}: ${subscriberPollInterval / 1000}s interval)`);
+        log.info(`🔄 Starting subscriber data polling(${isMobile ? 'mobile' : 'desktop'}: ${subscriberPollInterval / 1000}s interval)`);
         let previousOfflineCount = null;
         let previousOnlineCount = null;
         const handleSubscriberUpdate = async (data) => {
             try {
-                if (data.offline || data.online) {
+                if (data.offline || data.electricOffline || data.online) {
                     if (!window._isManualRefresh && data.offline) loadingIndicator.showLoading('offline-subscribers-update', 'Offline Subscribers');
+                    if (!window._isManualRefresh && data.electricOffline) loadingIndicator.showLoading('electric-offline-subscribers-update', 'Electric Offline Subscribers');
                     if (!window._isManualRefresh && data.online && this.onlineLayerLoaded) loadingIndicator.showLoading('online-subscribers-update', 'Online Subscribers');
                     const currentOfflineCount = data.offline?.count || 0;
+                    const currentElectricOfflineCount = data.electricOffline?.count || 0;
                     const currentOnlineCount = data.online?.count || 0;
                     const offlineLayer = this.services.layerManager.getLayer('offline-subscribers');
+                    const electricOfflineLayer = this.services.layerManager.getLayer('electric-offline-subscribers');
                     const onlineLayer = this.services.layerManager.getLayer('online-subscribers');
                     if (offlineLayer && data.offline) {
                         await this.services.layerManager.updateLayerData('offline-subscribers', data.offline);
                         if (!window._isManualRefresh) loadingIndicator.showNetwork('offline-subscribers-update', 'Offline Subscribers');
+                    }
+                    if (electricOfflineLayer && data.electricOffline) {
+                        await this.services.layerManager.updateLayerData('electric-offline-subscribers', data.electricOffline);
+                        if (!window._isManualRefresh) loadingIndicator.showNetwork('electric-offline-subscribers-update', 'Electric Offline Subscribers');
                     }
                     if (onlineLayer && data.online && this.onlineLayerLoaded) {
                         await this.services.layerManager.updateLayerData('online-subscribers', data.online);
@@ -1271,6 +1334,7 @@ export class Application {
                 try { (await import('../services/ErrorService.js')).errorService.report(error, { module: 'Application', action: 'handleSubscriberUpdate' }); } catch { }
                 if (!window._isManualRefresh) {
                     loadingIndicator.showError('offline-subscribers-update', 'Offline Subscribers', 'Update failed');
+                    loadingIndicator.showError('electric-offline-subscribers-update', 'Electric Offline Subscribers', 'Update failed');
                     loadingIndicator.showError('online-subscribers-update', 'Online Subscribers', 'Update failed');
                 }
             }
@@ -1348,19 +1412,33 @@ export class Application {
         // Desktop: 1 minute (users monitor actively)
         const outagePollInterval = isMobile ? 300000 : 60000;
 
-        log.info(`⚡ Starting power outage data polling (${isMobile ? 'mobile' : 'desktop'}: ${outagePollInterval / 1000}s interval)`);
+        log.info(`⚡ Starting power outage data polling(${isMobile ? 'mobile' : 'desktop'}: ${outagePollInterval / 1000}s interval)`);
         const handlePowerOutageUpdate = async (data) => {
             try {
                 if (data && data.features) {
                     if (!window._isManualRefresh) {
                         loadingIndicator.showLoading('cullman-outages-update', 'Cullman Power Outages');
                     }
-                    const cullmanLayer = this.services.layerManager.getLayer('cullman-outages');
+                    let cullmanLayer = this.services.layerManager.getLayer('cullman-outages');
+
+                    // Create layer if it doesn't exist
+                    if (!cullmanLayer) {
+                        const cullmanOutagesConfig = getLayerConfig('cullmanOutages');
+                        if (cullmanOutagesConfig) {
+                            cullmanLayer = await this.services.layerManager.createEmptyGeoJSONLayer(cullmanOutagesConfig);
+                            if (cullmanLayer) {
+                                cullmanLayer.visible = cullmanOutagesConfig.visible;
+                                this.services.mapController.addLayer(cullmanLayer, cullmanOutagesConfig.zOrder);
+                                log.info('✅ Power outage layer created during polling');
+                            }
+                        }
+                    }
+
                     if (cullmanLayer && data) {
                         // Convert to GeoJSON format for layer update
-                        const cullmanGeoJSON = { 
-                            type: 'FeatureCollection', 
-                            features: data.features || [] 
+                        const cullmanGeoJSON = {
+                            type: 'FeatureCollection',
+                            features: data.features || []
                         };
                         await this.services.layerManager.updateLayerData('cullman-outages', cullmanGeoJSON);
                     }
@@ -1368,10 +1446,10 @@ export class Application {
                         loadingIndicator.showNetwork('cullman-outages-update', 'Cullman Power Outages');
                     }
                     // Dispatch event for PowerOutageStats component to update
-                    document.dispatchEvent(new CustomEvent('powerOutageDataUpdated', { 
-                        detail: { 
-                            cullmanCount: data?.count || 0 
-                        } 
+                    document.dispatchEvent(new CustomEvent('powerOutageDataUpdated', {
+                        detail: {
+                            cullmanCount: data?.count || 0
+                        }
                     }));
                     const powerOutageStatsComponent = document.querySelector('power-outage-stats');
                     if (powerOutageStatsComponent && powerOutageStatsComponent.updateStats) {
@@ -1380,11 +1458,11 @@ export class Application {
                 }
             } catch (error) {
                 log.error('Failed to handle power outage update:', error);
-                try { 
-                    (await import('../services/ErrorService.js')).errorService.report(error, { 
-                        module: 'Application', 
-                        action: 'handlePowerOutageUpdate' 
-                    }); 
+                try {
+                    (await import('../services/ErrorService.js')).errorService.report(error, {
+                        module: 'Application',
+                        action: 'handlePowerOutageUpdate'
+                    });
                 } catch { }
                 if (!window._isManualRefresh) {
                     loadingIndicator.showError('cullman-outages-update', 'Cullman Power Outages', 'Update failed');
@@ -1477,21 +1555,21 @@ export class Application {
         let kind = 'info';
         if (offlineChange > 0 && onlineChange <= 0) {
             kind = 'warning'; title = 'Subscribers Offline';
-            message = offlineChange === 1 ? `1 subscriber went offline (${currOffline.toLocaleString()} total offline)` : `${offlineChange.toLocaleString()} subscribers went offline (${currOffline.toLocaleString()} total offline)`;
-            if (onlineChange < 0) message += `. ${Math.abs(onlineChange).toLocaleString()} fewer online subscribers`;
+            message = offlineChange === 1 ? `1 subscriber went offline(${currOffline.toLocaleString()} total offline)` : `${offlineChange.toLocaleString()} subscribers went offline(${currOffline.toLocaleString()} total offline)`;
+            if (onlineChange < 0) message += `.${Math.abs(onlineChange).toLocaleString()} fewer online subscribers`;
         } else if (offlineChange < 0 && onlineChange >= 0) {
             kind = 'success'; title = 'Subscribers Restored';
             const restored = Math.abs(offlineChange);
-            message = restored === 1 ? `1 subscriber restored to service (${currOffline.toLocaleString()} still offline)` : `${restored.toLocaleString()} subscribers restored to service (${currOffline.toLocaleString()} still offline)`;
-            if (onlineChange > 0) message += `. ${onlineChange.toLocaleString()} more online subscribers`;
+            message = restored === 1 ? `1 subscriber restored to service(${currOffline.toLocaleString()} still offline)` : `${restored.toLocaleString()} subscribers restored to service(${currOffline.toLocaleString()} still offline)`;
+            if (onlineChange > 0) message += `.${onlineChange.toLocaleString()} more online subscribers`;
         } else if (offlineChange > 0 && onlineChange > 0) {
             kind = 'info'; title = 'Network Activity'; message = `${offlineChange.toLocaleString()} subscribers went offline, ${onlineChange.toLocaleString()} new subscribers online`;
         } else if (offlineChange < 0 && onlineChange < 0) {
             kind = 'info'; title = 'Subscriber Changes'; const offlineRestored = Math.abs(offlineChange); const onlineReduced = Math.abs(onlineChange); message = `${offlineRestored.toLocaleString()} subscribers restored, ${onlineReduced.toLocaleString()} subscribers disconnected`;
         } else if (totalChange !== 0) {
-            kind = 'info'; title = totalChange > 0 ? 'New Subscribers' : 'Subscriber Changes'; message = totalChange > 0 ? `${totalChange.toLocaleString()} new subscribers added to network (${totalCurrent.toLocaleString()} total)` : `${Math.abs(totalChange).toLocaleString()} subscribers removed from network (${totalCurrent.toLocaleString()} total)`;
+            kind = 'info'; title = totalChange > 0 ? 'New Subscribers' : 'Subscriber Changes'; message = totalChange > 0 ? `${totalChange.toLocaleString()} new subscribers added to network(${totalCurrent.toLocaleString()} total)` : `${Math.abs(totalChange).toLocaleString()} subscribers removed from network(${totalCurrent.toLocaleString()} total)`;
         } else {
-            kind = 'info'; title = 'Service Status Changes'; message = offlineChange > 0 ? `${offlineChange.toLocaleString()} subscribers changed status (${currOffline.toLocaleString()} offline, ${currOnline.toLocaleString()} online)` : `Subscriber status updates (${currOffline.toLocaleString()} offline, ${currOnline.toLocaleString()} online)`;
+            kind = 'info'; title = 'Service Status Changes'; message = offlineChange > 0 ? `${offlineChange.toLocaleString()} subscribers changed status(${currOffline.toLocaleString()} offline, ${currOnline.toLocaleString()} online)` : `Subscriber status updates(${currOffline.toLocaleString()} offline, ${currOnline.toLocaleString()} online)`;
         }
         const noticeContainer = getOrCreateNoticeContainer();
         const notice = document.createElement('calcite-notice');

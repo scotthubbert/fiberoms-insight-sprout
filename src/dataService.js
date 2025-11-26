@@ -216,15 +216,18 @@ export class SubscriberDataService {
     }
 
     // Get offline subscribers for map display (includes geometry) - REALTIME (no caching)
+    // Excludes electric offline markers (electricOut='YES') - those are in a separate layer
     async getOfflineSubscribers() {
         try {
             log.info('📡 Fetching offline subscribers from Supabase... (realtime - no cache)')
 
             // Select all fields for feature layer creation
+            // Exclude electric offline markers (electricOut='YES') - they have their own layer
             const { data, error, count } = await supabase
                 .from('fiber_subscriber_status_live')
                 .select('*', { count: 'exact' })
                 .eq('Status', 'Offline')
+                .or('electricOut.is.null,electricOut.neq.YES,electricOut.ilike.no%')
                 .not('lat', 'is', null)
                 .not('lon', 'is', null)
 
@@ -297,6 +300,78 @@ export class SubscriberDataService {
             return result
         } catch (error) {
             log.error('Failed to fetch offline subscribers:', error)
+            throw error
+        }
+    }
+
+    // Get electric offline subscribers for map display (includes geometry) - REALTIME (no caching)
+    // Only includes markers where electricOut='YES' AND Status='Offline'
+    async getElectricOfflineSubscribers() {
+        try {
+            log.info('📡 Fetching electric offline subscribers from Supabase... (realtime - no cache)')
+
+            // Select all fields for feature layer creation
+            // Only include markers where electricOut='YES' AND Status='Offline'
+            const { data, error, count } = await supabase
+                .from('fiber_subscriber_status_live')
+                .select('*', { count: 'exact' })
+                .eq('Status', 'Offline')
+                .ilike('electricOut', 'yes%')
+                .not('lat', 'is', null)
+                .not('lon', 'is', null)
+
+            if (isDevelopment) {
+                log.info('📊 Supabase response (electric offline):')
+                log.info('- Count:', count)
+                log.info('- Data length:', data?.length || 0)
+                log.info('- Error:', error)
+            }
+
+            if (error) {
+                log.error('❌ Error fetching electric offline subscribers:', error)
+                throw error
+            }
+
+            if (!data || data.length === 0) {
+                log.info('ℹ️ No electric offline subscribers found')
+                return {
+                    count: 0,
+                    data: [],
+                    features: [],
+                    lastUpdated: new Date().toISOString(),
+                    fromCache: false
+                }
+            }
+
+            // Log first record for debugging in development only
+            if (isDevelopment) {
+                log.info('📋 Sample electric offline record:', data[0])
+            }
+
+            // Map data to application schema
+            const mappedData = data.map(r => this._mapDatabaseRecord(r));
+
+            // Convert to GeoJSON features for ArcGIS
+            const features = geoJSONTransformService.convertToGeoJSONFeatures(mappedData, 'electric-offline')
+
+            log.info('🗺️ Generated electric offline features:', features.length)
+            if (isDevelopment && features.length > 0) {
+                log.info('📍 Sample electric offline feature:', features[0])
+                log.info('📍 Sample coordinates:', features[0].geometry.coordinates)
+            }
+
+            const result = {
+                count: count || 0,
+                data: mappedData,
+                features: features,
+                lastUpdated: new Date().toISOString(),
+                fromCache: false
+            }
+
+            // No caching for realtime data
+            return result
+        } catch (error) {
+            log.error('Failed to fetch electric offline subscribers:', error)
             throw error
         }
     }
@@ -425,18 +500,25 @@ export class SubscriberDataService {
                 { count: totalCount, error: totalError },
                 { count: offlineCount, error: offlineError },
                 { count: onlineCount, error: onlineError },
-                { count: unknownCount, error: unknownError }
+                { count: unknownCount, error: unknownError },
+                { count: electricOfflineCount, error: electricOfflineError }
             ] = await Promise.all([
                 supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }),
-                // Match Status variants like 'Offline', 'offline', 'Offline ' etc.
-                supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }).ilike('Status', 'offline%'),
+                // Offline: Status is Offline BUT exclude electric offline (electricOut='YES')
+                // This matches the getOfflineSubscribers() query logic
+                supabase.from('fiber_subscriber_status_live')
+                    .select('account', { count: 'exact', head: true })
+                    .ilike('Status', 'offline%')
+                    .or('electricOut.is.null,electricOut.neq.YES,electricOut.ilike.no%'),
                 supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }).ilike('Status', 'online%'),
                 // Unknown includes null/empty/explicit 'Unknown'
-                supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }).or('Status.is.null,Status.eq.,Status.ilike.unknown%')
+                supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }).or('Status.is.null,Status.eq.,Status.ilike.unknown%'),
+                // Electric offline: Status is Offline AND electricOut is YES
+                supabase.from('fiber_subscriber_status_live').select('account', { count: 'exact', head: true }).ilike('Status', 'offline%').ilike('electricOut', 'yes%')
             ])
 
-            if (totalError || offlineError || onlineError || unknownError) {
-                const err = totalError || offlineError || onlineError || unknownError
+            if (totalError || offlineError || onlineError || unknownError || electricOfflineError) {
+                const err = totalError || offlineError || onlineError || unknownError || electricOfflineError
                 log.error('Error fetching subscribers summary counts:', err)
                 throw err
             }
@@ -444,7 +526,8 @@ export class SubscriberDataService {
             const statusBreakdown = {
                 Online: onlineCount || 0,
                 Offline: offlineCount || 0,
-                Unknown: unknownCount || 0
+                Unknown: unknownCount || 0,
+                ElectricOffline: electricOfflineCount || 0
             }
 
             return {
@@ -452,6 +535,7 @@ export class SubscriberDataService {
                 online: onlineCount || 0,
                 offline: offlineCount || 0,
                 unknown: unknownCount || 0,
+                electricOffline: electricOfflineCount || 0,
                 statusBreakdown,
                 lastUpdated: new Date().toISOString(),
                 fromCache: false
@@ -495,7 +579,7 @@ export class SubscriberDataService {
             // Updated for Sprout Fiber schema: name, account, address, city
             // Note: account is bigint, so we need to handle it differently - use text() function or separate query
             const isNumeric = /^\d+$/.test(searchTerm.trim());
-            
+
             let query = supabase
                 .from('fiber_subscriber_status_live')
                 .select('*', { count: 'exact' });
@@ -926,6 +1010,9 @@ export class PollingManager {
                 case 'offline-subscribers':
                     data = await this.dataService.getOfflineSubscribers()
                     break
+                case 'electric-offline-subscribers':
+                    data = await this.dataService.getElectricOfflineSubscribers()
+                    break
                 case 'online-subscribers':
                     data = await this.dataService.getOnlineSubscribers()
                     break
@@ -933,36 +1020,59 @@ export class PollingManager {
                     // Only fetch data for layers that exist to save bandwidth
                     const layerManager = window.app?.services?.layerManager;
                     const offlineLayer = layerManager?.getLayer('offline-subscribers');
+                    const electricOfflineLayer = layerManager?.getLayer('electric-offline-subscribers');
                     const onlineLayer = layerManager?.getLayer('online-subscribers');
                     const offlineExists = offlineLayer !== null && offlineLayer !== undefined;
+                    const electricOfflineExists = electricOfflineLayer !== null && electricOfflineLayer !== undefined;
                     const onlineExists = onlineLayer !== null && onlineLayer !== undefined;
                     const onlineLayerLoaded = window.app?.onlineLayerLoaded || false;
                     const isFirst = this.isFirstUpdate.get(dataType);
 
-                    log.info(`📊 Polling update ${isFirst ? '(INITIAL)' : '(PERIODIC)'} - Offline layer exists: ${offlineExists}, Online layer exists: ${onlineExists}, onlineLayerLoaded: ${onlineLayerLoaded}`);
+                    log.info(`📊 Polling update ${isFirst ? '(INITIAL)' : '(PERIODIC)'} - Offline: ${offlineExists}, Electric Offline: ${electricOfflineExists}, Online: ${onlineExists}, onlineLayerLoaded: ${onlineLayerLoaded}`);
 
                     // For the first update, only fetch offline data to save bandwidth
                     let offline = null;
+                    let electricOffline = null;
                     let online = null;
 
                     if (isFirst && !onlineLayerLoaded) {
-                        // First update and online layer not manually loaded - only fetch offline
-                        log.info('📊 Initial load - fetching only offline subscriber data to save bandwidth');
-                        offline = await this.dataService.getOfflineSubscribers();
-                        this.isFirstUpdate.set(dataType, false);
-                    } else if (offlineExists && onlineExists && onlineLayerLoaded) {
-                        // Both layers exist, fetch both
-                        log.info('📊 Fetching both offline and online subscriber data');
+                        // First update and online layer not manually loaded - fetch offline and electric offline
+                        log.info('📊 Initial load - fetching offline and electric offline subscriber data to save bandwidth');
                         const results = await Promise.all([
                             this.dataService.getOfflineSubscribers(),
+                            this.dataService.getElectricOfflineSubscribers()
+                        ]);
+                        offline = results[0];
+                        electricOffline = results[1];
+                        this.isFirstUpdate.set(dataType, false);
+                    } else if (offlineExists && electricOfflineExists && onlineExists && onlineLayerLoaded) {
+                        // All layers exist, fetch all
+                        log.info('📊 Fetching all subscriber data (offline, electric offline, online)');
+                        const results = await Promise.all([
+                            this.dataService.getOfflineSubscribers(),
+                            this.dataService.getElectricOfflineSubscribers(),
                             this.dataService.getOnlineSubscribers()
                         ]);
                         offline = results[0];
-                        online = results[1];
+                        electricOffline = results[1];
+                        online = results[2];
+                    } else if (offlineExists && electricOfflineExists) {
+                        // Offline and electric offline exist
+                        log.info('📊 Fetching offline and electric offline subscriber data');
+                        const results = await Promise.all([
+                            this.dataService.getOfflineSubscribers(),
+                            this.dataService.getElectricOfflineSubscribers()
+                        ]);
+                        offline = results[0];
+                        electricOffline = results[1];
                     } else if (offlineExists) {
                         // Only offline exists
-                        log.info('📊 Fetching only offline subscriber data (online layer not loaded)');
+                        log.info('📊 Fetching only offline subscriber data');
                         offline = await this.dataService.getOfflineSubscribers();
+                    } else if (electricOfflineExists) {
+                        // Only electric offline exists
+                        log.info('📊 Fetching only electric offline subscriber data');
+                        electricOffline = await this.dataService.getElectricOfflineSubscribers();
                     } else if (onlineExists && onlineLayerLoaded) {
                         // Only online exists and is loaded
                         log.info('📊 Fetching only online subscriber data');
@@ -971,7 +1081,7 @@ export class PollingManager {
                         log.warn('📊 No subscriber layers exist or are loaded, skipping data fetch');
                     }
 
-                    data = { offline, online }
+                    data = { offline, electricOffline, online }
                     break
                 case 'power-outages':
                     // Import outageService dynamically to avoid circular dependencies

@@ -3,6 +3,7 @@ import { subscriberDataService } from '../dataService.js';
 import { infrastructureService } from '../services/InfrastructureService.js';
 
 // Renderer configurations
+// Offline renderer - excludes electric offline (those are in a separate layer)
 const createOfflineRenderer = () => ({
     type: 'unique-value',
     field: 'service_type',
@@ -32,6 +33,32 @@ const createOfflineRenderer = () => ({
         }
     ],
     // Scale-dependent sizing with smooth interpolation to prevent cluttering at different zoom levels
+    visualVariables: [{
+        type: "size",
+        valueExpression: "$view.scale",
+        stops: [
+            { value: 80000, size: 12 },      // Zoom 14 and closer: Full size
+            { value: 1000000, size: 6 },     // Zoom 10-13: Smaller size
+            { value: 10000000, size: 3 }     // Zoom 6-9: Tiny size
+        ],
+        interpolation: "linear"  // Smooth interpolation between zoom levels
+    }]
+});
+
+// Electric Offline renderer - simple yellow markers (all are electric offline)
+const createElectricOfflineRenderer = () => ({
+    type: 'simple',
+    symbol: {
+        type: 'simple-marker',
+        style: 'circle',
+        color: [255, 193, 7, 0.9], // Yellow for electric offline
+        size: 12,
+        outline: {
+            color: [255, 152, 0, 1], // Darker yellow/orange outline
+            width: 2
+        }
+    },
+    // Scale-dependent sizing with smooth interpolation
     visualVariables: [{
         type: "size",
         valueExpression: "$view.scale",
@@ -352,6 +379,7 @@ const subscriberFields = [
     { name: 'zip_code', type: 'integer', alias: 'ZIP Code' },
     { name: 'full_address', type: 'string', alias: 'Full Address' },
     { name: 'status', type: 'string', alias: 'Connection Status' },
+    { name: 'Status', type: 'string', alias: 'Status' }, // Database field (capital S)
     { name: 'county', type: 'string', alias: 'County' },
     { name: 'latitude', type: 'double', alias: 'Latitude' },
     { name: 'longitude', type: 'double', alias: 'Longitude' },
@@ -362,6 +390,8 @@ const subscriberFields = [
     { name: 'ta5k', type: 'string', alias: 'TA5K' },
     { name: 'remote_id', type: 'string', alias: 'Remote ID' },
     { name: 'has_electric', type: 'string', alias: 'Electric Available' },
+    { name: 'electricOut', type: 'string', alias: 'Electric Out' },
+    { name: 'electric_out', type: 'string', alias: 'Electric Out' }, // Alternative field name
     { name: 'fiber_distance', type: 'string', alias: 'Fiber Distance' },
     { name: 'light', type: 'string', alias: 'Light Level' },
     { name: 'bip', type: 'string', alias: 'BIP' },
@@ -1239,6 +1269,19 @@ export const layerConfigs = {
         dataServiceMethod: () => subscriberDataService.getOnlineSubscribers()
     },
 
+    electricOfflineSubscribers: {
+        id: 'electric-offline-subscribers',
+        title: 'Electric Offline Subscribers',
+        dataSource: 'electric_offline_subscribers',
+        renderer: createElectricOfflineRenderer(),
+        popupTemplate: createSubscriberPopup('offline'),
+        featureReduction: createOfflineClusterConfig(), // Use same clustering as offline
+        fields: subscriberFields,
+        visible: true, // Visible by default
+        zOrder: 101, // Just above regular offline subscribers
+        dataServiceMethod: () => subscriberDataService.getElectricOfflineSubscribers()
+    },
+
     // Sprout Huts Layer
     sproutHuts: {
         id: 'sprout-huts',
@@ -1459,6 +1502,44 @@ export const layerConfigs = {
         zOrder: -10, // Below all basemap layers
         // This layer is created dynamically by RainViewerService
         // No dataServiceMethod needed - handled by service
+    },
+
+    // Power Outage Layer (Cullman Electric)
+    cullmanOutages: {
+        id: 'cullman-outages',
+        title: 'Cullman Power Outages',
+        layerType: 'GeoJSONLayer',
+        dataUrl: null, // Data loaded dynamically via OutageService
+        renderer: {
+            type: 'simple',
+            symbol: {
+                type: 'simple-fill',
+                color: [255, 140, 0, 0.3], // Orange fill with transparency
+                outline: {
+                    color: [255, 140, 0, 0.9], // Orange outline
+                    width: 2
+                }
+            }
+        },
+        popupTemplate: {
+            title: 'Power Outage: {outage_id}',
+            content: [
+                {
+                    type: 'fields',
+                    fieldInfos: [
+                        { fieldName: 'customers_affected', label: 'Customers Affected' },
+                        { fieldName: 'status', label: 'Status' },
+                        { fieldName: 'cause', label: 'Cause' },
+                        { fieldName: 'start_time', label: 'Start Time' },
+                        { fieldName: 'estimated_restoration', label: 'Estimated Restoration' },
+                        { fieldName: 'crew_assigned', label: 'Crew Assigned' }
+                    ]
+                }
+            ]
+        },
+        visible: true, // Visible by default
+        zOrder: 2, // Below all markers and OSP data, above service boundaries
+        fields: [] // Will be inferred from GeoJSON
     }
 
     // Additional layers can be added here as needed

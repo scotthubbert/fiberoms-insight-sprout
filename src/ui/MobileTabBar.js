@@ -215,35 +215,41 @@ export class MobileTabBar {
         try {
             // Import subscriber data service dynamically to avoid circular dependencies
             const { subscriberDataService } = await import('../dataService.js');
-            
+
             const summary = await subscriberDataService.getSubscribersSummary();
-            
+
             const mobileOnlineCountEl = document.getElementById('mobile-online-count-display');
             const mobileOfflineCountEl = document.getElementById('mobile-offline-count-display');
+            const mobileElectricOfflineCountEl = document.getElementById('mobile-electric-offline-count-display');
             const mobileLastUpdatedEl = document.getElementById('mobile-last-updated-display');
-            
+
             if (mobileOnlineCountEl) {
                 mobileOnlineCountEl.textContent = summary.online?.toLocaleString() || '0';
             }
             if (mobileOfflineCountEl) {
                 mobileOfflineCountEl.textContent = summary.offline?.toLocaleString() || '0';
             }
+            if (mobileElectricOfflineCountEl) {
+                mobileElectricOfflineCountEl.textContent = summary.electricOffline?.toLocaleString() || '0';
+            }
             if (mobileLastUpdatedEl) {
                 const lastUpdated = summary.lastUpdated ? new Date(summary.lastUpdated).toLocaleString() : 'Never';
                 mobileLastUpdatedEl.textContent = `Last updated: ${lastUpdated}`;
             }
-            
+
             log.info('✅ Mobile subscriber statistics updated');
         } catch (error) {
             log.error('Failed to update mobile subscriber statistics:', error);
-            
+
             // Set error states
             const mobileOnlineCountEl = document.getElementById('mobile-online-count-display');
             const mobileOfflineCountEl = document.getElementById('mobile-offline-count-display');
+            const mobileElectricOfflineCountEl = document.getElementById('mobile-electric-offline-count-display');
             const mobileLastUpdatedEl = document.getElementById('mobile-last-updated-display');
-            
+
             if (mobileOnlineCountEl) mobileOnlineCountEl.textContent = '--';
             if (mobileOfflineCountEl) mobileOfflineCountEl.textContent = '--';
+            if (mobileElectricOfflineCountEl) mobileElectricOfflineCountEl.textContent = '--';
             if (mobileLastUpdatedEl) mobileLastUpdatedEl.textContent = 'Last updated: Error loading data';
         }
     }
