@@ -115,13 +115,6 @@ calcite-navigation.unified-header {
   background: var(--calcite-color-foreground-1);
 }
 
-calcite-navigation.unified-header calcite-navigation-logo {
-  --calcite-navigation-logo-padding: var(--calcite-spacing-sm);
-  line-height: 1.2;
-  font-weight: 600;
-  color: var(--calcite-color-brand);
-}
-
 /* Brand Logo Container */
 .brand-logo-container {
   display: flex;
@@ -142,7 +135,7 @@ calcite-navigation.unified-header calcite-navigation-logo {
   .brand-logo-container {
     padding: var(--calcite-spacing-xs) var(--calcite-spacing-sm);
   }
-  
+
   .brand-logo {
     height: 32px;
     max-width: 150px;
@@ -737,12 +730,6 @@ calcite-dialog.mobile-only [slot="content"] {
 @media (min-width: 1367px) {
   calcite-navigation.unified-header .navigation-actions {
     padding-right: var(--calcite-spacing-lg);
-  }
-
-  calcite-navigation.unified-header calcite-navigation-logo {
-    --calcite-navigation-logo-padding: var(--calcite-spacing-sm)
-      var(--calcite-spacing-lg);
-    font-size: 16px;
   }
 
   calcite-navigation.unified-header calcite-button {

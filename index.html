@@ -23,9 +23,11 @@
   <title>FiberOMS Insight</title>
 
   <!-- Progressive Web App Icons -->
-  <link rel="icon" type="image/png" href="https://www.sproutfiberinternet.com/wp-content/uploads/2024/03/cropped-Sprout-favicon-color-32x32.png">
-  <link rel="apple-touch-icon" href="https://www.sproutfiberinternet.com/wp-content/uploads/2024/03/cropped-Sprout-favicon-color-32x32.png">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png"
+    href="https://www.sproutfiberinternet.com/wp-content/uploads/2024/03/cropped-Sprout-favicon-color-32x32.png">
+  <link rel="apple-touch-icon"
+    href="https://www.sproutfiberinternet.com/wp-content/uploads/2024/03/cropped-Sprout-favicon-color-32x32.png">
+  <link rel="manifest" href="./manifest.json">
 
   <!-- Performance Optimization -->
   <!-- Preconnect to critical third-party domains -->
@@ -35,12 +37,12 @@
   <link rel="dns-prefetch" href="//basemaps.arcgis.com">
 
   <!-- ArcGIS Map SDK theme stylesheets - deferred loading for faster FCP -->
-  <link id="esri-theme-light" rel="preload" href="/assets/esri/themes/light/main.css" as="style"
+  <link id="esri-theme-light" rel="preload" href="./assets/esri/themes/light/main.css" as="style"
     onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
-    <link id="esri-theme-light" rel="stylesheet" href="/assets/esri/themes/light/main.css" />
+    <link id="esri-theme-light" rel="stylesheet" href="./assets/esri/themes/light/main.css" />
   </noscript>
-  <link id="esri-theme-dark" rel="stylesheet" href="/assets/esri/themes/dark/main.css" disabled />
+  <link id="esri-theme-dark" rel="stylesheet" href="./assets/esri/themes/dark/main.css" disabled />
 
   <!-- Main styles - deferred loading for non-critical styles -->
   <link rel="preload" href="/src/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -65,11 +67,7 @@
       <!-- Header Navigation -->
       <calcite-navigation slot="header" class="unified-header">
         <div slot="logo" class="brand-logo-container">
-          <img src="/logos/sprout-logo-header.png" 
-               alt="Sprout Fiber" 
-               class="brand-logo"
-               width="200"
-               height="78">
+          <img src="./logos/sprout-logo-header.png" alt="Sprout Fiber" class="brand-logo" width="200" height="78">
         </div>
         <div slot="content-center" class="navigation-content-center">
           <div class="search-section">

@@ -48,13 +48,17 @@ export class PWAInstaller {
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     // Only reload when we explicitly requested activation (via forceUpdate)
                     if (this._reloadOnControllerChange) {
-                        try { window.location.reload(); } catch {}
+                        try { window.location.reload(); } catch { }
                     } else {
                         log.info('Service worker controller changed (initial activation)');
                     }
                 });
 
-                const registration = await navigator.serviceWorker.register('/sw.js');
+                // Use relative path to work with base path configuration
+                const swPath = import.meta.env.PROD ? './sw.js' : '/sw.js';
+                const registration = await navigator.serviceWorker.register(swPath, {
+                    scope: import.meta.env.PROD ? './' : '/'
+                });
                 this.registration = registration;
 
                 // If there's already a waiting worker, notify immediately
@@ -140,7 +144,7 @@ export class PWAInstaller {
                     this.forceUpdate();
                     return;
                 }
-            } catch {}
+            } catch { }
             // Fallback: full reload
             notice.remove();
             if (noticeContainer.children.length === 0) {

@@ -57,7 +57,6 @@ async function initializeApp() {
     { PWAInstaller },
     { initVersionCheck },
     { setupCalciteIconFallback },
-    { setAssetPath },
     { Application },
     { initSentryIfEnabled, captureError: sentryCaptureError },
     { initAnalytics }
@@ -69,14 +68,12 @@ async function initializeApp() {
     import('./core/PWAInstaller.js'),
     import('./utils/versionCheck.js'),
     import('./utils/calciteIconFallback.js'),
-    import('@esri/calcite-components/dist/components'),
     import('./core/Application.js'),
     import('./services/SentryService.js'),
     import('./services/AnalyticsService.js'),
     // CalciteUI core (mobile + shared)
     import('@esri/calcite-components/dist/components/calcite-shell'),
     import('@esri/calcite-components/dist/components/calcite-navigation'),
-    import('@esri/calcite-components/dist/components/calcite-navigation-logo'),
     import('@esri/calcite-components/dist/components/calcite-button'),
     import('@esri/calcite-components/dist/components/calcite-icon'),
     import('@esri/calcite-components/dist/components/calcite-loader'),
@@ -85,7 +82,6 @@ async function initializeApp() {
     import('@esri/calcite-components/dist/components/calcite-input'),
     import('@esri/calcite-components/dist/components/calcite-switch'),
     import('@esri/calcite-components/dist/components/calcite-notice'),
-    import('@esri/calcite-components/dist/components/calcite-alert'),
     import('@esri/calcite-components/dist/components/calcite-list'),
     import('@esri/calcite-components/dist/components/calcite-list-item'),
     import('@esri/calcite-components/dist/components/calcite-autocomplete'),
@@ -138,7 +134,8 @@ async function initializeApp() {
     esriConfigModule.default.apiKey = arcgisApiKey;
   }
 
-  // Set Calcite assets path
+  // Set Calcite assets path - import setAssetPath separately to avoid pulling in entire library
+  const { setAssetPath } = await import('@esri/calcite-components/dist/components');
   const assetsPath = import.meta.env.PROD
     ? '/dev/insight/calcite/assets'
     : '/node_modules/@esri/calcite-components/dist/calcite/assets';
