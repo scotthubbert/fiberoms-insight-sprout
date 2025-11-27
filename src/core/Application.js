@@ -180,9 +180,19 @@ export class Application {
             const offlineConfig = getLayerConfig('offlineSubscribers');
             if (offlineConfig) {
                 const result = await this.createLayerFromConfig(offlineConfig);
-                if (result && result.layer) {
-                    this.services.mapController.addLayer(result.layer, offlineConfig.zOrder);
-                    loadingIndicator.showNetwork('offline-subscribers', 'Offline Subscribers');
+                if (result && result.success) {
+                    if (result.layer) {
+                        // Layer created successfully with data
+                        this.services.mapController.addLayer(result.layer, offlineConfig.zOrder);
+                        loadingIndicator.showNetwork('offline-subscribers', 'Offline Subscribers');
+                    } else if (result.isEmpty) {
+                        // Empty dataset - this is expected and not an error
+                        log.info('📭 No offline subscribers found (empty dataset - layer not created)');
+                        loadingIndicator.showNetwork('offline-subscribers', 'Offline Subscribers');
+                    } else {
+                        // Actual failure
+                        loadingIndicator.showError('offline-subscribers', 'Offline Subscribers', 'Failed to create layer');
+                    }
                 } else {
                     loadingIndicator.showError('offline-subscribers', 'Offline Subscribers', 'Failed to create layer');
                 }
@@ -193,9 +203,19 @@ export class Application {
             const electricOfflineConfig = getLayerConfig('electricOfflineSubscribers');
             if (electricOfflineConfig) {
                 const result = await this.createLayerFromConfig(electricOfflineConfig);
-                if (result && result.layer) {
-                    this.services.mapController.addLayer(result.layer, electricOfflineConfig.zOrder);
-                    loadingIndicator.showNetwork('electric-offline-subscribers', 'Electric Offline Subscribers');
+                if (result && result.success) {
+                    if (result.layer) {
+                        // Layer created successfully with data
+                        this.services.mapController.addLayer(result.layer, electricOfflineConfig.zOrder);
+                        loadingIndicator.showNetwork('electric-offline-subscribers', 'Electric Offline Subscribers');
+                    } else if (result.isEmpty) {
+                        // Empty dataset - this is expected and not an error
+                        log.info('📭 No electric offline subscribers found (empty dataset - layer not created)');
+                        loadingIndicator.showNetwork('electric-offline-subscribers', 'Electric Offline Subscribers');
+                    } else {
+                        // Actual failure
+                        loadingIndicator.showError('electric-offline-subscribers', 'Electric Offline Subscribers', 'Failed to create layer');
+                    }
                 } else {
                     loadingIndicator.showError('electric-offline-subscribers', 'Electric Offline Subscribers', 'Failed to create layer');
                 }
@@ -358,6 +378,11 @@ export class Application {
                 log.info(`📦 Batch ${Math.floor(i / batchSize) + 1} complete: ${results.filter(r => r.status === 'fulfilled').length}/${batch.length} layers loaded`);
             }
             log.info('🔌 Fiber plant layers initialization complete');
+            
+            // Initialize fiber legend after layers are loaded
+            setTimeout(() => {
+                this.initializeFiberLegend();
+            }, 500);
 
             // Initialize hover highlight service after fiber layers are loaded
             if (this.services.mapController.view) {
@@ -1202,6 +1227,11 @@ export class Application {
                 // The "Electric Offline" toggle controls the filter independently
             }
             this.syncToggleStates(layerId, checked);
+            
+            // Show/hide fiber legend when Main Line Fiber is toggled
+            if (layerId === 'main-line-fiber') {
+                this.toggleFiberLegend(checked);
+            }
             const layerDisplayName = this.getLayerDisplayName(layerId);
             if (layerDisplayName) await this.manageTruckLayerState(layerDisplayName, checked);
         }
@@ -1642,6 +1672,92 @@ export class Application {
         if (loadingIndicator) loadingIndicator.destroy();
         this._cleanupHandlers.forEach(handler => { try { handler(); } catch (error) { log.error('Cleanup handler error:', error); } });
         this.services = {}; this._cleanupHandlers = []; this.geotabFeed = null; this.activeTruckLayers.clear(); this.geotabReady = false;
+    }
+
+    /**
+     * Initialize the fiber cable count legend
+     */
+    initializeFiberLegend() {
+        const fiberCounts = [1, 4, 6, 8, 12, 24, 48, 72, 96, 144];
+        const colors = {
+            1: [32, 178, 170, 0.8],    // Light Sea Green (#20B2AA)
+            4: [153, 50, 204, 0.8],    // Purple (#9932CC)
+            6: [255, 140, 0, 0.8],     // Dark Orange (#FF8C00)
+            8: [70, 130, 180, 0.8],    // Steel Blue (#4682B4)
+            12: [0, 255, 0, 0.8],      // Green (#00ff00)
+            24: [255, 255, 0, 0.8],    // Yellow (#ffff00)
+            48: [255, 165, 0, 0.8],    // Orange (#ffa500)
+            72: [0, 191, 255, 0.8],    // Deep Sky Blue (#00BFFF)
+            96: [139, 69, 19, 0.8],    // Brown (#8b4513)
+            144: [255, 0, 0, 0.8]      // Red (#ff0000)
+        };
+        const widths = {
+            1: 2, 4: 2, 6: 2, 8: 2, 12: 2,
+            24: 3, 48: 4, 72: 4, 96: 5, 144: 6
+        };
+
+        const legendContainer = document.getElementById('fiber-legend-items');
+
+        if (!legendContainer) {
+            log.warn('Fiber legend container not found');
+            return;
+        }
+
+        // Clear existing items
+        legendContainer.innerHTML = '';
+
+        // Create legend items for each fiber count
+        // Using createElement and textContent for security (no innerHTML XSS risk)
+        fiberCounts.forEach(count => {
+            const color = colors[count];
+            const width = widths[count];
+            const label = count === 1 ? '1 Fiber' : `${count} Fibers`;
+            const rgbColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+
+            // Create legend item using semantic structure
+            const legendItem = document.createElement('div');
+            legendItem.className = 'fiber-legend-item';
+            legendItem.setAttribute('role', 'listitem');
+            legendItem.setAttribute('aria-label', `Cable count: ${label}`);
+
+            // Create line sample element
+            const lineSample = document.createElement('div');
+            lineSample.className = 'fiber-legend-line';
+            lineSample.setAttribute('role', 'img');
+            lineSample.setAttribute('aria-label', `${label} cable line`);
+            // Use CSS custom properties instead of inline styles
+            lineSample.style.setProperty('--line-width', `${width * 8}px`);
+            lineSample.style.setProperty('--line-color', rgbColor);
+            lineSample.style.width = 'var(--line-width)';
+            lineSample.style.backgroundColor = 'var(--line-color)';
+
+            // Create label element
+            const labelElement = document.createElement('span');
+            labelElement.className = 'fiber-legend-label';
+            labelElement.textContent = label; // Use textContent instead of innerHTML
+
+            // Assemble the item
+            legendItem.appendChild(lineSample);
+            legendItem.appendChild(labelElement);
+            legendContainer.appendChild(legendItem);
+        });
+
+        // Check initial state of Main Line Fiber layer
+        const mainLineFiberLayer = this.services.layerManager?.getLayer('main-line-fiber');
+        if (mainLineFiberLayer) {
+            this.toggleFiberLegend(mainLineFiberLayer.visible);
+        }
+    }
+
+    /**
+     * Toggle fiber legend visibility based on Main Line Fiber layer state
+     * @param {boolean} visible - Whether the legend should be visible
+     */
+    toggleFiberLegend(visible) {
+        const legendContainer = document.getElementById('fiber-legend-container');
+        if (legendContainer) {
+            legendContainer.hidden = !visible;
+        }
     }
 }
 

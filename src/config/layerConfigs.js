@@ -1335,7 +1335,7 @@ export const layerConfigs = {
         featureReduction: createOfflineClusterConfig(),
         fields: subscriberFields,
         visible: true,
-        zOrder: 126, // Above node sites (125) so cluster labels are visible
+        zOrder: 128, // Highest priority - offline markers/clusters render above online
         dataServiceMethod: () => subscriberDataService.getOfflineSubscribers()
     },
 
@@ -1348,7 +1348,7 @@ export const layerConfigs = {
         featureReduction: createOnlineClusterConfig(), // Enable clustering for performance
         fields: subscriberFields,
         visible: false,
-        zOrder: 127, // Above node sites (125) so cluster labels are visible
+        zOrder: 126, // Lowest priority - online markers/clusters render below offline
         dataServiceMethod: () => subscriberDataService.getOnlineSubscribers()
     },
 
@@ -1361,7 +1361,7 @@ export const layerConfigs = {
         featureReduction: createElectricOfflineClusterConfig(), // Yellow cluster configuration
         fields: subscriberFields,
         visible: true, // Visible by default
-        zOrder: 128, // Above node sites (125) so cluster labels are visible
+        zOrder: 127, // Second highest - electric offline markers/clusters render above online, below regular offline
         dataServiceMethod: () => subscriberDataService.getElectricOfflineSubscribers()
     },
 

@@ -2986,6 +2986,48 @@ power-outage-stats .outages-list::-webkit-scrollbar-thumb:hover {
   color: var(--calcite-color-status-danger);
 }
 
+/* Fiber Cable Count Legend */
+.fiber-legend-container {
+  margin-top: var(--calcite-spacing-md);
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calcite-spacing-xs);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fiber-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--calcite-spacing-sm);
+  padding: var(--calcite-spacing-xs) 0;
+  min-height: 24px; /* Ensure consistent height for accessibility */
+}
+
+.fiber-legend-line {
+  flex-shrink: 0;
+  height: 3px;
+  border-radius: 2px;
+  position: relative;
+  /* Width and color set via CSS custom properties from JS */
+  transition: opacity 0.2s ease;
+}
+
+.fiber-legend-item:hover .fiber-legend-line {
+  opacity: 0.8;
+}
+
+.fiber-legend-label {
+  font-size: var(--calcite-font-size--1);
+  color: var(--calcite-color-text-1);
+  font-weight: var(--calcite-font-weight-medium);
+  line-height: var(--calcite-line-height-normal);
+}
+
 .health-status-card {
   --calcite-card-background-color: var(--calcite-color-foreground-2);
   --calcite-card-border-color: var(--calcite-color-border-2);

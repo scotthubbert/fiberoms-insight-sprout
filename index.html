@@ -234,6 +234,14 @@
                   <calcite-switch slot="content-end"></calcite-switch>
                 </calcite-list-item>
 
+                <!-- Cable Count Legend -->
+                <div id="fiber-legend-container" class="fiber-legend-container" hidden role="region" aria-label="Fiber cable count legend">
+                  <calcite-block heading="Cable Counts" collapsible expanded>
+                    <calcite-icon slot="icon" icon="legend"></calcite-icon>
+                    <div id="fiber-legend-items" class="legend-items" role="list" aria-label="Cable count legend items"></div>
+                  </calcite-block>
+                </div>
+
                 <!-- Main Line Old removed as it's not relevant for this ISP -->
 
                 <calcite-list-item label="MST Terminals" description="Multi-service terminals">
