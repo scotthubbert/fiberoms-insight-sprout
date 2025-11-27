@@ -376,6 +376,15 @@ const createSubscriberPopup = (status) => ({
             creator: function (feature) {
                 const attributes = feature.graphic.attributes;
 
+                // Get MST value from multiple possible field names
+                const mstValue = attributes.mst || attributes.MST || attributes.MapNumber || attributes.mapnumber || attributes.mst_terminal || 'N/A';
+                
+                // Create attributes object with normalized MST field
+                const normalizedAttributes = {
+                    ...attributes,
+                    mst: mstValue // Ensure 'mst' field exists for the popup
+                };
+
                 // Field configuration for subscriber popup
                 const fieldsConfig = [
                     { fieldName: 'account', label: 'Account' },
@@ -384,6 +393,7 @@ const createSubscriberPopup = (status) => ({
                     { fieldName: 'service_type', label: 'Service Type' },
                     { fieldName: 'plan_name', label: 'Plan' },
                     { fieldName: 'ta5k', label: 'TA5K' },
+                    { fieldName: 'mst', label: 'MST' },
                     { fieldName: 'remote_id', label: 'Remote ID' },
                     { fieldName: 'ont', label: 'ONT' },
                     { fieldName: 'has_electric', label: 'Electric Available' },
@@ -394,7 +404,7 @@ const createSubscriberPopup = (status) => ({
 
                 // Use clipboard utility if available
                 if (window.clipboardUtils && window.clipboardUtils.createPopupWithCopyButtons) {
-                    return window.clipboardUtils.createPopupWithCopyButtons(attributes, fieldsConfig);
+                    return window.clipboardUtils.createPopupWithCopyButtons(normalizedAttributes, fieldsConfig);
                 }
 
                 // Fallback to simple content if clipboard utils not available
@@ -407,6 +417,7 @@ const createSubscriberPopup = (status) => ({
                         <div><strong>Service Type:</strong> ${attributes.service_type || 'N/A'}</div>
                         <div><strong>Plan:</strong> ${attributes.plan_name || 'N/A'}</div>
                         <div><strong>TA5K:</strong> ${attributes.ta5k || 'N/A'}</div>
+                        <div><strong>MST:</strong> ${mstValue}</div>
                         <div><strong>Remote ID:</strong> ${attributes.remote_id || 'N/A'}</div>
                         <div><strong>ONT:</strong> ${attributes.ont || 'N/A'}</div>
                         <div><strong>Electric Available:</strong> ${attributes.has_electric ? 'Yes' : 'No'}</div>
@@ -455,6 +466,11 @@ const subscriberFields = [
     { name: 'plan_name', type: 'string', alias: 'Service Plan' },
     { name: 'service_type', type: 'string', alias: 'Service Type' },
     { name: 'ta5k', type: 'string', alias: 'TA5K' },
+    { name: 'mst', type: 'string', alias: 'MST' },
+    { name: 'MST', type: 'string', alias: 'MST' },
+    { name: 'MapNumber', type: 'string', alias: 'MST' },
+    { name: 'mapnumber', type: 'string', alias: 'MST' },
+    { name: 'mst_terminal', type: 'string', alias: 'MST Terminal' },
     { name: 'remote_id', type: 'string', alias: 'Remote ID' },
     { name: 'has_electric', type: 'string', alias: 'Electric Available' },
     { name: 'electricOut', type: 'string', alias: 'Electric Out' },

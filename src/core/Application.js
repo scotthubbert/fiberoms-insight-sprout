@@ -1005,9 +1005,25 @@ export class Application {
             const offlineCountEl = document.getElementById('offline-count-display');
             const electricOfflineCountEl = document.getElementById('electric-offline-count-display');
             const lastUpdatedEl = document.getElementById('last-updated-display');
+            
+            // Mobile count elements
+            const mobileOnlineCountEl = document.getElementById('mobile-online-count-display');
+            const mobileOfflineCountEl = document.getElementById('mobile-offline-count-display');
+            const mobileElectricOfflineCountEl = document.getElementById('mobile-electric-offline-count-display');
+            
+            const regularOffline = summary.offline || 0;
+            const electricOffline = summary.electricOffline || 0;
+            const totalOffline = regularOffline + electricOffline;
+            
             if (onlineCountEl) onlineCountEl.textContent = summary.online?.toLocaleString() || '0';
-            if (offlineCountEl) offlineCountEl.textContent = summary.offline?.toLocaleString() || '0';
-            if (electricOfflineCountEl) electricOfflineCountEl.textContent = summary.electricOffline?.toLocaleString() || '0';
+            if (offlineCountEl) offlineCountEl.textContent = totalOffline.toLocaleString();
+            if (electricOfflineCountEl) electricOfflineCountEl.textContent = electricOffline.toLocaleString();
+            
+            // Update mobile counts
+            if (mobileOnlineCountEl) mobileOnlineCountEl.textContent = summary.online?.toLocaleString() || '0';
+            if (mobileOfflineCountEl) mobileOfflineCountEl.textContent = totalOffline.toLocaleString();
+            if (mobileElectricOfflineCountEl) mobileElectricOfflineCountEl.textContent = electricOffline.toLocaleString();
+            
             if (lastUpdatedEl) {
                 const lastUpdated = summary.lastUpdated ? new Date(summary.lastUpdated).toLocaleString() : 'Never';
                 lastUpdatedEl.textContent = `Last updated: ${lastUpdated}`;
@@ -1019,9 +1035,16 @@ export class Application {
             const offlineCountEl = document.getElementById('offline-count-display');
             const electricOfflineCountEl = document.getElementById('electric-offline-count-display');
             const lastUpdatedEl = document.getElementById('last-updated-display');
+            const mobileOnlineCountEl = document.getElementById('mobile-online-count-display');
+            const mobileOfflineCountEl = document.getElementById('mobile-offline-count-display');
+            const mobileElectricOfflineCountEl = document.getElementById('mobile-electric-offline-count-display');
+            
             if (onlineCountEl) onlineCountEl.textContent = '--';
             if (offlineCountEl) offlineCountEl.textContent = '--';
             if (electricOfflineCountEl) electricOfflineCountEl.textContent = '--';
+            if (mobileOnlineCountEl) mobileOnlineCountEl.textContent = '--';
+            if (mobileOfflineCountEl) mobileOfflineCountEl.textContent = '--';
+            if (mobileElectricOfflineCountEl) mobileElectricOfflineCountEl.textContent = '--';
             if (lastUpdatedEl) lastUpdatedEl.textContent = 'Last updated: Error loading data';
         }
     }

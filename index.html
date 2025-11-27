@@ -124,29 +124,35 @@
               <calcite-icon slot="icon" icon="users"></calcite-icon>
 
               <div class="network-cards">
-                <calcite-card class="status-card status-card-online">
-                  <div slot="subtitle" class="status-online">
-                    <calcite-icon icon="circle" scale="s"></calcite-icon>
-                    <span>Online</span>
+                <!-- Top row: Offline (full width) -->
+                <calcite-card class="status-card status-card-offline status-card-full-width">
+                  <div class="status-card-offline-content">
+                    <div slot="subtitle" class="status-offline">
+                      <calcite-icon icon="circle" scale="s"></calcite-icon>
+                      <span>Offline</span>
+                    </div>
+                    <div slot="title" id="offline-count-display" class="status-card-offline-number">--</div>
                   </div>
-                  <div slot="title" id="online-count-display">--</div>
                 </calcite-card>
 
-                <calcite-card class="status-card status-card-offline">
-                  <div slot="subtitle" class="status-offline">
-                    <calcite-icon icon="circle" scale="s"></calcite-icon>
-                    <span>Offline</span>
-                  </div>
-                  <div slot="title" id="offline-count-display">--</div>
-                </calcite-card>
+                <!-- Bottom row: Online and Electric Offline (split) -->
+                <div class="network-cards-row">
+                  <calcite-card class="status-card status-card-online">
+                    <div slot="subtitle" class="status-online">
+                      <calcite-icon icon="circle" scale="s"></calcite-icon>
+                      <span>Online</span>
+                    </div>
+                    <div slot="title" id="online-count-display">--</div>
+                  </calcite-card>
 
-                <calcite-card class="status-card status-card-electric-offline">
-                  <div slot="subtitle" class="status-electric-offline">
-                    <calcite-icon icon="circle" scale="s"></calcite-icon>
-                    <span>Electric Offline</span>
-                  </div>
-                  <div slot="title" id="electric-offline-count-display">--</div>
-                </calcite-card>
+                  <calcite-card class="status-card status-card-electric-offline">
+                    <div slot="subtitle" class="status-electric-offline">
+                      <calcite-icon icon="circle" scale="s"></calcite-icon>
+                      <span>Electric Offline</span>
+                    </div>
+                    <div slot="title" id="electric-offline-count-display">--</div>
+                  </calcite-card>
+                </div>
               </div>
 
               <!-- Last Updated Info -->
@@ -520,28 +526,34 @@
           <calcite-icon slot="icon" icon="users"></calcite-icon>
 
           <div class="mobile-network-status-cards">
-            <div class="mobile-status-card mobile-status-card-online">
-              <div class="mobile-status-label">
-                <calcite-icon icon="circle" scale="s"></calcite-icon>
-                <span>Online</span>
+            <!-- Top row: Offline (full width) -->
+            <div class="mobile-status-card mobile-status-card-offline mobile-status-card-full-width">
+              <div class="mobile-status-card-offline-content">
+                <div class="mobile-status-label">
+                  <calcite-icon icon="circle" scale="s"></calcite-icon>
+                  <span>Offline</span>
+                </div>
+                <div class="mobile-status-count mobile-status-card-offline-number" id="mobile-offline-count-display">--</div>
               </div>
-              <div class="mobile-status-count" id="mobile-online-count-display">--</div>
             </div>
 
-            <div class="mobile-status-card mobile-status-card-offline">
-              <div class="mobile-status-label">
-                <calcite-icon icon="circle" scale="s"></calcite-icon>
-                <span>Offline</span>
+            <!-- Bottom row: Online and Electric Offline (split) -->
+            <div class="mobile-network-cards-row">
+              <div class="mobile-status-card mobile-status-card-online">
+                <div class="mobile-status-label">
+                  <calcite-icon icon="circle" scale="s"></calcite-icon>
+                  <span>Online</span>
+                </div>
+                <div class="mobile-status-count" id="mobile-online-count-display">--</div>
               </div>
-              <div class="mobile-status-count" id="mobile-offline-count-display">--</div>
-            </div>
 
-            <div class="mobile-status-card mobile-status-card-electric-offline">
-              <div class="mobile-status-label">
-                <calcite-icon icon="circle" scale="s"></calcite-icon>
-                <span>Electric Offline</span>
+              <div class="mobile-status-card mobile-status-card-electric-offline">
+                <div class="mobile-status-label">
+                  <calcite-icon icon="circle" scale="s"></calcite-icon>
+                  <span>Electric Offline</span>
+                </div>
+                <div class="mobile-status-count" id="mobile-electric-offline-count-display">--</div>
               </div>
-              <div class="mobile-status-count" id="mobile-electric-offline-count-display">--</div>
             </div>
           </div>
 

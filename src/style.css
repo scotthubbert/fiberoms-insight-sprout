@@ -1468,8 +1468,15 @@ arcgis-distance-measurement-2d {
 /* Network Status Cards - Simplified Calcite Design */
 .network-cards {
   display: flex;
+  flex-direction: column;
   gap: var(--calcite-spacing-md);
   margin-bottom: var(--calcite-spacing-md);
+}
+
+/* Bottom row container for Online and Electric Offline */
+.network-cards-row {
+  display: flex;
+  gap: var(--calcite-spacing-md);
 }
 
 .status-card {
@@ -1477,6 +1484,12 @@ arcgis-distance-measurement-2d {
   --calcite-card-padding: var(--calcite-spacing-md);
   --calcite-card-shadow: none;
   border: 1px solid var(--calcite-color-border-3);
+}
+
+/* Offline card takes full width on top row */
+.status-card-full-width {
+  flex: 1 1 100%;
+  width: 100%;
 }
 
 .status-card:hover {
@@ -1491,6 +1504,12 @@ arcgis-distance-measurement-2d {
   font-weight: var(--calcite-font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--calcite-letter-spacing-wide);
+}
+
+/* Larger label for offline card */
+.status-card-offline [slot="subtitle"] {
+  font-size: var(--calcite-font-size-0);
+  font-weight: var(--calcite-font-weight-semibold);
 }
 
 .status-card [slot="title"] {
@@ -1517,6 +1536,23 @@ arcgis-distance-measurement-2d {
 .status-card-offline [slot="title"] {
   color: var(--calcite-color-status-danger);
   font-weight: var(--calcite-font-weight-bold);
+}
+
+/* Enhanced Offline card layout for full-width display */
+.status-card-offline-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--calcite-spacing-lg);
+  width: 100%;
+}
+
+.status-card-offline-number {
+  font-size: var(--calcite-font-size-6) !important;
+  font-weight: var(--calcite-font-weight-bold) !important;
+  color: var(--calcite-color-status-danger) !important;
+  line-height: 1;
+  margin-left: auto;
 }
 
 .status-card-electric-offline [slot="subtitle"] {
@@ -1798,8 +1834,15 @@ calcite-list-item[style*="cursor: pointer"]:active {
 /* Mobile status cards - simpler structure for mobile dialogs */
 .mobile-network-status-cards {
   display: flex;
+  flex-direction: column;
   gap: var(--calcite-spacing-md);
   margin-bottom: var(--calcite-spacing-md);
+}
+
+/* Bottom row container for Online and Electric Offline on mobile */
+.mobile-network-cards-row {
+  display: flex;
+  gap: var(--calcite-spacing-md);
 }
 
 .mobile-status-card {
@@ -1813,6 +1856,12 @@ calcite-list-item[style*="cursor: pointer"]:active {
   gap: var(--calcite-spacing-sm);
 }
 
+/* Offline card takes full width on top row (mobile) */
+.mobile-status-card-full-width {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
 .mobile-status-label {
   display: flex;
   align-items: center;
@@ -1821,6 +1870,12 @@ calcite-list-item[style*="cursor: pointer"]:active {
   font-weight: var(--calcite-font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--calcite-letter-spacing-wide);
+}
+
+/* Larger label for mobile offline card */
+.mobile-status-card-offline .mobile-status-label {
+  font-size: var(--calcite-font-size-0);
+  font-weight: var(--calcite-font-weight-semibold);
 }
 
 .mobile-status-card-online .mobile-status-label {
@@ -1852,6 +1907,23 @@ calcite-list-item[style*="cursor: pointer"]:active {
 
 .mobile-status-card-electric-offline .mobile-status-count {
   color: #ffc107; /* Yellow for electric offline */
+}
+
+/* Enhanced Mobile Offline card layout for full-width display */
+.mobile-status-card-offline-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--calcite-spacing-md);
+  width: 100%;
+}
+
+.mobile-status-card-offline-number {
+  font-size: var(--calcite-font-size-5) !important;
+  font-weight: var(--calcite-font-weight-bold) !important;
+  color: var(--calcite-color-status-danger) !important;
+  line-height: 1;
+  margin-left: auto;
 }
 
 /* Mobile responsive adjustments */
