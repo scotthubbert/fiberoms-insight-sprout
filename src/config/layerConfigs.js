@@ -358,7 +358,7 @@ const createSproutHutLabeling = () => [
         labelExpressionInfo: {
             expression: '$feature.name'
         },
-        deconflictionStrategy: 'none',
+        deconflictionStrategy: 'dynamic', // Enable collision detection to avoid overlapping with clusters
         repeatLabel: false,
         removeDuplicateLabels: false,
         maxScale: 0,
@@ -1319,7 +1319,7 @@ export const layerConfigs = {
         featureReduction: createOfflineClusterConfig(),
         fields: subscriberFields,
         visible: true,
-        zOrder: 100,
+        zOrder: 126, // Above node sites (125) so cluster labels are visible
         dataServiceMethod: () => subscriberDataService.getOfflineSubscribers()
     },
 
@@ -1332,7 +1332,7 @@ export const layerConfigs = {
         featureReduction: createOnlineClusterConfig(), // Enable clustering for performance
         fields: subscriberFields,
         visible: false,
-        zOrder: 10,  // Changed from 0 to ensure it's above basemap
+        zOrder: 127, // Above node sites (125) so cluster labels are visible
         dataServiceMethod: () => subscriberDataService.getOnlineSubscribers()
     },
 
@@ -1345,7 +1345,7 @@ export const layerConfigs = {
         featureReduction: createElectricOfflineClusterConfig(), // Yellow cluster configuration
         fields: subscriberFields,
         visible: true, // Visible by default
-        zOrder: 101, // Just above regular offline subscribers
+        zOrder: 128, // Above node sites (125) so cluster labels are visible
         dataServiceMethod: () => subscriberDataService.getElectricOfflineSubscribers()
     },
 
@@ -1359,7 +1359,7 @@ export const layerConfigs = {
         fields: createSproutHutFields(),
         labelingInfo: createSproutHutLabeling(),
         visible: true, // Visible by default as they are major landmarks
-        zOrder: 150, // Above all subscriber clusters to prevent UI conflicts
+        zOrder: 100, // Well below subscriber clusters (126-128) so cluster markers and labels render above
         dataServiceMethod: () => infrastructureService.getSproutHuts()
     },
 

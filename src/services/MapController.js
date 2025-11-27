@@ -664,17 +664,17 @@ export class MapController {
             'rainviewer-radar': -10,
             'county-boundaries': 1,
             'fsa-boundaries': 5, // Below all point layers
-            'online-subscribers': 10,
+            'online-subscribers': 127, // Above node sites (125) so cluster markers are visible
             'main-line-old': 28, // Below current main line
             'main-line-fiber': 30,
             'mst-fiber': 35,
             'closures': 40,
             'mst-terminals': 50,
             'splitters': 60,
-            'offline-subscribers': 100,
-            'electric-offline-subscribers': 101, // Just above regular offline subscribers
+            'offline-subscribers': 126, // Above node sites (100) so cluster markers and labels are visible
+            'electric-offline-subscribers': 128, // Above node sites (100) so cluster markers and labels are visible
             'vehicles': 130,
-            'sprout-huts': 150, // Above all subscriber clusters to prevent UI conflicts
+            'sprout-huts': 100, // Node sites - well below subscriber clusters so cluster labels render above
             'weather-radar': 140
         };
         return zOrderMap[layerId] || 0;
