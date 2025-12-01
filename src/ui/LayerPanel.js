@@ -97,7 +97,7 @@ export class LayerPanel {
         if (savedState === 'true') {
             this.isPanelCollapsed = true;
             this.shellPanel.collapsed = true;
-            this.panelCollapseToggle.icon = 'chevron-right';
+            this.panelCollapseToggle.icon = 'chevrons-right';
             this.panelCollapseToggle.text = 'Expand panel';
             this.panelCollapseToggle.title = 'Expand panel';
         }
@@ -118,11 +118,11 @@ export class LayerPanel {
 
         // Update the button icon and text
         if (this.isPanelCollapsed) {
-            this.panelCollapseToggle.icon = 'chevron-right';
+            this.panelCollapseToggle.icon = 'chevrons-right';
             this.panelCollapseToggle.text = 'Expand panel';
             this.panelCollapseToggle.title = 'Expand panel';
         } else {
-            this.panelCollapseToggle.icon = 'chevron-left';
+            this.panelCollapseToggle.icon = 'chevrons-left';
             this.panelCollapseToggle.text = 'Collapse panel';
             this.panelCollapseToggle.title = 'Collapse panel';
         }
@@ -161,7 +161,7 @@ export class LayerPanel {
                     if (this.isPanelCollapsed) {
                         this.isPanelCollapsed = false;
                         this.shellPanel.collapsed = false;
-                        this.panelCollapseToggle.icon = 'chevron-left';
+                        this.panelCollapseToggle.icon = 'chevrons-left';
                         this.panelCollapseToggle.text = 'Collapse panel';
                         this.panelCollapseToggle.title = 'Collapse panel';
                         localStorage.setItem('panel-collapsed', 'false');

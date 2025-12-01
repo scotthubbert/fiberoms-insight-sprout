@@ -1031,6 +1031,9 @@ export class Application {
             const electricOfflineCountEl = document.getElementById('electric-offline-count-display');
             const lastUpdatedEl = document.getElementById('last-updated-display');
             
+            // Header count elements
+            const headerElectricOfflineCountEl = document.getElementById('electric-offline-count');
+            
             // Mobile count elements
             const mobileOnlineCountEl = document.getElementById('mobile-online-count-display');
             const mobileOfflineCountEl = document.getElementById('mobile-offline-count-display');
@@ -1043,6 +1046,9 @@ export class Application {
             if (onlineCountEl) onlineCountEl.textContent = summary.online?.toLocaleString() || '0';
             if (offlineCountEl) offlineCountEl.textContent = totalOffline.toLocaleString();
             if (electricOfflineCountEl) electricOfflineCountEl.textContent = electricOffline.toLocaleString();
+            
+            // Update header electric offline count chip
+            if (headerElectricOfflineCountEl) headerElectricOfflineCountEl.textContent = electricOffline.toLocaleString();
             
             // Update mobile counts
             if (mobileOnlineCountEl) mobileOnlineCountEl.textContent = summary.online?.toLocaleString() || '0';
@@ -1060,6 +1066,7 @@ export class Application {
             const offlineCountEl = document.getElementById('offline-count-display');
             const electricOfflineCountEl = document.getElementById('electric-offline-count-display');
             const lastUpdatedEl = document.getElementById('last-updated-display');
+            const headerElectricOfflineCountEl = document.getElementById('electric-offline-count');
             const mobileOnlineCountEl = document.getElementById('mobile-online-count-display');
             const mobileOfflineCountEl = document.getElementById('mobile-offline-count-display');
             const mobileElectricOfflineCountEl = document.getElementById('mobile-electric-offline-count-display');
@@ -1067,6 +1074,7 @@ export class Application {
             if (onlineCountEl) onlineCountEl.textContent = '--';
             if (offlineCountEl) offlineCountEl.textContent = '--';
             if (electricOfflineCountEl) electricOfflineCountEl.textContent = '--';
+            if (headerElectricOfflineCountEl) headerElectricOfflineCountEl.textContent = '--';
             if (mobileOnlineCountEl) mobileOnlineCountEl.textContent = '--';
             if (mobileOfflineCountEl) mobileOfflineCountEl.textContent = '--';
             if (mobileElectricOfflineCountEl) mobileElectricOfflineCountEl.textContent = '--';
