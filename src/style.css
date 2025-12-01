@@ -3353,3 +3353,46 @@ calcite-icon.status-icon-business::part(icon) {
 .icon-diamond-gold {
   color: rgb(255, 165, 0);
 }
+
+/* Panel Collapse Functionality */
+/* Smooth transition for panel collapse/expand */
+calcite-shell-panel {
+  transition: width var(--calcite-animation-timing) ease-in-out;
+}
+
+/* Style the panel collapse toggle button */
+#panel-collapse-toggle {
+  opacity: 0.8;
+  transition: opacity var(--calcite-animation-timing) ease-in-out;
+}
+
+#panel-collapse-toggle:hover {
+  opacity: 1;
+}
+
+/* When panel is collapsed, ensure the action bar is still accessible */
+calcite-shell-panel[collapsed] calcite-action-bar {
+  display: flex;
+}
+
+/* Highlight action bar icons when panel is collapsed to show they're clickable */
+calcite-shell-panel[collapsed] calcite-action-bar calcite-action {
+  opacity: 1;
+  transition: opacity var(--calcite-animation-timing) ease-in-out,
+              transform var(--calcite-animation-timing) ease-in-out;
+}
+
+calcite-shell-panel[collapsed] calcite-action-bar calcite-action:hover {
+  transform: scale(1.1);
+  background-color: var(--calcite-color-foreground-2);
+}
+
+/* Smooth icon transition for collapse button */
+#panel-collapse-toggle calcite-icon {
+  transition: transform var(--calcite-animation-timing) ease-in-out;
+}
+
+/* Add subtle animation when panel state changes */
+calcite-shell-panel[collapsed] {
+  box-shadow: var(--calcite-shadow-1);
+}

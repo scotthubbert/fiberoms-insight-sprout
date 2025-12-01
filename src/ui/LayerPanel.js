@@ -11,6 +11,7 @@ export class LayerPanel {
     constructor() {
         this.shellPanel = document.getElementById('shell-panel-start');
         this.panel = document.getElementById('panel-content');
+        this.panelCollapseToggle = document.getElementById('panel-collapse-toggle');
 
         // Get all actions
         this.actions = this.shellPanel?.querySelectorAll('calcite-action');
@@ -30,6 +31,7 @@ export class LayerPanel {
         this.vehiclePopupPending = false;
         this.lastFocusedVehicle = null; // { point, name }
         this.vehiclePopupWatcherSetup = false;
+        this.isPanelCollapsed = false;
 
         this.init();
     }
@@ -41,6 +43,7 @@ export class LayerPanel {
 
         this.setupActionBarNavigation();
         this.setupCacheManagement();
+        this.setupPanelCollapse();
 
         // Show layers content by default
         this.showContent('layers');
@@ -83,6 +86,56 @@ export class LayerPanel {
         }
     }
 
+    setupPanelCollapse() {
+        if (!this.panelCollapseToggle || !this.shellPanel) {
+            log.warn('Panel collapse toggle or shell panel not found');
+            return;
+        }
+
+        // Restore collapsed state from localStorage
+        const savedState = localStorage.getItem('panel-collapsed');
+        if (savedState === 'true') {
+            this.isPanelCollapsed = true;
+            this.shellPanel.collapsed = true;
+            this.panelCollapseToggle.icon = 'chevron-right';
+            this.panelCollapseToggle.text = 'Expand panel';
+            this.panelCollapseToggle.title = 'Expand panel';
+        }
+
+        // Set up click handler for collapse toggle (in panel header)
+        this.panelCollapseToggle.addEventListener('click', () => {
+            this.togglePanelCollapse();
+        });
+
+        log.info('Panel collapse functionality initialized');
+    }
+
+    togglePanelCollapse() {
+        this.isPanelCollapsed = !this.isPanelCollapsed;
+        
+        // Toggle the collapsed attribute on the shell panel
+        this.shellPanel.collapsed = this.isPanelCollapsed;
+
+        // Update the button icon and text
+        if (this.isPanelCollapsed) {
+            this.panelCollapseToggle.icon = 'chevron-right';
+            this.panelCollapseToggle.text = 'Expand panel';
+            this.panelCollapseToggle.title = 'Expand panel';
+        } else {
+            this.panelCollapseToggle.icon = 'chevron-left';
+            this.panelCollapseToggle.text = 'Collapse panel';
+            this.panelCollapseToggle.title = 'Collapse panel';
+        }
+
+        // Save state to localStorage
+        localStorage.setItem('panel-collapsed', this.isPanelCollapsed.toString());
+
+        // Track usage for analytics
+        trackFeatureUsage('panel-collapse', { collapsed: this.isPanelCollapsed });
+        
+        log.info(`Panel ${this.isPanelCollapsed ? 'collapsed' : 'expanded'}`);
+    }
+
     setupActionBarNavigation() {
         // Set up action click handlers following the Calcite example pattern
         this.actions?.forEach(action => {
@@ -104,6 +157,17 @@ export class LayerPanel {
                 const contentName = contentMap[actionId];
 
                 if (contentName) {
+                    // If panel is collapsed, expand it when any action is clicked
+                    if (this.isPanelCollapsed) {
+                        this.isPanelCollapsed = false;
+                        this.shellPanel.collapsed = false;
+                        this.panelCollapseToggle.icon = 'chevron-left';
+                        this.panelCollapseToggle.text = 'Collapse panel';
+                        this.panelCollapseToggle.title = 'Collapse panel';
+                        localStorage.setItem('panel-collapsed', 'false');
+                        log.info('Panel expanded via action click');
+                    }
+
                     // Track navigation click (both Sentry and PostHog)
                     trackClickSentry(actionId, {
                         section: 'navigation',
