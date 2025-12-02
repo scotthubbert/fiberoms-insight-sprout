@@ -339,3 +339,4 @@ You can use this simple HTML page to check/clear the localStorage value:
 - [Calcite Action](https://developers.arcgis.com/calcite-design-system/components/action/)
 - [Calcite Panel](https://developers.arcgis.com/calcite-design-system/components/panel/)
 
+
