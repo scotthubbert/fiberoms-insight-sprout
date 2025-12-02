@@ -118,6 +118,20 @@ export class LayerManager {
             type: "application/json"
         }));
 
+        // Detect geometry type from data for layers with mixed geometry support
+        // Power outage layers can have Point (small outages) or Polygon (larger areas)
+        let renderer = layerConfig.renderer;
+        if (layerConfig.geometryType === 'mixed' && features.length > 0) {
+            const firstGeomType = features[0]?.geometry?.type;
+            if (firstGeomType === 'Point' && layerConfig.pointRenderer) {
+                renderer = layerConfig.pointRenderer;
+                log.info(`🔧 Using Point renderer for ${layerConfig.id} (detected Point geometry)`);
+            } else if ((firstGeomType === 'Polygon' || firstGeomType === 'MultiPolygon') && layerConfig.polygonRenderer) {
+                renderer = layerConfig.polygonRenderer;
+                log.info(`🔧 Using Polygon renderer for ${layerConfig.id} (detected ${firstGeomType} geometry)`);
+            }
+        }
+
         // Create LabelClass objects for node sites/sprout huts synchronously if needed
         let labelingInfo = layerConfig.labelingInfo || [];
         if (layerConfig.id === 'sprout-huts' && labelingInfo.length > 0) {
@@ -279,13 +293,29 @@ export class LayerManager {
     // Create empty GeoJSON layer that can be updated later
     async createEmptyGeoJSONLayer(layerConfig) {
         try {
-            // Create empty GeoJSON with a dummy polygon feature to help ArcGIS understand geometry type
+            // Determine initial geometry type from config
+            // For layers with mixed geometry types (like power outages), default to Point
+            // as Point data is more common for small outages
+            const isPointLayer = layerConfig.geometryType === 'point' ||
+                layerConfig.geometryType === 'mixed' ||
+                layerConfig.id === 'cullman-outages';
+
+            // Create empty GeoJSON with appropriate dummy feature to help ArcGIS understand geometry type
             // This prevents the "table feature layer can't be displayed" error
             // The dummy feature will be replaced when real data arrives
             const emptyGeoJSON = {
                 type: "FeatureCollection",
                 features: [
-                    {
+                    isPointLayer ? {
+                        type: "Feature",
+                        geometry: {
+                            type: "Point",
+                            coordinates: [0, 0] // Dummy point at null island
+                        },
+                        properties: {
+                            _dummy: true // Mark as dummy so it can be filtered out if needed
+                        }
+                    } : {
                         type: "Feature",
                         geometry: {
                             type: "Polygon",
@@ -298,6 +328,11 @@ export class LayerManager {
                 ]
             };
 
+            // Use point renderer for point layers, or default renderer
+            const renderer = isPointLayer && layerConfig.pointRenderer
+                ? layerConfig.pointRenderer
+                : layerConfig.renderer;
+
             // Create blob URL for the GeoJSON
             const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(emptyGeoJSON)], {
                 type: "application/json"
@@ -306,7 +341,7 @@ export class LayerManager {
             const layer = new GeoJSONLayer({
                 id: layerConfig.id,
                 url: blobUrl,
-                renderer: layerConfig.renderer,
+                renderer: renderer,
                 popupTemplate: layerConfig.popupTemplate,
                 featureReduction: layerConfig.featureReduction,
                 fields: layerConfig.fields || [],
@@ -321,13 +356,194 @@ export class LayerManager {
             this.layerConfigs.set(layerConfig.id, layerConfig);
             this.blobUrls.set(layerConfig.id, blobUrl);
 
-            log.info(`✅ Created empty GeoJSON layer: ${layerConfig.id} (ready for updates)`);
+            log.info(`✅ Created empty GeoJSON layer: ${layerConfig.id} (${isPointLayer ? 'Point' : 'Polygon'} geometry, ready for updates)`);
             return layer;
         } catch (error) {
             log.error(`Failed to create empty GeoJSON layer ${layerConfig.id}:`, error);
             errorService.report(error, { module: 'LayerManager', action: 'createEmptyGeoJSONLayer', id: layerConfig?.id });
             return null;
         }
+    }
+
+    // Create power outage layer using GraphicsLayer for mixed geometry support (Point + Polygon)
+    // This approach allows custom icons (PictureMarkerSymbol) for point outages
+    async createPowerOutageLayer(layerConfig, data = null) {
+        try {
+            const features = data?.features || [];
+            const graphics = [];
+
+            // Company symbol configurations - CEC (Cullman Electric Cooperative)
+            // Logo downloaded from: https://cullmanec.com/sites/default/files/NRECA_Circle_Transparent_0.png
+            // Saved locally to avoid CORS issues with ArcGIS PictureMarkerSymbol
+            const companyConfigs = {
+                'cullman': {
+                    pointSymbol: {
+                        type: 'picture-marker',
+                        url: '/logos/cec-logo.png',
+                        width: '28px',
+                        height: '28px'
+                    },
+                    // Fallback simple marker if logo not available
+                    pointSymbolFallback: {
+                        type: 'simple-marker',
+                        style: 'circle',
+                        size: 16,
+                        color: [255, 140, 0, 0.9], // Orange
+                        outline: {
+                            color: [255, 255, 255, 1],
+                            width: 2
+                        }
+                    },
+                    polygonSymbol: {
+                        type: 'simple-fill',
+                        color: [255, 140, 0, 0.35], // Orange with transparency
+                        outline: {
+                            color: [255, 100, 0, 0.9],
+                            width: 3,
+                            style: 'solid'
+                        }
+                    }
+                }
+            };
+
+            // Determine company from layer ID
+            const company = layerConfig.id.includes('cullman') ? 'cullman' : 'cullman';
+            const companyConfig = companyConfigs[company];
+
+            let pointCount = 0, polygonCount = 0;
+
+            // Use the CEC logo as the point symbol
+            const pointSymbol = companyConfig.pointSymbol;
+
+            // Process each feature
+            for (const feature of features) {
+                if (!feature.geometry) continue;
+
+                let arcgisGeometry;
+                let symbol;
+                const attributes = { ...feature.properties };
+
+                if (feature.geometry.type === 'Point') {
+                    arcgisGeometry = new Point({
+                        longitude: feature.geometry.coordinates[0],
+                        latitude: feature.geometry.coordinates[1],
+                        spatialReference: { wkid: 4326 }
+                    });
+                    symbol = pointSymbol;
+                    pointCount++;
+
+                } else if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+                    const rings = feature.geometry.type === 'MultiPolygon'
+                        ? feature.geometry.coordinates[0] // Use first polygon of MultiPolygon
+                        : feature.geometry.coordinates;
+
+                    arcgisGeometry = new Polygon({
+                        rings: rings,
+                        spatialReference: { wkid: 4326 }
+                    });
+                    symbol = companyConfig.polygonSymbol;
+                    polygonCount++;
+
+                    // Create polygon graphic
+                    const polygonGraphic = new Graphic({
+                        geometry: arcgisGeometry,
+                        symbol: symbol,
+                        attributes: attributes,
+                        popupTemplate: layerConfig.popupTemplate
+                    });
+                    graphics.push(polygonGraphic);
+
+                    // Add logo/marker at centroid for better visibility
+                    try {
+                        const centroid = arcgisGeometry.centroid;
+                        if (centroid) {
+                            const centroidGraphic = new Graphic({
+                                geometry: centroid,
+                                symbol: pointSymbol,
+                                attributes: {
+                                    ...attributes,
+                                    _is_centroid: true
+                                },
+                                popupTemplate: layerConfig.popupTemplate
+                            });
+                            graphics.push(centroidGraphic);
+                        }
+                    } catch (error) {
+                        log.warn('Failed to create polygon centroid marker:', error.message);
+                    }
+                    continue; // Already added polygon graphic above
+                }
+
+                // Create point graphic
+                if (arcgisGeometry && symbol) {
+                    const graphic = new Graphic({
+                        geometry: arcgisGeometry,
+                        symbol: symbol,
+                        attributes: attributes,
+                        popupTemplate: layerConfig.popupTemplate
+                    });
+                    graphics.push(graphic);
+                }
+            }
+
+            // Create GraphicsLayer
+            const layer = new GraphicsLayer({
+                id: layerConfig.id,
+                title: layerConfig.title,
+                graphics: graphics,
+                listMode: layerConfig.visible ? 'show' : 'hide',
+                visible: layerConfig.visible !== undefined ? layerConfig.visible : true
+            });
+
+            log.info(`✅ Created ${layerConfig.title} with ${graphics.length} graphics (${pointCount} points, ${polygonCount} polygons)`);
+
+            this.layers.set(layerConfig.id, layer);
+            this.layerConfigs.set(layerConfig.id, layerConfig);
+
+            return layer;
+        } catch (error) {
+            log.error(`Failed to create power outage layer ${layerConfig.id}:`, error);
+            errorService.report(error, { module: 'LayerManager', action: 'createPowerOutageLayer', id: layerConfig?.id });
+            return null;
+        }
+    }
+
+    // Update power outage GraphicsLayer with new data
+    async updatePowerOutageLayer(layerId, config, newData) {
+        const map = this.getMapForLayer(layerId);
+        if (!map) {
+            log.warn(`No map found for layer ${layerId}`);
+            return false;
+        }
+
+        // Get old layer to preserve visibility state
+        const oldLayer = this.layers.get(layerId);
+        let wasVisible = true;
+
+        if (oldLayer) {
+            wasVisible = oldLayer.visible;
+            map.remove(oldLayer);
+            this.layers.delete(layerId);
+        }
+
+        // Create new layer with updated data
+        const newConfig = {
+            ...config,
+            visible: wasVisible
+        };
+
+        const newLayer = await this.createPowerOutageLayer(newConfig, newData);
+
+        if (newLayer) {
+            const zOrder = this.getZOrder(layerId);
+            map.add(newLayer, zOrder);
+            newLayer.visible = wasVisible;
+
+            log.info(`✅ Updated power outage layer ${layerId}: ${newData.features?.length || 0} features`);
+            return true;
+        }
+
+        return false;
     }
 
     // Create truck FeatureLayer for smooth real-time updates
@@ -530,6 +746,11 @@ export class LayerManager {
             if (layerId.includes('trucks') && layer.type === 'feature') {
                 const truckData = newData.features ? newData.features.map(f => f.properties) : newData;
                 return this.smoothTruckUpdate(layerId, truckData);
+            }
+
+            // Power outage layers use GraphicsLayer for mixed geometry (Point + Polygon) support
+            if (layerId.includes('outages') && layer.type === 'graphics') {
+                return this.updatePowerOutageLayer(layerId, config, newData);
             }
 
             // GeoJSON layers

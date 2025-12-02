@@ -300,15 +300,17 @@ export class Application {
                 }
             }
 
-            // Initialize Power Outage Layer (empty, will be populated by polling)
+            // Initialize Power Outage Layer using GraphicsLayer for mixed geometry support (Point + Polygon)
+            // Uses CEC logo from: https://cullmanec.com/sites/default/files/NRECA_Circle_Transparent_0.png
             const cullmanOutagesConfig = getLayerConfig('cullmanOutages');
             if (cullmanOutagesConfig) {
                 try {
-                    const layer = await this.services.layerManager.createEmptyGeoJSONLayer(cullmanOutagesConfig);
+                    // Create empty power outage layer (GraphicsLayer) - will be populated by polling
+                    const layer = await this.services.layerManager.createPowerOutageLayer(cullmanOutagesConfig, null);
                     if (layer) {
                         layer.visible = cullmanOutagesConfig.visible;
                         this.services.mapController.addLayer(layer, cullmanOutagesConfig.zOrder);
-                        log.info('✅ Power outage layer initialized (empty, ready for updates)');
+                        log.info('✅ Power outage layer initialized (GraphicsLayer, ready for updates)');
                     }
                 } catch (error) {
                     log.error('Failed to initialize power outage layer:', error);
@@ -1482,15 +1484,15 @@ export class Application {
                     }
                     let cullmanLayer = this.services.layerManager.getLayer('cullman-outages');
 
-                    // Create layer if it doesn't exist
+                    // Create layer if it doesn't exist (uses GraphicsLayer for mixed geometry support)
                     if (!cullmanLayer) {
                         const cullmanOutagesConfig = getLayerConfig('cullmanOutages');
                         if (cullmanOutagesConfig) {
-                            cullmanLayer = await this.services.layerManager.createEmptyGeoJSONLayer(cullmanOutagesConfig);
+                            cullmanLayer = await this.services.layerManager.createPowerOutageLayer(cullmanOutagesConfig, data);
                             if (cullmanLayer) {
                                 cullmanLayer.visible = cullmanOutagesConfig.visible;
                                 this.services.mapController.addLayer(cullmanLayer, cullmanOutagesConfig.zOrder);
-                                log.info('✅ Power outage layer created during polling');
+                                log.info('✅ Power outage layer created during polling (GraphicsLayer)');
                             }
                         }
                     }

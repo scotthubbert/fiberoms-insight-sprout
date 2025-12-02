@@ -1588,18 +1588,49 @@ export const layerConfigs = {
     },
 
     // Power Outage Layer (Cullman Electric)
+    // Supports both Point geometries (small outages) and Polygon geometries (larger outage areas)
     cullmanOutages: {
         id: 'cullman-outages',
         title: 'Cullman Power Outages',
         layerType: 'GeoJSONLayer',
         dataUrl: null, // Data loaded dynamically via OutageService
-        renderer: {
+        geometryType: 'mixed', // Supports both Point and Polygon
+        // Point renderer for small outages (default - most common)
+        pointRenderer: {
+            type: 'simple',
+            symbol: {
+                type: 'simple-marker',
+                style: 'circle',
+                size: 14,
+                color: [255, 140, 0, 0.85], // Orange with slight transparency
+                outline: {
+                    color: [255, 255, 255, 1], // White outline
+                    width: 2
+                }
+            }
+        },
+        // Polygon renderer for larger outage areas
+        polygonRenderer: {
             type: 'simple',
             symbol: {
                 type: 'simple-fill',
                 color: [255, 140, 0, 0.3], // Orange fill with transparency
                 outline: {
                     color: [255, 140, 0, 0.9], // Orange outline
+                    width: 2
+                }
+            }
+        },
+        // Default renderer (will be overridden based on geometry type)
+        renderer: {
+            type: 'simple',
+            symbol: {
+                type: 'simple-marker',
+                style: 'circle',
+                size: 14,
+                color: [255, 140, 0, 0.85], // Orange with slight transparency
+                outline: {
+                    color: [255, 255, 255, 1], // White outline
                     width: 2
                 }
             }
