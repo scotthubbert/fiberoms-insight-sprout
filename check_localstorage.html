@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Check localStorage</title>
+</head>
+<body>
+  <h2>LocalStorage Check</h2>
+  <div id="output"></div>
+  <script>
+    const output = document.getElementById('output');
+    const collapsed = localStorage.getItem('panel-collapsed');
+    output.innerHTML = `
+      <p>panel-collapsed value: <strong>${collapsed}</strong></p>
+      <button onclick="localStorage.removeItem('panel-collapsed'); alert('Cleared!'); location.reload();">Clear Value</button>
+    `;
+  </script>
+</body>
+</html>

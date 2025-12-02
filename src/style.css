@@ -3451,3 +3451,8 @@ calcite-shell-panel[collapsed] calcite-action-bar calcite-action:hover {
 calcite-shell-panel[collapsed] {
   box-shadow: var(--calcite-shadow-1);
 }
+
+/* Hide the action-bar's built-in expand/collapse button */
+calcite-action-bar::part(expand-toggle) {
+  display: none !important;
+}

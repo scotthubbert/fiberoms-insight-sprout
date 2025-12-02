@@ -38,6 +38,7 @@ export class LayerPanel {
 
     async init() {
         await customElements.whenDefined('calcite-shell-panel');
+        await customElements.whenDefined('calcite-action-bar');
         await customElements.whenDefined('calcite-action');
         await customElements.whenDefined('calcite-panel');
 
@@ -92,14 +93,35 @@ export class LayerPanel {
             return;
         }
 
-        // Restore collapsed state from localStorage
+        // Get the action bar
+        const actionBar = this.shellPanel.querySelector('calcite-action-bar');
+        log.info(`Action bar found: ${!!actionBar}`);
+
+        // Restore collapsed state from localStorage (default to expanded)
         const savedState = localStorage.getItem('panel-collapsed');
-        if (savedState === 'true') {
-            this.isPanelCollapsed = true;
-            this.shellPanel.collapsed = true;
+        this.isPanelCollapsed = savedState === 'true';
+        
+        // Force action bar to always be expanded (CSS hides the collapse button)
+        if (actionBar) {
+            actionBar.expanded = true;
+            log.info(`Action bar expanded set to true`);
+        } else {
+            log.error('❌ Action bar element NOT FOUND!');
+        }
+        
+        // Apply the saved panel state (or default to expanded)
+        this.shellPanel.collapsed = this.isPanelCollapsed;
+        
+        if (this.isPanelCollapsed) {
             this.panelCollapseToggle.icon = 'chevrons-right';
             this.panelCollapseToggle.text = 'Expand panel';
             this.panelCollapseToggle.title = 'Expand panel';
+            log.info('Panel restored to collapsed state from localStorage');
+        } else {
+            this.panelCollapseToggle.icon = 'chevrons-left';
+            this.panelCollapseToggle.text = 'Collapse panel';
+            this.panelCollapseToggle.title = 'Collapse panel';
+            log.info('Panel set to expanded state (default or from localStorage)');
         }
 
         // Set up click handler for collapse toggle (in panel header)
@@ -107,7 +129,7 @@ export class LayerPanel {
             this.togglePanelCollapse();
         });
 
-        log.info('Panel collapse functionality initialized');
+        log.info('Panel collapse functionality initialized with localStorage support');
     }
 
     togglePanelCollapse() {
