@@ -7,7 +7,71 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="theme-color" content="#1976d2">
+  <meta name="theme-color" content="#1976d2" id="theme-color-meta">
+
+  <!-- 
+    CRITICAL: Theme Detection Script (Blocking)
+    Must run synchronously before any content renders to prevent FOUC (Flash of Unstyled Content).
+    This is the industry-standard approach for system theme detection in vanilla JS.
+    
+    Pattern used by: GitHub, Tailwind docs, Next.js, Remix, Calcite Design System
+  -->
+  <script>
+    (function() {
+      // Detect system color scheme preference
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = prefersDark ? 'dark' : 'light';
+      
+      // Apply theme immediately to <html> - before body exists
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.classList.add(prefersDark ? 'calcite-mode-dark' : 'calcite-mode-light');
+      
+      // Update theme-color meta for browser chrome (mobile address bar, etc.)
+      var themeColorMeta = document.getElementById('theme-color-meta');
+      if (themeColorMeta) {
+        themeColorMeta.content = prefersDark ? '#1a1a1a' : '#1976d2';
+      }
+    })();
+  </script>
+
+  <!-- 
+    CRITICAL: Anti-FOUC Styles
+    These styles are applied immediately based on the data-theme attribute set above.
+    This prevents white flash by setting correct background before CSS files load.
+  -->
+  <style>
+    /* Prevent FOUC - set background immediately based on detected theme */
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Light theme (default) */
+    html {
+      background-color: #f8f9fa;
+      color-scheme: light;
+    }
+    
+    /* Dark theme */
+    html[data-theme="dark"] {
+      background-color: #1a1a1a;
+      color-scheme: dark;
+    }
+    
+    /* Also apply to body when it exists */
+    html[data-theme="dark"] body {
+      background-color: #1a1a1a;
+    }
+    
+    html[data-theme="light"] body {
+      background-color: #f8f9fa;
+    }
+    
+    /* Hide content until CSS fully loads to prevent layout shift */
+    body:not(.css-loaded) #app {
+      visibility: hidden;
+    }
+  </style>
 
   <!-- Security Headers -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
@@ -45,7 +109,7 @@
   <link id="esri-theme-dark" rel="stylesheet" href="./assets/esri/themes/dark/main.css" disabled />
 
   <!-- Main styles - deferred loading for non-critical styles -->
-  <link rel="preload" href="/src/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="/src/style.css" as="style" onload="this.onload=null;this.rel='stylesheet';document.body.classList.add('css-loaded')">
   <noscript>
     <link rel="stylesheet" href="/src/style.css">
   </noscript>
@@ -786,6 +850,16 @@
   <!-- Fallback for browsers that don't support ES modules -->
   <script nomodule>
     alert('This application requires a modern browser that supports ES modules. Please update your browser.');
+  </script>
+
+  <!-- Fallback: Ensure app visibility even if CSS onload doesn't fire -->
+  <script>
+    // Mark CSS as loaded after a short delay as fallback
+    setTimeout(function() {
+      if (!document.body.classList.contains('css-loaded')) {
+        document.body.classList.add('css-loaded');
+      }
+    }, 500);
   </script>
 </body>
 

@@ -1,4 +1,8 @@
 // ThemeManager.js - Handles theme switching and related UI updates
+//
+// IMPORTANT: Theme is initially set by a blocking script in index.html <head>
+// to prevent FOUC (Flash of Unstyled Content). This manager syncs with that
+// initial state and handles subsequent theme changes.
 
 import Basemap from '@arcgis/core/Basemap';
 import { createLogger } from '../utils/logger.js';
@@ -25,8 +29,12 @@ export class ThemeManager {
         // Clean up any existing stored theme preferences
         localStorage.removeItem('theme');
 
-        // Always follow system preference - no stored user preferences
-        this.currentTheme = this.getSystemPreference();
+        // Sync with the theme already applied by the blocking script in <head>
+        // This prevents any flash - the blocking script has already set the correct theme
+        const initialTheme = document.documentElement.getAttribute('data-theme');
+        this.currentTheme = initialTheme || this.getSystemPreference();
+        
+        log.info(`ThemeManager initialized with theme: ${this.currentTheme} (from ${initialTheme ? 'blocking script' : 'system preference'})`);
         this.init();
     }
 
@@ -56,9 +64,21 @@ export class ThemeManager {
 
     async applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
+        
+        // Update theme-color meta for browser chrome (mobile address bar, etc.)
+        const themeColorMeta = document.getElementById('theme-color-meta');
+        if (themeColorMeta) {
+            themeColorMeta.content = theme === 'dark' ? '#1a1a1a' : '#1976d2';
+        }
+        
         if (this.themeToggle) this.updateToggleIcon(theme);
 
         const isDark = theme === 'dark';
+        
+        // Update html element classes (syncs with blocking script in <head>)
+        document.documentElement.classList.toggle('calcite-mode-dark', isDark);
+        document.documentElement.classList.toggle('calcite-mode-light', !isDark);
+        
         document.body.classList.toggle('calcite-mode-dark', isDark);
 
         // Toggle ArcGIS theme stylesheets (official Esri pattern)
