@@ -37,9 +37,7 @@ function getBuildInfo() {
 const buildInfo = getBuildInfo();
 
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production'
-    ? '/dev/insight/'
-    : '/',
+  base: '/',
 
   test: {
     environment: 'jsdom',
@@ -139,8 +137,8 @@ export default defineConfig({
         clientsClaim: true,
         dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
 
-        // ✅ REQUIRED FIX FOR NON-ROOT DEPLOYMENT
-        navigateFallback: '/dev/insight/index.html',
+        // ✅ REQUIRED FIX FOR ROOT DEPLOYMENT
+        navigateFallback: '/index.html',
 
         navigateFallbackDenylist: [/^\/(api|storage)\//],
         navigationPreload: false,

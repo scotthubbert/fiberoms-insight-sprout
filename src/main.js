@@ -137,7 +137,7 @@ async function initializeApp() {
   // Set Calcite assets path - import setAssetPath separately to avoid pulling in entire library
   const { setAssetPath } = await import('@esri/calcite-components/dist/components');
   const assetsPath = import.meta.env.PROD
-    ? '/dev/insight/calcite/assets'
+    ? '/calcite/assets'
     : '/node_modules/@esri/calcite-components/dist/calcite/assets';
   log.info('🎨 Setting CalciteUI asset path:', assetsPath);
   setAssetPath(assetsPath);
