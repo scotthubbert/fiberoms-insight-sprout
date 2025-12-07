@@ -389,6 +389,9 @@ export class PopupManager {
         const isSlackLoop = (attributes.structure !== undefined || attributes.type !== undefined || attributes.cable !== undefined) &&
             !isMSTTerminal && !isSplitter;
 
+        // Check if this is a Subscriber (has account field and name)
+        const isSubscriber = attributes.account !== undefined && (attributes.name !== undefined || attributes.customer_name !== undefined);
+
         // If MST Terminal, use popup field labels
         if (isMSTTerminal) {
             // MST Terminal field configuration matching popup labels
@@ -454,6 +457,67 @@ export class PopupManager {
                 if (value !== null && value !== undefined && value !== '') {
                     const displayValue = value.toString();
                     data.push(`${field.label}: ${displayValue}`);
+                }
+            });
+        } else if (isSubscriber) {
+            // Subscriber field configuration in specific order
+            // Get MST value from multiple possible field names
+            const mstValue = attributes.mst || attributes.MST || attributes.MapNumber || attributes.mapnumber || attributes.mst_terminal || '';
+
+            // Get Electric Out value (check multiple field names)
+            const electricOutValue = attributes.electricOut || attributes.electric_out ||
+                (attributes.has_electric !== undefined ? (attributes.has_electric ? 'Yes' : 'No') : '');
+
+            // Subscriber fields in the requested order
+            const subscriberFields = [
+                { fieldName: 'name', label: 'Name', altFieldName: 'customer_name' },
+                { fieldName: 'mst', label: 'MST', value: mstValue, altFieldNames: ['MST', 'MapNumber', 'mapnumber', 'mst_terminal'] },
+                { fieldName: 'status', label: 'Status', altFieldName: 'Status' },
+                { fieldName: 'account', label: 'Account' },
+                { fieldName: 'electricOut', label: 'Electric Out', value: electricOutValue, altFieldNames: ['electric_out', 'has_electric'] },
+                { fieldName: 'full_address', label: 'Full Address' },
+                { fieldName: 'ont', label: 'ONT' },
+                { fieldName: 'remote_id', label: 'Remote ID', altFieldName: 'remote_id' },
+                { fieldName: 'service_type', label: 'Service Type' },
+                { fieldName: 'ta5k', label: 'TA5K' }
+            ];
+
+            subscriberFields.forEach(field => {
+                let value;
+
+                // Use provided value if available (for MST and Electric Out)
+                if (field.value !== undefined) {
+                    value = field.value;
+                } else {
+                    // Try primary field name
+                    value = attributes[field.fieldName];
+
+                    // Try alternate field names
+                    if ((value === null || value === undefined || value === '') && field.altFieldName) {
+                        value = attributes[field.altFieldName];
+                    }
+
+                    if ((value === null || value === undefined || value === '') && field.altFieldNames) {
+                        for (const altName of field.altFieldNames) {
+                            const altValue = attributes[altName];
+                            if (altValue !== null && altValue !== undefined && altValue !== '') {
+                                // Convert has_electric boolean to Yes/No
+                                if (altName === 'has_electric') {
+                                    value = altValue ? 'Yes' : 'No';
+                                } else {
+                                    value = altValue;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (value !== null && value !== undefined && value !== '') {
+                    const displayValue = value.toString().trim();
+                    if (displayValue) {
+                        data.push(`${field.label}: ${displayValue}`);
+                    }
                 }
             });
         } else {
@@ -525,8 +589,10 @@ export class PopupManager {
             }
 
             if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
+                // For subscribers, use "Lat Lon" label, otherwise use "Coordinates"
+                const coordLabel = isSubscriber ? 'Lat Lon' : 'Coordinates';
                 // Use 14 decimal places for coordinates to match popup display
-                data.push(`Coordinates: ${latitude.toFixed(14)}, ${longitude.toFixed(14)}`);
+                data.push(`${coordLabel}: ${latitude.toFixed(14)}, ${longitude.toFixed(14)}`);
                 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
                 data.push(`Maps Link: ${mapsUrl}`);
             }
@@ -635,25 +701,25 @@ export class PopupManager {
                 if (graphic?.attributes) {
                     const attrs = graphic.attributes;
 
-                    // Add ALL subscriber fields from the popup configuration
+                    // Subscriber fields in the requested order
+                    // Get MST value from multiple possible field names
+                    const mstValue = attrs.mst || attrs.MST || attrs.MapNumber || attrs.mapnumber || attrs.mst_terminal || '';
+
+                    // Get Electric Out value (check multiple field names)
+                    const electricOutValue = attrs.electricOut || attrs.electric_out ||
+                        (attrs.has_electric !== undefined ? (attrs.has_electric ? 'Yes' : 'No') : '');
+
                     const subscriberFields = [
+                        { attr: 'name', label: 'Name', altAttr: 'customer_name' },
+                        { attr: 'mst', label: 'MST', value: mstValue, altAttrs: ['MST', 'MapNumber', 'mapnumber', 'mst_terminal'] },
+                        { attr: 'status', label: 'Status', altAttr: 'Status' },
                         { attr: 'account', label: 'Account' },
-                        { attr: 'status', label: 'Status' },
+                        { attr: 'electricOut', label: 'Electric Out', value: electricOutValue, altAttrs: ['electric_out', 'has_electric'] },
                         { attr: 'full_address', label: 'Full Address' },
-                        { attr: 'service_type', label: 'Service Type' },
-                        { attr: 'plan_name', label: 'Plan' },
-                        { attr: 'ta5k', label: 'TA5K' },
-                        { attr: 'remote_id', label: 'Remote ID' },
                         { attr: 'ont', label: 'ONT' },
-                        { attr: 'has_electric', label: 'Electric Available' },
-                        { attr: 'fiber_distance', label: 'Fiber Distance' },
-                        { attr: 'light', label: 'Light Level' },
-                        { attr: 'last_update', label: 'Last Update' },
-                        { attr: 'service_address', label: 'Service Address' },
-                        { attr: 'city', label: 'City' },
-                        { attr: 'state', label: 'State' },
-                        { attr: 'zip_code', label: 'Zip Code' },
-                        { attr: 'county', label: 'County' }
+                        { attr: 'remote_id', label: 'Remote ID' },
+                        { attr: 'service_type', label: 'Service Type' },
+                        { attr: 'ta5k', label: 'TA5K' }
                     ];
 
                     // Add MST Terminal fields from the popup configuration
@@ -706,6 +772,7 @@ export class PopupManager {
                         (attrs.modelnumbe && attrs.modelnumbe.toString().includes('MST'));
                     const isPole = attrs.wmElementN !== undefined;
                     const isSlackLoop = attrs.structure !== undefined || attrs.type !== undefined || attrs.cable !== undefined;
+                    const isSubscriber = attrs.account !== undefined && (attrs.name !== undefined || attrs.customer_name !== undefined);
 
                     let fieldsToUse = subscriberFields;
                     if (isPole) {
@@ -725,7 +792,11 @@ export class PopupManager {
                     fieldsToUse.forEach(field => {
                         // Try all possible attribute name variations (case-insensitive)
                         let value;
-                        if (field.attrs) {
+
+                        // Use provided value if available (for MST and Electric Out)
+                        if (field.value !== undefined) {
+                            value = field.value;
+                        } else if (field.attrs) {
                             // MST Terminal fields with multiple possible names
                             for (const attrName of field.attrs) {
                                 if (attrs[attrName] !== undefined) {
@@ -734,13 +805,37 @@ export class PopupManager {
                                 }
                             }
                         } else {
-                            // Standard fields with single attribute name
+                            // Try primary attribute name
                             value = attrs[field.attr];
+
+                            // Try alternate attribute names
+                            if ((value === null || value === undefined || value === '') && field.altAttr) {
+                                value = attrs[field.altAttr];
+                            }
+
+                            if ((value === null || value === undefined || value === '') && field.altAttrs) {
+                                for (const altName of field.altAttrs) {
+                                    const altValue = attrs[altName];
+                                    if (altValue !== null && altValue !== undefined && altValue !== '') {
+                                        // Convert has_electric boolean to Yes/No
+                                        if (altName === 'has_electric') {
+                                            value = altValue ? 'Yes' : 'No';
+                                        } else {
+                                            value = altValue;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
                         }
 
                         let displayValue;
 
                         if (value === null || value === undefined || value === '') {
+                            // Skip empty values for subscriber fields (don't show "Not Available")
+                            if (isSubscriber) {
+                                return;
+                            }
                             displayValue = 'Not Available in Dataset';
                         } else {
                             // Format outputport as integer for MST terminals
@@ -751,14 +846,19 @@ export class PopupManager {
                             }
                         }
 
-                        data.push(`${field.label}: ${displayValue}`);
+                        if (displayValue && (displayValue !== 'Not Available in Dataset' || !isSubscriber)) {
+                            data.push(`${field.label}: ${displayValue}`);
+                        }
                     });
                 }
             }
 
-            // Add timestamp and data note
-            data.push(`\nCopied: ${new Date().toLocaleString()}`);
-            data.push(`Note: "Not Available in Dataset" indicates information not provided in source data, not a system error.`);
+            // Add timestamp and data note (skip for subscribers to keep output clean)
+            const isSubscriberPopup = attrs.account !== undefined && (attrs.name !== undefined || attrs.customer_name !== undefined);
+            if (!isSubscriberPopup) {
+                data.push(`\nCopied: ${new Date().toLocaleString()}`);
+                data.push(`Note: "Not Available in Dataset" indicates information not provided in source data, not a system error.`);
+            }
 
             // Add coordinates if available
             const graphic = this.view.popup?.selectedFeature;
@@ -777,8 +877,10 @@ export class PopupManager {
                 }
 
                 if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
+                    // For subscribers, use "Lat Lon" label, otherwise use "Coordinates"
+                    const coordLabel = isSubscriberPopup ? 'Lat Lon' : 'Coordinates';
                     // Use 14 decimal places for coordinates to match popup display
-                    data.push(`Coordinates: ${latitude.toFixed(14)}, ${longitude.toFixed(14)}`);
+                    data.push(`${coordLabel}: ${latitude.toFixed(14)}, ${longitude.toFixed(14)}`);
                     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
                     data.push(`Maps Link: ${mapsUrl}`);
                 }
