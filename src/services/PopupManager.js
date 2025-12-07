@@ -373,50 +373,164 @@ export class PopupManager {
 
         const nameKeys = new Set(['name', 'customer_name', 'Name']);
 
-        // Add title if available
-        if (attributes.name || attributes.customer_name || attributes.Name) {
-            data.push(`Name: ${attributes.name || attributes.customer_name || attributes.Name}`);
+        // Check if this is an MST Terminal based on modelnumbe field
+        const modelnumbe = attributes.modelnumbe || attributes.MODELNUMBE;
+        const isMSTTerminal = modelnumbe && modelnumbe.toString().toUpperCase().includes('MST');
+
+        // Check if this is a Pole based on wmElementN field
+        const isPole = attributes.wmElementN !== undefined;
+
+        // Check if this is a Splitter (has STRUCTURE_ and CLLI/EQUIP_FRAB but not MST)
+        const isSplitter = (attributes.STRUCTURE_ !== undefined || attributes.structure_ !== undefined) &&
+            (attributes.CLLI !== undefined || attributes.EQUIP_FRAB !== undefined) &&
+            !isMSTTerminal;
+
+        // Check if this is a Slack Loop (has structure, type, cable fields)
+        const isSlackLoop = (attributes.structure !== undefined || attributes.type !== undefined || attributes.cable !== undefined) &&
+            !isMSTTerminal && !isSplitter;
+
+        // If MST Terminal, use popup field labels
+        if (isMSTTerminal) {
+            // MST Terminal field configuration matching popup labels
+            const mstFields = [
+                { fieldName: 'distributi', label: 'DA', altFieldName: 'DISTRIBUTI' },
+                { fieldName: 'equipmentn', label: 'EQUIP_FRAB', altFieldName: 'EQUIPMENTN' },
+                { fieldName: 'modelnumbe', label: 'Model Number', altFieldName: 'MODELNUMBE' },
+                { fieldName: 'outputport', label: 'Output Port Count', altFieldName: 'OUTPUTPORT' },
+                { fieldName: 'partnumber', label: 'Part Number', altFieldName: 'PARTNUMBER' }
+            ];
+
+            mstFields.forEach(field => {
+                const value = attributes[field.fieldName] !== undefined ? attributes[field.fieldName] :
+                    (field.altFieldName ? attributes[field.altFieldName] : undefined);
+
+                if (value !== null && value !== undefined && value !== '') {
+                    let displayValue = value;
+                    // Format outputport as integer if it's a number
+                    if (field.fieldName === 'outputport' && typeof value === 'number') {
+                        displayValue = Math.round(value).toString();
+                    } else {
+                        displayValue = value.toString();
+                    }
+                    data.push(`${field.label}: ${displayValue}`);
+                }
+            });
+        } else if (isSplitter) {
+            // Splitter field configuration matching popup labels
+            const splitterFields = [
+                { fieldName: 'STRUCTURE_', label: 'Structure ID', altFieldName: 'structure_' },
+                { fieldName: 'CLLI', label: 'CLLI Code', altFieldName: 'clli' },
+                { fieldName: 'EQUIP_FRAB', label: 'Equipment FRAB', altFieldName: 'equip_frab' },
+                { fieldName: 'OUTPUTPORT', label: 'Output Port Count', altFieldName: 'outputport' }
+            ];
+
+            splitterFields.forEach(field => {
+                const value = attributes[field.fieldName] !== undefined ? attributes[field.fieldName] :
+                    (field.altFieldName ? attributes[field.altFieldName] : undefined);
+
+                if (value !== null && value !== undefined && value !== '') {
+                    let displayValue = value;
+                    // Format outputport as integer if it's a number
+                    if (field.fieldName === 'OUTPUTPORT' && typeof value === 'number') {
+                        displayValue = Math.round(value).toString();
+                    } else {
+                        displayValue = value.toString();
+                    }
+                    data.push(`${field.label}: ${displayValue}`);
+                }
+            });
+        } else if (isSlackLoop) {
+            // Slack Loop field configuration matching popup labels
+            const slackLoopFields = [
+                { fieldName: 'structure', label: 'Structure ID' },
+                { fieldName: 'type', label: 'Type' },
+                { fieldName: 'cable', label: 'Cable' },
+                { fieldName: 'length', label: 'Length (ft)' }
+            ];
+
+            slackLoopFields.forEach(field => {
+                const value = attributes[field.fieldName];
+
+                if (value !== null && value !== undefined && value !== '') {
+                    const displayValue = value.toString();
+                    data.push(`${field.label}: ${displayValue}`);
+                }
+            });
+        } else {
+            // Standard feature extraction
+            // Add title if available
+            if (attributes.name || attributes.customer_name || attributes.Name) {
+                data.push(`Name: ${attributes.name || attributes.customer_name || attributes.Name}`);
+            }
+
+            // Add all attributes in a readable format
+            Object.keys(attributes).forEach(key => {
+                // Skip internal/system fields
+                if (key.startsWith('__') || key === 'OBJECTID' || key === 'FID') {
+                    return;
+                }
+
+                // Skip name-related fields we've already added above
+                if (nameKeys.has(key)) {
+                    return;
+                }
+
+                // Skip latitude and longitude for poles (we add Coordinates and Maps Link instead)
+                if (isPole && (key.toLowerCase() === 'latitude' || key.toLowerCase() === 'longitude')) {
+                    return;
+                }
+
+                const value = attributes[key];
+
+                // Format the value
+                let displayValue = value;
+                if (value === null || value === undefined || value === '') {
+                    return; // Skip empty values
+                } else if (typeof value === 'boolean') {
+                    displayValue = value ? 'Yes' : 'No';
+                } else if (typeof value === 'number' && !isNaN(value)) {
+                    displayValue = value.toFixed(2);
+                } else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('update')) {
+                    try {
+                        displayValue = new Date(value).toLocaleString();
+                    } catch (e) {
+                        displayValue = value;
+                    }
+                }
+
+                // Format key name (convert snake_case or camelCase to Title Case)
+                const formattedKey = key
+                    .replace(/_/g, ' ')
+                    .replace(/([A-Z])/g, ' $1')
+                    .replace(/^./, str => str.toUpperCase())
+                    .trim();
+
+                data.push(`${formattedKey}: ${displayValue}`);
+            });
         }
 
-        // Add all attributes in a readable format
-        Object.keys(attributes).forEach(key => {
-            // Skip internal/system fields
-            if (key.startsWith('__') || key === 'OBJECTID' || key === 'FID') {
-                return;
+        // Add coordinates and Google Maps link if geometry is available
+        if (graphic.geometry) {
+            const geometry = graphic.geometry;
+            let latitude, longitude;
+
+            // Handle different geometry types and coordinate systems
+            if (geometry.type === 'point') {
+                // ArcGIS Point geometry uses x (longitude) and y (latitude) or longitude/latitude properties
+                longitude = geometry.longitude !== undefined ? geometry.longitude : geometry.x;
+                latitude = geometry.latitude !== undefined ? geometry.latitude : geometry.y;
+            } else if (geometry.coordinates && Array.isArray(geometry.coordinates)) {
+                // GeoJSON format: [longitude, latitude]
+                [longitude, latitude] = geometry.coordinates;
             }
 
-            // Skip name-related fields we've already added above
-            if (nameKeys.has(key)) {
-                return;
+            if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
+                // Use 14 decimal places for coordinates to match popup display
+                data.push(`Coordinates: ${latitude.toFixed(14)}, ${longitude.toFixed(14)}`);
+                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+                data.push(`Maps Link: ${mapsUrl}`);
             }
-
-            const value = attributes[key];
-
-            // Format the value
-            let displayValue = value;
-            if (value === null || value === undefined || value === '') {
-                return; // Skip empty values
-            } else if (typeof value === 'boolean') {
-                displayValue = value ? 'Yes' : 'No';
-            } else if (typeof value === 'number' && !isNaN(value)) {
-                displayValue = value.toFixed(2);
-            } else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('update')) {
-                try {
-                    displayValue = new Date(value).toLocaleString();
-                } catch (e) {
-                    displayValue = value;
-                }
-            }
-
-            // Format key name (convert snake_case or camelCase to Title Case)
-            const formattedKey = key
-                .replace(/_/g, ' ')
-                .replace(/([A-Z])/g, ' $1')
-                .replace(/^./, str => str.toUpperCase())
-                .trim();
-
-            data.push(`${formattedKey}: ${displayValue}`);
-        });
+        }
 
         return data.length > 0 ? data.join('\n') : null;
     }
@@ -497,6 +611,11 @@ export class PopupManager {
                             const label = labelCell.textContent.trim();
                             const value = valueCell.textContent.trim();
 
+                            // Skip latitude and longitude for poles (we add Coordinates and Maps Link instead)
+                            if (label.toLowerCase() === 'latitude' || label.toLowerCase() === 'longitude') {
+                                return;
+                            }
+
                             // Include all values, with clear messaging for missing data
                             if (label && label !== value) {
                                 const displayValue = value || 'Not Available in Dataset';
@@ -538,15 +657,32 @@ export class PopupManager {
                     ];
 
                     // Add MST Terminal fields from the popup configuration
+                    // Support both uppercase and lowercase field names (check both variations)
                     const mstTerminalFields = [
-                        { attr: 'CLLI', label: 'CLLI Code' },
-                        { attr: 'STRUCTURE_', label: 'Structure ID' },
-                        { attr: 'EQUIP_FRAB', label: 'Equipment FRAB' },
-                        { attr: 'MODELNUMBE', label: 'Model Number' },
-                        { attr: 'LOCID', label: 'Location ID' },
-                        { attr: 'OUTPUTPORT', label: 'Output Ports' },
-                        { attr: 'GPSLATITUD', label: 'GPS Latitude' },
-                        { attr: 'GPSLONGITU', label: 'GPS Longitude' }
+                        { attrs: ['distributi', 'DISTRIBUTI'], label: 'DA' },
+                        { attrs: ['equipmentn', 'EQUIPMENTN'], label: 'EQUIP_FRAB' },
+                        { attrs: ['modelnumbe', 'MODELNUMBE'], label: 'Model Number' },
+                        { attrs: ['outputport', 'OUTPUTPORT'], label: 'Output Port Count' },
+                        { attrs: ['partnumber', 'PARTNUMBER'], label: 'Part Number' },
+                        { attrs: ['CLLI', 'clli'], label: 'CLLI Code' },
+                        { attrs: ['STRUCTURE_', 'structure_'], label: 'Structure ID' },
+                        { attrs: ['EQUIP_FRAB', 'equip_frab'], label: 'Equipment FRAB' },
+                        { attrs: ['LOCID', 'locid'], label: 'Location ID' },
+                        { attrs: ['GPSLATITUD', 'gpslatitud'], label: 'GPS Latitude' },
+                        { attrs: ['GPSLONGITU', 'gpslongitu'], label: 'GPS Longitude' }
+                    ];
+
+                    // Add Pole fields (excluding latitude/longitude as we add Coordinates/Maps Link)
+                    const poleFields = [
+                        { attr: 'wmElementN', label: 'Pole ID' }
+                    ];
+
+                    // Add Slack Loop fields
+                    const slackLoopFields = [
+                        { attr: 'structure', label: 'Structure ID' },
+                        { attr: 'type', label: 'Type' },
+                        { attr: 'cable', label: 'Cable' },
+                        { attr: 'length', label: 'Length (ft)' }
                     ];
 
                     // Add Node Site fields
@@ -563,9 +699,21 @@ export class PopupManager {
                     ];
 
                     // Determine which field set to use based on available attributes
+                    // Check both uppercase and lowercase field names
+                    const hasMSTFields = attrs.CLLI || attrs.STRUCTURE_ || attrs.MODELNUMBE ||
+                        attrs.distributi || attrs.equipmentn || attrs.modelnumbe;
+                    const isMST = (attrs.MODELNUMBE && attrs.MODELNUMBE.toString().includes('MST')) ||
+                        (attrs.modelnumbe && attrs.modelnumbe.toString().includes('MST'));
+                    const isPole = attrs.wmElementN !== undefined;
+                    const isSlackLoop = attrs.structure !== undefined || attrs.type !== undefined || attrs.cable !== undefined;
+
                     let fieldsToUse = subscriberFields;
-                    if (attrs.CLLI || attrs.STRUCTURE_ || attrs.MODELNUMBE) {
-                        if (attrs.MODELNUMBE && attrs.MODELNUMBE.includes('MST')) {
+                    if (isPole) {
+                        fieldsToUse = poleFields;
+                    } else if (isSlackLoop) {
+                        fieldsToUse = slackLoopFields;
+                    } else if (hasMSTFields) {
+                        if (isMST) {
                             fieldsToUse = mstTerminalFields;
                         } else {
                             fieldsToUse = splitterFields;
@@ -575,13 +723,32 @@ export class PopupManager {
                     }
 
                     fieldsToUse.forEach(field => {
-                        const value = attrs[field.attr];
+                        // Try all possible attribute name variations (case-insensitive)
+                        let value;
+                        if (field.attrs) {
+                            // MST Terminal fields with multiple possible names
+                            for (const attrName of field.attrs) {
+                                if (attrs[attrName] !== undefined) {
+                                    value = attrs[attrName];
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Standard fields with single attribute name
+                            value = attrs[field.attr];
+                        }
+
                         let displayValue;
 
                         if (value === null || value === undefined || value === '') {
                             displayValue = 'Not Available in Dataset';
                         } else {
-                            displayValue = value.toString().trim() || 'Not Available in Dataset';
+                            // Format outputport as integer for MST terminals
+                            if (field.label === 'Output Port Count' && typeof value === 'number') {
+                                displayValue = Math.round(value).toString();
+                            } else {
+                                displayValue = value.toString().trim() || 'Not Available in Dataset';
+                            }
                         }
 
                         data.push(`${field.label}: ${displayValue}`);
@@ -596,11 +763,24 @@ export class PopupManager {
             // Add coordinates if available
             const graphic = this.view.popup?.selectedFeature;
             if (graphic?.geometry) {
-                const { latitude, longitude } = graphic.geometry;
-                if (latitude && longitude) {
-                    data.push(`Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+                const geometry = graphic.geometry;
+                let latitude, longitude;
+
+                // Handle different geometry types and coordinate systems
+                if (geometry.type === 'point') {
+                    // ArcGIS Point geometry uses x (longitude) and y (latitude) or longitude/latitude properties
+                    longitude = geometry.longitude !== undefined ? geometry.longitude : geometry.x;
+                    latitude = geometry.latitude !== undefined ? geometry.latitude : geometry.y;
+                } else if (geometry.coordinates && Array.isArray(geometry.coordinates)) {
+                    // GeoJSON format: [longitude, latitude]
+                    [longitude, latitude] = geometry.coordinates;
+                }
+
+                if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
+                    // Use 14 decimal places for coordinates to match popup display
+                    data.push(`Coordinates: ${latitude.toFixed(14)}, ${longitude.toFixed(14)}`);
                     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-                    data.push(`Maps: ${mapsUrl}`);
+                    data.push(`Maps Link: ${mapsUrl}`);
                 }
             }
 
