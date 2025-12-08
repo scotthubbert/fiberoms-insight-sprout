@@ -1032,6 +1032,12 @@ const createSplitterPopup = () => ({
     ],
     actions: [
         {
+            id: 'copy-info',
+            title: 'Copy Splitter Info',
+            icon: 'duplicate',
+            type: 'button'
+        },
+        {
             id: 'directions',
             title: 'Get Directions',
             icon: 'pin-tear',
@@ -1043,7 +1049,20 @@ const createSplitterPopup = () => ({
 const createClosurePopup = () => ({
     title: 'Slack Loop Item',
     content: 'This is a slack loop item',
-    actions: []
+    actions: [
+        {
+            id: 'copy-info',
+            title: 'Copy Slack Loop Info',
+            icon: 'duplicate',
+            type: 'button'
+        },
+        {
+            id: 'directions',
+            title: 'Get Directions',
+            icon: 'pin-tear',
+            type: 'button'
+        }
+    ]
 });
 
 const createMSTFiberPopup = () => ({
@@ -1088,6 +1107,20 @@ const createSlackLoopPopup = () => ({
                 { fieldName: 'cable', label: 'Cable', visible: true },
                 { fieldName: 'length', label: 'Length (ft)', visible: true }
             ]
+        }
+    ],
+    actions: [
+        {
+            id: 'copy-info',
+            title: 'Copy Slack Loop Info',
+            icon: 'duplicate',
+            type: 'button'
+        },
+        {
+            id: 'directions',
+            title: 'Get Directions',
+            icon: 'pin-tear',
+            type: 'button'
         }
     ]
 });
