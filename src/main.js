@@ -70,7 +70,7 @@ async function initializeApp() {
     import('./utils/versionCheck.js'),
     import('./utils/calciteIconFallback.js'),
     import('./core/Application.js'),
-    import('./services/SentryService.js')
+    import('./services/SentryService.js'),
     // POSTHOG DISABLED - Process of elimination for RDP click capture testing
     // import('./services/AnalyticsService.js'),
     // CalciteUI core (mobile + shared)
