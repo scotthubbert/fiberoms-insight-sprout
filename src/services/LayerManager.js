@@ -668,10 +668,11 @@ export class LayerManager {
         }
 
         // Track layer toggle
-        const { trackLayerToggle } = await import('../services/AnalyticsService.js');
-        trackLayerToggle(layerId, visible, {
-            layer_type: layer.type || 'unknown'
-        });
+        // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+        // const { trackLayerToggle } = await import('../services/AnalyticsService.js');
+        // trackLayerToggle(layerId, visible, {
+        //     layer_type: layer.type || 'unknown'
+        // });
 
         // Set visibility on our stored layer reference
         layer.visible = visible;

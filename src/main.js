@@ -58,8 +58,9 @@ async function initializeApp() {
     { initVersionCheck },
     { setupCalciteIconFallback },
     { Application },
-    { initSentryIfEnabled, captureError: sentryCaptureError },
-    { initAnalytics }
+    { initSentryIfEnabled, captureError: sentryCaptureError }
+    // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+    // { initAnalytics }
   ] = await Promise.all([
     // Core services
     import('./services/ErrorService.js'),
@@ -69,8 +70,9 @@ async function initializeApp() {
     import('./utils/versionCheck.js'),
     import('./utils/calciteIconFallback.js'),
     import('./core/Application.js'),
-    import('./services/SentryService.js'),
-    import('./services/AnalyticsService.js'),
+    import('./services/SentryService.js')
+    // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+    // import('./services/AnalyticsService.js'),
     // CalciteUI core (mobile + shared)
     import('@esri/calcite-components/dist/components/calcite-shell'),
     import('@esri/calcite-components/dist/components/calcite-navigation'),
@@ -192,7 +194,8 @@ async function initializeApp() {
   });
 
   // Initialize PostHog analytics (for user behavior tracking)
-  initAnalytics();
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  // initAnalytics();
 
   // Initialize PWA installer
   const pwaInstaller = new PWAInstaller();

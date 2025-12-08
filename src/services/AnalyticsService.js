@@ -1,5 +1,6 @@
 // AnalyticsService.js - PostHog analytics integration
 // Handles user behavior tracking, click analytics, and feature usage
+// POSTHOG DISABLED - Process of elimination for RDP click capture testing
 
 let posthog = null;
 let isInitialized = false;
@@ -9,6 +10,10 @@ let isInitialized = false;
  * @returns {Promise<boolean>} True if successfully initialized
  */
 export async function initAnalytics() {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return false;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   try {
     const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
     const enabled = import.meta.env.VITE_POSTHOG_ENABLED === 'true';
@@ -48,6 +53,7 @@ export async function initAnalytics() {
     console.warn('⚠️ PostHog initialization failed:', error);
     return false;
   }
+  */
 }
 
 /**
@@ -56,6 +62,10 @@ export async function initAnalytics() {
  * @param {object} properties - Event properties
  */
 export function trackEvent(eventName, properties = {}) {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   if (!isInitialized || !posthog) return;
   
   try {
@@ -67,6 +77,7 @@ export function trackEvent(eventName, properties = {}) {
   } catch (error) {
     console.warn('Failed to track event:', error);
   }
+  */
 }
 
 /**
@@ -75,10 +86,15 @@ export function trackEvent(eventName, properties = {}) {
  * @param {object} context - Additional context
  */
 export function trackClick(elementName, context = {}) {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   trackEvent('user_click', {
     element: elementName,
     ...context
   });
+  */
 }
 
 /**
@@ -87,10 +103,15 @@ export function trackClick(elementName, context = {}) {
  * @param {object} properties - Feature usage properties
  */
 export function trackFeatureUsage(featureName, properties = {}) {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   trackEvent('feature_used', {
     feature: featureName,
     ...properties
   });
+  */
 }
 
 /**
@@ -99,6 +120,10 @@ export function trackFeatureUsage(featureName, properties = {}) {
  * @param {object} traits - User traits (email, name, etc.)
  */
 export function identifyUser(userId, traits = {}) {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   if (!isInitialized || !posthog) return;
   
   try {
@@ -109,12 +134,17 @@ export function identifyUser(userId, traits = {}) {
   } catch (error) {
     console.warn('Failed to identify user:', error);
   }
+  */
 }
 
 /**
  * Reset user identification (on sign out)
  */
 export function resetUser() {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   if (!isInitialized || !posthog) return;
   
   try {
@@ -122,6 +152,7 @@ export function resetUser() {
   } catch (error) {
     console.warn('Failed to reset user:', error);
   }
+  */
 }
 
 /**
@@ -130,6 +161,10 @@ export function resetUser() {
  * @param {object} properties - Additional properties
  */
 export function trackPageView(pageName, properties = {}) {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   if (!isInitialized || !posthog) return;
   
   try {
@@ -140,6 +175,7 @@ export function trackPageView(pageName, properties = {}) {
   } catch (error) {
     console.warn('Failed to track page view:', error);
   }
+  */
 }
 
 /**
@@ -149,12 +185,17 @@ export function trackPageView(pageName, properties = {}) {
  * @param {object} context - Additional context
  */
 export function trackSearch(query, resultCount, context = {}) {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   trackEvent('search_performed', {
     query_length: query.length,
     result_count: resultCount,
     has_results: resultCount > 0,
     ...context
   });
+  */
 }
 
 /**
@@ -164,11 +205,16 @@ export function trackSearch(query, resultCount, context = {}) {
  * @param {object} context - Additional context
  */
 export function trackLayerToggle(layerName, enabled, context = {}) {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   trackEvent('layer_toggled', {
     layer_name: layerName,
     enabled,
     ...context
   });
+  */
 }
 
 /**
@@ -177,10 +223,15 @@ export function trackLayerToggle(layerName, enabled, context = {}) {
  * @param {object} properties - Export properties (itemCount, etc.)
  */
 export function trackExport(exportType, properties = {}) {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   trackEvent('export_performed', {
     export_type: exportType,
     ...properties
   });
+  */
 }
 
 /**
@@ -188,6 +239,11 @@ export function trackExport(exportType, properties = {}) {
  * @returns {boolean}
  */
 export function isAnalyticsReady() {
+  // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+  return false;
+  
+  /* COMMENTED OUT - POSTHOG DISABLED
   return isInitialized && posthog !== null;
+  */
 }
 

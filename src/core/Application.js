@@ -896,11 +896,12 @@ export class Application {
         const originalIcon = button.getAttribute('icon-start');
         try {
             // Track export initiation
-            const { trackExport, trackClick } = await import('../services/AnalyticsService.js');
-            trackClick(`export-${exportType}-csv`, {
-                section: 'dashboard',
-                export_type: exportType
-            });
+            // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+            // const { trackExport, trackClick } = await import('../services/AnalyticsService.js');
+            // trackClick(`export-${exportType}-csv`, {
+            //     section: 'dashboard',
+            //     export_type: exportType
+            // });
 
             button.setAttribute('loading', 'true');
             button.textContent = 'Preparing Download...';
@@ -924,10 +925,11 @@ export class Application {
             }
 
             // Track successful export
-            trackExport(exportType, {
-                item_count: itemCount,
-                success: true
-            });
+            // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+            // trackExport(exportType, {
+            //     item_count: itemCount,
+            //     success: true
+            // });
             button.removeAttribute('loading');
             button.setAttribute('icon-start', 'check');
             button.textContent = 'Download Complete!';
@@ -940,11 +942,12 @@ export class Application {
             log.error('CSV download failed:', error);
 
             // Track failed export
-            const { trackExport } = await import('../services/AnalyticsService.js');
-            trackExport(exportType, {
-                success: false,
-                error: error.message
-            });
+            // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+            // const { trackExport } = await import('../services/AnalyticsService.js');
+            // trackExport(exportType, {
+            //     success: false,
+            //     error: error.message
+            // });
 
             button.removeAttribute('loading');
             button.setAttribute('icon-start', 'exclamation-mark-triangle');

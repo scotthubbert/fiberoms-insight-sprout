@@ -4,7 +4,8 @@
 import { subscriberDataService } from '../dataService.js';
 import { enhancedSearchService } from '../services/EnhancedSearchService.js';
 import { createLogger } from '../utils/logger.js';
-import { trackSearch } from '../services/AnalyticsService.js';
+// POSTHOG DISABLED - Process of elimination for RDP click capture testing
+// import { trackSearch } from '../services/AnalyticsService.js';
 
 // Initialize logger for this module
 const log = createLogger('HeaderSearch');
@@ -210,22 +211,24 @@ export class HeaderSearch {
             }
             
             // Track search event
-            trackSearch(searchTerm, searchResult.results?.length || 0, {
-                source,
-                has_results: (searchResult.results?.length || 0) > 0,
-                search_type: searchResult.searchType || 'server'
-            });
+            // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+            // trackSearch(searchTerm, searchResult.results?.length || 0, {
+            //     source,
+            //     has_results: (searchResult.results?.length || 0) > 0,
+            //     search_type: searchResult.searchType || 'server'
+            // });
             
             this.updateSearchResults(searchResult, targetInput);
         } catch (error) {
             log.error('Search failed:', error);
             
             // Track failed search
-            trackSearch(searchTerm, 0, {
-                source,
-                has_results: false,
-                error: error.message
-            });
+            // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+            // trackSearch(searchTerm, 0, {
+            //     source,
+            //     has_results: false,
+            //     error: error.message
+            // });
             
             this.showSearchError(source === 'desktop' ? this.desktopSearchInput : this.searchInput);
         } finally {

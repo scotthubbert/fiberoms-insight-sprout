@@ -2,7 +2,8 @@
 import { createLogger } from '../utils/logger.js';
 import { getOrCreateNoticeContainer } from '../utils/noticeContainer.js';
 import { trackClick as trackClickSentry } from '../services/SentryService.js';
-import { trackClick, trackFeatureUsage } from '../services/AnalyticsService.js';
+// POSTHOG DISABLED - Process of elimination for RDP click capture testing
+// import { trackClick, trackFeatureUsage } from '../services/AnalyticsService.js';
 
 // Initialize logger for this module
 const log = createLogger('LayerPanel');
@@ -153,7 +154,8 @@ export class LayerPanel {
         localStorage.setItem('panel-collapsed', this.isPanelCollapsed.toString());
 
         // Track usage for analytics
-        trackFeatureUsage('panel-collapse', { collapsed: this.isPanelCollapsed });
+        // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+        // trackFeatureUsage('panel-collapse', { collapsed: this.isPanelCollapsed });
         
         log.info(`Panel ${this.isPanelCollapsed ? 'collapsed' : 'expanded'}`);
     }
@@ -196,14 +198,15 @@ export class LayerPanel {
                         content: contentName,
                         actionText: action.text || ''
                     });
-                    trackClick(actionId, {
-                        section: 'navigation',
-                        content: contentName,
-                        action_text: action.text || ''
-                    });
-                    trackFeatureUsage(`navigation_${contentName}`, {
-                        action_id: actionId
-                    });
+                    // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+                    // trackClick(actionId, {
+                    //     section: 'navigation',
+                    //     content: contentName,
+                    //     action_text: action.text || ''
+                    // });
+                    // trackFeatureUsage(`navigation_${contentName}`, {
+                    //     action_id: actionId
+                    // });
 
                     // Update all action states
                     this.actions.forEach(a => a.active = false);

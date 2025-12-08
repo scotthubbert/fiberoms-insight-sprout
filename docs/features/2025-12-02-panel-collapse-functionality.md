@@ -341,3 +341,4 @@ You can use this simple HTML page to check/clear the localStorage value:
 
 
 
+

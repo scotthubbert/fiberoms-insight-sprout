@@ -4,7 +4,8 @@ import { subscriberDataService } from '../dataService.js';
 import { infrastructureService } from '../services/InfrastructureService.js';
 import { loadingIndicator } from '../utils/loadingIndicator.js';
 import { createLogger } from '../utils/logger.js';
-import { trackClick, trackFeatureUsage } from '../services/AnalyticsService.js';
+// POSTHOG DISABLED - Process of elimination for RDP click capture testing
+// import { trackClick, trackFeatureUsage } from '../services/AnalyticsService.js';
 
 // Initialize logger for this module
 const log = createLogger('DashboardManager');
@@ -86,11 +87,12 @@ export class DashboardManager {
         log.info('🔄 Manual dashboard refresh triggered');
 
         // Track refresh action
-        trackClick('refresh-dashboard', {
-            section: 'header',
-            action: 'refresh'
-        });
-        trackFeatureUsage('dashboard_refresh');
+        // POSTHOG DISABLED - Process of elimination for RDP click capture testing
+        // trackClick('refresh-dashboard', {
+        //     section: 'header',
+        //     action: 'refresh'
+        // });
+        // trackFeatureUsage('dashboard_refresh');
 
         // Add loading state to refresh button
         if (this.refreshButton) {
