@@ -380,10 +380,10 @@ export class PopupManager {
         // Check if this is a Pole based on wmElementN field
         const isPole = attributes.wmElementN !== undefined;
 
-        // Check if this is a Splitter (has STRUCTURE_ and CLLI/EQUIP_FRAB but not MST)
-        const isSplitter = (attributes.STRUCTURE_ !== undefined || attributes.structure_ !== undefined) &&
-            (attributes.CLLI !== undefined || attributes.EQUIP_FRAB !== undefined) &&
-            !isMSTTerminal;
+        // Check if this is a Splitter (has partnumber field and is not MST)
+        const isSplitter = (attributes.partnumber !== undefined || attributes.PARTNUMBER !== undefined ||
+            attributes.equipmentn !== undefined || attributes.EQUIPMENTN !== undefined) &&
+            !isMSTTerminal && !isPole;
 
         // Check if this is a Slack Loop (has structure, type, cable fields)
         const isSlackLoop = (attributes.structure !== undefined || attributes.type !== undefined || attributes.cable !== undefined) &&
@@ -419,12 +419,12 @@ export class PopupManager {
                 }
             });
         } else if (isSplitter) {
-            // Splitter field configuration matching popup labels
+            // Splitter field configuration matching popup labels - updated layout
             const splitterFields = [
-                { fieldName: 'STRUCTURE_', label: 'Structure ID', altFieldName: 'structure_' },
-                { fieldName: 'CLLI', label: 'CLLI Code', altFieldName: 'clli' },
-                { fieldName: 'EQUIP_FRAB', label: 'Equipment FRAB', altFieldName: 'equip_frab' },
-                { fieldName: 'OUTPUTPORT', label: 'Output Port Count', altFieldName: 'outputport' }
+                { fieldName: 'equipmentn', label: 'Name', altFieldName: 'EQUIPMENTN' },
+                { fieldName: 'distributi', label: 'DA', altFieldName: 'DISTRIBUTI' },
+                { fieldName: 'outputport', label: 'Splitter Count', altFieldName: 'OUTPUTPORT' },
+                { fieldName: 'partnumber', label: 'Part Number', altFieldName: 'PARTNUMBER' }
             ];
 
             splitterFields.forEach(field => {
@@ -522,55 +522,55 @@ export class PopupManager {
             });
         } else {
             // Standard feature extraction
-            // Add title if available
-            if (attributes.name || attributes.customer_name || attributes.Name) {
-                data.push(`Name: ${attributes.name || attributes.customer_name || attributes.Name}`);
+        // Add title if available
+        if (attributes.name || attributes.customer_name || attributes.Name) {
+            data.push(`Name: ${attributes.name || attributes.customer_name || attributes.Name}`);
+        }
+
+        // Add all attributes in a readable format
+        Object.keys(attributes).forEach(key => {
+            // Skip internal/system fields
+            if (key.startsWith('__') || key === 'OBJECTID' || key === 'FID') {
+                return;
             }
 
-            // Add all attributes in a readable format
-            Object.keys(attributes).forEach(key => {
-                // Skip internal/system fields
-                if (key.startsWith('__') || key === 'OBJECTID' || key === 'FID') {
-                    return;
-                }
-
-                // Skip name-related fields we've already added above
-                if (nameKeys.has(key)) {
-                    return;
-                }
+            // Skip name-related fields we've already added above
+            if (nameKeys.has(key)) {
+                return;
+            }
 
                 // Skip latitude and longitude for poles (we add Coordinates and Maps Link instead)
                 if (isPole && (key.toLowerCase() === 'latitude' || key.toLowerCase() === 'longitude')) {
                     return;
                 }
 
-                const value = attributes[key];
+            const value = attributes[key];
 
-                // Format the value
-                let displayValue = value;
-                if (value === null || value === undefined || value === '') {
-                    return; // Skip empty values
-                } else if (typeof value === 'boolean') {
-                    displayValue = value ? 'Yes' : 'No';
-                } else if (typeof value === 'number' && !isNaN(value)) {
-                    displayValue = value.toFixed(2);
-                } else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('update')) {
-                    try {
-                        displayValue = new Date(value).toLocaleString();
-                    } catch (e) {
-                        displayValue = value;
-                    }
+            // Format the value
+            let displayValue = value;
+            if (value === null || value === undefined || value === '') {
+                return; // Skip empty values
+            } else if (typeof value === 'boolean') {
+                displayValue = value ? 'Yes' : 'No';
+            } else if (typeof value === 'number' && !isNaN(value)) {
+                displayValue = value.toFixed(2);
+            } else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('update')) {
+                try {
+                    displayValue = new Date(value).toLocaleString();
+                } catch (e) {
+                    displayValue = value;
                 }
+            }
 
-                // Format key name (convert snake_case or camelCase to Title Case)
-                const formattedKey = key
-                    .replace(/_/g, ' ')
-                    .replace(/([A-Z])/g, ' $1')
-                    .replace(/^./, str => str.toUpperCase())
-                    .trim();
+            // Format key name (convert snake_case or camelCase to Title Case)
+            const formattedKey = key
+                .replace(/_/g, ' ')
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase())
+                .trim();
 
-                data.push(`${formattedKey}: ${displayValue}`);
-            });
+            data.push(`${formattedKey}: ${displayValue}`);
+        });
         }
 
         // Add coordinates and Google Maps link if geometry is available
@@ -756,18 +756,19 @@ export class PopupManager {
                         { attr: 'Name', label: 'Site Name' }
                     ];
 
-                    // Add Splitter fields  
+                    // Add Splitter fields - updated layout
                     const splitterFields = [
-                        { attr: 'STRUCTURE_', label: 'Structure ID' },
-                        { attr: 'CLLI', label: 'CLLI Code' },
-                        { attr: 'EQUIP_FRAB', label: 'Equipment FRAB' },
-                        { attr: 'OUTPUTPORT', label: 'Output Port Count' }
+                        { attr: 'equipmentn', label: 'Name', altAttr: 'EQUIPMENTN' },
+                        { attr: 'distributi', label: 'DA', altAttr: 'DISTRIBUTI' },
+                        { attr: 'outputport', label: 'Splitter Count', altAttr: 'OUTPUTPORT' },
+                        { attr: 'partnumber', label: 'Part Number', altAttr: 'PARTNUMBER' }
                     ];
 
                     // Determine which field set to use based on available attributes
                     // Check both uppercase and lowercase field names
-                    const hasMSTFields = attrs.CLLI || attrs.STRUCTURE_ || attrs.MODELNUMBE ||
-                        attrs.distributi || attrs.equipmentn || attrs.modelnumbe;
+                    const hasMSTFields = attrs.MODELNUMBE || attrs.modelnumbe ||
+                        attrs.distributi || attrs.equipmentn || attrs.partnumber ||
+                        attrs.DISTRIBUTI || attrs.EQUIPMENTN || attrs.PARTNUMBER;
                     const isMST = (attrs.MODELNUMBE && attrs.MODELNUMBE.toString().includes('MST')) ||
                         (attrs.modelnumbe && attrs.modelnumbe.toString().includes('MST'));
                     const isPole = attrs.wmElementN !== undefined;
@@ -841,13 +842,13 @@ export class PopupManager {
                             // Format outputport as integer for MST terminals
                             if (field.label === 'Output Port Count' && typeof value === 'number') {
                                 displayValue = Math.round(value).toString();
-                            } else {
-                                displayValue = value.toString().trim() || 'Not Available in Dataset';
+                        } else {
+                            displayValue = value.toString().trim() || 'Not Available in Dataset';
                             }
                         }
 
                         if (displayValue && (displayValue !== 'Not Available in Dataset' || !isSubscriber)) {
-                            data.push(`${field.label}: ${displayValue}`);
+                        data.push(`${field.label}: ${displayValue}`);
                         }
                     });
                 }
@@ -856,8 +857,8 @@ export class PopupManager {
             // Add timestamp and data note (skip for subscribers to keep output clean)
             const isSubscriberPopup = attrs.account !== undefined && (attrs.name !== undefined || attrs.customer_name !== undefined);
             if (!isSubscriberPopup) {
-                data.push(`\nCopied: ${new Date().toLocaleString()}`);
-                data.push(`Note: "Not Available in Dataset" indicates information not provided in source data, not a system error.`);
+            data.push(`\nCopied: ${new Date().toLocaleString()}`);
+            data.push(`Note: "Not Available in Dataset" indicates information not provided in source data, not a system error.`);
             }
 
             // Add coordinates if available
