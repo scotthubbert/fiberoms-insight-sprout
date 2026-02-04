@@ -378,7 +378,7 @@ const createSubscriberPopup = (status) => ({
 
                 // Get MST value from multiple possible field names
                 const mstValue = attributes.mst || attributes.MST || attributes.MapNumber || attributes.mapnumber || attributes.mst_terminal || 'N/A';
-                
+
                 // Create attributes object with normalized MST field
                 const normalizedAttributes = {
                     ...attributes,
