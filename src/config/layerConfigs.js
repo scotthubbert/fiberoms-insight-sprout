@@ -1021,14 +1021,116 @@ const createSplitterPopup = () => ({
     title: 'Splitter: {equipmentn}',
     content: [
         {
-            type: 'fields',
-            fieldInfos: [
-                { fieldName: 'distributi', label: 'Structure ID', visible: true },
-                { fieldName: 'equipmentn', label: 'CLLI Code', visible: true },
-                { fieldName: 'equipmentn', label: 'Equipment FRAB', visible: true },
-                { fieldName: 'outputport', label: 'Output Port Count', visible: true },
-                { fieldName: 'partnumber', label: 'Part Number', visible: true }
-            ]
+            type: 'custom',
+            outFields: ['*'],
+            creator: function (feature) {
+                const attributes = feature.graphic.attributes;
+
+                // Create container for popup content
+                const container = document.createElement('div');
+                container.style.cssText = 'padding: 0; font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;';
+
+                // Field configuration matching requested layout
+                const fieldsConfig = [
+                    { fieldName: 'equipmentn', label: 'Name' },
+                    { fieldName: 'distributi', label: 'DA' },
+                    { fieldName: 'outputport', label: 'Splitter Count' },
+                    { fieldName: 'partnumber', label: 'Part Number' }
+                ];
+
+                // Create fields table
+                const table = document.createElement('table');
+                table.style.cssText = 'width: 100%; border-collapse: collapse; font-size: 14px;';
+
+                fieldsConfig.forEach(field => {
+                    const row = document.createElement('tr');
+                    row.style.cssText = 'border-bottom: 1px solid var(--calcite-color-border-3);';
+
+                    const labelCell = document.createElement('td');
+                    labelCell.style.cssText = 'padding: 8px 12px; font-weight: 600; color: var(--calcite-color-text-2); width: 40%; vertical-align: top;';
+                    labelCell.textContent = field.label;
+
+                    const valueCell = document.createElement('td');
+                    valueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1); word-break: break-word;';
+
+                    // Check both lowercase and uppercase field names for compatibility
+                    const value = attributes[field.fieldName] ||
+                        attributes[field.fieldName.toUpperCase()] ||
+                        attributes[field.fieldName.toLowerCase()];
+
+                    if (value === null || value === undefined || value === '' || (typeof value === 'string' && value.trim() === '')) {
+                        valueCell.innerHTML = '<span style="color: var(--calcite-color-text-3); font-style: italic;">N/A</span>';
+                    } else {
+                        let displayValue = value.toString();
+
+                        // Format outputport as integer if it's a number
+                        if (field.fieldName === 'outputport' && !isNaN(value)) {
+                            displayValue = Math.round(parseFloat(value)).toString();
+                        }
+
+                        valueCell.textContent = displayValue;
+                    }
+
+                    row.appendChild(labelCell);
+                    row.appendChild(valueCell);
+                    table.appendChild(row);
+                });
+
+                // Add coordinates row if geometry is available
+                if (feature.graphic.geometry) {
+                    const geometry = feature.graphic.geometry;
+                    let latitude, longitude;
+
+                    // Handle different geometry types and coordinate systems
+                    if (geometry.type === 'point') {
+                        longitude = geometry.longitude !== undefined ? geometry.longitude : geometry.x;
+                        latitude = geometry.latitude !== undefined ? geometry.latitude : geometry.y;
+                    } else if (geometry.coordinates && Array.isArray(geometry.coordinates)) {
+                        [longitude, latitude] = geometry.coordinates;
+                    }
+
+                    if (latitude !== undefined && longitude !== undefined) {
+                        const coordRow = document.createElement('tr');
+                        coordRow.style.cssText = 'border-bottom: 1px solid var(--calcite-color-border-3);';
+
+                        const coordLabelCell = document.createElement('td');
+                        coordLabelCell.style.cssText = 'padding: 8px 12px; font-weight: 600; color: var(--calcite-color-text-2); width: 40%; vertical-align: top;';
+                        coordLabelCell.textContent = 'Coordinates';
+
+                        const coordValueCell = document.createElement('td');
+                        coordValueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1); word-break: break-word;';
+                        coordValueCell.textContent = `${latitude.toFixed(14)}, ${longitude.toFixed(14)}`;
+
+                        coordRow.appendChild(coordLabelCell);
+                        coordRow.appendChild(coordValueCell);
+                        table.appendChild(coordRow);
+
+                        // Add Maps Link
+                        const mapsRow = document.createElement('tr');
+                        const mapsLabelCell = document.createElement('td');
+                        mapsLabelCell.style.cssText = 'padding: 8px 12px; font-weight: 600; color: var(--calcite-color-text-2); width: 40%; vertical-align: top;';
+                        mapsLabelCell.textContent = 'Maps Link';
+
+                        const mapsValueCell = document.createElement('td');
+                        mapsValueCell.style.cssText = 'padding: 8px 12px; color: var(--calcite-color-text-1);';
+                        const mapsLink = document.createElement('a');
+                        mapsLink.href = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+                        mapsLink.target = '_blank';
+                        mapsLink.rel = 'noopener noreferrer';
+                        mapsLink.textContent = mapsLink.href;
+                        mapsLink.style.cssText = 'color: var(--calcite-color-brand); text-decoration: underline;';
+                        mapsValueCell.appendChild(mapsLink);
+
+                        mapsRow.appendChild(mapsLabelCell);
+                        mapsRow.appendChild(mapsValueCell);
+                        table.appendChild(mapsRow);
+                    }
+                }
+
+                container.appendChild(table);
+
+                return container;
+            }
         }
     ],
     actions: [
@@ -1219,10 +1321,15 @@ const createMSTTerminalFields = () => [
 ];
 
 const createSplitterFields = () => [
-    { name: 'distributi', type: 'string', alias: 'Structure ID' },
-    { name: 'equipmentn', type: 'string', alias: 'CLLI Code / Equipment FRAB' },
-    { name: 'outputport', type: 'integer', alias: 'Output Port Count' },
-    { name: 'partnumber', type: 'string', alias: 'Part Number' }
+    { name: 'equipmentn', type: 'string', alias: 'Name' },
+    { name: 'distributi', type: 'string', alias: 'DA' },
+    { name: 'outputport', type: 'integer', alias: 'Splitter Count' },
+    { name: 'partnumber', type: 'string', alias: 'Part Number' },
+    // Also include uppercase versions for compatibility
+    { name: 'EQUIPMENTN', type: 'string', alias: 'Name' },
+    { name: 'DISTRIBUTI', type: 'string', alias: 'DA' },
+    { name: 'OUTPUTPORT', type: 'integer', alias: 'Splitter Count' },
+    { name: 'PARTNUMBER', type: 'string', alias: 'Part Number' }
 ];
 
 // Pole fields
