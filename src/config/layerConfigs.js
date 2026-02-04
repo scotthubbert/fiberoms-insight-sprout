@@ -1018,15 +1018,16 @@ const createPolePopup = () => ({
 });
 
 const createSplitterPopup = () => ({
-    title: 'Splitter: {STRUCTURE_}',
+    title: 'Splitter: {equipmentn}',
     content: [
         {
             type: 'fields',
             fieldInfos: [
-                { fieldName: 'STRUCTURE_', label: 'Structure ID', visible: true },
-                { fieldName: 'CLLI', label: 'CLLI Code', visible: true },
-                { fieldName: 'EQUIP_FRAB', label: 'Equipment FRAB', visible: true },
-                { fieldName: 'OUTPUTPORT', label: 'Output Port Count', visible: true }
+                { fieldName: 'distributi', label: 'Structure ID', visible: true },
+                { fieldName: 'equipmentn', label: 'CLLI Code', visible: true },
+                { fieldName: 'equipmentn', label: 'Equipment FRAB', visible: true },
+                { fieldName: 'outputport', label: 'Output Port Count', visible: true },
+                { fieldName: 'partnumber', label: 'Part Number', visible: true }
             ]
         }
     ],
@@ -1218,10 +1219,10 @@ const createMSTTerminalFields = () => [
 ];
 
 const createSplitterFields = () => [
-    { name: 'STRUCTURE_', type: 'string', alias: 'Structure ID' },
-    { name: 'CLLI', type: 'string', alias: 'CLLI Code' },
-    { name: 'EQUIP_FRAB', type: 'string', alias: 'Equipment FRAB' },
-    { name: 'OUTPUTPORT', type: 'integer', alias: 'Output Port Count' }
+    { name: 'distributi', type: 'string', alias: 'Structure ID' },
+    { name: 'equipmentn', type: 'string', alias: 'CLLI Code / Equipment FRAB' },
+    { name: 'outputport', type: 'integer', alias: 'Output Port Count' },
+    { name: 'partnumber', type: 'string', alias: 'Part Number' }
 ];
 
 // Pole fields

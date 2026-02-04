@@ -380,10 +380,12 @@ export class PopupManager {
         // Check if this is a Pole based on wmElementN field
         const isPole = attributes.wmElementN !== undefined;
 
-        // Check if this is a Splitter (has STRUCTURE_ and CLLI/EQUIP_FRAB but not MST)
-        const isSplitter = (attributes.STRUCTURE_ !== undefined || attributes.structure_ !== undefined) &&
-            (attributes.CLLI !== undefined || attributes.EQUIP_FRAB !== undefined) &&
-            !isMSTTerminal;
+        // Check if this is a Splitter (ArcGIS-style STRUCTURE_/CLLI/EQUIP_FRAB or GeoJSON-style distributi/equipmentn/outputport)
+        const isSplitter = (
+            ((attributes.STRUCTURE_ !== undefined || attributes.structure_ !== undefined) &&
+                (attributes.CLLI !== undefined || attributes.EQUIP_FRAB !== undefined)) ||
+            ((attributes.distributi !== undefined || attributes.equipmentn !== undefined) && attributes.outputport !== undefined)
+        ) && !isMSTTerminal;
 
         // Check if this is a Slack Loop (has structure, type, cable fields)
         const isSlackLoop = (attributes.structure !== undefined || attributes.type !== undefined || attributes.cable !== undefined) &&
@@ -419,12 +421,13 @@ export class PopupManager {
                 }
             });
         } else if (isSplitter) {
-            // Splitter field configuration matching popup labels
+            // Splitter field configuration: GeoJSON uses distributi, equipmentn, outputport, partnumber
             const splitterFields = [
-                { fieldName: 'STRUCTURE_', label: 'Structure ID', altFieldName: 'structure_' },
-                { fieldName: 'CLLI', label: 'CLLI Code', altFieldName: 'clli' },
-                { fieldName: 'EQUIP_FRAB', label: 'Equipment FRAB', altFieldName: 'equip_frab' },
-                { fieldName: 'OUTPUTPORT', label: 'Output Port Count', altFieldName: 'outputport' }
+                { fieldName: 'distributi', label: 'Structure ID', altFieldName: 'STRUCTURE_' },
+                { fieldName: 'equipmentn', label: 'CLLI Code', altFieldName: 'CLLI' },
+                { fieldName: 'equipmentn', label: 'Equipment FRAB', altFieldName: 'EQUIP_FRAB' },
+                { fieldName: 'outputport', label: 'Output Port Count', altFieldName: 'OUTPUTPORT' },
+                { fieldName: 'partnumber', label: 'Part Number', altFieldName: 'PARTNUMBER' }
             ];
 
             splitterFields.forEach(field => {
@@ -434,7 +437,7 @@ export class PopupManager {
                 if (value !== null && value !== undefined && value !== '') {
                     let displayValue = value;
                     // Format outputport as integer if it's a number
-                    if (field.fieldName === 'OUTPUTPORT' && typeof value === 'number') {
+                    if ((field.fieldName === 'outputport' || field.fieldName === 'OUTPUTPORT') && typeof value === 'number') {
                         displayValue = Math.round(value).toString();
                     } else {
                         displayValue = value.toString();
@@ -756,12 +759,13 @@ export class PopupManager {
                         { attr: 'Name', label: 'Site Name' }
                     ];
 
-                    // Add Splitter fields  
+                    // Add Splitter fields (GeoJSON: distributi, equipmentn, outputport, partnumber)
                     const splitterFields = [
-                        { attr: 'STRUCTURE_', label: 'Structure ID' },
-                        { attr: 'CLLI', label: 'CLLI Code' },
-                        { attr: 'EQUIP_FRAB', label: 'Equipment FRAB' },
-                        { attr: 'OUTPUTPORT', label: 'Output Port Count' }
+                        { attrs: ['distributi', 'DISTRIBUTI', 'STRUCTURE_', 'structure_'], label: 'Structure ID' },
+                        { attrs: ['equipmentn', 'EQUIPMENTN', 'CLLI', 'clli'], label: 'CLLI Code' },
+                        { attrs: ['equipmentn', 'EQUIPMENTN', 'EQUIP_FRAB', 'equip_frab'], label: 'Equipment FRAB' },
+                        { attrs: ['outputport', 'OUTPUTPORT'], label: 'Output Port Count' },
+                        { attrs: ['partnumber', 'PARTNUMBER'], label: 'Part Number' }
                     ];
 
                     // Determine which field set to use based on available attributes
